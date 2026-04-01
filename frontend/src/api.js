@@ -179,6 +179,60 @@ export async function importEventCsv(file) {
   return parseJson(response, '공연 CSV 업로드에 실패했습니다.');
 }
 
+export async function fetchActiveNotices() {
+  const response = await fetch(`${API_BASE}/notices/active`);
+  return parseJson(response, '공지 목록을 가져오지 못했습니다.');
+}
+
+export async function fetchAdminNotices() {
+  const response = await fetch(`${API_BASE}/admin/notices`, {
+    headers: withAuth(),
+  });
+  return parseJson(response, '관리자 공지 목록을 가져오지 못했습니다.');
+}
+
+export async function createNotice(payload) {
+  const response = await fetch(`${API_BASE}/admin/notices`, {
+    method: 'POST',
+    headers: withAuth({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '공지 생성에 실패했습니다.');
+}
+
+export async function updateNotice(id, payload) {
+  const response = await fetch(`${API_BASE}/admin/notices/${id}`, {
+    method: 'PUT',
+    headers: withAuth({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '공지 수정에 실패했습니다.');
+}
+
+export async function deleteNotice(id) {
+  const response = await fetch(`${API_BASE}/admin/notices/${id}`, {
+    method: 'DELETE',
+    headers: withAuth(),
+  });
+  if (!response.ok) {
+    throw new Error('공지 삭제에 실패했습니다.');
+  }
+}
+
+export async function fetchAdminDashboardKpis() {
+  const response = await fetch(`${API_BASE}/admin/dashboard/kpis`, {
+    headers: withAuth(),
+  });
+  return parseJson(response, '대시보드 KPI를 가져오지 못했습니다.');
+}
+
+export async function fetchAuditLogs() {
+  const response = await fetch(`${API_BASE}/admin/audit-logs`, {
+    headers: withAuth(),
+  });
+  return parseJson(response, '감사 로그를 가져오지 못했습니다.');
+}
+
 export async function fetchTrafficHourly() {
   const response = await fetch(`${API_BASE}/analytics/traffic-hourly`);
   return parseJson(response, '시간대별 방문량 조회에 실패했습니다.');
@@ -200,6 +254,10 @@ export function createCongestionStream() {
 
 export function createEventStream() {
   return new EventSource(`${API_BASE}/stream/events`);
+}
+
+export function createNoticeStream() {
+  return new EventSource(`${API_BASE}/stream/notices`);
 }
 
 export function downloadBoothCsv() {

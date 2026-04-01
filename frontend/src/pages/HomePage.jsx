@@ -4,7 +4,9 @@ import { MapContainer, Marker, Popup, TileLayer, useMapEvents, CircleMarker } fr
 import L from 'leaflet';
 import {
   createCongestionStream,
+  createNoticeStream,
   downloadBoothCsv,
+  fetchActiveNotices,
   fetchBooths,
   fetchCongestion,
   sendGps,
@@ -21,6 +23,11 @@ const markerIcon = L.icon({
 
 const levelToScore = { 여유: 1, 보통: 2, 혼잡: 3, 매우혼잡: 4 };
 const scoreToLevel = ['여유', '보통', '혼잡', '매우혼잡'];
+const noticeColor = {
+  긴급: 'border-rose-300 bg-rose-50 text-rose-700',
+  분실물: 'border-amber-300 bg-amber-50 text-amber-700',
+  우천: 'border-sky-300 bg-sky-50 text-sky-700',
+};
 
 function ZoomWatcher({ onZoomChange }) {
   useMapEvents({
@@ -91,13 +98,15 @@ export default function HomePage() {
   const [levelFilter, setLevelFilter] = useState('전체');
   const [favorites, setFavorites] = useState(getFavoriteIds());
   const [recentIds, setRecentIds] = useState(getRecentBoothIds());
+  const [notices, setNotices] = useState([]);
   const previousCongestionRef = useRef({});
 
   useEffect(() => {
     async function load() {
       try {
-        const boothData = await fetchBooths();
+        const [boothData, noticeData] = await Promise.all([fetchBooths(), fetchActiveNotices()]);
         setBooths(boothData);
+        setNotices(noticeData);
 
         const congestionData = await Promise.all(
           boothData.map(async (booth) => [booth.id, await fetchCongestion(booth.id)])
@@ -137,11 +146,26 @@ export default function HomePage() {
         previousCongestionRef.current = nextMap;
         setCongestionMap(nextMap);
       } catch {
-        // SSE 파싱 에러는 무시하고 다음 이벤트를 기다립니다.
+        // SSE 파싱 실패는 무시한다.
       }
     });
 
     return () => stream.close();
+  }, []);
+
+  useEffect(() => {
+    const noticeStream = createNoticeStream();
+
+    noticeStream.addEventListener('notices', (event) => {
+      try {
+        const list = JSON.parse(event.data);
+        setNotices(list);
+      } catch {
+        // SSE 파싱 실패는 무시한다.
+      }
+    });
+
+    return () => noticeStream.close();
   }, []);
 
   const filteredBooths = useMemo(() => {
@@ -209,17 +233,29 @@ export default function HomePage() {
   return (
     <section className="space-y-4 pt-4">
       <article className="rounded-xl border border-teal-100 bg-teal-50/70 p-3">
-        <p className="text-sm font-semibold text-teal-900">실제 지도 모드</p>
-        <p className="text-xs text-teal-800 mt-1">줌 레벨이 낮아지면 마커 클러스터가 표시되고, 팝업에서 카카오/네이버 길찾기 링크를 열 수 있습니다.</p>
+        <p className="text-sm font-semibold text-teal-900">실시간 운영 안내</p>
+        <p className="text-xs text-teal-800 mt-1">공지와 혼잡도가 실시간으로 갱신됩니다. 동선은 혼잡도순 정렬을 활용하세요.</p>
       </article>
+
+      <div className="space-y-2">
+        {notices.length === 0 && (
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">현재 등록된 운영 공지가 없습니다.</div>
+        )}
+        {notices.slice(0, 2).map((notice) => (
+          <article key={notice.id} className={`rounded-lg border px-3 py-2 ${noticeColor[notice.category] || 'border-slate-300 bg-slate-50 text-slate-700'}`}>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] font-bold">{notice.category}</span>
+              <span className="text-[10px] opacity-70">{notice.updatedAt?.replace('T', ' ').slice(5, 16)}</span>
+            </div>
+            <p className="text-sm font-semibold mt-1">{notice.title}</p>
+            <p className="text-xs mt-1">{notice.content}</p>
+          </article>
+        ))}
+      </div>
 
       <div className="rounded-2xl overflow-hidden border border-slate-200">
         <MapContainer center={[37.5665, 126.978]} zoom={16} className="h-64 w-full">
-          <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          />
-
+          <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <ZoomWatcher onZoomChange={setMapZoom} />
 
           {mapZoom >= 16 &&
@@ -276,12 +312,7 @@ export default function HomePage() {
               className="rounded-xl border border-slate-200 bg-white overflow-hidden text-left"
             >
               <div className="aspect-square bg-slate-100">
-                <img
-                  src={getBoothImageUrl(booth)}
-                  alt={`${booth.name} 정사각형 카드 이미지`}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
+                <img src={getBoothImageUrl(booth)} alt={`${booth.name} 정사각형 카드 이미지`} className="h-full w-full object-cover" loading="lazy" />
               </div>
               <div className="p-2">
                 <p className="text-sm font-bold text-slate-800 line-clamp-1">{booth.name}</p>
@@ -293,47 +324,26 @@ export default function HomePage() {
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <button onClick={handleMockGpsBatch} className="rounded-xl bg-teal-700 text-white py-2.5 font-semibold">
-          GPS 샘플 생성
-        </button>
-        <button type="button" onClick={refreshAllCongestion} className="rounded-xl border border-teal-700 text-teal-700 py-2.5 font-semibold">
-          혼잡도 새로고침
-        </button>
+        <button onClick={handleMockGpsBatch} className="rounded-xl bg-teal-700 text-white py-2.5 font-semibold">GPS 샘플 생성</button>
+        <button type="button" onClick={refreshAllCongestion} className="rounded-xl border border-teal-700 text-teal-700 py-2.5 font-semibold">혼잡도 새로고침</button>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
         <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => setIsGridView((prev) => !prev)}
-            className="rounded-lg border border-teal-700 text-teal-700 py-2 text-sm font-semibold"
-          >
+          <button type="button" onClick={() => setIsGridView((prev) => !prev)} className="rounded-lg border border-teal-700 text-teal-700 py-2 text-sm font-semibold">
             {isGridView ? '세로 카드 보기' : '가로 카드 보기'}
           </button>
-          <button type="button" onClick={downloadBoothCsv} className="rounded-lg border border-slate-300 py-2 text-sm font-semibold text-slate-700">
-            부스 CSV
-          </button>
+          <button type="button" onClick={downloadBoothCsv} className="rounded-lg border border-slate-300 py-2 text-sm font-semibold text-slate-700">부스 CSV</button>
         </div>
 
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="부스 이름 검색"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        />
+        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="부스 이름 검색" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
 
         <div className="grid grid-cols-2 gap-2">
           <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 text-sm">
-            <option>전체</option>
-            <option>여유</option>
-            <option>보통</option>
-            <option>혼잡</option>
-            <option>매우혼잡</option>
+            <option>전체</option><option>여유</option><option>보통</option><option>혼잡</option><option>매우혼잡</option>
           </select>
           <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 text-sm">
-            <option value="displayOrder">운영순</option>
-            <option value="name">이름순</option>
-            <option value="congestion">혼잡도순</option>
+            <option value="displayOrder">운영순</option><option value="name">이름순</option><option value="congestion">혼잡도순</option>
           </select>
         </div>
       </div>
@@ -343,10 +353,7 @@ export default function HomePage() {
         <div className="h-24 flex items-end gap-2">
           {chartData.map((item) => (
             <div key={item.label} className="flex-1 text-center">
-              <div
-                className="mx-auto w-full rounded-t bg-teal-500/80"
-                style={{ height: `${Math.max(8, item.value * 18)}px` }}
-              />
+              <div className="mx-auto w-full rounded-t bg-teal-500/80" style={{ height: `${Math.max(8, item.value * 18)}px` }} />
               <p className="mt-1 text-[10px] text-slate-500">{item.label} ({item.value})</p>
             </div>
           ))}
@@ -358,14 +365,7 @@ export default function HomePage() {
           <p className="text-sm font-semibold text-slate-700 mb-2">최근 본 부스</p>
           <div className="flex flex-wrap gap-2">
             {recentBooths.map((booth) => (
-              <button
-                key={booth.id}
-                type="button"
-                onClick={() => openBoothDetail(booth.id)}
-                className="rounded-full bg-slate-100 px-3 py-1 text-xs"
-              >
-                {booth.name}
-              </button>
+              <button key={booth.id} type="button" onClick={() => openBoothDetail(booth.id)} className="rounded-full bg-slate-100 px-3 py-1 text-xs">{booth.name}</button>
             ))}
           </div>
         </div>
@@ -380,12 +380,7 @@ export default function HomePage() {
           const isFavorite = favorites.includes(booth.id);
 
           return (
-            <button
-              key={booth.id}
-              type="button"
-              onClick={() => openBoothDetail(booth.id)}
-              className="w-full h-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden"
-            >
+            <button key={booth.id} type="button" onClick={() => openBoothDetail(booth.id)} className="w-full h-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden">
               <div className="aspect-[16/9] bg-slate-100">
                 <img src={getBoothImageUrl(booth)} alt={`${booth.name} 대표 이미지`} className="h-full w-full object-cover" loading="lazy" />
               </div>

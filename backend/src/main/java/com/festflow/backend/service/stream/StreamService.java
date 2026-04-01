@@ -13,6 +13,7 @@ public class StreamService {
 
     private final List<SseEmitter> congestionEmitters = new CopyOnWriteArrayList<>();
     private final List<SseEmitter> eventEmitters = new CopyOnWriteArrayList<>();
+    private final List<SseEmitter> noticeEmitters = new CopyOnWriteArrayList<>();
 
     public SseEmitter subscribeCongestion() {
         return createEmitter(congestionEmitters);
@@ -22,12 +23,20 @@ public class StreamService {
         return createEmitter(eventEmitters);
     }
 
+    public SseEmitter subscribeNotices() {
+        return createEmitter(noticeEmitters);
+    }
+
     public void publishCongestion(Object payload) {
         send(congestionEmitters, "congestion", payload);
     }
 
     public void publishEvents(Object payload) {
         send(eventEmitters, "events", payload);
+    }
+
+    public void publishNotices(Object payload) {
+        send(noticeEmitters, "notices", payload);
     }
 
     private SseEmitter createEmitter(List<SseEmitter> emitters) {

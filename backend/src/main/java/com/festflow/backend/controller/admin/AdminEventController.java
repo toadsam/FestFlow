@@ -2,8 +2,10 @@ package com.festflow.backend.controller.admin;
 
 import com.festflow.backend.dto.EventResponseDto;
 import com.festflow.backend.dto.EventUpsertRequestDto;
+import com.festflow.backend.service.AuditLogService;
 import com.festflow.backend.service.EventService;
 import jakarta.validation.Valid;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,23 +19,30 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminEventController {
 
     private final EventService eventService;
+    private final AuditLogService auditLogService;
 
-    public AdminEventController(EventService eventService) {
+    public AdminEventController(EventService eventService, AuditLogService auditLogService) {
         this.eventService = eventService;
+        this.auditLogService = auditLogService;
     }
 
     @PostMapping
-    public EventResponseDto createEvent(@Valid @RequestBody EventUpsertRequestDto requestDto) {
-        return eventService.createEvent(requestDto);
+    public EventResponseDto createEvent(@Valid @RequestBody EventUpsertRequestDto requestDto, Authentication authentication) {
+        EventResponseDto created = eventService.createEvent(requestDto);
+        auditLogService.log(authentication.getName(), "CREATE", "EVENT", created.id(), created.title());
+        return created;
     }
 
     @PutMapping("/{id}")
-    public EventResponseDto updateEvent(@PathVariable Long id, @Valid @RequestBody EventUpsertRequestDto requestDto) {
-        return eventService.updateEvent(id, requestDto);
+    public EventResponseDto updateEvent(@PathVariable Long id, @Valid @RequestBody EventUpsertRequestDto requestDto, Authentication authentication) {
+        EventResponseDto updated = eventService.updateEvent(id, requestDto);
+        auditLogService.log(authentication.getName(), "UPDATE", "EVENT", id, updated.title());
+        return updated;
     }
 
     @DeleteMapping("/{id}")
-    public void deleteEvent(@PathVariable Long id) {
+    public void deleteEvent(@PathVariable Long id, Authentication authentication) {
         eventService.deleteEvent(id);
+        auditLogService.log(authentication.getName(), "DELETE", "EVENT", id, "공연 삭제");
     }
 }

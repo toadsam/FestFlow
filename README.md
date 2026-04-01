@@ -73,12 +73,14 @@ npm run dev
   - 실제 지도(OSM 타일) + 부스 마커 표시
   - 줌아웃 시 마커 클러스터 표시
   - 카카오/네이버 외부 길찾기 링크
+  - 운영 공지 실시간 노출(긴급/분실물/우천)
   - 부스 카드(정사각형 소개 카드 유지)
   - 검색/필터/정렬, 즐겨찾기, 최근 본 부스
   - 혼잡도 요약 차트
 - 부스 상세
   - 이미지, 설명, 위치 지도, 혼잡도 상세
-  - 카카오/네이버 링크
+  - \"지금 출발\"(카카오/네이버) 버튼
+  - 현재 위치 기준 예상 도보시간 계산
   - 메모 저장(localStorage)
 - 공연
   - 공연 목록/상태 표시(예정/진행중/종료)
@@ -91,6 +93,7 @@ npm run dev
 - SSE 기반 실시간 반영
   - `/api/stream/congestion`: 혼잡도 갱신
   - `/api/stream/events`: 공연 상태 갱신
+  - `/api/stream/notices`: 공지 갱신
 - 브라우저 알림
   - 혼잡 급상승 알림
   - 임박 공연 알림
@@ -99,10 +102,22 @@ npm run dev
 
 - JWT 로그인
 - 관리자 API 보호(`/api/admin/**`)
+- 운영 KPI 상단 고정 표시
+  - 오늘 총 방문자
+  - 현재 가장 혼잡한 부스
+  - 30분 내 시작 공연
+- 공지 작성/수정/삭제 및 홈 실시간 반영
 - 부스/공연 CRUD
 - 부스 이미지 업로드
 - CSV 일괄 업로드(부스/공연)
 - 부스 드래그 정렬(순서 저장)
+- 최근 관리자 감사 로그 조회
+
+### 혼잡도 계산 개선
+
+- 최근 15분 GPS 로그를 사용
+- 시간 가중치 적용(최근 로그일수록 점수 높음)
+- 가중치 점수 기반으로 `여유/보통/혼잡/매우혼잡` 단계 계산
 
 ### 데이터 분석
 
@@ -126,6 +141,8 @@ npm run dev
 - `POST /api/auth/login`
 - `GET /api/stream/congestion` (SSE)
 - `GET /api/stream/events` (SSE)
+- `GET /api/stream/notices` (SSE)
+- `GET /api/notices/active`
 - `GET /api/analytics/traffic-hourly`
 - `GET /api/analytics/popular-booths`
 - `GET /api/analytics/congestion-heatmap`
@@ -142,6 +159,12 @@ npm run dev
 - `POST /api/admin/events`
 - `PUT /api/admin/events/{id}`
 - `DELETE /api/admin/events/{id}`
+- `GET /api/admin/dashboard/kpis`
+- `GET /api/admin/audit-logs`
+- `GET /api/admin/notices`
+- `POST /api/admin/notices`
+- `PUT /api/admin/notices/{id}`
+- `DELETE /api/admin/notices/{id}`
 
 ## PWA
 

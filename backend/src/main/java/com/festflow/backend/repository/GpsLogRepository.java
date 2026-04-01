@@ -8,5 +8,6 @@ import java.util.List;
 
 public interface GpsLogRepository extends JpaRepository<GpsLog, Long> {
     List<GpsLog> findByCreatedAtAfter(LocalDateTime threshold);
+    long countByCreatedAtBetween(LocalDateTime from, LocalDateTime to);
 }
 

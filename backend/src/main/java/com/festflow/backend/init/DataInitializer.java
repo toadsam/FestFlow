@@ -3,9 +3,11 @@ package com.festflow.backend.init;
 import com.festflow.backend.entity.Booth;
 import com.festflow.backend.entity.FestivalEvent;
 import com.festflow.backend.entity.AdminUser;
+import com.festflow.backend.entity.Notice;
 import com.festflow.backend.repository.AdminUserRepository;
 import com.festflow.backend.repository.BoothRepository;
 import com.festflow.backend.repository.EventRepository;
+import com.festflow.backend.repository.NoticeRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +24,7 @@ public class DataInitializer {
             BoothRepository boothRepository,
             EventRepository eventRepository,
             AdminUserRepository adminUserRepository,
+            NoticeRepository noticeRepository,
             PasswordEncoder passwordEncoder
     ) {
         return args -> {
@@ -45,6 +48,15 @@ public class DataInitializer {
 
             if (adminUserRepository.count() == 0) {
                 adminUserRepository.save(new AdminUser("admin", passwordEncoder.encode("admin1234"), "ADMIN"));
+            }
+
+            if (noticeRepository.count() == 0) {
+                noticeRepository.save(new Notice(
+                        "우천 안내",
+                        "오늘 18:00 이후 비 예보가 있어 실외 공연은 우천 대체 무대로 이동될 수 있습니다.",
+                        "우천",
+                        true
+                ));
             }
         };
     }

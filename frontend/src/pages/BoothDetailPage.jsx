@@ -31,6 +31,16 @@ function getDirectionLinks(booth) {
   };
 }
 
+function distanceInMeters(lat1, lon1, lat2, lon2) {
+  const earthRadius = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return earthRadius * c;
+}
+
 export default function BoothDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -40,6 +50,7 @@ export default function BoothDetailPage() {
   const [memo, setMemo] = useState('');
   const [favorites, setFavorites] = useState(getFavoriteIds());
   const [savedNotice, setSavedNotice] = useState('');
+  const [currentPos, setCurrentPos] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -77,6 +88,22 @@ export default function BoothDetailPage() {
     setFavorites(toggleFavorite(Number(id)));
   }
 
+  function handleLoadCurrentLocation() {
+    if (!navigator.geolocation) {
+      setError('현재 브라우저에서 위치 정보를 지원하지 않습니다.');
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCurrentPos({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+      },
+      () => {
+        setError('현재 위치를 가져오지 못했습니다. 권한을 확인해 주세요.');
+      }
+    );
+  }
+
   if (error) {
     return <p className="pt-4 text-sm text-rose-600">{error}</p>;
   }
@@ -88,6 +115,10 @@ export default function BoothDetailPage() {
   const isFavorite = favorites.includes(Number(id));
   const links = getDirectionLinks(booth);
   const imageUrl = booth.imageUrl || `https://picsum.photos/seed/festflow-booth-${booth.id}/1200/700`;
+
+  const walkMinutes = currentPos
+    ? Math.max(1, Math.round(distanceInMeters(currentPos.latitude, currentPos.longitude, booth.latitude, booth.longitude) / 75))
+    : null;
 
   return (
     <section className="pt-4 space-y-4">
@@ -134,19 +165,33 @@ export default function BoothDetailPage() {
               </MapContainer>
             </div>
 
-            <div className="mt-2 flex gap-2 text-xs">
-              <a href={links.kakao} target="_blank" rel="noreferrer" className="rounded-md bg-yellow-100 px-2 py-1 text-yellow-800">
-                카카오 길찾기
+            <button
+              type="button"
+              onClick={handleLoadCurrentLocation}
+              className="mt-2 w-full rounded-lg border border-slate-300 bg-white py-2 text-sm font-semibold text-slate-700"
+            >
+              현재 위치 기준 도보시간 계산
+            </button>
+
+            {walkMinutes && (
+              <p className="mt-2 text-sm font-semibold text-emerald-700">
+                예상 도보시간: 약 {walkMinutes}분
+              </p>
+            )}
+
+            <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
+              <a href={links.kakao} target="_blank" rel="noreferrer" className="rounded-md bg-yellow-100 px-2 py-2 text-yellow-800 text-center font-semibold">
+                지금 출발 (카카오)
               </a>
-              <a href={links.naver} target="_blank" rel="noreferrer" className="rounded-md bg-emerald-100 px-2 py-1 text-emerald-800">
-                네이버 지도
+              <a href={links.naver} target="_blank" rel="noreferrer" className="rounded-md bg-emerald-100 px-2 py-2 text-emerald-800 text-center font-semibold">
+                지금 출발 (네이버)
               </a>
             </div>
           </div>
 
           <div>
             <p className="text-sm font-semibold text-slate-700">혼잡도 상세</p>
-            <p className="mt-1 text-sm text-slate-600">현재 반경 내 사용자 수: {congestion.nearbyUserCount}명</p>
+            <p className="mt-1 text-sm text-slate-600">시간 가중 사용자 수: {congestion.nearbyUserCount}명</p>
           </div>
 
           <div className="space-y-2">

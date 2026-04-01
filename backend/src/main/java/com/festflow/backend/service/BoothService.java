@@ -106,11 +106,14 @@ public class BoothService {
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(15);
         List<GpsLog> recentLogs = gpsLogRepository.findByCreatedAtAfter(threshold);
 
-        int nearbyCount = (int) recentLogs.stream()
+        LocalDateTime now = LocalDateTime.now();
+        double weightedScore = recentLogs.stream()
                 .filter(log -> distanceInMeters(booth.getLatitude(), booth.getLongitude(), log.getLatitude(), log.getLongitude()) <= BOOTH_RADIUS_METERS)
-                .count();
+                .mapToDouble(log -> timeWeight(log.getCreatedAt(), now))
+                .sum();
+        int weightedCount = (int) Math.round(weightedScore);
 
-        return new CongestionResponseDto(booth.getId(), booth.getName(), convertLevel(nearbyCount), nearbyCount);
+        return new CongestionResponseDto(booth.getId(), booth.getName(), convertLevel(weightedCount), weightedCount);
     }
 
     public List<CongestionResponseDto> getAllCongestions() {
@@ -142,6 +145,13 @@ public class BoothService {
             return "\uD63C\uC7A1";
         }
         return "\uB9E4\uC6B0\uD63C\uC7A1";
+    }
+
+    // 최근 15분 데이터에 시간 가중치를 적용한다. 방금 들어온 로그일수록 높은 가중치를 받는다.
+    private double timeWeight(LocalDateTime createdAt, LocalDateTime now) {
+        long seconds = java.time.Duration.between(createdAt, now).toSeconds();
+        double ratio = Math.max(0.0, Math.min(1.0, seconds / 900.0)); // 15분=900초
+        return 1.0 - (ratio * 0.7); // 최신 1.0, 오래된 로그 약 0.3
     }
 
     private double distanceInMeters(double lat1, double lon1, double lat2, double lon2) {

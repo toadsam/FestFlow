@@ -2,8 +2,13 @@
 import {
   createBooth,
   createEvent,
+  createNotice,
   deleteBooth,
   deleteEvent,
+  deleteNotice,
+  fetchAdminDashboardKpis,
+  fetchAdminNotices,
+  fetchAuditLogs,
   fetchBooths,
   fetchEvents,
   importBoothCsv,
@@ -12,12 +17,14 @@ import {
   reorderBooths,
   updateBooth,
   updateEvent,
+  updateNotice,
   uploadBoothImage,
 } from '../api';
 import { clearLogin, getAdminName, isLoggedIn, saveLogin } from '../utils/auth';
 
 const initialBooth = { name: '', latitude: '', longitude: '', description: '', imageUrl: '' };
 const initialEvent = { title: '', startTime: '', endTime: '' };
+const initialNotice = { title: '', content: '', category: '긴급', active: true };
 
 function toApiDateTime(value) {
   return value.length === 16 ? `${value}:00` : value;
@@ -38,12 +45,22 @@ export default function AdminPage() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
   const [adminName, setAdminName] = useState(getAdminName());
   const [loginForm, setLoginForm] = useState({ username: 'admin', password: 'admin1234' });
+
+  const [kpi, setKpi] = useState(null);
+  const [auditLogs, setAuditLogs] = useState([]);
+
   const [booths, setBooths] = useState([]);
   const [events, setEvents] = useState([]);
+  const [notices, setNotices] = useState([]);
+
   const [boothForm, setBoothForm] = useState(initialBooth);
   const [eventForm, setEventForm] = useState(initialEvent);
+  const [noticeForm, setNoticeForm] = useState(initialNotice);
+
   const [editingBoothId, setEditingBoothId] = useState(null);
   const [editingEventId, setEditingEventId] = useState(null);
+  const [editingNoticeId, setEditingNoticeId] = useState(null);
+
   const [message, setMessage] = useState('');
   const [importFiles, setImportFiles] = useState({ booths: null, events: null });
   const [draggingBoothId, setDraggingBoothId] = useState(null);
@@ -55,17 +72,24 @@ export default function AdminPage() {
   );
 
   async function loadAll() {
-    const [boothData, eventData] = await Promise.all([fetchBooths(), fetchEvents()]);
+    const [boothData, eventData, noticeData, kpiData, logData] = await Promise.all([
+      fetchBooths(),
+      fetchEvents(),
+      fetchAdminNotices(),
+      fetchAdminDashboardKpis(),
+      fetchAuditLogs(),
+    ]);
+
     setBooths(boothData);
     setEvents(eventData);
+    setNotices(noticeData);
+    setKpi(kpiData);
+    setAuditLogs(logData);
   }
 
   useEffect(() => {
     if (!loggedIn) return;
-
-    loadAll().catch(() => {
-      setMessage('관리자 데이터를 불러오지 못했습니다. 다시 로그인해 주세요.');
-    });
+    loadAll().catch((error) => setMessage(error.message));
   }, [loggedIn]);
 
   async function handleLogin(e) {
@@ -90,7 +114,6 @@ export default function AdminPage() {
 
   async function handleBoothSubmit(e) {
     e.preventDefault();
-
     try {
       const payload = {
         ...boothForm,
@@ -134,6 +157,26 @@ export default function AdminPage() {
 
       setEventForm(initialEvent);
       setEditingEventId(null);
+      await loadAll();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  async function handleNoticeSubmit(e) {
+    e.preventDefault();
+
+    try {
+      if (editingNoticeId) {
+        await updateNotice(editingNoticeId, noticeForm);
+        setMessage('공지를 수정했습니다.');
+      } else {
+        await createNotice(noticeForm);
+        setMessage('공지를 등록했습니다.');
+      }
+
+      setNoticeForm(initialNotice);
+      setEditingNoticeId(null);
       await loadAll();
     } catch (error) {
       setMessage(error.message);
@@ -192,21 +235,8 @@ export default function AdminPage() {
         <h2 className="text-lg font-bold">관리자 로그인</h2>
         <p className="text-xs text-slate-500">기본 계정: admin / admin1234</p>
         <form className="space-y-2 rounded-xl border border-slate-200 bg-white p-3" onSubmit={handleLogin}>
-          <input
-            className="w-full border rounded px-2 py-2 text-sm"
-            placeholder="아이디"
-            value={loginForm.username}
-            onChange={(e) => setLoginForm((prev) => ({ ...prev, username: e.target.value }))}
-            required
-          />
-          <input
-            type="password"
-            className="w-full border rounded px-2 py-2 text-sm"
-            placeholder="비밀번호"
-            value={loginForm.password}
-            onChange={(e) => setLoginForm((prev) => ({ ...prev, password: e.target.value }))}
-            required
-          />
+          <input className="w-full border rounded px-2 py-2 text-sm" placeholder="아이디" value={loginForm.username} onChange={(e) => setLoginForm((prev) => ({ ...prev, username: e.target.value }))} required />
+          <input type="password" className="w-full border rounded px-2 py-2 text-sm" placeholder="비밀번호" value={loginForm.password} onChange={(e) => setLoginForm((prev) => ({ ...prev, password: e.target.value }))} required />
           <button className="w-full rounded bg-teal-700 text-white py-2 text-sm font-semibold">로그인</button>
         </form>
         {message && <p className="text-sm text-rose-600">{message}</p>}
@@ -217,11 +247,91 @@ export default function AdminPage() {
   return (
     <section className="pt-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">관리자</h2>
+        <h2 className="text-lg font-bold">운영 관리자</h2>
         <button type="button" onClick={handleLogout} className="text-xs rounded-lg border px-2 py-1">로그아웃</button>
       </div>
       <p className="text-xs text-slate-500">로그인 사용자: {adminName}</p>
       {message && <p className="text-sm text-teal-700">{message}</p>}
+
+      <article className="sticky top-2 z-20 rounded-xl border border-slate-200 bg-white/95 backdrop-blur p-3 shadow-sm">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="font-semibold">실시간 운영 KPI</h3>
+          <button type="button" onClick={loadAll} className="text-xs rounded border px-2 py-1">갱신</button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-lg bg-teal-50 p-2">
+            <p className="text-[10px] text-teal-700">오늘 총 방문</p>
+            <p className="text-lg font-bold text-teal-800">{kpi?.todayVisitorCount ?? 0}</p>
+          </div>
+          <div className="rounded-lg bg-amber-50 p-2">
+            <p className="text-[10px] text-amber-700">최대 혼잡 부스</p>
+            <p className="text-xs font-bold text-amber-800 line-clamp-1">{kpi?.mostCongestedBooth?.boothName || '-'}</p>
+            <p className="text-[10px] text-amber-700">{kpi?.mostCongestedBooth?.level || '-'} / {kpi?.mostCongestedBooth?.score ?? 0}</p>
+          </div>
+          <div className="rounded-lg bg-indigo-50 p-2">
+            <p className="text-[10px] text-indigo-700">30분 내 공연</p>
+            <p className="text-xs font-bold text-indigo-800 line-clamp-1">{kpi?.upcomingWithin30Minutes?.title || '-'}</p>
+            <p className="text-[10px] text-indigo-700">{kpi?.upcomingWithin30Minutes?.startTime?.slice(11, 16) || '--:--'}</p>
+          </div>
+        </div>
+      </article>
+
+      <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+        <h3 className="font-semibold">운영 공지 관리</h3>
+        <form className="space-y-2" onSubmit={handleNoticeSubmit}>
+          <input className="w-full border rounded px-2 py-2 text-sm" placeholder="공지 제목" value={noticeForm.title} onChange={(e) => setNoticeForm((p) => ({ ...p, title: e.target.value }))} required />
+          <textarea className="w-full border rounded px-2 py-2 text-sm" placeholder="공지 내용" rows={3} value={noticeForm.content} onChange={(e) => setNoticeForm((p) => ({ ...p, content: e.target.value }))} required />
+          <div className="grid grid-cols-2 gap-2">
+            <select className="border rounded px-2 py-2 text-sm" value={noticeForm.category} onChange={(e) => setNoticeForm((p) => ({ ...p, category: e.target.value }))}>
+              <option>긴급</option><option>분실물</option><option>우천</option><option>일반</option>
+            </select>
+            <label className="border rounded px-2 py-2 text-sm flex items-center gap-2">
+              <input type="checkbox" checked={noticeForm.active} onChange={(e) => setNoticeForm((p) => ({ ...p, active: e.target.checked }))} />
+              홈 노출 활성화
+            </label>
+          </div>
+          <button className="w-full rounded bg-rose-600 text-white py-2 text-sm">{editingNoticeId ? '공지 수정' : '공지 등록'}</button>
+          {editingNoticeId && (
+            <button type="button" className="w-full rounded border py-2 text-sm" onClick={() => {
+              setEditingNoticeId(null);
+              setNoticeForm(initialNotice);
+            }}>
+              공지 편집 취소
+            </button>
+          )}
+        </form>
+
+        <div className="space-y-2">
+          {notices.map((notice) => (
+            <div key={notice.id} className="rounded-lg border border-slate-200 p-2 text-sm">
+              <div className="flex items-center justify-between">
+                <p className="font-semibold">[{notice.category}] {notice.title}</p>
+                <span className={`text-[10px] px-2 py-0.5 rounded-full ${notice.active ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
+                  {notice.active ? '활성' : '비활성'}
+                </span>
+              </div>
+              <p className="text-xs text-slate-600 mt-1 line-clamp-2">{notice.content}</p>
+              <div className="mt-2 flex gap-1 justify-end">
+                <button type="button" className="px-2 py-1 rounded bg-slate-100 text-xs" onClick={() => {
+                  setEditingNoticeId(notice.id);
+                  setNoticeForm({
+                    title: notice.title,
+                    content: notice.content,
+                    category: notice.category,
+                    active: notice.active,
+                  });
+                }}>수정</button>
+                <button type="button" className="px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs" onClick={async () => {
+                  if (!confirm('이 공지를 삭제할까요?')) return;
+                  await deleteNotice(notice.id);
+                  await loadAll();
+                }}>삭제</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </article>
 
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <h3 className="font-semibold">CSV 일괄 업로드</h3>
@@ -254,61 +364,38 @@ export default function AdminPage() {
             <button type="button" className="w-full rounded border py-2 text-sm" onClick={() => {
               setEditingBoothId(null);
               setBoothForm(initialBooth);
-            }}>
-              편집 취소
-            </button>
+            }}>편집 취소</button>
           )}
         </form>
 
         <div className="space-y-2">
           <p className="text-xs text-slate-500">드래그해서 순서 변경 후 자동 저장</p>
           {sortedBooths.map((booth) => (
-            <div
-              key={booth.id}
-              draggable
-              onDragStart={() => setDraggingBoothId(booth.id)}
-              onDragOver={(e) => e.preventDefault()}
-              onDrop={() => handleDropBooth(booth.id)}
-              className="border rounded p-2 text-sm bg-slate-50"
-            >
+            <div key={booth.id} draggable onDragStart={() => setDraggingBoothId(booth.id)} onDragOver={(e) => e.preventDefault()} onDrop={() => handleDropBooth(booth.id)} className="border rounded p-2 text-sm bg-slate-50">
               <div className="flex items-center justify-between gap-2">
                 <p className="font-semibold">#{booth.displayOrder} {booth.name}</p>
                 <div className="flex gap-1">
-                  <button
-                    type="button"
-                    className="px-2 py-1 rounded bg-slate-100"
-                    onClick={() => {
-                      setEditingBoothId(booth.id);
-                      setBoothForm({
-                        name: booth.name,
-                        latitude: String(booth.latitude),
-                        longitude: String(booth.longitude),
-                        description: booth.description,
-                        imageUrl: booth.imageUrl || '',
-                      });
-                    }}
-                  >
-                    수정
-                  </button>
-                  <button
-                    type="button"
-                    className="px-2 py-1 rounded bg-rose-100 text-rose-700"
-                    onClick={async () => {
-                      if (!confirm('이 부스를 삭제할까요?')) return;
-                      await deleteBooth(booth.id);
-                      await loadAll();
-                    }}
-                  >
-                    삭제
-                  </button>
+                  <button type="button" className="px-2 py-1 rounded bg-slate-100" onClick={() => {
+                    setEditingBoothId(booth.id);
+                    setBoothForm({
+                      name: booth.name,
+                      latitude: String(booth.latitude),
+                      longitude: String(booth.longitude),
+                      description: booth.description,
+                      imageUrl: booth.imageUrl || '',
+                    });
+                  }}>수정</button>
+                  <button type="button" className="px-2 py-1 rounded bg-rose-100 text-rose-700" onClick={async () => {
+                    if (!confirm('이 부스를 삭제할까요?')) return;
+                    await deleteBooth(booth.id);
+                    await loadAll();
+                  }}>삭제</button>
                 </div>
               </div>
 
               <div className="mt-2 flex items-center gap-2">
                 <input type="file" accept="image/*" className="text-xs" onChange={(e) => setUploadFiles((prev) => ({ ...prev, [booth.id]: e.target.files?.[0] || null }))} />
-                <button type="button" onClick={() => handleImageUpload(booth.id)} className="rounded border px-2 py-1 text-xs">
-                  이미지 업로드
-                </button>
+                <button type="button" onClick={() => handleImageUpload(booth.id)} className="rounded border px-2 py-1 text-xs">이미지 업로드</button>
               </div>
             </div>
           ))}
@@ -328,9 +415,7 @@ export default function AdminPage() {
             <button type="button" className="w-full rounded border py-2 text-sm" onClick={() => {
               setEditingEventId(null);
               setEventForm(initialEvent);
-            }}>
-              편집 취소
-            </button>
+            }}>편집 취소</button>
           )}
         </form>
 
@@ -340,33 +425,37 @@ export default function AdminPage() {
               <div className="flex items-center justify-between gap-2">
                 <p className="font-semibold">{event.title}</p>
                 <div className="flex gap-1">
-                  <button
-                    type="button"
-                    className="px-2 py-1 rounded bg-slate-100"
-                    onClick={() => {
-                      setEditingEventId(event.id);
-                      setEventForm({
-                        title: event.title,
-                        startTime: event.startTime.slice(0, 16),
-                        endTime: event.endTime.slice(0, 16),
-                      });
-                    }}
-                  >
-                    수정
-                  </button>
-                  <button
-                    type="button"
-                    className="px-2 py-1 rounded bg-rose-100 text-rose-700"
-                    onClick={async () => {
-                      if (!confirm('이 공연을 삭제할까요?')) return;
-                      await deleteEvent(event.id);
-                      await loadAll();
-                    }}
-                  >
-                    삭제
-                  </button>
+                  <button type="button" className="px-2 py-1 rounded bg-slate-100" onClick={() => {
+                    setEditingEventId(event.id);
+                    setEventForm({
+                      title: event.title,
+                      startTime: event.startTime.slice(0, 16),
+                      endTime: event.endTime.slice(0, 16),
+                    });
+                  }}>수정</button>
+                  <button type="button" className="px-2 py-1 rounded bg-rose-100 text-rose-700" onClick={async () => {
+                    if (!confirm('이 공연을 삭제할까요?')) return;
+                    await deleteEvent(event.id);
+                    await loadAll();
+                  }}>삭제</button>
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      </article>
+
+      <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+        <h3 className="font-semibold">최근 관리자 작업 이력</h3>
+        <div className="space-y-2 max-h-72 overflow-auto pr-1">
+          {auditLogs.length === 0 && <p className="text-sm text-slate-500">아직 기록이 없습니다.</p>}
+          {auditLogs.map((log) => (
+            <div key={log.id} className="rounded-lg border border-slate-200 p-2 bg-slate-50">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-700">{log.adminUsername} · {log.action} · {log.targetType}</p>
+                <p className="text-[10px] text-slate-500">{log.createdAt.replace('T', ' ').slice(5, 16)}</p>
+              </div>
+              <p className="text-xs text-slate-600 mt-1">{log.details}</p>
             </div>
           ))}
         </div>
