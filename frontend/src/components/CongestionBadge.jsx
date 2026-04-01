@@ -1,4 +1,4 @@
-const colorMap = {
+﻿const colorMap = {
   여유: 'bg-emerald-100 text-emerald-700',
   보통: 'bg-amber-100 text-amber-700',
   혼잡: 'bg-orange-100 text-orange-700',

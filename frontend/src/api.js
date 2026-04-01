@@ -1,8 +1,14 @@
-const API_BASE = 'http://localhost:8080/api';
+﻿const API_BASE = 'http://localhost:8080/api';
 
 export async function fetchBooths() {
   const response = await fetch(`${API_BASE}/booths`);
   if (!response.ok) throw new Error('부스 목록을 가져오지 못했습니다.');
+  return response.json();
+}
+
+export async function fetchBoothById(boothId) {
+  const response = await fetch(`${API_BASE}/booths/${boothId}`);
+  if (!response.ok) throw new Error('부스 정보를 가져오지 못했습니다.');
   return response.json();
 }
 
