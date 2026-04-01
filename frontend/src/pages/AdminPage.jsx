@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   createBooth,
   createEvent,
@@ -15,14 +15,17 @@ import {
   importEventCsv,
   loginAdmin,
   reorderBooths,
+  triggerCongestionReliefNotice,
+  triggerEventStartNotice,
   updateBooth,
+  updateBoothLiveStatus,
   updateEvent,
   updateNotice,
   uploadBoothImage,
 } from '../api';
 import { clearLogin, getAdminName, isLoggedIn, saveLogin } from '../utils/auth';
 
-const initialBooth = { name: '', latitude: '', longitude: '', description: '', imageUrl: '' };
+const initialBooth = { name: '', latitude: '', longitude: '', description: '', imageUrl: '', estimatedWaitMinutes: '', remainingStock: '', liveStatusMessage: '' };
 const initialEvent = { title: '', startTime: '', endTime: '' };
 const initialNotice = { title: '', content: '', category: '긴급', active: true };
 
@@ -65,6 +68,7 @@ export default function AdminPage() {
   const [importFiles, setImportFiles] = useState({ booths: null, events: null });
   const [draggingBoothId, setDraggingBoothId] = useState(null);
   const [uploadFiles, setUploadFiles] = useState({});
+  const [boothLiveDrafts, setBoothLiveDrafts] = useState({});
 
   const sortedBooths = useMemo(
     () => [...booths].sort((a, b) => (a.displayOrder || 999) - (b.displayOrder || 999)),
@@ -85,6 +89,16 @@ export default function AdminPage() {
     setNotices(noticeData);
     setKpi(kpiData);
     setAuditLogs(logData);
+
+    const nextDrafts = {};
+    boothData.forEach((booth) => {
+      nextDrafts[booth.id] = {
+        estimatedWaitMinutes: booth.estimatedWaitMinutes ?? '',
+        remainingStock: booth.remainingStock ?? '',
+        liveStatusMessage: booth.liveStatusMessage ?? '',
+      };
+    });
+    setBoothLiveDrafts(nextDrafts);
   }
 
   useEffect(() => {
@@ -112,6 +126,41 @@ export default function AdminPage() {
     setMessage('로그아웃되었습니다.');
   }
 
+  async function handleQuickCongestionNotice() {
+    try {
+      await triggerCongestionReliefNotice();
+      setMessage('혼잡 완화 안내 공지를 즉시 발행했습니다.');
+      await loadAll();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  async function handleQuickEventStartNotice(eventId) {
+    try {
+      await triggerEventStartNotice(eventId);
+      setMessage('공연 시작 안내 공지를 발행했습니다.');
+      await loadAll();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  async function handleSaveBoothLiveStatus(boothId) {
+    const draft = boothLiveDrafts[boothId] || {};
+    try {
+      await updateBoothLiveStatus(boothId, {
+        estimatedWaitMinutes: draft.estimatedWaitMinutes === '' ? null : Number(draft.estimatedWaitMinutes),
+        remainingStock: draft.remainingStock === '' ? null : Number(draft.remainingStock),
+        liveStatusMessage: draft.liveStatusMessage || null,
+      });
+      setMessage('부스 실시간 운영 정보를 저장했습니다.');
+      await loadAll();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
   async function handleBoothSubmit(e) {
     e.preventDefault();
     try {
@@ -119,6 +168,8 @@ export default function AdminPage() {
         ...boothForm,
         latitude: Number(boothForm.latitude),
         longitude: Number(boothForm.longitude),
+        estimatedWaitMinutes: boothForm.estimatedWaitMinutes === '' ? null : Number(boothForm.estimatedWaitMinutes),
+        remainingStock: boothForm.remainingStock === '' ? null : Number(boothForm.remainingStock),
       };
 
       if (editingBoothId) {
@@ -258,7 +309,6 @@ export default function AdminPage() {
           <h3 className="font-semibold">실시간 운영 KPI</h3>
           <button type="button" onClick={loadAll} className="text-xs rounded border px-2 py-1">갱신</button>
         </div>
-
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-teal-50 p-2">
             <p className="text-[10px] text-teal-700">오늘 총 방문</p>
@@ -277,6 +327,26 @@ export default function AdminPage() {
         </div>
       </article>
 
+      <article className="rounded-xl border border-rose-200 bg-rose-50 p-3 space-y-2">
+        <h3 className="font-semibold text-rose-800">운영자 즉시 조치 패널</h3>
+        <button type="button" onClick={handleQuickCongestionNotice} className="w-full rounded-lg bg-rose-600 text-white py-2 text-sm font-semibold">
+          혼잡 완화 안내 공지 자동 발행
+        </button>
+        <div className="space-y-1">
+          {events.map((event) => (
+            <button
+              key={`quick-${event.id}`}
+              type="button"
+              onClick={() => handleQuickEventStartNotice(event.id)}
+              className="w-full rounded-lg border border-rose-200 bg-white py-2 text-sm text-left px-3"
+            >
+              <span className="font-semibold">{event.title}</span>
+              <span className="text-xs text-slate-500 ml-2">공연 시작 안내 발행</span>
+            </button>
+          ))}
+        </div>
+      </article>
+
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <h3 className="font-semibold">운영 공지 관리</h3>
         <form className="space-y-2" onSubmit={handleNoticeSubmit}>
@@ -292,14 +362,6 @@ export default function AdminPage() {
             </label>
           </div>
           <button className="w-full rounded bg-rose-600 text-white py-2 text-sm">{editingNoticeId ? '공지 수정' : '공지 등록'}</button>
-          {editingNoticeId && (
-            <button type="button" className="w-full rounded border py-2 text-sm" onClick={() => {
-              setEditingNoticeId(null);
-              setNoticeForm(initialNotice);
-            }}>
-              공지 편집 취소
-            </button>
-          )}
         </form>
 
         <div className="space-y-2">
@@ -315,12 +377,7 @@ export default function AdminPage() {
               <div className="mt-2 flex gap-1 justify-end">
                 <button type="button" className="px-2 py-1 rounded bg-slate-100 text-xs" onClick={() => {
                   setEditingNoticeId(notice.id);
-                  setNoticeForm({
-                    title: notice.title,
-                    content: notice.content,
-                    category: notice.category,
-                    active: notice.active,
-                  });
+                  setNoticeForm({ title: notice.title, content: notice.content, category: notice.category, active: notice.active });
                 }}>수정</button>
                 <button type="button" className="px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs" onClick={async () => {
                   if (!confirm('이 공지를 삭제할까요?')) return;
@@ -334,22 +391,6 @@ export default function AdminPage() {
       </article>
 
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-        <h3 className="font-semibold">CSV 일괄 업로드</h3>
-        <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <p className="text-xs text-slate-600">부스 CSV</p>
-            <input type="file" accept=".csv" onChange={(e) => setImportFiles((prev) => ({ ...prev, booths: e.target.files?.[0] || null }))} className="text-xs" />
-            <button type="button" onClick={() => handleImport('booths')} className="w-full rounded border py-1.5 text-xs">부스 업로드</button>
-          </div>
-          <div className="space-y-1">
-            <p className="text-xs text-slate-600">공연 CSV</p>
-            <input type="file" accept=".csv" onChange={(e) => setImportFiles((prev) => ({ ...prev, events: e.target.files?.[0] || null }))} className="text-xs" />
-            <button type="button" onClick={() => handleImport('events')} className="w-full rounded border py-1.5 text-xs">공연 업로드</button>
-          </div>
-        </div>
-      </article>
-
-      <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <h3 className="font-semibold">부스 등록/수정</h3>
         <form className="space-y-2" onSubmit={handleBoothSubmit}>
           <input className="w-full border rounded px-2 py-2 text-sm" placeholder="부스 이름" value={boothForm.name} onChange={(e) => setBoothForm((p) => ({ ...p, name: e.target.value }))} required />
@@ -358,18 +399,17 @@ export default function AdminPage() {
             <input className="border rounded px-2 py-2 text-sm" placeholder="경도" value={boothForm.longitude} onChange={(e) => setBoothForm((p) => ({ ...p, longitude: e.target.value }))} required />
           </div>
           <textarea className="w-full border rounded px-2 py-2 text-sm" placeholder="설명" value={boothForm.description} onChange={(e) => setBoothForm((p) => ({ ...p, description: e.target.value }))} required />
+          <div className="grid grid-cols-2 gap-2">
+            <input className="border rounded px-2 py-2 text-sm" placeholder="대기(분)" value={boothForm.estimatedWaitMinutes} onChange={(e) => setBoothForm((p) => ({ ...p, estimatedWaitMinutes: e.target.value }))} />
+            <input className="border rounded px-2 py-2 text-sm" placeholder="잔여 수량" value={boothForm.remainingStock} onChange={(e) => setBoothForm((p) => ({ ...p, remainingStock: e.target.value }))} />
+          </div>
+          <input className="w-full border rounded px-2 py-2 text-sm" placeholder="실시간 운영 메모" value={boothForm.liveStatusMessage} onChange={(e) => setBoothForm((p) => ({ ...p, liveStatusMessage: e.target.value }))} />
           <input className="w-full border rounded px-2 py-2 text-sm" placeholder="이미지 URL(선택)" value={boothForm.imageUrl} onChange={(e) => setBoothForm((p) => ({ ...p, imageUrl: e.target.value }))} />
           <button className="w-full rounded bg-teal-700 text-white py-2 text-sm">{editingBoothId ? '부스 수정' : '부스 추가'}</button>
-          {editingBoothId && (
-            <button type="button" className="w-full rounded border py-2 text-sm" onClick={() => {
-              setEditingBoothId(null);
-              setBoothForm(initialBooth);
-            }}>편집 취소</button>
-          )}
         </form>
 
         <div className="space-y-2">
-          <p className="text-xs text-slate-500">드래그해서 순서 변경 후 자동 저장</p>
+          <p className="text-xs text-slate-500">드래그 순서 저장 + 실시간 운영정보 즉시 입력</p>
           {sortedBooths.map((booth) => (
             <div key={booth.id} draggable onDragStart={() => setDraggingBoothId(booth.id)} onDragOver={(e) => e.preventDefault()} onDrop={() => handleDropBooth(booth.id)} className="border rounded p-2 text-sm bg-slate-50">
               <div className="flex items-center justify-between gap-2">
@@ -383,6 +423,9 @@ export default function AdminPage() {
                       longitude: String(booth.longitude),
                       description: booth.description,
                       imageUrl: booth.imageUrl || '',
+                      estimatedWaitMinutes: booth.estimatedWaitMinutes ?? '',
+                      remainingStock: booth.remainingStock ?? '',
+                      liveStatusMessage: booth.liveStatusMessage || '',
                     });
                   }}>수정</button>
                   <button type="button" className="px-2 py-1 rounded bg-rose-100 text-rose-700" onClick={async () => {
@@ -392,6 +435,13 @@ export default function AdminPage() {
                   }}>삭제</button>
                 </div>
               </div>
+
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                <input className="border rounded px-2 py-1 text-xs" placeholder="대기분" value={boothLiveDrafts[booth.id]?.estimatedWaitMinutes ?? ''} onChange={(e) => setBoothLiveDrafts((p) => ({ ...p, [booth.id]: { ...p[booth.id], estimatedWaitMinutes: e.target.value } }))} />
+                <input className="border rounded px-2 py-1 text-xs" placeholder="잔여수량" value={boothLiveDrafts[booth.id]?.remainingStock ?? ''} onChange={(e) => setBoothLiveDrafts((p) => ({ ...p, [booth.id]: { ...p[booth.id], remainingStock: e.target.value } }))} />
+                <button type="button" className="rounded border py-1 text-xs font-semibold" onClick={() => handleSaveBoothLiveStatus(booth.id)}>실시간 저장</button>
+              </div>
+              <input className="mt-2 w-full border rounded px-2 py-1 text-xs" placeholder="운영 메모" value={boothLiveDrafts[booth.id]?.liveStatusMessage ?? ''} onChange={(e) => setBoothLiveDrafts((p) => ({ ...p, [booth.id]: { ...p[booth.id], liveStatusMessage: e.target.value } }))} />
 
               <div className="mt-2 flex items-center gap-2">
                 <input type="file" accept="image/*" className="text-xs" onChange={(e) => setUploadFiles((prev) => ({ ...prev, [booth.id]: e.target.files?.[0] || null }))} />
@@ -411,12 +461,6 @@ export default function AdminPage() {
             <input type="datetime-local" className="border rounded px-2 py-2 text-sm" value={eventForm.endTime} onChange={(e) => setEventForm((p) => ({ ...p, endTime: e.target.value }))} required />
           </div>
           <button className="w-full rounded bg-cyan-700 text-white py-2 text-sm">{editingEventId ? '공연 수정' : '공연 추가'}</button>
-          {editingEventId && (
-            <button type="button" className="w-full rounded border py-2 text-sm" onClick={() => {
-              setEditingEventId(null);
-              setEventForm(initialEvent);
-            }}>편집 취소</button>
-          )}
         </form>
 
         <div className="space-y-2">
@@ -425,13 +469,10 @@ export default function AdminPage() {
               <div className="flex items-center justify-between gap-2">
                 <p className="font-semibold">{event.title}</p>
                 <div className="flex gap-1">
+                  <button type="button" className="px-2 py-1 rounded bg-rose-50 text-rose-700" onClick={() => handleQuickEventStartNotice(event.id)}>시작안내</button>
                   <button type="button" className="px-2 py-1 rounded bg-slate-100" onClick={() => {
                     setEditingEventId(event.id);
-                    setEventForm({
-                      title: event.title,
-                      startTime: event.startTime.slice(0, 16),
-                      endTime: event.endTime.slice(0, 16),
-                    });
+                    setEventForm({ title: event.title, startTime: event.startTime.slice(0, 16), endTime: event.endTime.slice(0, 16) });
                   }}>수정</button>
                   <button type="button" className="px-2 py-1 rounded bg-rose-100 text-rose-700" onClick={async () => {
                     if (!confirm('이 공연을 삭제할까요?')) return;
@@ -442,6 +483,22 @@ export default function AdminPage() {
               </div>
             </div>
           ))}
+        </div>
+      </article>
+
+      <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+        <h3 className="font-semibold">CSV 일괄 업로드</h3>
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <p className="text-xs text-slate-600">부스 CSV</p>
+            <input type="file" accept=".csv" onChange={(e) => setImportFiles((prev) => ({ ...prev, booths: e.target.files?.[0] || null }))} className="text-xs" />
+            <button type="button" onClick={() => handleImport('booths')} className="w-full rounded border py-1.5 text-xs">부스 업로드</button>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs text-slate-600">공연 CSV</p>
+            <input type="file" accept=".csv" onChange={(e) => setImportFiles((prev) => ({ ...prev, events: e.target.files?.[0] || null }))} className="text-xs" />
+            <button type="button" onClick={() => handleImport('events')} className="w-full rounded border py-1.5 text-xs">공연 업로드</button>
+          </div>
         </div>
       </article>
 

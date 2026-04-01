@@ -34,7 +34,7 @@ class BoothControllerTest {
     @Test
     void getBoothsReturnsList() throws Exception {
         Mockito.when(boothService.getAllBooths()).thenReturn(List.of(
-                new BoothResponseDto(1L, "푸드트럭 A", 37.1, 127.1, "설명", 1, "img")
+                new BoothResponseDto(1L, "Booth A", 37.1, 127.1, "desc", 1, "img", 5, 20, "running", null)
         ));
 
         mockMvc.perform(get("/api/booths"))
@@ -44,7 +44,7 @@ class BoothControllerTest {
     @Test
     void getCongestionReturnsData() throws Exception {
         Mockito.when(boothService.getCongestionByBoothId(1L))
-                .thenReturn(new CongestionResponseDto(1L, "푸드트럭 A", "보통", 4));
+                .thenReturn(new CongestionResponseDto(1L, "Booth A", "보통", 4));
 
         mockMvc.perform(get("/api/booths/1/congestion"))
                 .andExpect(status().isOk())

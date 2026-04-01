@@ -1,5 +1,6 @@
 package com.festflow.backend.service;
 
+import com.festflow.backend.dto.BoothLiveStatusRequestDto;
 import com.festflow.backend.dto.BoothReorderRequestDto;
 import com.festflow.backend.dto.BoothResponseDto;
 import com.festflow.backend.dto.BoothUpsertRequestDto;
@@ -11,6 +12,7 @@ import com.festflow.backend.repository.GpsLogRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -55,7 +57,11 @@ public class BoothService {
                 requestDto.longitude(),
                 requestDto.description(),
                 nextOrder,
-                requestDto.imageUrl() != null ? requestDto.imageUrl() : "https://picsum.photos/seed/festflow-default/800/450"
+                requestDto.imageUrl() != null ? requestDto.imageUrl() : "https://picsum.photos/seed/festflow-default/800/450",
+                requestDto.estimatedWaitMinutes(),
+                requestDto.remainingStock(),
+                requestDto.liveStatusMessage(),
+                LocalDateTime.now()
         ));
         return toDto(saved);
     }
@@ -70,8 +76,13 @@ public class BoothService {
                 requestDto.longitude(),
                 requestDto.description(),
                 requestDto.displayOrder() != null ? requestDto.displayOrder() : booth.getDisplayOrder(),
-                requestDto.imageUrl() != null ? requestDto.imageUrl() : booth.getImageUrl()
+                requestDto.imageUrl() != null ? requestDto.imageUrl() : booth.getImageUrl(),
+                requestDto.estimatedWaitMinutes() != null ? requestDto.estimatedWaitMinutes() : booth.getEstimatedWaitMinutes(),
+                requestDto.remainingStock() != null ? requestDto.remainingStock() : booth.getRemainingStock(),
+                requestDto.liveStatusMessage() != null ? requestDto.liveStatusMessage() : booth.getLiveStatusMessage(),
+                LocalDateTime.now()
         );
+
         return toDto(boothRepository.save(booth));
     }
 
@@ -79,6 +90,18 @@ public class BoothService {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Booth not found"));
         booth.setImageUrl(imageUrl);
+        return toDto(boothRepository.save(booth));
+    }
+
+    public BoothResponseDto updateLiveStatus(Long boothId, BoothLiveStatusRequestDto requestDto) {
+        Booth booth = boothRepository.findById(boothId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Booth not found"));
+
+        booth.setEstimatedWaitMinutes(requestDto.estimatedWaitMinutes());
+        booth.setRemainingStock(requestDto.remainingStock());
+        booth.setLiveStatusMessage(requestDto.liveStatusMessage());
+        booth.setLiveStatusUpdatedAt(LocalDateTime.now());
+
         return toDto(boothRepository.save(booth));
     }
 
@@ -122,6 +145,12 @@ public class BoothService {
                 .toList();
     }
 
+    public CongestionResponseDto getMostCongestedBooth() {
+        return getAllCongestions().stream()
+                .max(Comparator.comparingInt(CongestionResponseDto::nearbyUserCount))
+                .orElse(null);
+    }
+
     private BoothResponseDto toDto(Booth booth) {
         return new BoothResponseDto(
                 booth.getId(),
@@ -130,28 +159,32 @@ public class BoothService {
                 booth.getLongitude(),
                 booth.getDescription(),
                 booth.getDisplayOrder(),
-                booth.getImageUrl()
+                booth.getImageUrl(),
+                booth.getEstimatedWaitMinutes(),
+                booth.getRemainingStock(),
+                booth.getLiveStatusMessage(),
+                booth.getLiveStatusUpdatedAt()
         );
     }
 
     private String convertLevel(int count) {
         if (count < 3) {
-            return "\uC5EC\uC720";
+            return "?ъ쑀";
         }
         if (count < 7) {
-            return "\uBCF4\uD1B5";
+            return "蹂댄넻";
         }
         if (count < 12) {
-            return "\uD63C\uC7A1";
+            return "?쇱옟";
         }
-        return "\uB9E4\uC6B0\uD63C\uC7A1";
+        return "留ㅼ슦?쇱옟";
     }
 
-    // 최근 15분 데이터에 시간 가중치를 적용한다. 방금 들어온 로그일수록 높은 가중치를 받는다.
+    // 理쒓렐 15遺??곗씠?곗뿉 ?쒓컙 媛以묒튂瑜??곸슜?쒕떎. 理쒖떊 濡쒓렇?쇱닔濡??믪? 媛以묒튂瑜?以??
     private double timeWeight(LocalDateTime createdAt, LocalDateTime now) {
-        long seconds = java.time.Duration.between(createdAt, now).toSeconds();
-        double ratio = Math.max(0.0, Math.min(1.0, seconds / 900.0)); // 15분=900초
-        return 1.0 - (ratio * 0.7); // 최신 1.0, 오래된 로그 약 0.3
+        long seconds = Duration.between(createdAt, now).toSeconds();
+        double ratio = Math.max(0.0, Math.min(1.0, seconds / 900.0));
+        return 1.0 - (ratio * 0.7);
     }
 
     private double distanceInMeters(double lat1, double lon1, double lat2, double lon2) {

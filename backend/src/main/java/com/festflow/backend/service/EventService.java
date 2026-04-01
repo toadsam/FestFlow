@@ -44,6 +44,12 @@ public class EventService {
         return toDto(saved, resolveStatus(saved, LocalDateTime.now()));
     }
 
+    public EventResponseDto getEventById(Long eventId) {
+        FestivalEvent event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Event not found"));
+        return toDto(event, resolveStatus(event, LocalDateTime.now()));
+    }
+
     public EventResponseDto updateEvent(Long eventId, EventUpsertRequestDto requestDto) {
         FestivalEvent event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Event not found"));

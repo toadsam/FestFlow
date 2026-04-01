@@ -1,10 +1,11 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer, useMapEvents, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
 import {
   createCongestionStream,
   createNoticeStream,
+  createBoothStream,
   downloadBoothCsv,
   fetchActiveNotices,
   fetchBooths,
@@ -12,6 +13,7 @@ import {
   sendGps,
 } from '../api';
 import CongestionBadge from '../components/CongestionBadge';
+import { AJOU_ADDRESS, AJOU_CENTER, reverseGeocodeKoreanShort } from '../utils/location';
 import { addRecentBooth, getFavoriteIds, getRecentBoothIds, toggleFavorite } from '../utils/storage';
 
 const markerIcon = L.icon({
@@ -99,6 +101,8 @@ export default function HomePage() {
   const [favorites, setFavorites] = useState(getFavoriteIds());
   const [recentIds, setRecentIds] = useState(getRecentBoothIds());
   const [notices, setNotices] = useState([]);
+  const [locationText, setLocationText] = useState('');
+  const [gpsSending, setGpsSending] = useState(false);
   const previousCongestionRef = useRef({});
 
   useEffect(() => {
@@ -122,6 +126,18 @@ export default function HomePage() {
     }
 
     load();
+  }, []);
+
+  useEffect(() => {
+    const boothStream = createBoothStream();
+    boothStream.addEventListener('booths', (event) => {
+      try {
+        setBooths(JSON.parse(event.data));
+      } catch {
+        // ignore parse failure
+      }
+    });
+    return () => boothStream.close();
   }, []);
 
   useEffect(() => {
@@ -221,6 +237,36 @@ export default function HomePage() {
     );
   }
 
+  async function handleSendCurrentGps() {
+    if (!navigator.geolocation) {
+      setError('현재 브라우저에서 GPS를 지원하지 않습니다.');
+      return;
+    }
+
+    setGpsSending(true);
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const latitude = position.coords.latitude;
+          const longitude = position.coords.longitude;
+          await sendGps(latitude, longitude);
+          const area = await reverseGeocodeKoreanShort(latitude, longitude);
+          setLocationText(`${area} (위도 ${latitude.toFixed(4)}, 경도 ${longitude.toFixed(4)})`);
+          await refreshAllCongestion();
+        } catch (e) {
+          setError(e.message);
+        } finally {
+          setGpsSending(false);
+        }
+      },
+      () => {
+        setGpsSending(false);
+        setError('위치 권한이 거부되어 GPS를 전송하지 못했습니다.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
   function openBoothDetail(boothId) {
     setRecentIds(addRecentBooth(boothId));
     navigate(`/booths/${boothId}`);
@@ -234,7 +280,8 @@ export default function HomePage() {
     <section className="space-y-4 pt-4">
       <article className="rounded-xl border border-teal-100 bg-teal-50/70 p-3">
         <p className="text-sm font-semibold text-teal-900">실시간 운영 안내</p>
-        <p className="text-xs text-teal-800 mt-1">공지와 혼잡도가 실시간으로 갱신됩니다. 동선은 혼잡도순 정렬을 활용하세요.</p>
+        <p className="text-xs text-teal-800 mt-1">기준 위치: {AJOU_ADDRESS}</p>
+        {locationText && <p className="text-xs text-teal-700 mt-1">내 위치: {locationText}</p>}
       </article>
 
       <div className="space-y-2">
@@ -254,7 +301,7 @@ export default function HomePage() {
       </div>
 
       <div className="rounded-2xl overflow-hidden border border-slate-200">
-        <MapContainer center={[37.5665, 126.978]} zoom={16} className="h-64 w-full">
+        <MapContainer center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]} zoom={17} className="h-64 w-full">
           <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
           <ZoomWatcher onZoomChange={setMapZoom} />
 
@@ -268,6 +315,7 @@ export default function HomePage() {
                   <Popup>
                     <div className="space-y-1">
                       <p className="font-bold">{booth.name}</p>
+                      <p className="text-xs text-slate-600">수원시 영통구 아주대학교</p>
                       <p className="text-xs">혼잡도: {congestion?.level || '집계중'}</p>
                       <div className="flex gap-2 text-xs">
                         <a href={links.kakao} target="_blank" rel="noreferrer">카카오 길찾기</a>
@@ -316,7 +364,7 @@ export default function HomePage() {
               </div>
               <div className="p-2">
                 <p className="text-sm font-bold text-slate-800 line-clamp-1">{booth.name}</p>
-                <p className="text-xs text-slate-500 mt-1">눌러서 상세 보기</p>
+                <p className="text-xs text-slate-500 mt-1">수원시 영통구 아주대학교</p>
               </div>
             </button>
           ))}
@@ -325,7 +373,14 @@ export default function HomePage() {
 
       <div className="grid grid-cols-2 gap-2">
         <button onClick={handleMockGpsBatch} className="rounded-xl bg-teal-700 text-white py-2.5 font-semibold">GPS 샘플 생성</button>
-        <button type="button" onClick={refreshAllCongestion} className="rounded-xl border border-teal-700 text-teal-700 py-2.5 font-semibold">혼잡도 새로고침</button>
+        <button
+          type="button"
+          onClick={handleSendCurrentGps}
+          className="rounded-xl border border-teal-700 text-teal-700 py-2.5 font-semibold"
+          disabled={gpsSending}
+        >
+          {gpsSending ? 'GPS 전송 중...' : '내 위치 전송'}
+        </button>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
@@ -388,7 +443,13 @@ export default function HomePage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="font-bold text-slate-800">{booth.name}</h3>
+                    <p className="text-[11px] text-slate-500 mt-0.5">경기도 수원시 영통구</p>
                     <p className={`text-slate-600 mt-1 ${isGridView ? 'text-xs line-clamp-2' : 'text-sm'}`}>{booth.description}</p>
+                    {(booth.estimatedWaitMinutes != null || booth.remainingStock != null) && (
+                      <p className="text-[11px] mt-1 text-indigo-700">
+                        대기 {booth.estimatedWaitMinutes ?? '-'}분 · 잔여 {booth.remainingStock ?? '-'}
+                      </p>
+                    )}
                   </div>
                   {congestion ? <CongestionBadge level={congestion.level} /> : null}
                 </div>

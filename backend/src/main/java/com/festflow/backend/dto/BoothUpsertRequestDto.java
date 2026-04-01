@@ -9,6 +9,9 @@ public record BoothUpsertRequestDto(
         @NotNull Double longitude,
         @NotBlank String description,
         Integer displayOrder,
-        String imageUrl
+        String imageUrl,
+        Integer estimatedWaitMinutes,
+        Integer remainingStock,
+        String liveStatusMessage
 ) {
 }

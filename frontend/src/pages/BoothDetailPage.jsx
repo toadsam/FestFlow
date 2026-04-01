@@ -1,9 +1,10 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
-import { fetchBoothById, fetchCongestion } from '../api';
+import { createBoothStream, fetchBoothById, fetchCongestion } from '../api';
 import CongestionBadge from '../components/CongestionBadge';
+import { AJOU_ADDRESS, reverseGeocodeKoreanShort } from '../utils/location';
 import { getBoothMemo, getFavoriteIds, saveBoothMemo, toggleFavorite } from '../utils/storage';
 
 const markerIcon = L.icon({
@@ -51,6 +52,8 @@ export default function BoothDetailPage() {
   const [favorites, setFavorites] = useState(getFavoriteIds());
   const [savedNotice, setSavedNotice] = useState('');
   const [currentPos, setCurrentPos] = useState(null);
+  const [boothAreaText, setBoothAreaText] = useState('경기도 수원시 영통구 아주대학교');
+  const [myAreaText, setMyAreaText] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -62,12 +65,29 @@ export default function BoothDetailPage() {
         setBooth(boothData);
         setCongestion(congestionData);
         setMemo(getBoothMemo(id));
+        reverseGeocodeKoreanShort(boothData.latitude, boothData.longitude).then(setBoothAreaText);
       } catch (e) {
         setError(e.message);
       }
     }
 
     load();
+  }, [id]);
+
+  useEffect(() => {
+    const boothStream = createBoothStream();
+    boothStream.addEventListener('booths', (event) => {
+      try {
+        const list = JSON.parse(event.data);
+        const next = list.find((item) => String(item.id) === String(id));
+        if (next) {
+          setBooth(next);
+        }
+      } catch {
+        // ignore parse failure
+      }
+    });
+    return () => boothStream.close();
   }, [id]);
 
   const meta = useMemo(() => boothMeta(Number(id || 0)), [id]);
@@ -96,7 +116,10 @@ export default function BoothDetailPage() {
 
     navigator.geolocation.getCurrentPosition(
       (position) => {
-        setCurrentPos({ latitude: position.coords.latitude, longitude: position.coords.longitude });
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+        setCurrentPos({ latitude, longitude });
+        reverseGeocodeKoreanShort(latitude, longitude).then(setMyAreaText);
       },
       () => {
         setError('현재 위치를 가져오지 못했습니다. 권한을 확인해 주세요.');
@@ -154,7 +177,8 @@ export default function BoothDetailPage() {
 
           <div className="rounded-lg border border-slate-200 p-3 bg-slate-50">
             <p className="text-sm font-semibold text-slate-700">위치 지도</p>
-            <p className="mt-1 text-sm text-slate-600">위도 {booth.latitude.toFixed(6)} / 경도 {booth.longitude.toFixed(6)}</p>
+            <p className="mt-1 text-sm text-slate-600">{boothAreaText || AJOU_ADDRESS}</p>
+            <p className="mt-1 text-xs text-slate-500">위도 {booth.latitude.toFixed(6)} / 경도 {booth.longitude.toFixed(6)}</p>
 
             <div className="mt-2 h-44 rounded overflow-hidden">
               <MapContainer center={[booth.latitude, booth.longitude]} zoom={17} className="h-full w-full">
@@ -174,9 +198,10 @@ export default function BoothDetailPage() {
             </button>
 
             {walkMinutes && (
-              <p className="mt-2 text-sm font-semibold text-emerald-700">
-                예상 도보시간: 약 {walkMinutes}분
-              </p>
+              <div className="mt-2 rounded-md border border-emerald-200 bg-emerald-50 px-2 py-1.5">
+                <p className="text-sm font-semibold text-emerald-700">예상 도보시간: 약 {walkMinutes}분</p>
+                {myAreaText && <p className="text-xs text-emerald-800 mt-0.5">출발지: {myAreaText}</p>}
+              </div>
             )}
 
             <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
@@ -192,6 +217,16 @@ export default function BoothDetailPage() {
           <div>
             <p className="text-sm font-semibold text-slate-700">혼잡도 상세</p>
             <p className="mt-1 text-sm text-slate-600">시간 가중 사용자 수: {congestion.nearbyUserCount}명</p>
+          </div>
+
+          <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
+            <p className="text-sm font-semibold text-indigo-800">실시간 부스 운영 정보</p>
+            <p className="text-sm text-indigo-700 mt-1">현재 대기: {booth.estimatedWaitMinutes ?? '-'}분</p>
+            <p className="text-sm text-indigo-700">잔여 수량: {booth.remainingStock ?? '-'}</p>
+            <p className="text-sm text-indigo-700">운영 메모: {booth.liveStatusMessage || '등록된 메모 없음'}</p>
+            {booth.liveStatusUpdatedAt && (
+              <p className="text-xs text-indigo-600 mt-1">업데이트: {booth.liveStatusUpdatedAt.replace('T', ' ').slice(5, 16)}</p>
+            )}
           </div>
 
           <div className="space-y-2">

@@ -35,7 +35,7 @@ export default function App() {
           <div>
             <p className="text-xs tracking-[0.18em] uppercase opacity-80">대학교 축제 통합 관리</p>
             <h1 className="mt-1 text-2xl font-extrabold">FestFlow</h1>
-            <p className="text-xs opacity-85 mt-1">실시간 부스 혼잡도 · 공연 · 관리자 운영</p>
+            <p className="text-xs opacity-85 mt-1">아주대학교 축제 실시간 부스 혼잡도 · 공연 · 관리자 운영</p>
           </div>
           <button
             type="button"

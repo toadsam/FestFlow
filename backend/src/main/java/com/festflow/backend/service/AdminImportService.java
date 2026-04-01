@@ -40,6 +40,9 @@ public class AdminImportService {
                         Double.parseDouble(values[2].trim()),
                         values[3].trim(),
                         null,
+                        null,
+                        null,
+                        null,
                         null
                 ));
                 count++;

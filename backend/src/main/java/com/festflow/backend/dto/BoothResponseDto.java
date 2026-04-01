@@ -1,5 +1,7 @@
 package com.festflow.backend.dto;
 
+import java.time.LocalDateTime;
+
 public record BoothResponseDto(
         Long id,
         String name,
@@ -7,7 +9,11 @@ public record BoothResponseDto(
         double longitude,
         String description,
         Integer displayOrder,
-        String imageUrl
+        String imageUrl,
+        Integer estimatedWaitMinutes,
+        Integer remainingStock,
+        String liveStatusMessage,
+        LocalDateTime liveStatusUpdatedAt
 ) {
 }
 

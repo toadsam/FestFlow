@@ -1,4 +1,4 @@
-﻿import { getAccessToken } from './utils/auth';
+import { getAccessToken } from './utils/auth';
 
 const API_BASE = 'http://localhost:8080/api';
 
@@ -89,6 +89,15 @@ export async function updateBooth(id, payload) {
     body: JSON.stringify(payload),
   });
   return parseJson(response, '부스 수정에 실패했습니다.');
+}
+
+export async function updateBoothLiveStatus(id, payload) {
+  const response = await fetch(`${API_BASE}/admin/booths/${id}/live-status`, {
+    method: 'PUT',
+    headers: withAuth({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '부스 실시간 정보 업데이트에 실패했습니다.');
 }
 
 export async function uploadBoothImage(id, file) {
@@ -233,6 +242,22 @@ export async function fetchAuditLogs() {
   return parseJson(response, '감사 로그를 가져오지 못했습니다.');
 }
 
+export async function triggerCongestionReliefNotice() {
+  const response = await fetch(`${API_BASE}/admin/actions/congestion-relief-notice`, {
+    method: 'POST',
+    headers: withAuth(),
+  });
+  return parseJson(response, '혼잡 완화 공지 발행에 실패했습니다.');
+}
+
+export async function triggerEventStartNotice(eventId) {
+  const response = await fetch(`${API_BASE}/admin/actions/events/${eventId}/start-notice`, {
+    method: 'POST',
+    headers: withAuth(),
+  });
+  return parseJson(response, '공연 시작 공지 발행에 실패했습니다.');
+}
+
 export async function fetchTrafficHourly() {
   const response = await fetch(`${API_BASE}/analytics/traffic-hourly`);
   return parseJson(response, '시간대별 방문량 조회에 실패했습니다.');
@@ -258,6 +283,10 @@ export function createEventStream() {
 
 export function createNoticeStream() {
   return new EventSource(`${API_BASE}/stream/notices`);
+}
+
+export function createBoothStream() {
+  return new EventSource(`${API_BASE}/stream/booths`);
 }
 
 export function downloadBoothCsv() {

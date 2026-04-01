@@ -7,6 +7,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "booths")
 public class Booth {
@@ -33,25 +35,44 @@ public class Booth {
     @Column(nullable = false)
     private String imageUrl;
 
+    private Integer estimatedWaitMinutes;
+
+    private Integer remainingStock;
+
+    @Column(length = 1000)
+    private String liveStatusMessage;
+
+    private LocalDateTime liveStatusUpdatedAt;
+
     protected Booth() {
     }
 
-    public Booth(String name, double latitude, double longitude, String description, Integer displayOrder, String imageUrl) {
+    public Booth(String name, double latitude, double longitude, String description, Integer displayOrder, String imageUrl,
+                 Integer estimatedWaitMinutes, Integer remainingStock, String liveStatusMessage, LocalDateTime liveStatusUpdatedAt) {
         this.name = name;
         this.latitude = latitude;
         this.longitude = longitude;
         this.description = description;
         this.displayOrder = displayOrder;
         this.imageUrl = imageUrl;
+        this.estimatedWaitMinutes = estimatedWaitMinutes;
+        this.remainingStock = remainingStock;
+        this.liveStatusMessage = liveStatusMessage;
+        this.liveStatusUpdatedAt = liveStatusUpdatedAt;
     }
 
-    public void update(String name, double latitude, double longitude, String description, Integer displayOrder, String imageUrl) {
+    public void update(String name, double latitude, double longitude, String description, Integer displayOrder, String imageUrl,
+                       Integer estimatedWaitMinutes, Integer remainingStock, String liveStatusMessage, LocalDateTime liveStatusUpdatedAt) {
         this.name = name;
         this.latitude = latitude;
         this.longitude = longitude;
         this.description = description;
         this.displayOrder = displayOrder;
         this.imageUrl = imageUrl;
+        this.estimatedWaitMinutes = estimatedWaitMinutes;
+        this.remainingStock = remainingStock;
+        this.liveStatusMessage = liveStatusMessage;
+        this.liveStatusUpdatedAt = liveStatusUpdatedAt;
     }
 
     public void setImageUrl(String imageUrl) {
@@ -88,5 +109,37 @@ public class Booth {
 
     public String getImageUrl() {
         return imageUrl;
+    }
+
+    public Integer getEstimatedWaitMinutes() {
+        return estimatedWaitMinutes;
+    }
+
+    public void setEstimatedWaitMinutes(Integer estimatedWaitMinutes) {
+        this.estimatedWaitMinutes = estimatedWaitMinutes;
+    }
+
+    public Integer getRemainingStock() {
+        return remainingStock;
+    }
+
+    public void setRemainingStock(Integer remainingStock) {
+        this.remainingStock = remainingStock;
+    }
+
+    public String getLiveStatusMessage() {
+        return liveStatusMessage;
+    }
+
+    public void setLiveStatusMessage(String liveStatusMessage) {
+        this.liveStatusMessage = liveStatusMessage;
+    }
+
+    public LocalDateTime getLiveStatusUpdatedAt() {
+        return liveStatusUpdatedAt;
+    }
+
+    public void setLiveStatusUpdatedAt(LocalDateTime liveStatusUpdatedAt) {
+        this.liveStatusUpdatedAt = liveStatusUpdatedAt;
     }
 }

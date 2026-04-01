@@ -31,4 +31,9 @@ public class StreamController {
     public SseEmitter notices() {
         return streamService.subscribeNotices();
     }
+
+    @GetMapping(value = "/booths", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter booths() {
+        return streamService.subscribeBooths();
+    }
 }
