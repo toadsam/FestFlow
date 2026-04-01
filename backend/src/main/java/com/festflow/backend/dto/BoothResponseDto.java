@@ -5,7 +5,9 @@ public record BoothResponseDto(
         String name,
         double latitude,
         double longitude,
-        String description
+        String description,
+        Integer displayOrder,
+        String imageUrl
 ) {
 }
 

@@ -1,19 +1,97 @@
-﻿import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchBooths, fetchCongestion, sendGps } from '../api';
+import { MapContainer, Marker, Popup, TileLayer, useMapEvents, CircleMarker } from 'react-leaflet';
+import L from 'leaflet';
+import {
+  createCongestionStream,
+  downloadBoothCsv,
+  fetchBooths,
+  fetchCongestion,
+  sendGps,
+} from '../api';
 import CongestionBadge from '../components/CongestionBadge';
+import { addRecentBooth, getFavoriteIds, getRecentBoothIds, toggleFavorite } from '../utils/storage';
 
-function getBoothImageUrl(boothId) {
-  return `https://picsum.photos/seed/festflow-booth-${boothId}/800/450`;
+const markerIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+});
+
+const levelToScore = { 여유: 1, 보통: 2, 혼잡: 3, 매우혼잡: 4 };
+const scoreToLevel = ['여유', '보통', '혼잡', '매우혼잡'];
+
+function ZoomWatcher({ onZoomChange }) {
+  useMapEvents({
+    zoomend: (event) => onZoomChange(event.target.getZoom()),
+  });
+  return null;
+}
+
+function getBoothImageUrl(booth) {
+  return booth.imageUrl || `https://picsum.photos/seed/festflow-booth-${booth.id}/800/450`;
+}
+
+function getDirectionLinks(booth) {
+  const encodedName = encodeURIComponent(booth.name);
+  return {
+    kakao: `https://map.kakao.com/link/to/${encodedName},${booth.latitude},${booth.longitude}`,
+    naver: `https://map.naver.com/v5/search/${encodedName}`,
+  };
+}
+
+function buildClusters(booths, congestionMap) {
+  const map = new Map();
+
+  booths.forEach((booth) => {
+    const key = `${booth.latitude.toFixed(3)}-${booth.longitude.toFixed(3)}`;
+    const congestionLevel = congestionMap[booth.id]?.level || '여유';
+
+    if (!map.has(key)) {
+      map.set(key, {
+        key,
+        latitude: Number(booth.latitude.toFixed(3)),
+        longitude: Number(booth.longitude.toFixed(3)),
+        booths: [],
+        totalScore: 0,
+      });
+    }
+
+    const cluster = map.get(key);
+    cluster.booths.push(booth);
+    cluster.totalScore += levelToScore[congestionLevel] || 1;
+  });
+
+  return Array.from(map.values()).map((cluster) => {
+    const avgScore = Math.max(1, Math.round(cluster.totalScore / cluster.booths.length));
+    return {
+      ...cluster,
+      level: scoreToLevel[avgScore - 1],
+    };
+  });
+}
+
+function notify(title, body) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(title, { body });
+  }
 }
 
 export default function HomePage() {
   const navigate = useNavigate();
   const [booths, setBooths] = useState([]);
   const [congestionMap, setCongestionMap] = useState({});
-  const [isGridView, setIsGridView] = useState(false);
+  const [mapZoom, setMapZoom] = useState(16);
+  const [isGridView, setIsGridView] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [sortBy, setSortBy] = useState('displayOrder');
+  const [levelFilter, setLevelFilter] = useState('전체');
+  const [favorites, setFavorites] = useState(getFavoriteIds());
+  const [recentIds, setRecentIds] = useState(getRecentBoothIds());
+  const previousCongestionRef = useRef({});
 
   useEffect(() => {
     async function load() {
@@ -24,93 +102,315 @@ export default function HomePage() {
         const congestionData = await Promise.all(
           boothData.map(async (booth) => [booth.id, await fetchCongestion(booth.id)])
         );
-        setCongestionMap(Object.fromEntries(congestionData));
+        const nextMap = Object.fromEntries(congestionData);
+        previousCongestionRef.current = nextMap;
+        setCongestionMap(nextMap);
       } catch (e) {
         setError(e.message);
       } finally {
         setLoading(false);
       }
     }
+
     load();
   }, []);
 
-  async function handleMockGps() {
-    if (booths.length === 0) return;
-    const firstBooth = booths[0];
-    const jitter = () => (Math.random() - 0.5) * 0.0005;
+  useEffect(() => {
+    const stream = createCongestionStream();
 
-    await sendGps(firstBooth.latitude + jitter(), firstBooth.longitude + jitter());
-    const updated = await fetchCongestion(firstBooth.id);
-    setCongestionMap((prev) => ({ ...prev, [firstBooth.id]: updated }));
+    stream.addEventListener('congestion', (event) => {
+      try {
+        const list = JSON.parse(event.data);
+        const nextMap = Object.fromEntries(list.map((item) => [item.boothId, item]));
+
+        Object.values(nextMap).forEach((item) => {
+          const prev = previousCongestionRef.current[item.boothId];
+          if (!prev) return;
+
+          const prevScore = levelToScore[prev.level] || 1;
+          const nextScore = levelToScore[item.level] || 1;
+          if (nextScore - prevScore >= 2) {
+            notify('혼잡 급상승', `${item.boothName} 혼잡도가 ${prev.level} → ${item.level}로 상승했습니다.`);
+          }
+        });
+
+        previousCongestionRef.current = nextMap;
+        setCongestionMap(nextMap);
+      } catch {
+        // SSE 파싱 에러는 무시하고 다음 이벤트를 기다립니다.
+      }
+    });
+
+    return () => stream.close();
+  }, []);
+
+  const filteredBooths = useMemo(() => {
+    let list = booths.filter((booth) => booth.name.toLowerCase().includes(query.toLowerCase()));
+
+    if (levelFilter !== '전체') {
+      list = list.filter((booth) => congestionMap[booth.id]?.level === levelFilter);
+    }
+
+    return [...list].sort((a, b) => {
+      if (sortBy === 'congestion') {
+        return (levelToScore[congestionMap[b.id]?.level] || 1) - (levelToScore[congestionMap[a.id]?.level] || 1);
+      }
+      if (sortBy === 'name') {
+        return a.name.localeCompare(b.name, 'ko');
+      }
+      return (a.displayOrder || 999) - (b.displayOrder || 999);
+    });
+  }, [booths, congestionMap, levelFilter, query, sortBy]);
+
+  const recentBooths = useMemo(() => {
+    const byId = new Map(booths.map((booth) => [booth.id, booth]));
+    return recentIds.map((id) => byId.get(id)).filter(Boolean);
+  }, [booths, recentIds]);
+
+  const chartData = useMemo(() => {
+    const levels = ['여유', '보통', '혼잡', '매우혼잡'];
+    return levels.map((level) => ({
+      label: level,
+      value: Object.values(congestionMap).filter((item) => item.level === level).length,
+    }));
+  }, [congestionMap]);
+
+  const clusters = useMemo(() => buildClusters(booths, congestionMap), [booths, congestionMap]);
+
+  async function refreshAllCongestion() {
+    const updates = await Promise.all(booths.map(async (booth) => [booth.id, await fetchCongestion(booth.id)]));
+    const nextMap = Object.fromEntries(updates);
+    previousCongestionRef.current = nextMap;
+    setCongestionMap(nextMap);
+  }
+
+  async function handleMockGpsBatch() {
+    if (booths.length === 0) return;
+
+    const picks = Array.from({ length: 10 }, () => booths[Math.floor(Math.random() * booths.length)]);
+
+    await Promise.all(
+      picks.map((booth) => {
+        const jitter = () => (Math.random() - 0.5) * 0.00045;
+        return sendGps(booth.latitude + jitter(), booth.longitude + jitter());
+      })
+    );
+  }
+
+  function openBoothDetail(boothId) {
+    setRecentIds(addRecentBooth(boothId));
+    navigate(`/booths/${boothId}`);
+  }
+
+  function handleFavorite(boothId) {
+    setFavorites(toggleFavorite(boothId));
   }
 
   return (
     <section className="space-y-4 pt-4">
+      <article className="rounded-xl border border-teal-100 bg-teal-50/70 p-3">
+        <p className="text-sm font-semibold text-teal-900">실제 지도 모드</p>
+        <p className="text-xs text-teal-800 mt-1">줌 레벨이 낮아지면 마커 클러스터가 표시되고, 팝업에서 카카오/네이버 길찾기 링크를 열 수 있습니다.</p>
+      </article>
+
       <div className="rounded-2xl overflow-hidden border border-slate-200">
-        <div className="h-48 bg-gradient-to-br from-cyan-100 via-teal-100 to-emerald-100 p-4">
-          <p className="text-sm font-semibold text-slate-700">축제 맵 (더미 지도)</p>
-          <div className="mt-4 grid grid-cols-2 gap-2">
-            {booths.slice(0, 4).map((booth) => (
-              <div key={booth.id} className="rounded-lg bg-white/80 p-2 text-xs text-slate-700">
-                <p className="font-bold">{booth.name}</p>
-                <p>{booth.latitude.toFixed(4)}, {booth.longitude.toFixed(4)}</p>
-              </div>
+        <MapContainer center={[37.5665, 126.978]} zoom={16} className="h-64 w-full">
+          <TileLayer
+            attribution='&copy; OpenStreetMap contributors'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+
+          <ZoomWatcher onZoomChange={setMapZoom} />
+
+          {mapZoom >= 16 &&
+            booths.map((booth) => {
+              const links = getDirectionLinks(booth);
+              const congestion = congestionMap[booth.id];
+
+              return (
+                <Marker key={booth.id} position={[booth.latitude, booth.longitude]} icon={markerIcon}>
+                  <Popup>
+                    <div className="space-y-1">
+                      <p className="font-bold">{booth.name}</p>
+                      <p className="text-xs">혼잡도: {congestion?.level || '집계중'}</p>
+                      <div className="flex gap-2 text-xs">
+                        <a href={links.kakao} target="_blank" rel="noreferrer">카카오 길찾기</a>
+                        <a href={links.naver} target="_blank" rel="noreferrer">네이버 지도</a>
+                      </div>
+                    </div>
+                  </Popup>
+                </Marker>
+              );
+            })}
+
+          {mapZoom < 16 &&
+            clusters.map((cluster) => (
+              <CircleMarker
+                key={cluster.key}
+                center={[cluster.latitude, cluster.longitude]}
+                radius={10 + Math.min(cluster.booths.length * 2, 12)}
+                pathOptions={{ color: '#0f766e', fillColor: '#14b8a6', fillOpacity: 0.5 }}
+              >
+                <Popup>
+                  <p className="font-semibold">{cluster.booths.length}개 부스 클러스터</p>
+                  <p className="text-xs">평균 혼잡도: {cluster.level}</p>
+                  <ul className="text-xs mt-1 space-y-0.5">
+                    {cluster.booths.map((booth) => (
+                      <li key={booth.id}>{booth.name}</li>
+                    ))}
+                  </ul>
+                </Popup>
+              </CircleMarker>
             ))}
-          </div>
+        </MapContainer>
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-semibold text-slate-700">정사각형 부스 소개</p>
+        <div className="grid grid-cols-2 gap-3">
+          {booths.slice(0, 4).map((booth) => (
+            <button
+              key={`square-${booth.id}`}
+              type="button"
+              onClick={() => openBoothDetail(booth.id)}
+              className="rounded-xl border border-slate-200 bg-white overflow-hidden text-left"
+            >
+              <div className="aspect-square bg-slate-100">
+                <img
+                  src={getBoothImageUrl(booth)}
+                  alt={`${booth.name} 정사각형 카드 이미지`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              </div>
+              <div className="p-2">
+                <p className="text-sm font-bold text-slate-800 line-clamp-1">{booth.name}</p>
+                <p className="text-xs text-slate-500 mt-1">눌러서 상세 보기</p>
+              </div>
+            </button>
+          ))}
         </div>
       </div>
 
-      <button
-        onClick={handleMockGps}
-        className="w-full rounded-xl bg-teal-700 text-white py-2.5 font-semibold active:scale-[0.99]"
-      >
-        내 위치 전송(샘플)
-      </button>
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={handleMockGpsBatch} className="rounded-xl bg-teal-700 text-white py-2.5 font-semibold">
+          GPS 샘플 생성
+        </button>
+        <button type="button" onClick={refreshAllCongestion} className="rounded-xl border border-teal-700 text-teal-700 py-2.5 font-semibold">
+          혼잡도 새로고침
+        </button>
+      </div>
 
-      <p className="text-xs text-slate-500">
-        아래 부스 카드를 누르면 상세 페이지(설명/위치/혼잡도)로 이동합니다.
-      </p>
+      <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => setIsGridView((prev) => !prev)}
+            className="rounded-lg border border-teal-700 text-teal-700 py-2 text-sm font-semibold"
+          >
+            {isGridView ? '세로 카드 보기' : '가로 카드 보기'}
+          </button>
+          <button type="button" onClick={downloadBoothCsv} className="rounded-lg border border-slate-300 py-2 text-sm font-semibold text-slate-700">
+            부스 CSV
+          </button>
+        </div>
 
-      <button
-        type="button"
-        onClick={() => setIsGridView((prev) => !prev)}
-        className="w-full rounded-xl border border-teal-700 text-teal-700 py-2.5 font-semibold"
-      >
-        {isGridView ? '카드 1열 보기' : '카드 2열 보기'}
-      </button>
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="부스 이름 검색"
+          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
 
-      {loading && <p className="text-sm text-slate-500">데이터를 불러오는 중...</p>}
+        <div className="grid grid-cols-2 gap-2">
+          <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 text-sm">
+            <option>전체</option>
+            <option>여유</option>
+            <option>보통</option>
+            <option>혼잡</option>
+            <option>매우혼잡</option>
+          </select>
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 text-sm">
+            <option value="displayOrder">운영순</option>
+            <option value="name">이름순</option>
+            <option value="congestion">혼잡도순</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-slate-200 bg-white p-3">
+        <p className="text-sm font-semibold text-slate-700 mb-2">혼잡도 요약</p>
+        <div className="h-24 flex items-end gap-2">
+          {chartData.map((item) => (
+            <div key={item.label} className="flex-1 text-center">
+              <div
+                className="mx-auto w-full rounded-t bg-teal-500/80"
+                style={{ height: `${Math.max(8, item.value * 18)}px` }}
+              />
+              <p className="mt-1 text-[10px] text-slate-500">{item.label} ({item.value})</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {recentBooths.length > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+          <p className="text-sm font-semibold text-slate-700 mb-2">최근 본 부스</p>
+          <div className="flex flex-wrap gap-2">
+            {recentBooths.map((booth) => (
+              <button
+                key={booth.id}
+                type="button"
+                onClick={() => openBoothDetail(booth.id)}
+                className="rounded-full bg-slate-100 px-3 py-1 text-xs"
+              >
+                {booth.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {loading && <p className="text-sm text-slate-500">부스와 혼잡도 데이터를 불러오는 중...</p>}
       {error && <p className="text-sm text-rose-600">{error}</p>}
 
-      <div className={isGridView ? 'grid grid-cols-2 gap-3' : 'space-y-4'}>
-        {booths.map((booth) => {
+      <div className={isGridView ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>
+        {filteredBooths.map((booth) => {
           const congestion = congestionMap[booth.id];
+          const isFavorite = favorites.includes(booth.id);
+
           return (
             <button
               key={booth.id}
               type="button"
-              onClick={() => navigate(`/booths/${booth.id}`)}
-              className="w-full h-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden active:scale-[0.995]"
+              onClick={() => openBoothDetail(booth.id)}
+              className="w-full h-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden"
             >
               <div className="aspect-[16/9] bg-slate-100">
-                <img
-                  src={getBoothImageUrl(booth.id)}
-                  alt={`${booth.name} 대표 이미지`}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
+                <img src={getBoothImageUrl(booth)} alt={`${booth.name} 대표 이미지`} className="h-full w-full object-cover" loading="lazy" />
               </div>
               <div className="p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h3 className="font-bold text-slate-800">{booth.name}</h3>
-                    <p className={`text-slate-600 mt-1 ${isGridView ? 'text-xs line-clamp-2' : 'text-sm'}`}>
-                      {booth.description}
-                    </p>
+                    <p className={`text-slate-600 mt-1 ${isGridView ? 'text-xs line-clamp-2' : 'text-sm'}`}>{booth.description}</p>
                   </div>
                   {congestion ? <CongestionBadge level={congestion.level} /> : null}
                 </div>
-                <p className="text-xs text-teal-700 font-semibold mt-3">자세히 보기 →</p>
+                <div className="mt-2 flex items-center justify-between">
+                  <p className="text-xs text-teal-700 font-semibold">자세히 보기 →</p>
+                  <button
+                    type="button"
+                    aria-label="즐겨찾기"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleFavorite(booth.id);
+                    }}
+                    className="text-lg"
+                  >
+                    {isFavorite ? '⭐' : '☆'}
+                  </button>
+                </div>
               </div>
             </button>
           );

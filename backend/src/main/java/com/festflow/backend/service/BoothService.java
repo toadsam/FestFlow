@@ -1,6 +1,8 @@
 package com.festflow.backend.service;
 
+import com.festflow.backend.dto.BoothReorderRequestDto;
 import com.festflow.backend.dto.BoothResponseDto;
+import com.festflow.backend.dto.BoothUpsertRequestDto;
 import com.festflow.backend.dto.CongestionResponseDto;
 import com.festflow.backend.entity.Booth;
 import com.festflow.backend.entity.GpsLog;
@@ -10,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -29,13 +32,8 @@ public class BoothService {
 
     public List<BoothResponseDto> getAllBooths() {
         return boothRepository.findAll().stream()
-                .map(booth -> new BoothResponseDto(
-                        booth.getId(),
-                        booth.getName(),
-                        booth.getLatitude(),
-                        booth.getLongitude(),
-                        booth.getDescription()
-                ))
+                .sorted(Comparator.comparing(Booth::getDisplayOrder).thenComparing(Booth::getId))
+                .map(this::toDto)
                 .toList();
     }
 
@@ -43,20 +41,68 @@ public class BoothService {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Booth not found"));
 
-        return new BoothResponseDto(
-                booth.getId(),
-                booth.getName(),
-                booth.getLatitude(),
-                booth.getLongitude(),
-                booth.getDescription()
+        return toDto(booth);
+    }
+
+    public BoothResponseDto createBooth(BoothUpsertRequestDto requestDto) {
+        int nextOrder = requestDto.displayOrder() != null
+                ? requestDto.displayOrder()
+                : boothRepository.findTopByOrderByDisplayOrderDesc().map(Booth::getDisplayOrder).orElse(0) + 1;
+
+        Booth saved = boothRepository.save(new Booth(
+                requestDto.name(),
+                requestDto.latitude(),
+                requestDto.longitude(),
+                requestDto.description(),
+                nextOrder,
+                requestDto.imageUrl() != null ? requestDto.imageUrl() : "https://picsum.photos/seed/festflow-default/800/450"
+        ));
+        return toDto(saved);
+    }
+
+    public BoothResponseDto updateBooth(Long boothId, BoothUpsertRequestDto requestDto) {
+        Booth booth = boothRepository.findById(boothId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Booth not found"));
+
+        booth.update(
+                requestDto.name(),
+                requestDto.latitude(),
+                requestDto.longitude(),
+                requestDto.description(),
+                requestDto.displayOrder() != null ? requestDto.displayOrder() : booth.getDisplayOrder(),
+                requestDto.imageUrl() != null ? requestDto.imageUrl() : booth.getImageUrl()
         );
+        return toDto(boothRepository.save(booth));
+    }
+
+    public BoothResponseDto updateBoothImage(Long boothId, String imageUrl) {
+        Booth booth = boothRepository.findById(boothId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Booth not found"));
+        booth.setImageUrl(imageUrl);
+        return toDto(boothRepository.save(booth));
+    }
+
+    public void reorderBooths(BoothReorderRequestDto requestDto) {
+        int order = 1;
+        for (Long id : requestDto.boothIds()) {
+            Booth booth = boothRepository.findById(id)
+                    .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Booth not found: " + id));
+            booth.setDisplayOrder(order++);
+            boothRepository.save(booth);
+        }
+    }
+
+    public void deleteBooth(Long boothId) {
+        if (!boothRepository.existsById(boothId)) {
+            throw new ResponseStatusException(NOT_FOUND, "Booth not found");
+        }
+        boothRepository.deleteById(boothId);
     }
 
     public CongestionResponseDto getCongestionByBoothId(Long boothId) {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Booth not found"));
 
-        // Only recent logs are used so stale data does not distort congestion.
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(15);
         List<GpsLog> recentLogs = gpsLogRepository.findByCreatedAtAfter(threshold);
 
@@ -65,6 +111,24 @@ public class BoothService {
                 .count();
 
         return new CongestionResponseDto(booth.getId(), booth.getName(), convertLevel(nearbyCount), nearbyCount);
+    }
+
+    public List<CongestionResponseDto> getAllCongestions() {
+        return getAllBooths().stream()
+                .map(booth -> getCongestionByBoothId(booth.id()))
+                .toList();
+    }
+
+    private BoothResponseDto toDto(Booth booth) {
+        return new BoothResponseDto(
+                booth.getId(),
+                booth.getName(),
+                booth.getLatitude(),
+                booth.getLongitude(),
+                booth.getDescription(),
+                booth.getDisplayOrder(),
+                booth.getImageUrl()
+        );
     }
 
     private String convertLevel(int count) {
@@ -80,7 +144,6 @@ public class BoothService {
         return "\uB9E4\uC6B0\uD63C\uC7A1";
     }
 
-    // Haversine formula for distance over Earth's surface.
     private double distanceInMeters(double lat1, double lon1, double lat2, double lon2) {
         double earthRadius = 6_371_000;
         double dLat = Math.toRadians(lat2 - lat1);
@@ -93,4 +156,3 @@ public class BoothService {
         return earthRadius * c;
     }
 }
-

@@ -39,6 +39,12 @@ public class FestivalEvent {
         this.status = status;
     }
 
+    public void update(String title, LocalDateTime startTime, LocalDateTime endTime) {
+        this.title = title;
+        this.startTime = startTime;
+        this.endTime = endTime;
+    }
+
     public Long getId() {
         return id;
     }
@@ -63,4 +69,3 @@ public class FestivalEvent {
         this.status = status;
     }
 }
-

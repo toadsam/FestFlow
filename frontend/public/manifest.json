@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "FestFlow",
   "short_name": "FestFlow",
   "description": "대학교 축제 관리 웹앱 MVP",
@@ -19,4 +19,3 @@
     }
   ]
 }
-
