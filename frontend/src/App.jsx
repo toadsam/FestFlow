@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 const tabs = [
   { to: '/', label: '홈', icon: '🏠', end: true },
   { to: '/events', label: '공연', icon: '🎤' },
+  { to: '/stage-map', label: '무대지도', icon: '🗺️' },
   { to: '/analytics', label: '분석', icon: '📊' },
   { to: '/chat', label: '챗봇', icon: '💬' },
   { to: '/ops/master', label: '관리', icon: '🛠' },
@@ -67,7 +68,7 @@ export default function App() {
         <Outlet />
       </main>
 
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-5">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-6">
         {tabs.map((tab) => (
           <NavLink
             key={tab.to}

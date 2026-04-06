@@ -438,3 +438,8 @@ export async function triggerOpsMasterEventStartNotice(eventId, key) {
   });
   return parseJson(response, '공연 시작 공지 발행에 실패했습니다.');
 }
+
+export async function fetchStageCrowd(minutes = 10) {
+  const response = await fetch(`${API_BASE}/analytics/stage-crowd?minutes=${minutes}`);
+  return parseJson(response, '무대 혼잡도 정보를 불러오지 못했습니다.');
+}

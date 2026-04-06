@@ -2,6 +2,8 @@ package com.festflow.backend.service.analytics;
 
 import com.festflow.backend.dto.HeatPointDto;
 import com.festflow.backend.dto.PopularBoothDto;
+import com.festflow.backend.dto.StageCrowdResponseDto;
+import com.festflow.backend.dto.StageZoneCrowdDto;
 import com.festflow.backend.dto.TrafficHourlyDto;
 import com.festflow.backend.entity.Booth;
 import com.festflow.backend.entity.GpsLog;
@@ -18,6 +20,13 @@ import java.util.Map;
 
 @Service
 public class AnalyticsService {
+
+    private record StageZone(String key, String name, double latitude, double longitude, int radiusMeters, int capacityHint) {
+    }
+
+    private static final List<StageZone> STAGE_ZONES = List.of(
+            new StageZone("open-air-theater", "아주대 노천극장", 37.2829, 127.0447, 90, 180)
+    );
 
     private final GpsLogRepository gpsLogRepository;
     private final BoothRepository boothRepository;
@@ -80,6 +89,47 @@ public class AnalyticsService {
                 })
                 .sorted(Comparator.comparing(HeatPointDto::intensity).reversed())
                 .toList();
+    }
+
+    public StageCrowdResponseDto stageCrowd(int minutesWindow) {
+        int minutes = Math.max(1, Math.min(60, minutesWindow));
+        LocalDateTime from = LocalDateTime.now().minusMinutes(minutes);
+        List<GpsLog> logs = gpsLogRepository.findByCreatedAtAfter(from);
+
+        List<StageZoneCrowdDto> zones = STAGE_ZONES.stream()
+                .map(zone -> {
+                    int count = (int) logs.stream()
+                            .filter(log -> distanceInMeters(zone.latitude(), zone.longitude(), log.getLatitude(), log.getLongitude()) <= zone.radiusMeters())
+                            .count();
+                    return new StageZoneCrowdDto(
+                            zone.key(),
+                            zone.name(),
+                            zone.latitude(),
+                            zone.longitude(),
+                            zone.radiusMeters(),
+                            count,
+                            zone.capacityHint(),
+                            resolveLevel(count, zone.capacityHint())
+                    );
+                })
+                .toList();
+
+        int total = zones.stream().mapToInt(StageZoneCrowdDto::crowdCount).sum();
+        return new StageCrowdResponseDto(LocalDateTime.now(), minutes, total, zones);
+    }
+
+    private String resolveLevel(int count, int capacityHint) {
+        double ratio = capacityHint <= 0 ? 0.0 : (double) count / capacityHint;
+        if (ratio < 0.35) {
+            return "여유";
+        }
+        if (ratio < 0.65) {
+            return "보통";
+        }
+        if (ratio < 0.9) {
+            return "혼잡";
+        }
+        return "매우혼잡";
     }
 
     private double distanceInMeters(double lat1, double lon1, double lat2, double lon2) {

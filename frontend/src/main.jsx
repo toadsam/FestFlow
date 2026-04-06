@@ -5,6 +5,7 @@ import App from './App';
 import HomePage from './pages/HomePage';
 import EventPage from './pages/EventPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import StageMapPage from './pages/StageMapPage';
 import ChatPage from './pages/ChatPage';
 import BoothDetailPage from './pages/BoothDetailPage';
 import AdminPage from './pages/AdminPage';
@@ -29,6 +30,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route index element={<HomePage />} />
           <Route path="events" element={<EventPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="stage-map" element={<StageMapPage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="admin" element={<AdminPage />} />
           <Route path="ops/master" element={<OpsMasterPage />} />
