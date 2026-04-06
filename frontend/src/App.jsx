@@ -1,7 +1,8 @@
-﻿import { NavLink, Outlet } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
-const tabs = [
+const allTabs = [
   { to: '/', label: '홈', icon: '🏠', end: true },
   { to: '/events', label: '공연', icon: '🎤' },
   { to: '/stage-map', label: '무대지도', icon: '🗺️' },
@@ -10,10 +11,27 @@ const tabs = [
   { to: '/ops/master', label: '관리', icon: '🛠' },
 ];
 
+const quickTabs = [
+  { to: '/', label: '홈', icon: '🏠', end: true },
+  { to: '/stage-map', label: '무대지도', icon: '🗺️' },
+  { to: '/events', label: '공연', icon: '🎤' },
+];
+
+function mod(n, m) {
+  return ((n % m) + m) % m;
+}
+
 export default function App() {
+  const location = useLocation();
+  const navigate = useNavigate();
+
   const [noticeMessage, setNoticeMessage] = useState('');
   const [showSplash, setShowSplash] = useState(true);
   const [splashFading, setSplashFading] = useState(false);
+
+  const [radialOpen, setRadialOpen] = useState(false);
+  const [radialIndex, setRadialIndex] = useState(0);
+  const touchStartX = useRef(null);
 
   useEffect(() => {
     const fadeTimer = window.setTimeout(() => setSplashFading(true), 1500);
@@ -23,6 +41,12 @@ export default function App() {
       window.clearTimeout(hideTimer);
     };
   }, []);
+
+  useEffect(() => {
+    setRadialOpen(false);
+    const active = allTabs.findIndex((tab) => (tab.end ? location.pathname === tab.to : location.pathname.startsWith(tab.to)));
+    if (active >= 0) setRadialIndex(active);
+  }, [location.pathname]);
 
   function skipSplash() {
     setShowSplash(false);
@@ -42,6 +66,51 @@ export default function App() {
     }
 
     window.setTimeout(() => setNoticeMessage(''), 1500);
+  }
+
+  const radialItems = useMemo(() => {
+    const len = allTabs.length;
+    const offsets = [-2, -1, 0, 1, 2];
+    return offsets.map((offset) => {
+      const index = mod(radialIndex + offset, len);
+      const tab = allTabs[index];
+
+      const angle = 180 + offset * 28;
+      const radius = offset === 0 ? 124 : 104;
+      const rad = (angle * Math.PI) / 180;
+      const x = Math.cos(rad) * radius;
+      const y = Math.sin(rad) * radius;
+
+      return { tab, index, x, y, focused: offset === 0 };
+    });
+  }, [radialIndex]);
+
+  function rotateRadial(delta) {
+    setRadialIndex((prev) => mod(prev + delta, allTabs.length));
+  }
+
+  function handleTouchStart(e) {
+    touchStartX.current = e.touches[0]?.clientX ?? null;
+  }
+
+  function handleTouchMove(e) {
+    if (touchStartX.current == null) return;
+    const currentX = e.touches[0]?.clientX ?? touchStartX.current;
+    const diff = currentX - touchStartX.current;
+
+    if (Math.abs(diff) > 24) {
+      rotateRadial(diff > 0 ? -1 : 1);
+      touchStartX.current = currentX;
+    }
+  }
+
+  function handleTouchEnd() {
+    touchStartX.current = null;
+  }
+
+  function selectRadial(tab) {
+    setRadialOpen(false);
+    navigate(tab.to);
   }
 
   return (
@@ -64,12 +133,59 @@ export default function App() {
         {noticeMessage && <p className="text-xs mt-2 bg-white/20 rounded px-2 py-1 inline-block">{noticeMessage}</p>}
       </header>
 
-      <main className="px-4 pb-24 pt-1">
+      <main className="px-4 pb-28 pt-1">
         <Outlet />
       </main>
 
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[430px] bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-6">
-        {tabs.map((tab) => (
+      {createPortal(
+        <>
+          {radialOpen && (
+            <button
+              type="button"
+              aria-label="라디얼 메뉴 닫기"
+              className="fixed inset-0 z-[1280] bg-slate-900/20"
+              onClick={() => setRadialOpen(false)}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+            />
+          )}
+
+          <div className="fixed right-4 bottom-24 z-[1300]">
+            {radialOpen && (
+              <div className="relative" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+                {radialItems.map((item) => (
+                  <button
+                    key={`radial-${item.tab.to}-${item.index}`}
+                    type="button"
+                    onClick={() => selectRadial(item.tab)}
+                    className={`absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 rounded-full border shadow-md transition-all duration-200 radial-item ${item.focused ? 'h-16 w-16 bg-teal-700 border-teal-800 text-white scale-100' : 'h-12 w-12 bg-white border-slate-200 text-slate-700 scale-95'}`}
+                    style={{ transform: `translate(${item.x}px, ${item.y}px)`, animationDelay: `${Math.abs(item.index - radialIndex) * 45}ms` }}
+                  >
+                    <span className="block text-lg" aria-hidden>{item.tab.icon}</span>
+                    <span className="block text-[10px] font-semibold leading-tight">{item.tab.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setRadialOpen((prev) => !prev)}
+              className={`h-14 w-14 rounded-full shadow-lg border text-white font-bold text-lg radial-fab ${radialOpen ? 'bg-rose-600 border-rose-700' : 'bg-teal-700 border-teal-800'}`}
+            >
+              {radialOpen ? '✕' : '☰'}
+            </button>
+          </div>
+        </>,
+        document.body
+      )}
+
+      <nav
+        className="fixed bottom-0 left-1/2 z-[1200] -translate-x-1/2 w-full max-w-[430px] bg-white/95 backdrop-blur border-t border-slate-200 grid grid-cols-3"
+        style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 6px)' }}
+      >
+        {quickTabs.map((tab) => (
           <NavLink
             key={tab.to}
             to={tab.to}
