@@ -25,7 +25,7 @@ public class AnalyticsService {
     }
 
     private static final List<StageZone> STAGE_ZONES = List.of(
-            new StageZone("open-air-theater", "아주대 노천극장", 37.2829, 127.0447, 90, 180)
+            new StageZone("open-air-theater", "?꾩＜? ?몄쿇洹뱀옣", 37.281785, 127.045501, 55, 180)
     );
 
     private final GpsLogRepository gpsLogRepository;
@@ -121,15 +121,15 @@ public class AnalyticsService {
     private String resolveLevel(int count, int capacityHint) {
         double ratio = capacityHint <= 0 ? 0.0 : (double) count / capacityHint;
         if (ratio < 0.35) {
-            return "여유";
+            return "?ъ쑀";
         }
         if (ratio < 0.65) {
-            return "보통";
+            return "蹂댄넻";
         }
         if (ratio < 0.9) {
-            return "혼잡";
+            return "?쇱옟";
         }
-        return "매우혼잡";
+        return "留ㅼ슦?쇱옟";
     }
 
     private double distanceInMeters(double lat1, double lon1, double lat2, double lon2) {
@@ -144,3 +144,4 @@ public class AnalyticsService {
         return earthRadius * c;
     }
 }
+

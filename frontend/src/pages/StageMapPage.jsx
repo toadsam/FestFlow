@@ -2,7 +2,7 @@
 import { Circle, CircleMarker, MapContainer, Popup, TileLayer } from 'react-leaflet';
 import { fetchStageCrowd } from '../api';
 
-const OPEN_AIR_THEATER = { latitude: 37.28095, longitude: 127.04785 };
+const OPEN_AIR_THEATER = { latitude: 37.281785, longitude: 127.045501 };
 
 const LEVEL_STYLE = {
   여유: { stroke: '#0f766e', fill: '#14b8a6' },
@@ -99,9 +99,16 @@ export default function StageMapPage() {
       <div className="rounded-2xl overflow-hidden border border-slate-200">
         <MapContainer
           center={[OPEN_AIR_THEATER.latitude, OPEN_AIR_THEATER.longitude]}
-          zoom={22}
+          zoom={18}
           minZoom={18}
-          maxZoom={20}
+          maxZoom={18}
+          zoomControl={false}
+          dragging={false}
+          touchZoom={false}
+          doubleClickZoom={false}
+          scrollWheelZoom={false}
+          boxZoom={false}
+          keyboard={false}
           className="h-[74vh] w-full"
         >
           <TileLayer
