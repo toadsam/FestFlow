@@ -70,7 +70,7 @@ export default function EventPage() {
     <section className="pt-4 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">공연 라인업</h2>
-        <button type="button" onClick={downloadEventCsv} className="text-xs rounded-lg border px-2 py-1">
+        <button type="button" onClick={downloadEventCsv} className="text-xs rounded-lg border px-2 py-1 min-h-11">
           CSV
         </button>
       </div>
@@ -87,7 +87,7 @@ export default function EventPage() {
             key={status}
             type="button"
             onClick={() => setStatusFilter(status)}
-            className={`rounded-md py-1.5 text-xs font-semibold ${statusFilter === status ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-500'}`}
+            className={`rounded-md py-1.5 min-h-11 text-xs font-semibold ${statusFilter === status ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600'}`}
           >
             {status}
           </button>
@@ -119,8 +119,8 @@ export default function EventPage() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-sm text-slate-500">
-          선택한 상태의 공연이 없습니다.
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-sm text-slate-600">
+          선택한 상태의 공연이 없습니다. 관리자에서 공연을 등록하거나, 잠시 후 새로고침해 주세요.
         </div>
       )}
     </section>

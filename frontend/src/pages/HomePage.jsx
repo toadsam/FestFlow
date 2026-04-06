@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, Marker, Popup, TileLayer, useMapEvents, CircleMarker } from 'react-leaflet';
 import L from 'leaflet';
@@ -53,10 +53,6 @@ function ZoomWatcher({ onZoomChange }) {
   return null;
 }
 
-function getBoothImageUrl(booth) {
-  return resolveBoothImageUrl(booth);
-}
-
 function getDirectionLinks(booth) {
   const encodedName = encodeURIComponent(booth.name);
   return {
@@ -108,6 +104,7 @@ export default function HomePage() {
   const [congestionMap, setCongestionMap] = useState({});
   const [mapZoom, setMapZoom] = useState(16);
   const [isGridView, setIsGridView] = useState(true);
+  const [activeView, setActiveView] = useState('map');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -235,6 +232,15 @@ export default function HomePage() {
   );
 
   const clusters = useMemo(() => buildClusters(booths, congestionMap), [booths, congestionMap]);
+  const mapQuickBooths = useMemo(() => {
+    return [...booths]
+      .sort((a, b) => {
+        const scoreDiff = (levelToScore[congestionMap[b.id]?.level] || 1) - (levelToScore[congestionMap[a.id]?.level] || 1);
+        if (scoreDiff !== 0) return scoreDiff;
+        return (a.displayOrder || 999) - (b.displayOrder || 999);
+      })
+      .slice(0, 12);
+  }, [booths, congestionMap]);
 
   async function refreshAllCongestion() {
     const updates = await Promise.all(booths.map(async (booth) => [booth.id, await fetchCongestion(booth.id)]));
@@ -306,7 +312,7 @@ export default function HomePage() {
 
       <div className="space-y-2">
         {notices.length === 0 && (
-          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-500">현재 등록된 운영 공지가 없습니다.</div>
+          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">현재 등록된 운영 공지가 없습니다.</div>
         )}
         {notices.slice(0, 2).map((notice) => (
           <article key={notice.id} className={`rounded-lg border px-3 py-2 ${noticeColor[notice.category] || 'border-slate-300 bg-slate-50 text-slate-700'}`}>
@@ -320,166 +326,232 @@ export default function HomePage() {
         ))}
       </div>
 
-      <div className="rounded-2xl overflow-hidden border border-slate-200">
-        <MapContainer center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]} zoom={17} maxZoom={22} className="h-64 w-full">
-          <TileLayer
-            attribution='&copy; OpenStreetMap 기여자'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maxZoom={22}
-            maxNativeZoom={19}
-          />
-          <ZoomWatcher onZoomChange={setMapZoom} />
-
-          {mapZoom >= 16 &&
-            booths.map((booth) => {
-              const links = getDirectionLinks(booth);
-              const congestion = congestionMap[booth.id];
-
-              return (
-                <Marker key={booth.id} position={[booth.latitude, booth.longitude]} icon={markerIcon}>
-                  <Popup>
-                    <div className="space-y-1">
-                      <p className="font-bold">{booth.name}</p>
-                      <p className="text-xs text-slate-600">수원시 영통구 아주대학교</p>
-                      <p className="text-xs">혼잡도: {congestion?.level || '집계중'}</p>
-                      <div className="flex gap-2 text-xs">
-                        <a href={links.kakao} target="_blank" rel="noreferrer">카카오 길찾기</a>
-                        <a href={links.naver} target="_blank" rel="noreferrer">네이버 지도</a>
-                      </div>
-                    </div>
-                  </Popup>
-                </Marker>
-              );
-            })}
-
-          {mapZoom < 16 &&
-            clusters.map((cluster) => (
-              <CircleMarker
-                key={cluster.key}
-                center={[cluster.latitude, cluster.longitude]}
-                radius={10 + Math.min(cluster.booths.length * 2, 12)}
-                pathOptions={{ color: '#0f766e', fillColor: '#14b8a6', fillOpacity: 0.5 }}
-              >
-                <Popup>
-                  <p className="font-semibold">{cluster.booths.length}개 부스 클러스터</p>
-                  <p className="text-xs">평균 혼잡도: {cluster.level}</p>
-                  <ul className="text-xs mt-1 space-y-0.5">
-                    {cluster.booths.map((booth) => (
-                      <li key={booth.id}>{booth.name}</li>
-                    ))}
-                  </ul>
-                </Popup>
-              </CircleMarker>
-            ))}
-        </MapContainer>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={handleMockGpsBatch} className="rounded-xl bg-teal-700 text-white py-2.5 font-semibold">GPS 샘플 생성</button>
+      <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-1">
         <button
           type="button"
-          onClick={handleSendCurrentGps}
-          className="rounded-xl border border-teal-700 text-teal-700 py-2.5 font-semibold"
-          disabled={gpsSending}
+          onClick={() => setActiveView('map')}
+          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === 'map' ? 'bg-teal-700 text-white' : 'text-slate-700'}`}
         >
-          {gpsSending ? 'GPS 전송 중...' : '내 위치 전송'}
+          지도 보기
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveView('list')}
+          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === 'list' ? 'bg-teal-700 text-white' : 'text-slate-700'}`}
+        >
+          부스 목록
         </button>
       </div>
 
-      <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
-        <div className="grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => setIsGridView((prev) => !prev)} className="rounded-lg border border-teal-700 text-teal-700 py-2 text-sm font-semibold">
-            {isGridView ? '세로 카드 보기' : '가로 카드 보기'}
-          </button>
-          <button type="button" onClick={downloadBoothCsv} className="rounded-lg border border-slate-300 py-2 text-sm font-semibold text-slate-700">부스 CSV</button>
-        </div>
-
-        <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="부스 이름 검색" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-
-        <div className="grid grid-cols-2 gap-2">
-          <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 text-sm">
-            <option>전체</option><option>여유</option><option>보통</option><option>혼잡</option><option>매우혼잡</option>
-          </select>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 text-sm">
-            <option value="displayOrder">운영순</option><option value="name">이름순</option><option value="congestion">혼잡도순</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-slate-200 bg-white p-3">
-        <p className="text-sm font-semibold text-slate-700 mb-2">혼잡도 요약</p>
-        <div className="h-24 flex items-end gap-2 overflow-hidden">
-          {chartData.map((item) => (
-            <div key={item.label} className="flex-1 text-center">
-              <div
-                className="mx-auto w-full rounded-t bg-teal-500/80"
-                style={{ height: `${Math.max(8, Math.round((item.value / chartMax) * 88))}px` }}
+      {activeView === 'map' && (
+        <>
+          <div className="rounded-2xl overflow-hidden border border-slate-200">
+            <MapContainer center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]} zoom={17} maxZoom={22} className="h-64 w-full">
+              <TileLayer
+                attribution='&copy; OpenStreetMap 기여자'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                maxZoom={22}
+                maxNativeZoom={19}
               />
-              <p className="mt-1 text-[10px] text-slate-500">{item.label} ({item.value})</p>
-            </div>
-          ))}
-        </div>
-      </div>
+              <ZoomWatcher onZoomChange={setMapZoom} />
 
-      {recentBooths.length > 0 && (
-        <div className="rounded-xl border border-slate-200 bg-white p-3">
-          <p className="text-sm font-semibold text-slate-700 mb-2">최근 본 부스</p>
-          <div className="flex flex-wrap gap-2">
-            {recentBooths.map((booth) => (
-              <button key={booth.id} type="button" onClick={() => openBoothDetail(booth.id)} className="rounded-full bg-slate-100 px-3 py-1 text-xs">{booth.name}</button>
-            ))}
+              {mapZoom >= 16 &&
+                booths.map((booth) => {
+                  const links = getDirectionLinks(booth);
+                  const congestion = congestionMap[booth.id];
+
+                  return (
+                    <Marker key={booth.id} position={[booth.latitude, booth.longitude]} icon={markerIcon}>
+                      <Popup>
+                        <div className="space-y-1">
+                          <p className="font-bold">{booth.name}</p>
+                          <p className="text-xs text-slate-700">수원시 영통구 아주대학교</p>
+                          <p className="text-xs">혼잡도: {congestion?.level || '집계중'}</p>
+                          <div className="flex gap-2 text-xs">
+                            <a href={links.kakao} target="_blank" rel="noreferrer">카카오 길찾기</a>
+                            <a href={links.naver} target="_blank" rel="noreferrer">네이버 지도</a>
+                          </div>
+                        </div>
+                      </Popup>
+                    </Marker>
+                  );
+                })}
+
+              {mapZoom < 16 &&
+                clusters.map((cluster) => (
+                  <CircleMarker
+                    key={cluster.key}
+                    center={[cluster.latitude, cluster.longitude]}
+                    radius={10 + Math.min(cluster.booths.length * 2, 12)}
+                    pathOptions={{ color: '#0f766e', fillColor: '#14b8a6', fillOpacity: 0.5 }}
+                  >
+                    <Popup>
+                      <p className="font-semibold">{cluster.booths.length}개 부스 클러스터</p>
+                      <p className="text-xs">평균 혼잡도: {cluster.level}</p>
+                      <ul className="text-xs mt-1 space-y-0.5">
+                        {cluster.booths.map((booth) => (
+                          <li key={booth.id}>{booth.name}</li>
+                        ))}
+                      </ul>
+                    </Popup>
+                  </CircleMarker>
+                ))}
+            </MapContainer>
           </div>
-        </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-3">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-slate-800">빠른 부스 이동</p>
+              <button
+                type="button"
+                onClick={() => setActiveView('list')}
+                className="text-xs text-teal-700 font-semibold min-h-11 px-2"
+              >
+                전체 목록 보기
+              </button>
+            </div>
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {mapQuickBooths.map((booth) => {
+                const congestion = congestionMap[booth.id];
+                return (
+                  <button
+                    key={`quick-${booth.id}`}
+                    type="button"
+                    onClick={() => openBoothDetail(booth.id)}
+                    className="shrink-0 w-36 rounded-lg border border-slate-200 overflow-hidden text-left bg-slate-50"
+                  >
+                    <div className="h-20 bg-slate-200">
+                      <img src={resolveBoothImageUrl(booth)} alt={`${booth.name} 이미지`} className="h-full w-full object-cover" loading="lazy" />
+                    </div>
+                    <div className="p-2">
+                      <p className="text-xs font-semibold text-slate-800 line-clamp-1">{booth.name}</p>
+                      <div className="mt-1">
+                        {congestion ? <CongestionBadge level={congestion.level} /> : <span className="text-[11px] text-slate-600">집계중</span>}
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={handleMockGpsBatch} className="rounded-xl bg-teal-700 text-white min-h-11 py-2.5 font-semibold">GPS 샘플 생성</button>
+            <button
+              type="button"
+              onClick={handleSendCurrentGps}
+              className="rounded-xl border border-teal-700 text-teal-700 min-h-11 py-2.5 font-semibold"
+              disabled={gpsSending}
+            >
+              {gpsSending ? 'GPS 전송 중...' : '내 위치 전송'}
+            </button>
+          </div>
+        </>
       )}
 
-      {loading && <p className="text-sm text-slate-500">부스와 혼잡도 데이터를 불러오는 중...</p>}
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {activeView === 'list' && (
+        <>
+          <div className="sticky top-2 z-30 rounded-xl border border-slate-200 bg-white/95 backdrop-blur p-3 space-y-2 shadow-sm">
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button" onClick={() => setIsGridView((prev) => !prev)} className="rounded-lg border border-teal-700 text-teal-700 min-h-11 py-2 text-sm font-semibold">
+                {isGridView ? '세로 카드 보기' : '가로 카드 보기'}
+              </button>
+              <button type="button" onClick={downloadBoothCsv} className="rounded-lg border border-slate-300 min-h-11 py-2 text-sm font-semibold text-slate-700">부스 CSV</button>
+            </div>
 
-      <div className={isGridView ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>
-        {filteredBooths.map((booth) => {
-          const congestion = congestionMap[booth.id];
-          const isFavorite = favorites.includes(booth.id);
+            <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="부스 이름 검색" className="w-full rounded-lg border border-slate-300 px-3 py-2 min-h-11 text-sm" />
 
-          return (
-            <button key={booth.id} type="button" onClick={() => openBoothDetail(booth.id)} className="w-full h-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden">
-              <div className="aspect-[16/9] bg-slate-100">
-                <img src={getBoothImageUrl(booth)} alt={`${booth.name} 대표 이미지`} className="h-full w-full object-cover" loading="lazy" />
-              </div>
-              <div className="p-3">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <h3 className="font-bold text-slate-800 leading-tight break-keep">{booth.name}</h3>
-                    <p className="text-[11px] text-slate-500 mt-0.5">경기도 수원시 영통구</p>
-                    <p className={`text-slate-600 mt-1 ${isGridView ? 'text-xs line-clamp-2' : 'text-sm'}`}>{booth.description}</p>
-                    {(booth.estimatedWaitMinutes != null || booth.remainingStock != null) && (
-                      <p className="text-[11px] mt-1 text-indigo-700">
-                        대기 {booth.estimatedWaitMinutes ?? '-'}분 · 잔여 {booth.remainingStock ?? '-'}
-                      </p>
-                    )}
-                  </div>
-                  <div className="shrink-0">
-                    {congestion ? <CongestionBadge level={congestion.level} /> : null}
-                  </div>
+            <div className="grid grid-cols-2 gap-2">
+              <select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 min-h-11 text-sm">
+                <option>전체</option><option>여유</option><option>보통</option><option>혼잡</option><option>매우혼잡</option>
+              </select>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="rounded-lg border border-slate-300 px-2 py-2 min-h-11 text-sm">
+                <option value="displayOrder">운영순</option><option value="name">이름순</option><option value="congestion">혼잡도순</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 bg-white p-3">
+            <p className="text-sm font-semibold text-slate-700 mb-2">혼잡도 요약</p>
+            <div className="h-24 flex items-end gap-2 overflow-hidden">
+              {chartData.map((item) => (
+                <div key={item.label} className="flex-1 text-center">
+                  <div
+                    className="mx-auto w-full rounded-t bg-teal-500/80"
+                    style={{ height: `${Math.max(8, Math.round((item.value / chartMax) * 88))}px` }}
+                  />
+                  <p className="mt-1 text-[10px] text-slate-600">{item.label} ({item.value})</p>
                 </div>
-                <div className="mt-2 flex items-center justify-between">
-                  <p className="text-xs text-teal-700 font-semibold">자세히 보기 →</p>
-                  <button
-                    type="button"
-                    aria-label="즐겨찾기"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleFavorite(booth.id);
-                    }}
-                    className="text-lg"
-                  >
-                    {isFavorite ? '⭐' : '☆'}
-                  </button>
-                </div>
+              ))}
+            </div>
+          </div>
+
+          {recentBooths.length > 0 && (
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <p className="text-sm font-semibold text-slate-700 mb-2">최근 본 부스</p>
+              <div className="flex flex-wrap gap-2">
+                {recentBooths.map((booth) => (
+                  <button key={booth.id} type="button" onClick={() => openBoothDetail(booth.id)} className="rounded-full bg-slate-100 px-3 py-2 min-h-11 text-sm text-slate-700">{booth.name}</button>
+                ))}
               </div>
-            </button>
-          );
-        })}
-      </div>
+            </div>
+          )}
+
+          {loading && <p className="text-sm text-slate-600">부스와 혼잡도 데이터를 불러오는 중...</p>}
+          {error && <p className="text-sm text-rose-600">{error}</p>}
+
+          {!loading && filteredBooths.length === 0 && (
+            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-sm text-slate-600">
+              검색 조건에 맞는 부스가 없습니다. 지도 보기 탭에서 GPS를 전송하면 실시간 데이터가 더 정확해집니다.
+            </div>
+          )}
+
+          <div className={isGridView ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>
+            {filteredBooths.map((booth) => {
+              const congestion = congestionMap[booth.id];
+              const isFavorite = favorites.includes(booth.id);
+
+              return (
+                <button key={booth.id} type="button" onClick={() => openBoothDetail(booth.id)} className="w-full h-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden">
+                  <div className="aspect-[16/9] bg-slate-100">
+                    <img src={resolveBoothImageUrl(booth)} alt={`${booth.name} 대표 이미지`} className="h-full w-full object-cover" loading="lazy" />
+                  </div>
+                  <div className="p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <h3 className="font-bold text-slate-800 leading-tight break-keep">{booth.name}</h3>
+                        <p className="text-xs text-slate-700 mt-1">
+                          혼잡도 {congestion?.level || '집계중'}
+                          {' · '}
+                          대기 {booth.estimatedWaitMinutes ?? '-'}분
+                        </p>
+                        <p className="text-xs text-slate-600 mt-1 line-clamp-1">{booth.description}</p>
+                      </div>
+                      <div className="shrink-0">
+                        {congestion ? <CongestionBadge level={congestion.level} /> : null}
+                      </div>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
+                      <p className="text-xs text-teal-700 font-semibold">자세히 보기 →</p>
+                      <button
+                        type="button"
+                        aria-label="즐겨찾기"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleFavorite(booth.id);
+                        }}
+                        className="text-2xl leading-none min-h-11 min-w-11"
+                      >
+                        {isFavorite ? '⭐' : '☆'}
+                      </button>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      )}
     </section>
   );
 }

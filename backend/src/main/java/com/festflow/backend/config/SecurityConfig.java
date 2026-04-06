@@ -1,6 +1,7 @@
 package com.festflow.backend.config;
 
 import com.festflow.backend.security.JwtAuthenticationFilter;
+import com.festflow.backend.security.OpsKeyAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -16,9 +17,11 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final OpsKeyAuthenticationFilter opsKeyAuthenticationFilter;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, OpsKeyAuthenticationFilter opsKeyAuthenticationFilter) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.opsKeyAuthenticationFilter = opsKeyAuthenticationFilter;
     }
 
     @Bean
@@ -27,10 +30,13 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/ops/master/**").hasRole("OPS_MASTER")
+                        .requestMatchers("/api/ops/booth/**").hasAnyRole("OPS_MASTER", "OPS_BOOTH")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/auth/**", "/api/**", "/uploads/**").permitAll()
                         .anyRequest().permitAll()
                 )
+                .addFilterBefore(opsKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

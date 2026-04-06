@@ -3,6 +3,7 @@ package com.festflow.backend.controller;
 import com.festflow.backend.dto.BoothResponseDto;
 import com.festflow.backend.dto.CongestionResponseDto;
 import com.festflow.backend.security.JwtService;
+import com.festflow.backend.security.OpsKeyService;
 import com.festflow.backend.service.BoothService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -30,6 +31,9 @@ class BoothControllerTest {
 
     @MockBean
     private JwtService jwtService;
+
+    @MockBean
+    private OpsKeyService opsKeyService;
 
     @Test
     void getBoothsReturnsList() throws Exception {

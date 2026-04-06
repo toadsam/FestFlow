@@ -6,7 +6,7 @@ const tabs = [
   { to: '/events', label: '공연', icon: '🎤' },
   { to: '/analytics', label: '분석', icon: '📊' },
   { to: '/chat', label: '챗봇', icon: '💬' },
-  { to: '/admin', label: '관리', icon: '🛠' },
+  { to: '/ops/master', label: '관리', icon: '🛠' },
 ];
 
 export default function App() {
@@ -22,6 +22,10 @@ export default function App() {
       window.clearTimeout(hideTimer);
     };
   }, []);
+
+  function skipSplash() {
+    setShowSplash(false);
+  }
 
   async function requestNotificationPermission() {
     if (!('Notification' in window)) {
@@ -51,7 +55,7 @@ export default function App() {
           <button
             type="button"
             onClick={requestNotificationPermission}
-            className="text-[11px] px-2 py-1.5 rounded-lg bg-white/20 border border-white/40"
+            className="text-[11px] px-2 py-1.5 min-h-11 rounded-lg bg-white/20 border border-white/40"
           >
             알림 권한
           </button>
@@ -70,7 +74,7 @@ export default function App() {
             to={tab.to}
             end={tab.end}
             className={({ isActive }) =>
-              `py-2 text-[11px] text-center font-semibold flex flex-col items-center justify-center gap-0.5 ${isActive ? 'text-teal-700 bg-teal-50' : 'text-slate-500'}`
+              `py-2 min-h-11 text-[11px] text-center font-semibold flex flex-col items-center justify-center gap-0.5 ${isActive ? 'text-teal-700 bg-teal-50' : 'text-slate-600'}`
             }
           >
             <span aria-hidden>{tab.icon}</span>
@@ -82,11 +86,18 @@ export default function App() {
       {showSplash && (
         <div className={`fixed inset-0 z-[3000] bg-slate-950 transition-opacity duration-500 ${splashFading ? 'opacity-0' : 'opacity-100'}`}>
           <div className="h-full w-full flex items-start justify-center pt-0">
-          <img
-            src="/images/스플래시화면.png"
-            alt="스플래시 화면"
-            className="w-full max-w-[430px] h-auto object-contain object-top"
-          />
+            <img
+              src="/images/스플래시화면.png"
+              alt="스플래시 화면"
+              className="w-full max-w-[430px] h-auto object-contain object-top"
+            />
+            <button
+              type="button"
+              onClick={skipSplash}
+              className="absolute top-4 right-4 rounded-full bg-black/45 px-3 py-2 min-h-11 text-xs font-semibold text-white"
+            >
+              건너뛰기
+            </button>
           </div>
         </div>
       )}

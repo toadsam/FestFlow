@@ -296,3 +296,39 @@ export function downloadBoothCsv() {
 export function downloadEventCsv() {
   window.open(`${API_BASE}/export/events.csv`, '_blank', 'noopener,noreferrer');
 }
+
+function withOpsKey(path, key) {
+  const url = new URL(`${API_BASE}${path}`);
+  if (key) {
+    url.searchParams.set('key', key);
+  }
+  return url.toString();
+}
+
+export async function fetchOpsMasterBootstrap(key) {
+  const response = await fetch(withOpsKey('/ops/master/bootstrap', key));
+  return parseJson(response, '통합 관리자 데이터를 가져오지 못했습니다.');
+}
+
+export async function updateOpsMasterBoothLiveStatus(boothId, payload, key) {
+  const response = await fetch(withOpsKey(`/ops/master/booths/${boothId}/live-status`, key), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '통합 관리자 실시간 정보 저장에 실패했습니다.');
+}
+
+export async function fetchOpsBoothBootstrap(boothId, key) {
+  const response = await fetch(withOpsKey(`/ops/booth/${boothId}/bootstrap`, key));
+  return parseJson(response, '부스 관리자 데이터를 가져오지 못했습니다.');
+}
+
+export async function updateOpsBoothLiveStatus(boothId, payload, key) {
+  const response = await fetch(withOpsKey(`/ops/booth/${boothId}/live-status`, key), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '부스 실시간 정보 저장에 실패했습니다.');
+}

@@ -8,6 +8,8 @@ import AnalyticsPage from './pages/AnalyticsPage';
 import ChatPage from './pages/ChatPage';
 import BoothDetailPage from './pages/BoothDetailPage';
 import AdminPage from './pages/AdminPage';
+import OpsMasterPage from './pages/OpsMasterPage';
+import OpsBoothPage from './pages/OpsBoothPage';
 import './index.css';
 import 'leaflet/dist/leaflet.css';
 
@@ -29,6 +31,8 @@ ReactDOM.createRoot(document.getElementById('root')).render(
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="chat" element={<ChatPage />} />
           <Route path="admin" element={<AdminPage />} />
+          <Route path="ops/master" element={<OpsMasterPage />} />
+          <Route path="ops/booth/:id" element={<OpsBoothPage />} />
           <Route path="booths/:id" element={<BoothDetailPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
