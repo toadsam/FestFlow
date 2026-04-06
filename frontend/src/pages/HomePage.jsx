@@ -115,6 +115,7 @@ export default function HomePage() {
   const [recentIds, setRecentIds] = useState(getRecentBoothIds());
   const [notices, setNotices] = useState([]);
   const [events, setEvents] = useState([]);
+  const [dismissedNoticeIds, setDismissedNoticeIds] = useState([]);
   const [locationText, setLocationText] = useState('');
   const [gpsSending, setGpsSending] = useState(false);
   const previousCongestionRef = useRef({});
@@ -252,6 +253,10 @@ export default function HomePage() {
       .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))[0] || null;
   }, [events]);
 
+  const visibleNotices = useMemo(() => {
+    return (notices || []).filter((notice) => !dismissedNoticeIds.includes(notice.id));
+  }, [notices, dismissedNoticeIds]);
+
   const recommendedBooths = useMemo(() => {
     return [...booths]
       .sort((a, b) => {
@@ -378,14 +383,24 @@ export default function HomePage() {
       </article>
 
       <div className="space-y-2">
-        {notices.length === 0 && (
+        {visibleNotices.length === 0 && (
           <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">현재 등록된 운영 공지가 없습니다.</div>
         )}
-        {notices.slice(0, 2).map((notice) => (
+        {visibleNotices.slice(0, 2).map((notice) => (
           <article key={notice.id} className={`rounded-lg border px-3 py-2 ${noticeColor[notice.category] || 'border-slate-300 bg-slate-50 text-slate-700'}`}>
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[11px] font-bold">{notice.category}</span>
-              <span className="text-[10px] opacity-70">{notice.updatedAt?.replace('T', ' ').slice(5, 16)}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] font-bold">{notice.category}</span>
+                <span className="text-[10px] opacity-70">{notice.updatedAt?.replace('T', ' ').slice(5, 16)}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDismissedNoticeIds((prev) => [...prev, notice.id])}
+                className="rounded-full px-2 py-1 text-[11px] font-bold opacity-70 hover:opacity-100"
+                aria-label="공지 닫기"
+              >
+                ✕
+              </button>
             </div>
             <p className="text-sm font-semibold mt-1">{notice.title}</p>
             <p className="text-xs mt-1">{notice.content}</p>
@@ -397,7 +412,7 @@ export default function HomePage() {
         <button
           type="button"
           onClick={() => setActiveView('split')}
-          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === 'split' ? 'bg-teal-700 text-white' : 'text-slate-700'}`}
+          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === 'split' ? 'bg-gradient-to-r from-teal-700 via-cyan-600 to-emerald-600 text-white' : 'text-slate-700'}`}
         >
           동시 보기
         </button>

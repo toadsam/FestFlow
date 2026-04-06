@@ -6,6 +6,10 @@ import { resolveBoothImageUrl } from '../config/boothImages';
 
 const BOOTH_KEY_STORAGE_KEY = 'festflow_ops_booth_key';
 
+function confirmAction(message) {
+  return window.confirm(`정말 실행할까요?\n\n${message}`);
+}
+
 export default function OpsBoothPage() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -51,6 +55,7 @@ export default function OpsBoothPage() {
   }, [id, key]);
 
   async function handleSave() {
+    if (!confirmAction('부스 실시간 정보를 저장합니다.')) return;
     try {
       await updateOpsBoothLiveStatus(
         id,

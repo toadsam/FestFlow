@@ -17,6 +17,16 @@ const WINDOW_OPTIONS = [
   { label: '최근 15분', value: 15 },
 ];
 
+function normalizeLevel(level) {
+  const mapping = {
+    '?ъ쑀': '여유',
+    '蹂댄넻': '보통',
+    '?쇱옟': '혼잡',
+    '留ㅼ슦?쇱옟': '매우혼잡',
+  };
+  return mapping[level] || level;
+}
+
 function getLevelStyle(level) {
   return LEVEL_STYLE[level] || LEVEL_STYLE.여유;
 }
@@ -54,7 +64,10 @@ export default function StageMapPage() {
     return () => window.clearInterval(timer);
   }, [minutesWindow]);
 
-  const theater = useMemo(() => (stageData?.zones || [])[0] || null, [stageData]);
+  const theater = useMemo(() => {
+    const raw = (stageData?.zones || [])[0] || null;
+    return raw ? { ...raw, level: normalizeLevel(raw.level) } : null;
+  }, [stageData]);
   const style = getLevelStyle(theater?.level);
   const ratio = theater?.capacityHint ? Math.min(1.2, theater.crowdCount / theater.capacityHint) : 0;
   const pulseRadius = Math.max(10, Math.round(12 + ratio * 14));
@@ -63,7 +76,13 @@ export default function StageMapPage() {
     <section className="pt-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">노천극장 실시간 인원</h2>
-        <button type="button" onClick={load} className="rounded-lg border px-3 py-2 text-sm">새로고침</button>
+        <button
+          type="button"
+          onClick={load}
+          className="rounded-lg border border-teal-700 bg-gradient-to-r from-teal-700 via-cyan-600 to-emerald-600 px-3 py-2 text-sm font-semibold text-white"
+        >
+          새로고침
+        </button>
       </div>
 
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
@@ -88,7 +107,7 @@ export default function StageMapPage() {
               key={option.value}
               type="button"
               onClick={() => setMinutesWindow(option.value)}
-              className={`rounded-lg py-2 text-xs font-semibold ${minutesWindow === option.value ? 'bg-teal-700 text-white' : 'bg-slate-100 text-slate-700'}`}
+              className={`rounded-lg py-2 text-xs font-semibold ${minutesWindow === option.value ? 'bg-gradient-to-r from-teal-700 via-cyan-600 to-emerald-600 text-white' : 'bg-slate-100 text-slate-700'}`}
             >
               {option.label}
             </button>

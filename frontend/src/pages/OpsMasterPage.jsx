@@ -41,6 +41,10 @@ function toInputDateTime(value) {
   return value ? value.slice(0, 16) : '';
 }
 
+function confirmAction(message) {
+  return window.confirm(`정말 실행할까요?\n\n${message}`);
+}
+
 export default function OpsMasterPage() {
   const [searchParams] = useSearchParams();
   const initialKey = searchParams.get('key') || sessionStorage.getItem(MASTER_KEY_STORAGE_KEY) || '';
@@ -124,6 +128,7 @@ export default function OpsMasterPage() {
   }
 
   async function handleQuickCongestionNotice() {
+    if (!confirmAction('혼잡 완화 공지를 즉시 발행합니다.')) return;
     try {
       await triggerOpsMasterCongestionReliefNotice(key);
       setMessage('혼잡 완화 공지를 발행했습니다.');
@@ -134,6 +139,7 @@ export default function OpsMasterPage() {
   }
 
   async function handleQuickEventStartNotice(eventId) {
+    if (!confirmAction('공연 시작 공지를 즉시 발행합니다.')) return;
     try {
       await triggerOpsMasterEventStartNotice(eventId, key);
       setMessage('공연 시작 공지를 발행했습니다.');
@@ -145,6 +151,7 @@ export default function OpsMasterPage() {
 
   async function handleNoticeSubmit(e) {
     e.preventDefault();
+    if (!confirmAction(editingNoticeId ? '공지 수정 내용을 저장합니다.' : '새 공지를 등록합니다.')) return;
     try {
       if (editingNoticeId) {
         await updateOpsMasterNotice(editingNoticeId, noticeForm, key);
@@ -162,7 +169,7 @@ export default function OpsMasterPage() {
   }
 
   async function handleDeleteNotice(id) {
-    if (!confirm('이 공지를 삭제할까요?')) return;
+    if (!confirmAction('이 공지를 삭제합니다.')) return;
     try {
       await deleteOpsMasterNotice(id, key);
       setMessage('공지 삭제가 완료되었습니다.');
@@ -174,6 +181,7 @@ export default function OpsMasterPage() {
 
   async function handleEventSubmit(e) {
     e.preventDefault();
+    if (!confirmAction(editingEventId ? '공연 수정 내용을 저장합니다.' : '새 공연을 등록합니다.')) return;
     try {
       const payload = {
         title: eventForm.title,
@@ -198,7 +206,7 @@ export default function OpsMasterPage() {
   }
 
   async function handleDeleteEvent(id) {
-    if (!confirm('이 공연을 삭제할까요?')) return;
+    if (!confirmAction('이 공연을 삭제합니다.')) return;
     try {
       await deleteOpsMasterEvent(id, key);
       setMessage('공연 삭제가 완료되었습니다.');
@@ -210,6 +218,7 @@ export default function OpsMasterPage() {
 
   async function handleBoothSubmit(e) {
     e.preventDefault();
+    if (!confirmAction(editingBoothId ? '부스 수정 내용을 저장합니다.' : '새 부스를 등록합니다.')) return;
     try {
       const payload = {
         ...boothForm,
@@ -236,7 +245,7 @@ export default function OpsMasterPage() {
   }
 
   async function handleDeleteBooth(id) {
-    if (!confirm('이 부스를 삭제할까요?')) return;
+    if (!confirmAction('이 부스를 삭제합니다.')) return;
     try {
       await deleteOpsMasterBooth(id, key);
       setMessage('부스 삭제가 완료되었습니다.');
@@ -247,6 +256,7 @@ export default function OpsMasterPage() {
   }
 
   async function handleSaveLiveStatus(boothId) {
+    if (!confirmAction('해당 부스의 실시간 운영 상태를 저장합니다.')) return;
     try {
       const draft = boothLiveDrafts[boothId] || {};
       await updateOpsMasterBoothLiveStatus(
@@ -276,6 +286,7 @@ export default function OpsMasterPage() {
     const [item] = next.splice(index, 1);
     next.splice(targetIndex, 0, item);
 
+    if (!confirmAction('부스 노출 순서를 변경합니다.')) return;
     try {
       await reorderOpsMasterBooths(next.map((booth) => booth.id), key);
       setMessage('부스 순서를 변경했습니다.');

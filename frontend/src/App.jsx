@@ -115,22 +115,31 @@ export default function App() {
 
   return (
     <div className="mx-auto app-shell bg-white/90 backdrop-blur-sm shadow-app border-x border-slate-100 relative">
-      <header className="px-5 pt-6 pb-5 bg-gradient-to-r from-teal-700 via-cyan-600 to-emerald-600 text-white">
-        <div className="flex items-center justify-between gap-2">
-          <div>
-            <p className="text-xs tracking-[0.18em] uppercase opacity-80">대학교 축제 통합 관리</p>
-            <h1 className="mt-1 text-2xl font-extrabold">FestFlow</h1>
-            <p className="text-xs opacity-85 mt-1">아주대학교 축제 실시간 부스 혼잡도 · 공연 · 관리자 운영</p>
+      <header className="bg-white">
+        <img
+          src="/images/AUSUM로고모음집/헤더.jpg"
+          alt="헤더 이미지"
+          className="w-full h-44 object-cover object-center"
+          loading="eager"
+          decoding="async"
+        />
+        <div className="px-5 py-3 border-b border-slate-200">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <p className="text-xs tracking-[0.18em] uppercase text-slate-500">대학교 축제 통합 관리</p>
+              <h1 className="mt-1 text-2xl font-extrabold text-slate-800">FestFlow</h1>
+              <p className="text-xs text-slate-600 mt-1">아주대학교 축제 실시간 부스 혼잡도 · 공연 · 관리자 운영</p>
+            </div>
+            <button
+              type="button"
+              onClick={requestNotificationPermission}
+              className="text-[11px] px-3 py-1.5 min-h-11 rounded-lg bg-slate-100 border border-slate-300 text-slate-700 whitespace-nowrap"
+            >
+              알림 권한
+            </button>
           </div>
-          <button
-            type="button"
-            onClick={requestNotificationPermission}
-            className="text-[11px] px-2 py-1.5 min-h-11 rounded-lg bg-white/20 border border-white/40"
-          >
-            알림 권한
-          </button>
+          {noticeMessage && <p className="text-xs mt-2 bg-slate-100 text-slate-700 rounded px-2 py-1 inline-block">{noticeMessage}</p>}
         </div>
-        {noticeMessage && <p className="text-xs mt-2 bg-white/20 rounded px-2 py-1 inline-block">{noticeMessage}</p>}
       </header>
 
       <main className="px-4 pb-28 pt-1">
