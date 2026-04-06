@@ -117,7 +117,7 @@ export default function App() {
     <div className="mx-auto app-shell bg-white/90 backdrop-blur-sm shadow-app border-x border-slate-100 relative">
       <header className="bg-white">
         <img
-          src="/images/AUSUM로고모음집/헤더.jpg"
+          src="/images/AUSUM로고모음집/헤더.png"
           alt="헤더 이미지"
           className="w-full h-44 object-cover object-center"
           loading="eager"
@@ -213,7 +213,7 @@ export default function App() {
         <div className={`fixed inset-0 z-[3000] bg-slate-950 transition-opacity duration-500 ${splashFading ? 'opacity-0' : 'opacity-100'}`}>
           <div className="h-full w-full flex items-start justify-center pt-0">
             <img
-              src="/images/스플래시화면.png"
+              src="/images/스플래시화면.png?v=20260406-1"
               alt="스플래시 화면"
               className="w-full max-w-[430px] h-auto object-contain object-top"
             />

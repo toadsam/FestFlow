@@ -111,6 +111,7 @@ export default function HomePage() {
   const [query, setQuery] = useState('');
   const [sortBy, setSortBy] = useState('displayOrder');
   const [levelFilter, setLevelFilter] = useState('전체');
+  const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favorites, setFavorites] = useState(getFavoriteIds());
   const [recentIds, setRecentIds] = useState(getRecentBoothIds());
   const [notices, setNotices] = useState([]);
@@ -207,6 +208,10 @@ export default function HomePage() {
       list = list.filter((booth) => congestionMap[booth.id]?.level === levelFilter);
     }
 
+    if (favoritesOnly) {
+      list = list.filter((booth) => favorites.includes(booth.id));
+    }
+
     return [...list].sort((a, b) => {
       if (sortBy === 'congestion') {
         return (levelToScore[congestionMap[b.id]?.level] || 1) - (levelToScore[congestionMap[a.id]?.level] || 1);
@@ -216,7 +221,7 @@ export default function HomePage() {
       }
       return (a.displayOrder || 999) - (b.displayOrder || 999);
     });
-  }, [booths, congestionMap, levelFilter, query, sortBy]);
+  }, [booths, congestionMap, favorites, favoritesOnly, levelFilter, query, sortBy]);
 
   const recentBooths = useMemo(() => {
     const byId = new Map(booths.map((booth) => [booth.id, booth]));
@@ -569,6 +574,27 @@ export default function HomePage() {
                 {isGridView ? '세로 카드 보기' : '가로 카드 보기'}
               </button>
               <button type="button" onClick={downloadBoothCsv} className="rounded-lg border border-slate-300 min-h-11 py-2 text-sm font-semibold text-slate-700">부스 CSV</button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setFavoritesOnly((prev) => !prev)}
+                className={`rounded-lg min-h-11 py-2 text-sm font-semibold ${favoritesOnly ? 'bg-gradient-to-r from-teal-700 via-cyan-600 to-emerald-600 text-white' : 'border border-slate-300 text-slate-700'}`}
+              >
+                {favoritesOnly ? '좋아요만 보는 중' : '좋아요만 보기'}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setFavoritesOnly(false);
+                  setLevelFilter('전체');
+                  setQuery('');
+                }}
+                className="rounded-lg border border-slate-300 min-h-11 py-2 text-sm font-semibold text-slate-700"
+              >
+                필터 초기화
+              </button>
             </div>
 
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="부스 이름 검색" className="w-full rounded-lg border border-slate-300 px-3 py-2 min-h-11 text-sm" />
