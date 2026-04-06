@@ -10,6 +10,7 @@ import {
   fetchActiveNotices,
   fetchBooths,
   fetchCongestion,
+  fetchEvents,
   sendGps,
 } from '../api';
 import CongestionBadge from '../components/CongestionBadge';
@@ -104,7 +105,7 @@ export default function HomePage() {
   const [congestionMap, setCongestionMap] = useState({});
   const [mapZoom, setMapZoom] = useState(16);
   const [isGridView, setIsGridView] = useState(true);
-  const [activeView, setActiveView] = useState('map');
+  const [activeView, setActiveView] = useState('split');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [query, setQuery] = useState('');
@@ -113,6 +114,7 @@ export default function HomePage() {
   const [favorites, setFavorites] = useState(getFavoriteIds());
   const [recentIds, setRecentIds] = useState(getRecentBoothIds());
   const [notices, setNotices] = useState([]);
+  const [events, setEvents] = useState([]);
   const [locationText, setLocationText] = useState('');
   const [gpsSending, setGpsSending] = useState(false);
   const previousCongestionRef = useRef({});
@@ -120,9 +122,10 @@ export default function HomePage() {
   useEffect(() => {
     async function load() {
       try {
-        const [boothData, noticeData] = await Promise.all([fetchBooths(), fetchActiveNotices()]);
+        const [boothData, noticeData, eventData] = await Promise.all([fetchBooths(), fetchActiveNotices(), fetchEvents()]);
         setBooths(boothData);
         setNotices(noticeData);
+        setEvents(eventData);
 
         const congestionData = await Promise.all(
           boothData.map(async (booth) => [booth.id, normalizeCongestion(await fetchCongestion(booth.id))])
@@ -242,6 +245,23 @@ export default function HomePage() {
       .slice(0, 12);
   }, [booths, congestionMap]);
 
+  const nextEvent = useMemo(() => {
+    const now = new Date();
+    return (events || [])
+      .filter((event) => event.startTime && new Date(event.startTime) > now)
+      .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))[0] || null;
+  }, [events]);
+
+  const recommendedBooths = useMemo(() => {
+    return [...booths]
+      .sort((a, b) => {
+        const scoreDiff = (levelToScore[congestionMap[a.id]?.level] || 1) - (levelToScore[congestionMap[b.id]?.level] || 1);
+        if (scoreDiff !== 0) return scoreDiff;
+        return (a.estimatedWaitMinutes ?? 999) - (b.estimatedWaitMinutes ?? 999);
+      })
+      .slice(0, 3);
+  }, [booths, congestionMap]);
+
   async function refreshAllCongestion() {
     const updates = await Promise.all(booths.map(async (booth) => [booth.id, await fetchCongestion(booth.id)]));
     const normalized = updates.map(([id, item]) => [id, normalizeCongestion(item)]);
@@ -304,6 +324,53 @@ export default function HomePage() {
 
   return (
     <section className="space-y-4 pt-4">
+      <article className="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-700 via-cyan-700 to-emerald-600 px-4 py-4 text-white">
+        <p className="text-xs opacity-85">아주대학교 축제 메인</p>
+        <h2 className="mt-1 text-xl font-extrabold">지금 축제를 바로 즐겨보세요</h2>
+        <p className="mt-1 text-xs opacity-90">
+          {nextEvent ? `다음 공연: ${nextEvent.title} (${nextEvent.startTime?.replace('T', ' ').slice(11, 16)})` : '곧 시작하는 공연 정보를 확인해보세요.'}
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => navigate('/stage-map')}
+            className="rounded-xl bg-white/20 px-3 py-2.5 min-h-11 text-sm font-semibold"
+          >
+            노천극장 인원 보기
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/events')}
+            className="rounded-xl bg-white px-3 py-2.5 min-h-11 text-sm font-bold text-teal-800"
+          >
+            공연 일정 보기
+          </button>
+        </div>
+      </article>
+
+      <article className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-semibold text-slate-800">지금 덜 붐비는 추천 부스</p>
+          <button type="button" onClick={() => setActiveView('list')} className="text-xs text-teal-700 font-semibold">전체 보기</button>
+        </div>
+        <div className="mt-2 grid grid-cols-3 gap-2">
+          {recommendedBooths.map((booth) => (
+            <button
+              key={`recommended-${booth.id}`}
+              type="button"
+              onClick={() => openBoothDetail(booth.id)}
+              className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-left"
+            >
+              <p className="text-xs font-semibold text-slate-800 line-clamp-1">{booth.name}</p>
+              <p className="mt-1 text-[11px] text-slate-600">대기 {booth.estimatedWaitMinutes ?? '-'}분</p>
+              <div className="mt-1">
+                <CongestionBadge level={congestionMap[booth.id]?.level || '여유'} />
+              </div>
+            </button>
+          ))}
+        </div>
+      </article>
+
       <article className="rounded-xl border border-teal-100 bg-teal-50/70 p-3">
         <p className="text-sm font-semibold text-teal-900">실시간 운영 안내</p>
         <p className="text-xs text-teal-800 mt-1">기준 위치: {AJOU_ADDRESS}</p>
@@ -329,10 +396,10 @@ export default function HomePage() {
       <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white p-1">
         <button
           type="button"
-          onClick={() => setActiveView('map')}
-          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === 'map' ? 'bg-teal-700 text-white' : 'text-slate-700'}`}
+          onClick={() => setActiveView('split')}
+          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === 'split' ? 'bg-teal-700 text-white' : 'text-slate-700'}`}
         >
-          지도 보기
+          동시 보기
         </button>
         <button
           type="button"
@@ -343,7 +410,7 @@ export default function HomePage() {
         </button>
       </div>
 
-      {activeView === 'map' && (
+      {activeView !== 'list' && (
         <>
           <div className="rounded-2xl overflow-hidden border border-slate-200">
             <MapContainer center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]} zoom={17} maxZoom={22} className="h-64 w-full">
@@ -434,6 +501,36 @@ export default function HomePage() {
               })}
             </div>
           </div>
+
+          {activeView === 'split' && (
+            <div className="rounded-xl border border-slate-200 bg-white p-3">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-semibold text-slate-800">지도 아래 부스 리스트</p>
+                <button type="button" onClick={() => setActiveView('list')} className="text-xs text-teal-700 font-semibold">
+                  전체 목록으로
+                </button>
+              </div>
+              <div className="space-y-2 max-h-60 overflow-auto pr-1">
+                {filteredBooths.slice(0, 8).map((booth) => {
+                  const congestion = congestionMap[booth.id];
+                  return (
+                    <button
+                      key={`split-${booth.id}`}
+                      type="button"
+                      onClick={() => openBoothDetail(booth.id)}
+                      className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-left"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold text-slate-800 line-clamp-1">{booth.name}</p>
+                        {congestion ? <CongestionBadge level={congestion.level} /> : <span className="text-xs text-slate-500">집계중</span>}
+                      </div>
+                      <p className="mt-1 text-xs text-slate-600 line-clamp-1">{booth.description}</p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <button onClick={handleMockGpsBatch} className="rounded-xl bg-teal-700 text-white min-h-11 py-2.5 font-semibold">GPS 샘플 생성</button>
