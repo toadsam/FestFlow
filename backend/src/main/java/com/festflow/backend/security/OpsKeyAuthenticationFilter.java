@@ -26,7 +26,8 @@ public class OpsKeyAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !request.getRequestURI().startsWith("/api/ops/");
+        return "OPTIONS".equalsIgnoreCase(request.getMethod())
+                || !request.getRequestURI().startsWith("/api/ops/");
     }
 
     @Override
@@ -60,4 +61,3 @@ public class OpsKeyAuthenticationFilter extends OncePerRequestFilter {
         filterChain.doFilter(request, response);
     }
 }
-

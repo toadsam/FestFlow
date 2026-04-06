@@ -332,3 +332,109 @@ export async function updateOpsBoothLiveStatus(boothId, payload, key) {
   });
   return parseJson(response, '부스 실시간 정보 저장에 실패했습니다.');
 }
+
+export async function createOpsMasterNotice(payload, key) {
+  const response = await fetch(withOpsKey('/ops/master/notices', key), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '통합 공지 등록에 실패했습니다.');
+}
+
+export async function updateOpsMasterNotice(id, payload, key) {
+  const response = await fetch(withOpsKey(`/ops/master/notices/${id}`, key), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '통합 공지 수정에 실패했습니다.');
+}
+
+export async function deleteOpsMasterNotice(id, key) {
+  const response = await fetch(withOpsKey(`/ops/master/notices/${id}`, key), {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('통합 공지 삭제에 실패했습니다.');
+  }
+}
+
+export async function createOpsMasterEvent(payload, key) {
+  const response = await fetch(withOpsKey('/ops/master/events', key), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '공연 등록에 실패했습니다.');
+}
+
+export async function updateOpsMasterEvent(id, payload, key) {
+  const response = await fetch(withOpsKey(`/ops/master/events/${id}`, key), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '공연 수정에 실패했습니다.');
+}
+
+export async function deleteOpsMasterEvent(id, key) {
+  const response = await fetch(withOpsKey(`/ops/master/events/${id}`, key), {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('공연 삭제에 실패했습니다.');
+  }
+}
+
+export async function createOpsMasterBooth(payload, key) {
+  const response = await fetch(withOpsKey('/ops/master/booths', key), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '부스 등록에 실패했습니다.');
+}
+
+export async function updateOpsMasterBooth(id, payload, key) {
+  const response = await fetch(withOpsKey(`/ops/master/booths/${id}`, key), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '부스 수정에 실패했습니다.');
+}
+
+export async function deleteOpsMasterBooth(id, key) {
+  const response = await fetch(withOpsKey(`/ops/master/booths/${id}`, key), {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('부스 삭제에 실패했습니다.');
+  }
+}
+
+export async function reorderOpsMasterBooths(boothIds, key) {
+  const response = await fetch(withOpsKey('/ops/master/booths/reorder', key), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ boothIds }),
+  });
+  if (!response.ok) {
+    throw new Error('부스 순서 변경에 실패했습니다.');
+  }
+}
+
+export async function triggerOpsMasterCongestionReliefNotice(key) {
+  const response = await fetch(withOpsKey('/ops/master/actions/congestion-relief-notice', key), {
+    method: 'POST',
+  });
+  return parseJson(response, '혼잡 완화 공지 발행에 실패했습니다.');
+}
+
+export async function triggerOpsMasterEventStartNotice(eventId, key) {
+  const response = await fetch(withOpsKey(`/ops/master/actions/events/${eventId}/start-notice`, key), {
+    method: 'POST',
+  });
+  return parseJson(response, '공연 시작 공지 발행에 실패했습니다.');
+}

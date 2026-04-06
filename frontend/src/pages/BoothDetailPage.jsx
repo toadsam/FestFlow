@@ -66,6 +66,8 @@ export default function BoothDetailPage() {
   const [memo, setMemo] = useState('');
   const [favorites, setFavorites] = useState(getFavoriteIds());
   const [savedNotice, setSavedNotice] = useState('');
+  const [opsKeyInput, setOpsKeyInput] = useState('');
+  const [opsLoginError, setOpsLoginError] = useState('');
   const [currentPos, setCurrentPos] = useState(null);
   const [boothAreaText, setBoothAreaText] = useState('경기도 수원시 영통구 아주대학교');
   const [myAreaText, setMyAreaText] = useState('');
@@ -121,6 +123,16 @@ export default function BoothDetailPage() {
 
   function handleFavorite() {
     setFavorites(toggleFavorite(Number(id)));
+  }
+
+  function handleOpsLogin() {
+    const key = opsKeyInput.trim();
+    if (!key) {
+      setOpsLoginError('운영 키를 입력해 주세요.');
+      return;
+    }
+    setOpsLoginError('');
+    navigate(`/ops/booth/${id}?key=${encodeURIComponent(key)}`);
   }
 
   function handleLoadCurrentLocation() {
@@ -263,6 +275,23 @@ export default function BoothDetailPage() {
           <button type="button" onClick={refreshCongestion} className="w-full rounded-xl border border-teal-700 text-teal-700 py-2.5 font-semibold">
             혼잡도 새로고침
           </button>
+
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 space-y-2">
+            <p className="text-sm font-semibold text-slate-800">부스 관리자 로그인</p>
+            <p className="text-xs text-slate-600">운영 키를 입력하면 이 부스의 운영자 화면으로 이동합니다.</p>
+            <div className="grid grid-cols-[1fr_auto] gap-2">
+              <input
+                className="border rounded px-2 py-2 text-sm"
+                placeholder="운영 키 입력"
+                value={opsKeyInput}
+                onChange={(e) => setOpsKeyInput(e.target.value)}
+              />
+              <button type="button" onClick={handleOpsLogin} className="rounded bg-slate-800 text-white px-3 py-2 text-sm font-semibold">
+                로그인
+              </button>
+            </div>
+            {opsLoginError && <p className="text-xs text-rose-600">{opsLoginError}</p>}
+          </div>
         </div>
       </article>
     </section>
