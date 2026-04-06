@@ -24,14 +24,14 @@ public class AdminActionController {
     @PostMapping("/congestion-relief-notice")
     public NoticeResponseDto publishCongestionReliefNotice(Authentication authentication) {
         NoticeResponseDto notice = adminActionService.publishCongestionReliefNotice();
-        auditLogService.log(authentication.getName(), "QUICK_ACTION", "NOTICE", notice.id(), "?쇱옟 ?꾪솕 ?덈궡 ?먮룞 諛쒗뻾");
+        auditLogService.log(authentication.getName(), "QUICK_ACTION", "NOTICE", notice.id(), "혼잡 완화 안내 자동 발행");
         return notice;
     }
 
     @PostMapping("/events/{eventId}/start-notice")
     public NoticeResponseDto publishEventStartNotice(@PathVariable Long eventId, Authentication authentication) {
         NoticeResponseDto notice = adminActionService.publishEventStartNotice(eventId);
-        auditLogService.log(authentication.getName(), "QUICK_ACTION", "NOTICE", notice.id(), "怨듭뿰 ?쒖옉 ?덈궡 諛쒗뻾");
+        auditLogService.log(authentication.getName(), "QUICK_ACTION", "NOTICE", notice.id(), "공연 시작 안내 발행");
         return notice;
     }
 }

@@ -62,7 +62,7 @@ public class AdminBoothController {
     @PutMapping("/{id}/live-status")
     public BoothResponseDto updateLiveStatus(@PathVariable Long id, @RequestBody BoothLiveStatusRequestDto requestDto, Authentication authentication) {
         BoothResponseDto updated = boothService.updateLiveStatus(id, requestDto);
-        auditLogService.log(authentication.getName(), "LIVE_STATUS", "BOOTH", id, "?湲??붿뿬/硫붿떆吏 媛깆떊");
+        auditLogService.log(authentication.getName(), "LIVE_STATUS", "BOOTH", id, "대기/잔여/운영메모 갱신");
         streamService.publishBooths(boothService.getAllBooths());
         return updated;
     }
@@ -88,14 +88,14 @@ public class AdminBoothController {
     @PutMapping("/reorder")
     public void reorderBooths(@Valid @RequestBody BoothReorderRequestDto requestDto, Authentication authentication) {
         boothService.reorderBooths(requestDto);
-        auditLogService.log(authentication.getName(), "REORDER", "BOOTH", null, "珥?" + requestDto.boothIds().size() + "媛??뺣젹");
+        auditLogService.log(authentication.getName(), "REORDER", "BOOTH", null, "총 " + requestDto.boothIds().size() + "개 정렬");
         streamService.publishBooths(boothService.getAllBooths());
     }
 
     @DeleteMapping("/{id}")
     public void deleteBooth(@PathVariable Long id, Authentication authentication) {
         boothService.deleteBooth(id);
-        auditLogService.log(authentication.getName(), "DELETE", "BOOTH", id, "遺????젣");
+        auditLogService.log(authentication.getName(), "DELETE", "BOOTH", id, "부스 삭제");
         streamService.publishBooths(boothService.getAllBooths());
     }
 }

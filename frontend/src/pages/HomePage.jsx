@@ -13,6 +13,7 @@ import {
   sendGps,
 } from '../api';
 import CongestionBadge from '../components/CongestionBadge';
+import { resolveBoothImageUrl } from '../config/boothImages';
 import { AJOU_ADDRESS, AJOU_CENTER, reverseGeocodeKoreanShort } from '../utils/location';
 import { addRecentBooth, getFavoriteIds, getRecentBoothIds, toggleFavorite } from '../utils/storage';
 
@@ -31,6 +32,20 @@ const noticeColor = {
   우천: 'border-sky-300 bg-sky-50 text-sky-700',
 };
 
+function normalizeLevel(level) {
+  const mapping = {
+    '?ъ쑀': '여유',
+    '蹂댄넻': '보통',
+    '?쇱옟': '혼잡',
+    '留ㅼ슦?쇱옟': '매우혼잡',
+  };
+  return mapping[level] || level;
+}
+
+function normalizeCongestion(item) {
+  return item ? { ...item, level: normalizeLevel(item.level) } : item;
+}
+
 function ZoomWatcher({ onZoomChange }) {
   useMapEvents({
     zoomend: (event) => onZoomChange(event.target.getZoom()),
@@ -39,7 +54,7 @@ function ZoomWatcher({ onZoomChange }) {
 }
 
 function getBoothImageUrl(booth) {
-  return booth.imageUrl || `https://picsum.photos/seed/festflow-booth-${booth.id}/800/450`;
+  return resolveBoothImageUrl(booth);
 }
 
 function getDirectionLinks(booth) {
@@ -113,7 +128,7 @@ export default function HomePage() {
         setNotices(noticeData);
 
         const congestionData = await Promise.all(
-          boothData.map(async (booth) => [booth.id, await fetchCongestion(booth.id)])
+          boothData.map(async (booth) => [booth.id, normalizeCongestion(await fetchCongestion(booth.id))])
         );
         const nextMap = Object.fromEntries(congestionData);
         previousCongestionRef.current = nextMap;
@@ -146,7 +161,7 @@ export default function HomePage() {
     stream.addEventListener('congestion', (event) => {
       try {
         const list = JSON.parse(event.data);
-        const nextMap = Object.fromEntries(list.map((item) => [item.boothId, item]));
+        const nextMap = Object.fromEntries(list.map((item) => [item.boothId, normalizeCongestion(item)]));
 
         Object.values(nextMap).forEach((item) => {
           const prev = previousCongestionRef.current[item.boothId];
@@ -214,12 +229,17 @@ export default function HomePage() {
       value: Object.values(congestionMap).filter((item) => item.level === level).length,
     }));
   }, [congestionMap]);
+  const chartMax = useMemo(
+    () => Math.max(1, ...chartData.map((item) => item.value)),
+    [chartData]
+  );
 
   const clusters = useMemo(() => buildClusters(booths, congestionMap), [booths, congestionMap]);
 
   async function refreshAllCongestion() {
     const updates = await Promise.all(booths.map(async (booth) => [booth.id, await fetchCongestion(booth.id)]));
-    const nextMap = Object.fromEntries(updates);
+    const normalized = updates.map(([id, item]) => [id, normalizeCongestion(item)]);
+    const nextMap = Object.fromEntries(normalized);
     previousCongestionRef.current = nextMap;
     setCongestionMap(nextMap);
   }
@@ -301,8 +321,13 @@ export default function HomePage() {
       </div>
 
       <div className="rounded-2xl overflow-hidden border border-slate-200">
-        <MapContainer center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]} zoom={17} className="h-64 w-full">
-          <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+        <MapContainer center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]} zoom={17} maxZoom={22} className="h-64 w-full">
+          <TileLayer
+            attribution='&copy; OpenStreetMap 기여자'
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={22}
+            maxNativeZoom={19}
+          />
           <ZoomWatcher onZoomChange={setMapZoom} />
 
           {mapZoom >= 16 &&
@@ -349,28 +374,6 @@ export default function HomePage() {
         </MapContainer>
       </div>
 
-      <div className="space-y-2">
-        <p className="text-sm font-semibold text-slate-700">정사각형 부스 소개</p>
-        <div className="grid grid-cols-2 gap-3">
-          {booths.slice(0, 4).map((booth) => (
-            <button
-              key={`square-${booth.id}`}
-              type="button"
-              onClick={() => openBoothDetail(booth.id)}
-              className="rounded-xl border border-slate-200 bg-white overflow-hidden text-left"
-            >
-              <div className="aspect-square bg-slate-100">
-                <img src={getBoothImageUrl(booth)} alt={`${booth.name} 정사각형 카드 이미지`} className="h-full w-full object-cover" loading="lazy" />
-              </div>
-              <div className="p-2">
-                <p className="text-sm font-bold text-slate-800 line-clamp-1">{booth.name}</p>
-                <p className="text-xs text-slate-500 mt-1">수원시 영통구 아주대학교</p>
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div className="grid grid-cols-2 gap-2">
         <button onClick={handleMockGpsBatch} className="rounded-xl bg-teal-700 text-white py-2.5 font-semibold">GPS 샘플 생성</button>
         <button
@@ -405,10 +408,13 @@ export default function HomePage() {
 
       <div className="rounded-xl border border-slate-200 bg-white p-3">
         <p className="text-sm font-semibold text-slate-700 mb-2">혼잡도 요약</p>
-        <div className="h-24 flex items-end gap-2">
+        <div className="h-24 flex items-end gap-2 overflow-hidden">
           {chartData.map((item) => (
             <div key={item.label} className="flex-1 text-center">
-              <div className="mx-auto w-full rounded-t bg-teal-500/80" style={{ height: `${Math.max(8, item.value * 18)}px` }} />
+              <div
+                className="mx-auto w-full rounded-t bg-teal-500/80"
+                style={{ height: `${Math.max(8, Math.round((item.value / chartMax) * 88))}px` }}
+              />
               <p className="mt-1 text-[10px] text-slate-500">{item.label} ({item.value})</p>
             </div>
           ))}
@@ -441,8 +447,8 @@ export default function HomePage() {
               </div>
               <div className="p-3">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="font-bold text-slate-800">{booth.name}</h3>
+                  <div className="min-w-0">
+                    <h3 className="font-bold text-slate-800 leading-tight break-keep">{booth.name}</h3>
                     <p className="text-[11px] text-slate-500 mt-0.5">경기도 수원시 영통구</p>
                     <p className={`text-slate-600 mt-1 ${isGridView ? 'text-xs line-clamp-2' : 'text-sm'}`}>{booth.description}</p>
                     {(booth.estimatedWaitMinutes != null || booth.remainingStock != null) && (
@@ -451,7 +457,9 @@ export default function HomePage() {
                       </p>
                     )}
                   </div>
-                  {congestion ? <CongestionBadge level={congestion.level} /> : null}
+                  <div className="shrink-0">
+                    {congestion ? <CongestionBadge level={congestion.level} /> : null}
+                  </div>
                 </div>
                 <div className="mt-2 flex items-center justify-between">
                   <p className="text-xs text-teal-700 font-semibold">자세히 보기 →</p>

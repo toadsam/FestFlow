@@ -1,5 +1,5 @@
 export const AJOU_CENTER = { latitude: 37.2826, longitude: 127.0443 };
-export const AJOU_ADDRESS = '寃쎄린???섏썝???곹넻援??붾뱶而듬줈 206 ?꾩＜??숆탳';
+export const AJOU_ADDRESS = '경기도 수원시 영통구 월드컵로 206 아주대학교';
 
 function pickPrimaryCity(address) {
   return address.city || address.town || address.village || address.state || '';

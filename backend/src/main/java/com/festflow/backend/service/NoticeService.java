@@ -51,7 +51,7 @@ public class NoticeService {
 
     public NoticeResponseDto updateNotice(Long noticeId, NoticeUpsertRequestDto requestDto) {
         Notice notice = noticeRepository.findById(noticeId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Notice not found"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "공지를 찾을 수 없습니다."));
 
         notice.update(requestDto.title(), requestDto.content(), requestDto.category(), requestDto.active());
         Notice saved = noticeRepository.save(notice);
@@ -62,7 +62,7 @@ public class NoticeService {
 
     public void deleteNotice(Long noticeId) {
         if (!noticeRepository.existsById(noticeId)) {
-            throw new ResponseStatusException(NOT_FOUND, "Notice not found");
+            throw new ResponseStatusException(NOT_FOUND, "공지를 찾을 수 없습니다.");
         }
 
         noticeRepository.deleteById(noticeId);

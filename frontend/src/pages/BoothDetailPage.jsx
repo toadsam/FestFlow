@@ -4,6 +4,7 @@ import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import L from 'leaflet';
 import { createBoothStream, fetchBoothById, fetchCongestion } from '../api';
 import CongestionBadge from '../components/CongestionBadge';
+import { resolveBoothImageUrl } from '../config/boothImages';
 import { AJOU_ADDRESS, reverseGeocodeKoreanShort } from '../utils/location';
 import { getBoothMemo, getFavoriteIds, saveBoothMemo, toggleFavorite } from '../utils/storage';
 
@@ -13,6 +14,20 @@ const markerIcon = L.icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 });
+
+function normalizeLevel(level) {
+  const mapping = {
+    '?ъ쑀': '여유',
+    '蹂댄넻': '보통',
+    '?쇱옟': '혼잡',
+    '留ㅼ슦?쇱옟': '매우혼잡',
+  };
+  return mapping[level] || level;
+}
+
+function normalizeCongestion(item) {
+  return item ? { ...item, level: normalizeLevel(item.level) } : item;
+}
 
 function boothMeta(id) {
   const categories = ['먹거리', '체험', '굿즈', '게임'];
@@ -63,7 +78,7 @@ export default function BoothDetailPage() {
           fetchCongestion(id),
         ]);
         setBooth(boothData);
-        setCongestion(congestionData);
+        setCongestion(normalizeCongestion(congestionData));
         setMemo(getBoothMemo(id));
         reverseGeocodeKoreanShort(boothData.latitude, boothData.longitude).then(setBoothAreaText);
       } catch (e) {
@@ -95,7 +110,7 @@ export default function BoothDetailPage() {
   async function refreshCongestion() {
     if (!id) return;
     const updated = await fetchCongestion(id);
-    setCongestion(updated);
+    setCongestion(normalizeCongestion(updated));
   }
 
   function handleMemoSave() {
@@ -137,7 +152,7 @@ export default function BoothDetailPage() {
 
   const isFavorite = favorites.includes(Number(id));
   const links = getDirectionLinks(booth);
-  const imageUrl = booth.imageUrl || `https://picsum.photos/seed/festflow-booth-${booth.id}/1200/700`;
+  const imageUrl = resolveBoothImageUrl(booth);
 
   const walkMinutes = currentPos
     ? Math.max(1, Math.round(distanceInMeters(currentPos.latitude, currentPos.longitude, booth.latitude, booth.longitude) / 75))
@@ -182,7 +197,7 @@ export default function BoothDetailPage() {
 
             <div className="mt-2 h-44 rounded overflow-hidden">
               <MapContainer center={[booth.latitude, booth.longitude]} zoom={17} className="h-full w-full">
-                <TileLayer attribution='&copy; OpenStreetMap contributors' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+                <TileLayer attribution='&copy; OpenStreetMap 기여자' url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
                 <Marker position={[booth.latitude, booth.longitude]} icon={markerIcon}>
                   <Popup>{booth.name}</Popup>
                 </Marker>

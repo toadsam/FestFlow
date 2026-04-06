@@ -46,13 +46,13 @@ public class EventService {
 
     public EventResponseDto getEventById(Long eventId) {
         FestivalEvent event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Event not found"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "공연을 찾을 수 없습니다."));
         return toDto(event, resolveStatus(event, LocalDateTime.now()));
     }
 
     public EventResponseDto updateEvent(Long eventId, EventUpsertRequestDto requestDto) {
         FestivalEvent event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Event not found"));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "공연을 찾을 수 없습니다."));
 
         event.update(requestDto.title(), requestDto.startTime(), requestDto.endTime());
         FestivalEvent saved = eventRepository.save(event);
@@ -61,7 +61,7 @@ public class EventService {
 
     public void deleteEvent(Long eventId) {
         if (!eventRepository.existsById(eventId)) {
-            throw new ResponseStatusException(NOT_FOUND, "Event not found");
+            throw new ResponseStatusException(NOT_FOUND, "공연을 찾을 수 없습니다.");
         }
         eventRepository.deleteById(eventId);
     }

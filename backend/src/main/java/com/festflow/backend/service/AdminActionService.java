@@ -21,12 +21,12 @@ public class AdminActionService {
 
     public NoticeResponseDto publishCongestionReliefNotice() {
         CongestionResponseDto mostCongested = boothService.getMostCongestedBooth();
-        String targetBooth = mostCongested != null ? mostCongested.boothName() : "?꾩옣 ?꾩껜";
+        String targetBooth = mostCongested != null ? mostCongested.boothName() : "현장 전체";
 
         return noticeService.createNotice(new NoticeUpsertRequestDto(
-                "?쇱옟 ?꾪솕 ?덈궡",
-                targetBooth + " 二쇰???留ㅼ슦 遺먮퉽?덈떎. 以묒븰愿묒옣 ?고쉶 ?숈꽑???댁슜??二쇱꽭??",
-                "湲닿툒",
+                "혼잡 완화 안내",
+                targetBooth + " 주변이 매우 붐빕니다. 중앙광장 우회 동선을 이용해 주세요.",
+                "긴급",
                 true
         ));
     }
@@ -35,9 +35,9 @@ public class AdminActionService {
         EventResponseDto event = eventService.getEventById(eventId);
 
         return noticeService.createNotice(new NoticeUpsertRequestDto(
-                "怨듭뿰 ?쒖옉 ?덈궡",
-                "吏湲덈???'" + event.title() + "' 怨듭뿰???쒖옉?⑸땲?? 愿媛앹꽍?쇰줈 ?대룞??二쇱꽭??",
-                "湲닿툒",
+                "공연 시작 안내",
+                "지금부터 '" + event.title() + "' 공연이 시작됩니다. 관객석으로 이동해 주세요.",
+                "긴급",
                 true
         ));
     }

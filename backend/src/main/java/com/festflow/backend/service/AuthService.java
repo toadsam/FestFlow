@@ -26,10 +26,10 @@ public class AuthService {
 
     public LoginResponseDto login(LoginRequestDto requestDto) {
         AdminUser adminUser = adminUserRepository.findByUsername(requestDto.username())
-                .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid credentials"));
+                .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "아이디 또는 비밀번호가 올바르지 않습니다."));
 
         if (!passwordEncoder.matches(requestDto.password(), adminUser.getPassword())) {
-            throw new ResponseStatusException(UNAUTHORIZED, "Invalid credentials");
+            throw new ResponseStatusException(UNAUTHORIZED, "아이디 또는 비밀번호가 올바르지 않습니다.");
         }
 
         String token = jwtService.generateToken(adminUser.getUsername(), adminUser.getRole());

@@ -52,13 +52,13 @@ export default function AnalyticsPage() {
         <div className="mt-3 h-28 flex items-end gap-1 overflow-x-auto">
           {traffic.length === 0 && <p className="text-xs text-slate-500">집계 데이터가 없습니다.</p>}
           {traffic.map((item) => (
-            <div key={item.hourLabel} className="min-w-7 text-center">
+            <div key={item.hour} className="min-w-7 text-center">
               <div
                 className="mx-auto w-5 rounded-t bg-cyan-500"
                 style={{ height: `${Math.max(6, (item.count / trafficMax) * 100)}px` }}
-                title={`${item.hourLabel}: ${item.count}`}
+                title={`${item.hour}: ${item.count}`}
               />
-              <p className="mt-1 text-[10px] text-slate-500">{item.hourLabel.slice(-5)}</p>
+              <p className="mt-1 text-[10px] text-slate-500">{item.hour.slice(-5)}</p>
             </div>
           ))}
         </div>

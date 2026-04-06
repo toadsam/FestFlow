@@ -1,5 +1,5 @@
 ﻿import { NavLink, Outlet } from 'react-router-dom';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 const tabs = [
   { to: '/', label: '홈', icon: '🏠', end: true },
@@ -11,6 +11,17 @@ const tabs = [
 
 export default function App() {
   const [noticeMessage, setNoticeMessage] = useState('');
+  const [showSplash, setShowSplash] = useState(true);
+  const [splashFading, setSplashFading] = useState(false);
+
+  useEffect(() => {
+    const fadeTimer = window.setTimeout(() => setSplashFading(true), 1500);
+    const hideTimer = window.setTimeout(() => setShowSplash(false), 2000);
+    return () => {
+      window.clearTimeout(fadeTimer);
+      window.clearTimeout(hideTimer);
+    };
+  }, []);
 
   async function requestNotificationPermission() {
     if (!('Notification' in window)) {
@@ -29,7 +40,7 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto app-shell bg-white/90 backdrop-blur-sm shadow-app border-x border-slate-100">
+    <div className="mx-auto app-shell bg-white/90 backdrop-blur-sm shadow-app border-x border-slate-100 relative">
       <header className="px-5 pt-6 pb-5 bg-gradient-to-r from-teal-700 via-cyan-600 to-emerald-600 text-white">
         <div className="flex items-center justify-between gap-2">
           <div>
@@ -67,6 +78,18 @@ export default function App() {
           </NavLink>
         ))}
       </nav>
+
+      {showSplash && (
+        <div className={`fixed inset-0 z-[3000] bg-slate-950 transition-opacity duration-500 ${splashFading ? 'opacity-0' : 'opacity-100'}`}>
+          <div className="h-full w-full flex items-start justify-center pt-0">
+          <img
+            src="/images/스플래시화면.png"
+            alt="스플래시 화면"
+            className="w-full max-w-[430px] h-auto object-contain object-top"
+          />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
