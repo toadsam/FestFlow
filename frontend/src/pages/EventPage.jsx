@@ -2,9 +2,9 @@
 import { createEventStream, downloadEventCsv, fetchEvents } from '../api';
 
 const statusClassName = {
-  예정: 'bg-indigo-100 text-indigo-700',
-  진행중: 'bg-emerald-100 text-emerald-700',
-  종료: 'bg-slate-200 text-slate-700',
+  예정: 'bg-sky-500/20 text-sky-200 border border-sky-300/50',
+  진행중: 'bg-cyan-400/20 text-cyan-200 border border-cyan-300/50',
+  종료: 'bg-slate-700/30 text-slate-200 border border-slate-400/40',
 };
 
 function notify(title, body) {
@@ -67,27 +67,27 @@ export default function EventPage() {
   }, [events]);
 
   return (
-    <section className="pt-4 space-y-3">
+    <section className="pt-4 space-y-3 scan-enter">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">공연 라인업</h2>
-        <button type="button" onClick={downloadEventCsv} className="text-xs rounded-lg border px-2 py-1 min-h-11">
+        <h2 className="text-lg font-bold glitch-title" data-text="LIVE LINEUP">LIVE LINEUP</h2>
+        <button type="button" onClick={downloadEventCsv} className="text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)]">
           CSV
         </button>
       </div>
 
       {upcoming && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <div className="rounded-xl border border-cyan-300/40 bg-slate-900/80 p-3 text-sm text-cyan-100">
           임박 공연: {upcoming.title} ({upcoming.startTime.replace('T', ' ')})
         </div>
       )}
 
-      <div className="grid grid-cols-4 gap-1 rounded-lg bg-slate-100 p-1">
+      <div className="grid grid-cols-4 gap-1 rounded-lg bg-slate-900/80 p-1">
         {['전체', '예정', '진행중', '종료'].map((status) => (
           <button
             key={status}
             type="button"
             onClick={() => setStatusFilter(status)}
-            className={`rounded-md py-1.5 min-h-11 text-xs font-semibold ${statusFilter === status ? 'bg-white text-teal-700 shadow-sm' : 'text-slate-600'}`}
+            className={`rounded-md py-1.5 min-h-11 text-xs font-semibold ${statusFilter === status ? 'bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50 shadow-sm' : 'text-slate-300'}`}
           >
             {status}
           </button>
@@ -96,7 +96,7 @@ export default function EventPage() {
 
       {error && <p className="text-sm text-rose-600">{error}</p>}
 
-      <div className="space-y-2">
+      <div className="space-y-2 stagger-list">
         {filtered.map((event, index) => (
           <article key={event.id} className="rounded-xl border border-slate-200 p-3 bg-white">
             <div className="flex items-center gap-3">

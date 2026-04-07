@@ -333,25 +333,25 @@ export default function HomePage() {
   }
 
   return (
-    <section className="space-y-4 pt-4">
-      <article className="rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-700 via-cyan-700 to-emerald-600 px-4 py-4 text-white">
-        <p className="text-xs opacity-85">아주대학교 축제 메인</p>
-        <h2 className="mt-1 text-xl font-extrabold">지금 축제를 바로 즐겨보세요</h2>
-        <p className="mt-1 text-xs opacity-90">
+    <section className="space-y-4 pt-4 scan-enter">
+      <article className="rounded-2xl border border-cyan-300/60 bg-gradient-to-br from-[#05305b] via-[#0a6ea8] to-[#19c6e8] px-4 py-4 text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.42)]">
+        <p className="text-xs tracking-[0.03em] text-cyan-200/95 drop-shadow-[0_0_8px_rgba(34,211,238,0.45)]">아주대학교 축제 메인</p>
+        <h2 className="mt-1 text-xl font-extrabold text-cyan-100 drop-shadow-[0_0_12px_rgba(125,249,255,0.65)]">지금 축제를 바로 즐겨보세요</h2>
+        <p className="mt-1 text-xs text-cyan-200/95 drop-shadow-[0_0_7px_rgba(34,211,238,0.4)]">
           {nextEvent ? `다음 공연: ${nextEvent.title} (${nextEvent.startTime?.replace('T', ' ').slice(11, 16)})` : '곧 시작하는 공연 정보를 확인해보세요.'}
         </p>
         <div className="mt-3 grid grid-cols-2 gap-2">
           <button
             type="button"
             onClick={() => navigate('/stage-map')}
-            className="rounded-xl bg-white/20 px-3 py-2.5 min-h-11 text-sm font-semibold"
+            className="rounded-xl border border-cyan-300/60 bg-sky-500/20 px-3 py-2.5 min-h-11 text-sm font-semibold text-cyan-50 shadow-[0_0_22px_rgba(34,211,238,0.45)]"
           >
             노천극장 인원 보기
           </button>
           <button
             type="button"
             onClick={() => navigate('/events')}
-            className="rounded-xl bg-white px-3 py-2.5 min-h-11 text-sm font-bold text-teal-800"
+            className="rounded-xl border border-cyan-200/70 bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 px-3 py-2.5 min-h-11 text-sm font-bold text-cyan-50 shadow-[0_0_24px_rgba(56,189,248,0.55)]"
           >
             공연 일정 보기
           </button>
@@ -363,7 +363,7 @@ export default function HomePage() {
           <p className="text-sm font-semibold text-slate-800">지금 덜 붐비는 추천 부스</p>
           <button type="button" onClick={() => setActiveView('list')} className="text-xs text-teal-700 font-semibold">전체 보기</button>
         </div>
-        <div className="mt-2 grid grid-cols-3 gap-2">
+        <div className="mt-2 grid grid-cols-3 gap-2 stagger-list">
           {recommendedBooths.map((booth) => (
             <button
               key={`recommended-${booth.id}`}
@@ -387,7 +387,7 @@ export default function HomePage() {
         {locationText && <p className="text-xs text-teal-700 mt-1">내 위치: {locationText}</p>}
       </article>
 
-      <div className="space-y-2">
+      <div className="space-y-2 stagger-list">
         {visibleNotices.length === 0 && (
           <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">현재 등록된 운영 공지가 없습니다.</div>
         )}
@@ -413,18 +413,18 @@ export default function HomePage() {
         ))}
       </div>
 
-      <div className="sticky bottom-[86px] z-40 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-white/95 backdrop-blur p-1 shadow-sm">
+      <div className="sticky bottom-[86px] z-40 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-900/90 backdrop-blur p-1 shadow-sm">
         <button
           type="button"
           onClick={() => setActiveView('split')}
-          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === 'split' ? 'bg-gradient-to-r from-teal-700 via-cyan-600 to-emerald-600 text-white' : 'text-slate-700'}`}
+          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === 'split' ? 'bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50' : 'text-slate-300'}`}
         >
           동시 보기
         </button>
         <button
           type="button"
           onClick={() => setActiveView('list')}
-          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === 'list' ? 'bg-teal-700 text-white' : 'text-slate-700'}`}
+          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === 'list' ? 'bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50' : 'text-slate-300'}`}
         >
           부스 목록
         </button>
@@ -497,7 +497,7 @@ export default function HomePage() {
                 전체 목록 보기
               </button>
             </div>
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex gap-2 overflow-x-auto pb-1 stagger-list">
               {mapQuickBooths.map((booth) => {
                 const congestion = congestionMap[booth.id];
                 return (
@@ -530,7 +530,7 @@ export default function HomePage() {
                   전체 목록으로
                 </button>
               </div>
-              <div className="space-y-2 max-h-60 overflow-auto pr-1">
+              <div className="space-y-2 max-h-60 overflow-auto pr-1 stagger-list">
                 {filteredBooths.slice(0, 8).map((booth) => {
                   const congestion = congestionMap[booth.id];
                   return (
@@ -553,11 +553,11 @@ export default function HomePage() {
           )}
 
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={handleMockGpsBatch} className="rounded-xl bg-teal-700 text-white min-h-11 py-2.5 font-semibold">GPS 샘플 생성</button>
+            <button onClick={handleMockGpsBatch} className="rounded-xl bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50 min-h-11 py-2.5 font-semibold shadow-[0_0_22px_rgba(34,211,238,0.5)]">GPS 샘플 생성</button>
             <button
               type="button"
               onClick={handleSendCurrentGps}
-              className="rounded-xl border border-teal-700 text-teal-700 min-h-11 py-2.5 font-semibold"
+              className="rounded-xl border border-cyan-300/70 bg-sky-500/15 text-cyan-100 min-h-11 py-2.5 font-semibold shadow-[0_0_18px_rgba(34,211,238,0.35)]"
               disabled={gpsSending}
             >
               {gpsSending ? 'GPS 전송 중...' : '내 위치 전송'}
@@ -644,7 +644,7 @@ export default function HomePage() {
             </div>
           )}
 
-          <div className={isGridView ? 'grid grid-cols-2 gap-3' : 'space-y-3'}>
+          <div className={isGridView ? 'grid grid-cols-2 gap-3 stagger-list' : 'space-y-3 stagger-list'}>
             {filteredBooths.map((booth) => {
               const congestion = congestionMap[booth.id];
               const isFavorite = favorites.includes(booth.id);
