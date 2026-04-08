@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { createEventStream, downloadEventCsv, fetchEvents } from '../api';
 
 const statusClassName = {
@@ -20,8 +21,11 @@ export default function EventPage() {
   const [selectedId, setSelectedId] = useState(null);
   const [nowMs, setNowMs] = useState(Date.now());
   const [bursts, setBursts] = useState([]);
+  const [arenaShock, setArenaShock] = useState(false);
   const notifiedRef = useRef(new Set());
   const arenaRef = useRef(null);
+  const cursorGlowRef = useRef(null);
+  const cursorRafRef = useRef(null);
 
   useEffect(() => {
     fetchEvents()
@@ -32,6 +36,14 @@ export default function EventPage() {
   useEffect(() => {
     const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
     return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (cursorRafRef.current) {
+        cancelAnimationFrame(cursorRafRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -96,15 +108,51 @@ export default function EventPage() {
     [filtered, selectedId]
   );
 
-  function spawnBurst(nativeEvent) {
+  function triggerShock() {
+    setArenaShock(true);
+    window.setTimeout(() => setArenaShock(false), 220);
+  }
+
+  function spawnBurst(nativeEvent, intensity = 1) {
     const arena = arenaRef.current;
     if (!arena) return;
     const rect = arena.getBoundingClientRect();
     const x = (nativeEvent?.clientX ?? rect.left + rect.width * 0.6) - rect.left;
     const y = (nativeEvent?.clientY ?? rect.top + 84) - rect.top;
     const id = `${Date.now()}-${Math.random()}`;
-    setBursts((prev) => [...prev.slice(-10), { id, x, y }]);
-    window.setTimeout(() => setBursts((prev) => prev.filter((item) => item.id !== id)), 780);
+    const sparks = Array.from({ length: 10 }, (_, idx) => ({
+      angle: idx * 36 + Math.round(Math.random() * 18),
+      distance: Math.round(28 + Math.random() * 34 * intensity),
+      hue: Math.round(180 + Math.random() * 150),
+      delay: Math.round(Math.random() * 120),
+    }));
+    setBursts((prev) => [...prev.slice(-14), { id, x, y, sparks }]);
+    window.setTimeout(() => setBursts((prev) => prev.filter((item) => item.id !== id)), 900);
+    triggerShock();
+  }
+
+  function handleArenaMouseMove(e) {
+    const arena = arenaRef.current;
+    const glow = cursorGlowRef.current;
+    if (!arena || !glow) return;
+    const rect = arena.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    if (cursorRafRef.current) {
+      cancelAnimationFrame(cursorRafRef.current);
+    }
+    cursorRafRef.current = requestAnimationFrame(() => {
+      glow.style.left = `${x}px`;
+      glow.style.top = `${y}px`;
+      glow.style.opacity = '1';
+    });
+  }
+
+  function handleArenaMouseLeave() {
+    const glow = cursorGlowRef.current;
+    if (!glow) return;
+    glow.style.opacity = '0';
   }
 
   function progressPercent(event) {
@@ -125,20 +173,36 @@ export default function EventPage() {
   }
 
   return (
-    <section ref={arenaRef} className="cyber-page pt-4 space-y-3 scan-enter events-arena">
+    <section
+      ref={arenaRef}
+      data-burst-scope="local"
+      className={`cyber-page pt-4 space-y-3 scan-enter events-arena ${arenaShock ? 'events-arena-shock' : ''}`}
+      onMouseMove={handleArenaMouseMove}
+      onMouseLeave={handleArenaMouseLeave}
+    >
       <div className="event-grid-noise" aria-hidden />
-      <div className="flex items-center justify-between">
+      <div ref={cursorGlowRef} className="event-cursor-glow" aria-hidden />
+      <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold glitch-title" data-text="LIVE LINEUP">LIVE LINEUP</h2>
-        <button
-          type="button"
-          onClick={(e) => {
-            spawnBurst(e.nativeEvent);
-            downloadEventCsv();
-          }}
-          className="text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)]"
-        >
-          CSV
-        </button>
+        <div className="flex items-center gap-1.5">
+          <Link
+            to="/events/lineup"
+            className="event-cta text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)] inline-flex items-center"
+            onClick={(e) => spawnBurst(e.nativeEvent, 1.3)}
+          >
+            라인업 보기
+          </Link>
+          <button
+            type="button"
+            onClick={(e) => {
+              spawnBurst(e.nativeEvent, 1.35);
+              downloadEventCsv();
+            }}
+            className="event-cta text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)]"
+          >
+            CSV
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-4 gap-2">
@@ -164,10 +228,10 @@ export default function EventPage() {
             key={status}
             type="button"
             onClick={(e) => {
-              spawnBurst(e.nativeEvent);
+              spawnBurst(e.nativeEvent, 1.1);
               setStatusFilter(status);
             }}
-            className={`rounded-md py-1.5 min-h-11 text-xs font-semibold ${statusFilter === status ? 'bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50 shadow-sm' : 'text-slate-300'}`}
+            className={`event-cta rounded-md py-1.5 min-h-11 text-xs font-semibold ${statusFilter === status ? 'bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50 shadow-sm' : 'text-slate-300'}`}
           >
             {status}
           </button>
@@ -201,7 +265,7 @@ export default function EventPage() {
             className={`rounded-xl border border-slate-200 p-3 bg-white event-card ${selectedId === event.id ? 'event-card-active' : ''}`}
             onClick={(e) => {
               setSelectedId(event.id);
-              spawnBurst(e.nativeEvent);
+              spawnBurst(e.nativeEvent, 1.2);
             }}
           >
             <div className="flex items-center gap-3">
@@ -234,11 +298,22 @@ export default function EventPage() {
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         {bursts.map((burst) => (
-          <span
-            key={burst.id}
-            className="fx-burst"
-            style={{ left: `${burst.x}px`, top: `${burst.y}px` }}
-          />
+          <span key={burst.id} className="fx-burst" style={{ left: `${burst.x}px`, top: `${burst.y}px` }}>
+            <span className="fx-ring" />
+            <span className="fx-core" />
+            {burst.sparks.map((spark, idx) => (
+              <span
+                key={`${burst.id}-${idx}`}
+                className="fx-spark"
+                style={{
+                  '--a': `${spark.angle}deg`,
+                  '--d': `${spark.distance}px`,
+                  '--h': spark.hue,
+                  animationDelay: `${spark.delay}ms`,
+                }}
+              />
+            ))}
+          </span>
         ))}
       </div>
     </section>

@@ -31,6 +31,7 @@ export default function App() {
 
   const [radialOpen, setRadialOpen] = useState(false);
   const [radialIndex, setRadialIndex] = useState(0);
+  const [globalBursts, setGlobalBursts] = useState([]);
   const touchStartX = useRef(null);
 
   useEffect(() => {
@@ -47,6 +48,48 @@ export default function App() {
     const active = allTabs.findIndex((tab) => (tab.end ? location.pathname === tab.to : location.pathname.startsWith(tab.to)));
     if (active >= 0) setRadialIndex(active);
   }, [location.pathname]);
+
+  useEffect(() => {
+    function makeSparks(intensity = 1) {
+      return Array.from({ length: 9 }, (_, idx) => ({
+        angle: idx * 40 + Math.round(Math.random() * 16),
+        distance: Math.round(20 + Math.random() * 26 * intensity),
+        hue: Math.round(180 + Math.random() * 140),
+        delay: Math.round(Math.random() * 120),
+      }));
+    }
+
+    function onPointerDown(event) {
+      const shell = document.querySelector('.app-shell');
+      if (!shell || !shell.contains(event.target)) return;
+      if (event.target.closest('[data-burst-scope="local"]')) return;
+      const interactive = event.target.closest('button, a, article, .rounded-xl, .rounded-2xl, .rounded-lg');
+      if (!interactive) return;
+
+      const burstId = `${Date.now()}-${Math.random()}`;
+      const waveId = `wave-${burstId}`;
+      const x = event.clientX;
+      const y = event.clientY;
+
+      setGlobalBursts((prev) => [
+        ...prev.slice(-18),
+        { id: burstId, x, y, sparks: makeSparks(1), wave: { id: waveId, size: 180 } },
+      ]);
+      window.setTimeout(() => setGlobalBursts((prev) => prev.filter((item) => item.id !== burstId)), 760);
+
+      const card = event.target.closest('article, .event-card, .cyber-selectable');
+      if (card) {
+        const parent = card.parentElement;
+        if (parent) {
+          parent.querySelectorAll('.cyber-selected').forEach((node) => node.classList.remove('cyber-selected'));
+        }
+        card.classList.add('cyber-selected');
+      }
+    }
+
+    document.addEventListener('pointerdown', onPointerDown, { passive: true });
+    return () => document.removeEventListener('pointerdown', onPointerDown);
+  }, []);
 
   function skipSplash() {
     setShowSplash(false);
@@ -154,6 +197,28 @@ export default function App() {
 
       {createPortal(
         <>
+          <div className="pointer-events-none fixed inset-0 z-[1400] overflow-hidden">
+            {globalBursts.map((burst) => (
+              <span key={burst.id} className="fx-burst global-fx" style={{ left: `${burst.x}px`, top: `${burst.y}px` }}>
+                <span className="fx-ring" />
+                <span className="fx-core" />
+                <span className="fx-wave-lite" style={{ '--wave-size': `${burst.wave.size}px` }} />
+                {burst.sparks.map((spark, idx) => (
+                  <span
+                    key={`${burst.id}-${idx}`}
+                    className="fx-spark"
+                    style={{
+                      '--a': `${spark.angle}deg`,
+                      '--d': `${spark.distance}px`,
+                      '--h': spark.hue,
+                      animationDelay: `${spark.delay}ms`,
+                    }}
+                  />
+                ))}
+              </span>
+            ))}
+          </div>
+
           {radialOpen && (
             <button
               type="button"

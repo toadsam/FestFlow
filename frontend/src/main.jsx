@@ -4,6 +4,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import App from './App';
 import HomePage from './pages/HomePage';
 import EventPage from './pages/EventPage';
+import LineupPage from './pages/LineupPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import StageMapPage from './pages/StageMapPage';
 import ChatPage from './pages/ChatPage';
@@ -29,6 +30,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
         <Route path="/" element={<App />}>
           <Route index element={<HomePage />} />
           <Route path="events" element={<EventPage />} />
+          <Route path="events/lineup" element={<LineupPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="stage-map" element={<StageMapPage />} />
           <Route path="chat" element={<ChatPage />} />
