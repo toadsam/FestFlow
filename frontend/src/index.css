@@ -318,6 +318,56 @@ a:focus-visible {
   z-index: 2;
 }
 
+.cyber-main::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(420px 180px at 15% 0%, #15e7ff1a 0%, transparent 70%),
+    radial-gradient(360px 180px at 88% 4%, #ff2fb81a 0%, transparent 72%);
+}
+
+.cyber-page {
+  border: 1px solid #18efff3d;
+  border-radius: 14px;
+  padding: 14px;
+  background:
+    linear-gradient(180deg, #060f1fe8, #050d1be8),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 4px,
+      #11ecff08 4px 5px
+    );
+  box-shadow:
+    inset 0 0 0 1px #89f2ff16,
+    0 0 22px #10deff1f,
+    0 14px 36px #01050fc4;
+}
+
+.cyber-page::before,
+.cyber-page::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.cyber-page::before {
+  left: 10px;
+  right: 10px;
+  top: 10px;
+  bottom: 10px;
+  border: 1px solid #18efff2a;
+  border-radius: 10px;
+}
+
+.cyber-page::after {
+  inset: 0;
+  background:
+    linear-gradient(130deg, #17eaff22 0%, transparent 24%),
+    linear-gradient(320deg, #ff2fb814 0%, transparent 20%);
+}
+
 .app-shell article,
 .app-shell .rounded-xl,
 .app-shell .rounded-2xl,
@@ -326,6 +376,16 @@ a:focus-visible {
   border-radius: 12px !important;
   position: relative;
   overflow: hidden;
+  clip-path: polygon(
+    0 10px,
+    10px 0,
+    calc(100% - 14px) 0,
+    100% 14px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    14px 100%,
+    0 calc(100% - 14px)
+  );
 }
 
 .app-shell .bg-white,
@@ -406,9 +466,10 @@ a:focus-visible {
 .app-shell h2,
 .app-shell h3 {
   font-family: "Orbitron", "Rajdhani", sans-serif;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.06em;
   color: #d8fdff !important;
   text-shadow: 0 0 10px #1deeff52;
+  text-transform: uppercase;
 }
 
 .app-shell p,
@@ -486,6 +547,41 @@ a:focus-visible {
   color: #d2fbff !important;
   border: 1px solid #18ecff72;
   box-shadow: 0 0 22px #0ee0ff38;
+}
+
+.neon-logo-strip {
+  width: 100%;
+  height: 40px;
+  object-fit: cover;
+  object-position: center;
+  opacity: 0.9;
+  mix-blend-mode: screen;
+  border: 1px solid #25ecff47;
+  border-radius: 10px;
+  margin-bottom: 8px;
+  box-shadow: 0 0 18px #24e8ff3a;
+}
+
+.hud-vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 46%, #010208b8 100%);
+  z-index: 0;
+}
+
+.hud-scan {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0 3px,
+    #13ecff07 3px 4px
+  );
+  animation: scanline 4.6s linear infinite;
 }
 
 .app-shell ::-webkit-scrollbar {

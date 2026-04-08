@@ -297,7 +297,7 @@ export default function OpsMasterPage() {
   }
 
   return (
-    <section className="pt-4 space-y-3">
+    <section className="cyber-page pt-4 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">통합 운영 콘솔</h2>
         <button type="button" onClick={load} className="rounded-lg border px-3 py-2 text-sm">새로고침</button>

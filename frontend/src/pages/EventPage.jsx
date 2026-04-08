@@ -67,7 +67,7 @@ export default function EventPage() {
   }, [events]);
 
   return (
-    <section className="pt-4 space-y-3 scan-enter">
+    <section className="cyber-page pt-4 space-y-3 scan-enter">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold glitch-title" data-text="LIVE LINEUP">LIVE LINEUP</h2>
         <button type="button" onClick={downloadEventCsv} className="text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)]">

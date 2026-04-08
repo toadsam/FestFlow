@@ -37,7 +37,7 @@ export default function AnalyticsPage() {
   const trafficMax = useMemo(() => Math.max(1, ...traffic.map((item) => item.count)), [traffic]);
 
   return (
-    <section className="pt-4 space-y-4">
+    <section className="cyber-page pt-4 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">데이터 분석</h2>
         <button type="button" onClick={loadAnalytics} className="text-xs rounded-lg border px-2 py-1 min-h-11">

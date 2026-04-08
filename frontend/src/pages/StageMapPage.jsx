@@ -73,7 +73,7 @@ export default function StageMapPage() {
   const pulseRadius = Math.max(10, Math.round(12 + ratio * 14));
 
   return (
-    <section className="pt-4 space-y-3">
+    <section className="cyber-page pt-4 space-y-3">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold">노천극장 실시간 인원</h2>
         <button

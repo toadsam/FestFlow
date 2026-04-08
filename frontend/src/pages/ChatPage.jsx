@@ -40,7 +40,7 @@ export default function ChatPage() {
   }
 
   return (
-    <section className="pt-4 space-y-4">
+    <section className="cyber-page pt-4 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">축제 챗봇</h2>
         <button type="button" onClick={resetMessages} className="text-xs rounded-lg border px-2 py-1">

@@ -94,7 +94,7 @@ export default function OpsBoothPage() {
   }
 
   return (
-    <section className="pt-4 space-y-3">
+    <section className="cyber-page pt-4 space-y-3">
       <h2 className="text-lg font-bold">부스 운영자 화면</h2>
       <form onSubmit={submitKey} className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
         <p className="text-sm font-semibold">운영 키 입력</p>

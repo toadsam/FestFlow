@@ -171,7 +171,7 @@ export default function BoothDetailPage() {
     : null;
 
   return (
-    <section className="pt-4 space-y-4">
+    <section className="cyber-page pt-4 space-y-4">
       <button type="button" onClick={() => navigate('/')} className="text-sm text-teal-700 font-semibold">
         ← 홈으로 돌아가기
       </button>

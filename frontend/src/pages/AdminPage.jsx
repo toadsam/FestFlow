@@ -282,7 +282,7 @@ export default function AdminPage() {
 
   if (!loggedIn) {
     return (
-      <section className="pt-4 space-y-3">
+      <section className="cyber-page pt-4 space-y-3">
         <h2 className="text-lg font-bold">관리자 로그인</h2>
         <p className="text-xs text-slate-500">기본 계정: admin / admin1234</p>
         <form className="space-y-2 rounded-xl border border-slate-200 bg-white p-3" onSubmit={handleLogin}>
@@ -296,7 +296,7 @@ export default function AdminPage() {
   }
 
   return (
-    <section className="pt-4 space-y-4">
+    <section className="cyber-page pt-4 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold">운영 관리자</h2>
         <button type="button" onClick={handleLogout} className="text-xs rounded-lg border px-2 py-1">로그아웃</button>

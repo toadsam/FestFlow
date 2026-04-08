@@ -333,7 +333,7 @@ export default function HomePage() {
   }
 
   return (
-    <section className="space-y-4 pt-4 scan-enter">
+    <section className="cyber-page space-y-4 pt-4 scan-enter">
       <article className="rounded-2xl border border-cyan-300/60 bg-gradient-to-br from-[#05305b] via-[#0a6ea8] to-[#19c6e8] px-4 py-4 text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.42)]">
         <p className="text-xs tracking-[0.03em] text-cyan-200/95 drop-shadow-[0_0_8px_rgba(34,211,238,0.45)]">아주대학교 축제 메인</p>
         <h2 className="mt-1 text-xl font-extrabold text-cyan-100 drop-shadow-[0_0_12px_rgba(125,249,255,0.65)]">지금 축제를 바로 즐겨보세요</h2>

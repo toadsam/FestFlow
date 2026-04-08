@@ -115,10 +115,13 @@ export default function App() {
 
   return (
     <div className="mx-auto app-shell neon-shell relative">
+      <div className="hud-vignette" aria-hidden />
+      <div className="hud-scan" aria-hidden />
       <header className="neon-header">
         <div className="neon-header-hud">
           <div className="neon-header-grid" aria-hidden />
           <div className="neon-header-core">
+            <img src="/images/header-main.png" alt="" className="neon-logo-strip" aria-hidden />
             <p className="text-xs tracking-[0.22em] uppercase neon-kicker">2026 Ajou Culture Festival</p>
             <h1 className="mt-1 text-2xl font-extrabold neon-title glitch-title" data-text="ACENTIA FESTFLOW">ACENTIA FESTFLOW</h1>
             <p className="text-xs neon-sub mt-1">Live Crowd Intel · Stage Signal · Ops Command</p>
@@ -144,7 +147,7 @@ export default function App() {
         </div>
       </header>
 
-      <main className="px-4 pb-28 pt-1">
+      <main className="px-4 pb-28 pt-1 cyber-main">
         <Outlet />
       </main>
 
