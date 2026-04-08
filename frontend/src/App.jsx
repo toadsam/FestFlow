@@ -117,6 +117,7 @@ export default function App() {
     <div className="mx-auto app-shell neon-shell relative">
       <div className="hud-vignette" aria-hidden />
       <div className="hud-scan" aria-hidden />
+      <div className="hud-particles" aria-hidden />
       <header className="neon-header">
         <div className="neon-header-hud">
           <div className="neon-header-grid" aria-hidden />

@@ -413,7 +413,7 @@ export default function HomePage() {
         ))}
       </div>
 
-      <div className="sticky bottom-[86px] z-40 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-900/90 backdrop-blur p-1 shadow-sm">
+      <div className="z-40 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-900/90 backdrop-blur p-1 shadow-sm">
         <button
           type="button"
           onClick={() => setActiveView('split')}

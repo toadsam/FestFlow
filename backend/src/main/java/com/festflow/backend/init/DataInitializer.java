@@ -134,12 +134,13 @@ public class DataInitializer {
         if (events.isEmpty()) {
             return false;
         }
-        if (events.size() <= 3) {
+        if (events.size() <= 4) {
             return true;
         }
 
         String firstTitle = events.get(0).getTitle();
         return firstTitle.contains("Ajou")
+                || firstTitle.contains("\uB9C8\uC2A4\uD130\uD53C\uC2A4")
                 || firstTitle.equals("아주 축제 오프닝 퍼레이드")
                 || firstTitle.equals("율곡관 밴드 라이브")
                 || firstTitle.equals("중앙광장 DJ 나이트");
@@ -147,11 +148,11 @@ public class DataInitializer {
 
     private List<FestivalEvent> seedEvents(LocalDateTime now) {
         return List.of(
-                new FestivalEvent("마스터피스 공연", now.minusHours(2), now.minusHours(1), "예정"),
-                new FestivalEvent("득근득근 포징 공연", now.minusMinutes(25), now.plusMinutes(20), "예정"),
-                new FestivalEvent("하츠투하트", now.plusHours(1), now.plusHours(2), "예정"),
-                new FestivalEvent("베이비몬스터", now.plusHours(2).plusMinutes(30), now.plusHours(3).plusMinutes(30), "예정"),
-                new FestivalEvent("하이키", now.plusHours(4), now.plusHours(5), "예정")
+                new FestivalEvent("\uB4DD\uADFC\uB4DD\uADFC \uD3EC\uC9D5 \uACF5\uC5F0", now.minusMinutes(25), now.plusMinutes(20), "\uC608\uC815"),
+                new FestivalEvent("\uD558\uCE20\uD22C\uD558\uD2B8", now.plusMinutes(50), now.plusHours(1).plusMinutes(40), "\uC608\uC815"),
+                new FestivalEvent("\uD558\uC774\uD0A4", now.plusHours(2), now.plusHours(3), "\uC608\uC815"),
+                new FestivalEvent("\uBCA0\uC774\uBE44\uBAAC\uC2A4\uD130", now.plusHours(3).plusMinutes(30), now.plusHours(4).plusMinutes(30), "\uC608\uC815"),
+                new FestivalEvent("\uD0A4\uD0A4", now.plusHours(5), now.plusHours(6), "\uC608\uC815")
         );
     }
 }

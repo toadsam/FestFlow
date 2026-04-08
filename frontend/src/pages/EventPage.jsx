@@ -17,12 +17,21 @@ export default function EventPage() {
   const [events, setEvents] = useState([]);
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('전체');
+  const [selectedId, setSelectedId] = useState(null);
+  const [nowMs, setNowMs] = useState(Date.now());
+  const [bursts, setBursts] = useState([]);
   const notifiedRef = useRef(new Set());
+  const arenaRef = useRef(null);
 
   useEffect(() => {
     fetchEvents()
       .then(setEvents)
       .catch((e) => setError(e.message));
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -58,6 +67,14 @@ export default function EventPage() {
     return events.filter((event) => event.status === statusFilter);
   }, [events, statusFilter]);
 
+  const statusStats = useMemo(() => {
+    const counters = { 전체: events.length, 예정: 0, 진행중: 0, 종료: 0 };
+    events.forEach((event) => {
+      counters[event.status] = (counters[event.status] || 0) + 1;
+    });
+    return counters;
+  }, [events]);
+
   const upcoming = useMemo(() => {
     const now = new Date();
     return events.find((event) => {
@@ -66,18 +83,78 @@ export default function EventPage() {
     });
   }, [events]);
 
+  useEffect(() => {
+    if (filtered.length === 0) {
+      setSelectedId(null);
+      return;
+    }
+    setSelectedId((prev) => (filtered.some((item) => item.id === prev) ? prev : filtered[0].id));
+  }, [filtered]);
+
+  const selectedEvent = useMemo(
+    () => filtered.find((event) => event.id === selectedId) || null,
+    [filtered, selectedId]
+  );
+
+  function spawnBurst(nativeEvent) {
+    const arena = arenaRef.current;
+    if (!arena) return;
+    const rect = arena.getBoundingClientRect();
+    const x = (nativeEvent?.clientX ?? rect.left + rect.width * 0.6) - rect.left;
+    const y = (nativeEvent?.clientY ?? rect.top + 84) - rect.top;
+    const id = `${Date.now()}-${Math.random()}`;
+    setBursts((prev) => [...prev.slice(-10), { id, x, y }]);
+    window.setTimeout(() => setBursts((prev) => prev.filter((item) => item.id !== id)), 780);
+  }
+
+  function progressPercent(event) {
+    const start = new Date(event.startTime).getTime();
+    const end = new Date(event.endTime).getTime();
+    if (Number.isNaN(start) || Number.isNaN(end) || start >= end) return 0;
+    if (nowMs <= start) return 0;
+    if (nowMs >= end) return 100;
+    return Math.round(((nowMs - start) / (end - start)) * 100);
+  }
+
+  function countdownLabel(event) {
+    const diff = new Date(event.startTime).getTime() - nowMs;
+    if (diff <= 0) return '곧 시작';
+    const minutes = Math.floor(diff / 60000);
+    const seconds = Math.floor((diff % 60000) / 1000);
+    return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
+  }
+
   return (
-    <section className="cyber-page pt-4 space-y-3 scan-enter">
+    <section ref={arenaRef} className="cyber-page pt-4 space-y-3 scan-enter events-arena">
+      <div className="event-grid-noise" aria-hidden />
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold glitch-title" data-text="LIVE LINEUP">LIVE LINEUP</h2>
-        <button type="button" onClick={downloadEventCsv} className="text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)]">
+        <button
+          type="button"
+          onClick={(e) => {
+            spawnBurst(e.nativeEvent);
+            downloadEventCsv();
+          }}
+          className="text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)]"
+        >
           CSV
         </button>
       </div>
 
+      <div className="grid grid-cols-4 gap-2">
+        {['전체', '예정', '진행중', '종료'].map((label) => (
+          <div key={`metric-${label}`} className="event-metric rounded-lg p-2 text-center">
+            <p className="text-[10px] uppercase tracking-[0.12em]">{label}</p>
+            <p className="mt-1 text-base font-bold">{statusStats[label] ?? 0}</p>
+          </div>
+        ))}
+      </div>
+
       {upcoming && (
-        <div className="rounded-xl border border-cyan-300/40 bg-slate-900/80 p-3 text-sm text-cyan-100">
-          임박 공연: {upcoming.title} ({upcoming.startTime.replace('T', ' ')})
+        <div className="rounded-xl border border-cyan-300/40 bg-slate-900/80 p-3 text-sm text-cyan-100 event-alert">
+          <p className="text-[11px] uppercase tracking-[0.12em] text-cyan-200">Next On Stage</p>
+          <p className="mt-1 font-semibold">{upcoming.title}</p>
+          <p className="text-xs mt-1">{upcoming.startTime.replace('T', ' ')} · {countdownLabel(upcoming)}</p>
         </div>
       )}
 
@@ -86,7 +163,10 @@ export default function EventPage() {
           <button
             key={status}
             type="button"
-            onClick={() => setStatusFilter(status)}
+            onClick={(e) => {
+              spawnBurst(e.nativeEvent);
+              setStatusFilter(status);
+            }}
             className={`rounded-md py-1.5 min-h-11 text-xs font-semibold ${statusFilter === status ? 'bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50 shadow-sm' : 'text-slate-300'}`}
           >
             {status}
@@ -96,9 +176,34 @@ export default function EventPage() {
 
       {error && <p className="text-sm text-rose-600">{error}</p>}
 
+      {selectedEvent && (
+        <article className="event-highlight rounded-xl border border-cyan-300/60 p-3">
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-bold text-sm">{selectedEvent.title}</h3>
+            <span className={`text-xs font-bold px-2.5 py-1 rounded-full ${statusClassName[selectedEvent.status] || 'bg-slate-100 text-slate-600'}`}>
+              {selectedEvent.status}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-cyan-200">{selectedEvent.startTime.replace('T', ' ')} ~ {selectedEvent.endTime.replace('T', ' ')}</p>
+          <div className="mt-2 h-2 rounded bg-slate-900/70 overflow-hidden">
+            <div
+              className="h-full event-progress"
+              style={{ width: `${progressPercent(selectedEvent)}%` }}
+            />
+          </div>
+        </article>
+      )}
+
       <div className="space-y-2 stagger-list">
         {filtered.map((event, index) => (
-          <article key={event.id} className="rounded-xl border border-slate-200 p-3 bg-white">
+          <article
+            key={event.id}
+            className={`rounded-xl border border-slate-200 p-3 bg-white event-card ${selectedId === event.id ? 'event-card-active' : ''}`}
+            onClick={(e) => {
+              setSelectedId(event.id);
+              spawnBurst(e.nativeEvent);
+            }}
+          >
             <div className="flex items-center gap-3">
               <div className="w-6 flex justify-center text-slate-400 text-xs">{index + 1}</div>
               <div className="w-1 h-12 bg-teal-200 rounded" />
@@ -112,6 +217,9 @@ export default function EventPage() {
                 <p className="text-sm text-slate-600 mt-1">
                   {event.startTime.replace('T', ' ')} ~ {event.endTime.replace('T', ' ')}
                 </p>
+                <div className="mt-2 h-1.5 rounded bg-slate-900/60 overflow-hidden">
+                  <div className="event-progress h-full" style={{ width: `${progressPercent(event)}%` }} />
+                </div>
               </div>
             </div>
           </article>
@@ -123,6 +231,17 @@ export default function EventPage() {
           선택한 상태의 공연이 없습니다. 관리자에서 공연을 등록하거나, 잠시 후 새로고침해 주세요.
         </div>
       )}
+
+      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+        {bursts.map((burst) => (
+          <span
+            key={burst.id}
+            className="fx-burst"
+            style={{ left: `${burst.x}px`, top: `${burst.y}px` }}
+          />
+        ))}
+      </div>
     </section>
   );
 }
+

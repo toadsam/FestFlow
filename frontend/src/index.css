@@ -48,6 +48,7 @@ body::before {
     linear-gradient(to bottom, #17efff11 1px, transparent 1px);
   background-size: 30px 30px;
   mask-image: linear-gradient(180deg, transparent 0%, #000 20%, #000 86%, transparent 100%);
+  animation: grid-pan 18s linear infinite;
 }
 
 body::after {
@@ -60,6 +61,7 @@ body::after {
       #11edff0a 3px 4px
     );
   mix-blend-mode: screen;
+  animation: aurora-shift 9s ease-in-out infinite alternate;
 }
 
 button,
@@ -102,6 +104,7 @@ a:focus-visible {
     inset 0 1px 0 #7ce9ff33;
   position: relative;
   overflow: hidden;
+  animation: shell-breathe 5.8s ease-in-out infinite;
 }
 
 .neon-shell::before,
@@ -148,6 +151,16 @@ a:focus-visible {
     radial-gradient(180px 120px at 85% 80%, #ff5fd343 0%, transparent 70%),
     linear-gradient(165deg, #091c34 0%, #07152a 62%, #05101f 100%);
   padding: 16px 20px 12px;
+}
+
+.neon-header-hud::before {
+  content: "";
+  position: absolute;
+  inset: -20% -40%;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, #9ef6ff26 50%, transparent 64%);
+  transform: translateX(-34%);
+  animation: hud-shine 5.4s linear infinite;
 }
 
 .neon-header-grid {
@@ -213,6 +226,7 @@ a:focus-visible {
   text-shadow:
     0 0 14px #29e8ff7a,
     0 0 28px #238bff52;
+  animation: title-flicker 3.6s linear infinite;
 }
 
 .glitch-title {
@@ -235,14 +249,14 @@ a:focus-visible {
   color: #53f6ff;
   transform: translate(-1px, 0);
   text-shadow: -1px 0 #53f6ff;
-  animation: glitch-shift 2.4s infinite linear alternate-reverse;
+  animation: glitch-shift 2.4s infinite linear alternate-reverse, glitch-jump 240ms infinite steps(2, end);
 }
 
 .glitch-title::after {
   color: #7c74ff;
   transform: translate(1px, 0);
   text-shadow: 1px 0 #7c74ff;
-  animation: glitch-shift 1.8s infinite linear alternate-reverse;
+  animation: glitch-shift 1.8s infinite linear alternate-reverse, glitch-jump 180ms infinite steps(2, end);
 }
 
 .neon-sub {
@@ -279,6 +293,7 @@ a:focus-visible {
   border-color: #2ef2ff;
   background: linear-gradient(145deg, #1c75ff, #10dbff);
   box-shadow: 0 0 20px #20dfff80, 0 6px 24px #041327d9;
+  animation: focus-pulse 1.9s ease-in-out infinite;
 }
 
 .neon-radial-open {
@@ -286,6 +301,7 @@ a:focus-visible {
   border-color: #25eeff;
   background: linear-gradient(160deg, #0f6cff, #0fd4ff);
   box-shadow: 0 0 20px #19e6ff66, 0 8px 22px #020c18cc;
+  animation: orb-spin 5s linear infinite;
 }
 
 .neon-radial-close {
@@ -293,6 +309,7 @@ a:focus-visible {
   border-color: #ff6fc8;
   background: linear-gradient(160deg, #dc2587, #7d24ff);
   box-shadow: 0 0 18px #ff5ec178, 0 8px 22px #110317cc;
+  animation: orb-spin 3.2s linear infinite reverse;
 }
 
 .neon-bottom-nav {
@@ -306,6 +323,7 @@ a:focus-visible {
   color: #c7ffff;
   background: linear-gradient(140deg, #1e60ff 0%, #0df1ff 100%);
   text-shadow: 0 0 8px #d9ffff9f;
+  animation: nav-pulse 2.1s ease-in-out infinite;
 }
 
 .neon-nav-idle {
@@ -343,6 +361,7 @@ a:focus-visible {
     inset 0 0 0 1px #89f2ff16,
     0 0 22px #10deff1f,
     0 14px 36px #01050fc4;
+  animation: panel-breathe 4.8s ease-in-out infinite;
 }
 
 .cyber-page::before,
@@ -366,6 +385,7 @@ a:focus-visible {
   background:
     linear-gradient(130deg, #17eaff22 0%, transparent 24%),
     linear-gradient(320deg, #ff2fb814 0%, transparent 20%);
+  animation: panel-spark 4s linear infinite;
 }
 
 .app-shell article,
@@ -426,6 +446,7 @@ a:focus-visible {
     inset 0 1px 0 #e2ffff1f,
     0 12px 26px #020915bf,
     0 0 24px #0ddfff22;
+  animation: card-idle 4.4s ease-in-out infinite;
 }
 
 .app-shell article::before,
@@ -495,6 +516,8 @@ a:focus-visible {
 }
 
 .app-shell button {
+  position: relative;
+  overflow: hidden;
   border-color: #2ae9ff72;
   background: linear-gradient(150deg, #0a2744d6, #081a31d6);
   color: #b9f7ff;
@@ -502,9 +525,20 @@ a:focus-visible {
   transition: box-shadow 180ms ease, border-color 180ms ease, transform 180ms ease;
 }
 
+.app-shell button::before {
+  content: "";
+  position: absolute;
+  inset: -120% -40%;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 36%, #96f6ff2e 51%, transparent 66%);
+  transform: translateX(-20%);
+  animation: button-sweep 3.6s linear infinite;
+}
+
 .app-shell button:hover {
   border-color: #5ef2ff9f;
-  box-shadow: inset 0 0 0 1px #b5f8ff30, 0 0 20px #12e8ff52;
+  box-shadow: inset 0 0 0 1px #b5f8ff30, 0 0 20px #12e8ff52, 0 0 42px #27b3ff3d;
+  transform: translateY(-1px) scale(1.01);
 }
 
 .app-shell button:active {
@@ -560,6 +594,7 @@ a:focus-visible {
   border-radius: 10px;
   margin-bottom: 8px;
   box-shadow: 0 0 18px #24e8ff3a;
+  animation: logo-flicker 2.8s linear infinite;
 }
 
 .hud-vignette {
@@ -581,7 +616,22 @@ a:focus-visible {
     transparent 0 3px,
     #13ecff07 3px 4px
   );
-  animation: scanline 4.6s linear infinite;
+  animation: scanline 4.6s linear infinite, scan-shift 7s ease-in-out infinite;
+}
+
+.hud-particles {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    radial-gradient(circle, #63f3ffbf 0 1px, transparent 1px),
+    radial-gradient(circle, #ff4abc9e 0 1px, transparent 1px),
+    radial-gradient(circle, #6e7bff9e 0 1px, transparent 1px);
+  background-size: 140px 140px, 190px 190px, 220px 220px;
+  background-position: 10% 85%, 80% 15%, 45% 55%;
+  opacity: 0.45;
+  animation: particles-drift 16s linear infinite;
 }
 
 .app-shell ::-webkit-scrollbar {
@@ -592,6 +642,86 @@ a:focus-visible {
 .app-shell ::-webkit-scrollbar-thumb {
   background: linear-gradient(180deg, #28dbff, #775eff);
   border-radius: 999px;
+}
+
+.events-arena {
+  overflow: hidden;
+}
+
+.event-grid-noise {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+  background:
+    radial-gradient(circle at 20% 20%, #0de7ff1f 0%, transparent 32%),
+    radial-gradient(circle at 78% 24%, #ff34b51f 0%, transparent 30%),
+    linear-gradient(130deg, transparent 0 40%, #9af6ff17 48%, transparent 56%);
+  animation: event-noise 5.2s ease-in-out infinite;
+}
+
+.event-alert {
+  position: relative;
+  overflow: hidden;
+}
+
+.event-alert::before {
+  content: "";
+  position: absolute;
+  inset: -30% -40%;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 35%, #9ff8ff30 50%, transparent 65%);
+  animation: event-alert-sweep 3.6s linear infinite;
+}
+
+.event-metric {
+  border: 1px solid #18efff52;
+  background: linear-gradient(145deg, #081a31de, #07122adf);
+  box-shadow: inset 0 0 0 1px #8bf4ff17, 0 0 16px #0ddfff2e;
+  animation: metric-pop 2.8s ease-in-out infinite;
+}
+
+.event-metric:nth-child(2) { animation-delay: 120ms; }
+.event-metric:nth-child(3) { animation-delay: 240ms; }
+.event-metric:nth-child(4) { animation-delay: 360ms; }
+
+.event-highlight {
+  background: linear-gradient(145deg, #0a1d3de8, #092249e8) !important;
+  box-shadow: 0 0 30px #12e8ff3d, inset 0 0 0 1px #a5f6ff1c;
+}
+
+.event-card {
+  cursor: pointer;
+  transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+}
+
+.event-card:hover {
+  transform: translateY(-2px) scale(1.01);
+  border-color: #52f3ff9f !important;
+  box-shadow: 0 0 34px #10ddff47, 0 14px 36px #010814c9;
+}
+
+.event-card-active {
+  border-color: #72f6ff !important;
+  box-shadow: 0 0 0 1px #8af7ff61, 0 0 30px #12e0ff5c, 0 16px 38px #021121cf !important;
+  transform: translateY(-1px);
+}
+
+.event-progress {
+  background: linear-gradient(90deg, #6e56ff 0%, #12e5ff 46%, #ff38b8 100%);
+  box-shadow: 0 0 12px #10e9ff80;
+  animation: progress-flicker 2.2s linear infinite;
+}
+
+.fx-burst {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, #c6feff 0%, #16e8ff 48%, #ff32bd 100%);
+  box-shadow: 0 0 24px #21ebff, 0 0 36px #ff43bc;
+  animation: burst-ring 780ms ease-out forwards;
 }
 
 .app-shell .leaflet-container {
@@ -664,6 +794,119 @@ a:focus-visible {
   }
 }
 
+@keyframes button-sweep {
+  0% { transform: translateX(-44%); }
+  100% { transform: translateX(44%); }
+}
+
+@keyframes hud-shine {
+  0% { transform: translateX(-40%); opacity: 0; }
+  15% { opacity: 0.8; }
+  45% { opacity: 0; }
+  100% { transform: translateX(42%); opacity: 0; }
+}
+
+@keyframes title-flicker {
+  0%, 19%, 22%, 63%, 67%, 100% { filter: brightness(1); }
+  20%, 66% { filter: brightness(1.5); }
+}
+
+@keyframes glitch-jump {
+  0%, 70% { transform: translate(0, 0); }
+  73% { transform: translate(-2px, 1px); }
+  75% { transform: translate(2px, -1px); }
+  77%, 100% { transform: translate(0, 0); }
+}
+
+@keyframes focus-pulse {
+  0%, 100% { box-shadow: 0 0 18px #20dfff6e, 0 6px 24px #041327d9; }
+  50% { box-shadow: 0 0 30px #20dfff9e, 0 6px 30px #102b5ad9; }
+}
+
+@keyframes nav-pulse {
+  0%, 100% { box-shadow: inset 0 0 0 1px #95f8ff69, 0 0 16px #1ce9ff54; }
+  50% { box-shadow: inset 0 0 0 1px #b8fbff85, 0 0 26px #1ce9ff86; }
+}
+
+@keyframes panel-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 1px #89f2ff16, 0 0 18px #10deff1a, 0 14px 36px #01050fc4; }
+  50% { box-shadow: inset 0 0 0 1px #89f2ff2b, 0 0 30px #10deff33, 0 16px 42px #01050fd1; }
+}
+
+@keyframes panel-spark {
+  0% { filter: brightness(0.9); opacity: 0.55; }
+  50% { filter: brightness(1.3); opacity: 0.8; }
+  100% { filter: brightness(0.9); opacity: 0.55; }
+}
+
+@keyframes card-idle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
+}
+
+@keyframes logo-flicker {
+  0%, 14%, 18%, 100% { opacity: 0.9; filter: saturate(1) brightness(1); }
+  15%, 17% { opacity: 0.72; filter: saturate(1.3) brightness(1.2); }
+}
+
+@keyframes particles-drift {
+  0% { background-position: 10% 85%, 80% 15%, 45% 55%; }
+  100% { background-position: 30% 10%, 10% 75%, 80% 20%; }
+}
+
+@keyframes aurora-shift {
+  0% { transform: translate3d(0, 0, 0); filter: hue-rotate(0deg); }
+  100% { transform: translate3d(0, -8px, 0); filter: hue-rotate(18deg); }
+}
+
+@keyframes grid-pan {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(30px); }
+}
+
+@keyframes shell-breathe {
+  0%, 100% { box-shadow: 0 0 0 1px #12d7ff2d, 0 26px 98px #010510e3, inset 0 1px 0 #7ce9ff33; }
+  50% { box-shadow: 0 0 0 1px #12d7ff45, 0 28px 110px #010510ef, inset 0 1px 0 #9cf0ff4d; }
+}
+
+@keyframes scan-shift {
+  0%, 100% { transform: translateY(0); opacity: 0.3; }
+  50% { transform: translateY(-2px); opacity: 0.56; }
+}
+
+@keyframes orb-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes event-noise {
+  0%, 100% { transform: translateX(0); opacity: 0.34; }
+  50% { transform: translateX(6px); opacity: 0.6; }
+}
+
+@keyframes event-alert-sweep {
+  0% { transform: translateX(-34%); opacity: 0; }
+  24% { opacity: 0.85; }
+  42%, 100% { transform: translateX(38%); opacity: 0; }
+}
+
+@keyframes metric-pop {
+  0%, 100% { transform: translateY(0); box-shadow: inset 0 0 0 1px #8bf4ff17, 0 0 16px #0ddfff2e; }
+  50% { transform: translateY(-2px); box-shadow: inset 0 0 0 1px #aef8ff2f, 0 0 24px #0ddfff4f; }
+}
+
+@keyframes progress-flicker {
+  0%, 100% { filter: brightness(1); }
+  45% { filter: brightness(1.35); }
+  50% { filter: brightness(0.9); }
+}
+
+@keyframes burst-ring {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(0.3); }
+  70% { opacity: 0.9; transform: translate(-50%, -50%) scale(3.8); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(5.8); }
+}
+
 @keyframes scan-sweep {
   0% {
     transform: translateY(-100%);
@@ -702,5 +945,14 @@ a:focus-visible {
   0% { opacity: 0.2; }
   50% { opacity: 0.45; }
   100% { opacity: 0.2; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }
 
