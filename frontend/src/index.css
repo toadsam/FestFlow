@@ -5,29 +5,61 @@
 @tailwind utilities;
 
 :root {
-  --bg-0: #040814;
-  --bg-1: #07152b;
-  --bg-2: #0b2448;
-  --hud-border: #0ff3ff55;
-  --txt-main: #d8fbff;
-  --brand-cyan: #11f1ff;
-  --brand-pink: #ff55ca;
+  --bg-0: #02040b;
+  --bg-1: #050a18;
+  --bg-2: #081833;
+  --hud-border: #18f5ff61;
+  --txt-main: #dcf9ff;
+  --brand-cyan: #10ebff;
+  --brand-pink: #ff2fb8;
+  --brand-violet: #7a63ff;
   font-family: "Rajdhani", "Noto Sans KR", sans-serif;
   color: var(--txt-main);
   background:
-    radial-gradient(120% 140% at 80% -10%, #163369 0%, transparent 44%),
-    radial-gradient(90% 120% at 10% 10%, #122d57 0%, transparent 48%),
-    linear-gradient(160deg, var(--bg-0), var(--bg-1) 42%, var(--bg-2));
+    radial-gradient(130% 140% at 88% -12%, #1a2f6f 0%, transparent 42%),
+    radial-gradient(100% 120% at 8% 8%, #17244f 0%, transparent 44%),
+    linear-gradient(160deg, var(--bg-0), var(--bg-1) 40%, var(--bg-2));
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   background:
-    radial-gradient(circle at 12% 25%, #2d74ff2e 0%, transparent 28%),
-    radial-gradient(circle at 82% 72%, #ff64ca24 0%, transparent 32%),
-    linear-gradient(180deg, #040714 0%, #06101f 62%, #040814 100%);
+    radial-gradient(circle at 15% 22%, #2d74ff3b 0%, transparent 30%),
+    radial-gradient(circle at 80% 70%, #ff2fb830 0%, transparent 33%),
+    linear-gradient(180deg, #02040b 0%, #050e1b 56%, #02050d 100%);
   color: var(--txt-main);
+  position: relative;
+  overflow-x: hidden;
+}
+
+body::before,
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+body::before {
+  background-image:
+    linear-gradient(to right, #17efff15 1px, transparent 1px),
+    linear-gradient(to bottom, #17efff11 1px, transparent 1px);
+  background-size: 30px 30px;
+  mask-image: linear-gradient(180deg, transparent 0%, #000 20%, #000 86%, transparent 100%);
+}
+
+body::after {
+  background:
+    radial-gradient(240px 240px at 12% 16%, #31a5ff1a 0%, transparent 66%),
+    radial-gradient(240px 240px at 86% 18%, #ff44b61a 0%, transparent 66%),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0 3px,
+      #11edff0a 3px 4px
+    );
+  mix-blend-mode: screen;
 }
 
 button,
@@ -55,18 +87,19 @@ a:focus-visible {
 .app-shell {
   max-width: 430px;
   min-height: 100vh;
+  isolation: isolate;
 }
 
 .neon-shell {
   background:
-    linear-gradient(180deg, #06182fe6, #061225f0),
-    radial-gradient(120% 200% at 50% 0, #18dfff29 0%, transparent 52%);
-  border-left: 1px solid #17e3ff4d;
-  border-right: 1px solid #17e3ff4d;
+    linear-gradient(180deg, #06162af0, #060f21f0),
+    radial-gradient(120% 200% at 50% 0, #17efff2e 0%, transparent 52%);
+  border-left: 1px solid #17e3ff4a;
+  border-right: 1px solid #17e3ff4a;
   box-shadow:
-    0 0 0 1px #12d7ff26,
-    0 24px 90px #010510d8,
-    inset 0 1px 0 #7ce9ff2f;
+    0 0 0 1px #12d7ff2d,
+    0 26px 98px #010510e3,
+    inset 0 1px 0 #7ce9ff33;
   position: relative;
   overflow: hidden;
 }
@@ -79,6 +112,11 @@ a:focus-visible {
   height: 120px;
   border: 2px solid #14e8ff96;
   pointer-events: none;
+  z-index: 1;
+}
+
+.neon-shell > * {
+  position: relative;
   z-index: 1;
 }
 
@@ -285,6 +323,9 @@ a:focus-visible {
 .app-shell .rounded-2xl,
 .app-shell .rounded-lg {
   border-color: var(--hud-border) !important;
+  border-radius: 12px !important;
+  position: relative;
+  overflow: hidden;
 }
 
 .app-shell .bg-white,
@@ -327,10 +368,47 @@ a:focus-visible {
     0 0 24px #0ddfff22;
 }
 
+.app-shell article::before,
+.app-shell .rounded-xl::before,
+.app-shell .rounded-2xl::before,
+.app-shell .rounded-lg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(120deg, #19ecff2e 0%, transparent 30%),
+    linear-gradient(300deg, #ff2fb81f 0%, transparent 28%);
+  mix-blend-mode: screen;
+}
+
+.app-shell article::after,
+.app-shell .rounded-xl::after,
+.app-shell .rounded-2xl::after,
+.app-shell .rounded-lg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border: 1px solid #18f4ff40;
+  border-radius: inherit;
+  mask:
+    linear-gradient(#000, #000) content-box,
+    linear-gradient(#000, #000);
+  -webkit-mask:
+    linear-gradient(#000, #000) content-box,
+    linear-gradient(#000, #000);
+  padding: 1px;
+  opacity: 0.5;
+}
+
 .app-shell h1,
 .app-shell h2,
 .app-shell h3 {
+  font-family: "Orbitron", "Rajdhani", sans-serif;
+  letter-spacing: 0.03em;
   color: #d8fdff !important;
+  text-shadow: 0 0 10px #1deeff52;
 }
 
 .app-shell p,
@@ -338,6 +416,13 @@ a:focus-visible {
 .app-shell label,
 .app-shell li {
   color: #8dc5d8;
+}
+
+.app-shell .text-slate-500,
+.app-shell .text-slate-600,
+.app-shell .text-slate-700,
+.app-shell .text-slate-800 {
+  color: #8dc5d8 !important;
 }
 
 .app-shell input,
@@ -359,6 +444,58 @@ a:focus-visible {
 .app-shell button:hover {
   border-color: #5ef2ff9f;
   box-shadow: inset 0 0 0 1px #b5f8ff30, 0 0 20px #12e8ff52;
+}
+
+.app-shell button:active {
+  transform: translateY(1px);
+}
+
+.app-shell a {
+  color: #84f0ff;
+  text-decoration-color: #35ecff88;
+}
+
+.app-shell [class*="bg-amber-50"],
+.app-shell [class*="bg-indigo-50"],
+.app-shell [class*="bg-emerald-50"],
+.app-shell [class*="bg-rose-50"] {
+  background: linear-gradient(155deg, #071c32f0, #061426eb) !important;
+}
+
+.app-shell [class*="bg-teal-50"],
+.app-shell [class*="bg-sky-500/15"],
+.app-shell [class*="bg-sky-500/20"] {
+  background: linear-gradient(145deg, #0a3150df, #08243de6) !important;
+}
+
+.app-shell [class*="bg-slate-900/80"],
+.app-shell [class*="bg-slate-900/90"] {
+  background: linear-gradient(145deg, #061325f3, #040d1cee) !important;
+}
+
+.app-shell [class*="bg-teal-600"],
+.app-shell [class*="bg-amber-500"] {
+  background: linear-gradient(145deg, #6c3cff 0%, #00dfff 58%, #7af5ff 100%) !important;
+  color: #ecffff !important;
+  border-color: #87f9ff !important;
+}
+
+.app-shell .leaflet-popup-content-wrapper,
+.app-shell .leaflet-popup-tip {
+  background: #081a31 !important;
+  color: #d2fbff !important;
+  border: 1px solid #18ecff72;
+  box-shadow: 0 0 22px #0ee0ff38;
+}
+
+.app-shell ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.app-shell ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #28dbff, #775eff);
+  border-radius: 999px;
 }
 
 .app-shell .leaflet-container {
