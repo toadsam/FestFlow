@@ -2,7 +2,7 @@ package com.festflow.backend.dto;
 
 public record OpsBoothBootstrapDto(
         BoothResponseDto booth,
-        CongestionResponseDto congestion
+        CongestionResponseDto congestion,
+        BoothReservationStateDto reservations
 ) {
 }
-

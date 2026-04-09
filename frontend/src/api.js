@@ -32,27 +32,27 @@ export async function loginAdmin(username, password) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ username, password }),
   });
-  return parseJson(response, '로그인에 실패했습니다.');
+  return parseJson(response, '濡쒓렇?몄뿉 ?ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function fetchBooths() {
   const response = await fetch(`${API_BASE}/booths`);
-  return parseJson(response, '부스 목록을 가져오지 못했습니다.');
+  return parseJson(response, '遺??紐⑸줉??媛?몄삤吏 紐삵뻽?듬땲??');
 }
 
 export async function fetchBoothById(boothId) {
   const response = await fetch(`${API_BASE}/booths/${boothId}`);
-  return parseJson(response, '부스 정보를 가져오지 못했습니다.');
+  return parseJson(response, '遺???뺣낫瑜?媛?몄삤吏 紐삵뻽?듬땲??');
 }
 
 export async function fetchCongestion(boothId) {
   const response = await fetch(`${API_BASE}/booths/${boothId}/congestion`);
-  return parseJson(response, '혼잡도 조회에 실패했습니다.');
+  return parseJson(response, '?쇱옟??議고쉶???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function fetchEvents() {
   const response = await fetch(`${API_BASE}/events`);
-  return parseJson(response, '공연 목록을 가져오지 못했습니다.');
+  return parseJson(response, '怨듭뿰 紐⑸줉??媛?몄삤吏 紐삵뻽?듬땲??');
 }
 
 export async function sendGps(latitude, longitude) {
@@ -61,7 +61,7 @@ export async function sendGps(latitude, longitude) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ latitude, longitude }),
   });
-  return parseJson(response, 'GPS 전송에 실패했습니다.');
+  return parseJson(response, 'GPS ?꾩넚???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function askChat(question) {
@@ -70,7 +70,7 @@ export async function askChat(question) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question }),
   });
-  return parseJson(response, '챗봇 응답에 실패했습니다.');
+  return parseJson(response, '梨쀫큸 ?묐떟???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function createBooth(payload) {
@@ -79,7 +79,7 @@ export async function createBooth(payload) {
     headers: withAuth({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '부스 생성에 실패했습니다.');
+  return parseJson(response, '遺???앹꽦???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function updateBooth(id, payload) {
@@ -88,7 +88,7 @@ export async function updateBooth(id, payload) {
     headers: withAuth({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '부스 수정에 실패했습니다.');
+  return parseJson(response, '遺???섏젙???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function updateBoothLiveStatus(id, payload) {
@@ -97,7 +97,7 @@ export async function updateBoothLiveStatus(id, payload) {
     headers: withAuth({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '부스 실시간 정보 업데이트에 실패했습니다.');
+  return parseJson(response, '遺???ㅼ떆媛??뺣낫 ?낅뜲?댄듃???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function uploadBoothImage(id, file) {
@@ -109,7 +109,7 @@ export async function uploadBoothImage(id, file) {
     headers: withAuth(),
     body: formData,
   });
-  return parseJson(response, '이미지 업로드에 실패했습니다.');
+  return parseJson(response, '?대?吏 ?낅줈?쒖뿉 ?ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function reorderBooths(boothIds) {
@@ -120,7 +120,7 @@ export async function reorderBooths(boothIds) {
   });
 
   if (!response.ok) {
-    throw new Error('부스 순서 저장에 실패했습니다.');
+    throw new Error('遺???쒖꽌 ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.');
   }
 }
 
@@ -131,7 +131,7 @@ export async function deleteBooth(id) {
   });
 
   if (!response.ok) {
-    throw new Error('부스 삭제에 실패했습니다.');
+    throw new Error('遺????젣???ㅽ뙣?덉뒿?덈떎.');
   }
 }
 
@@ -141,7 +141,7 @@ export async function createEvent(payload) {
     headers: withAuth({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '공연 생성에 실패했습니다.');
+  return parseJson(response, '怨듭뿰 ?앹꽦???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function updateEvent(id, payload) {
@@ -150,7 +150,7 @@ export async function updateEvent(id, payload) {
     headers: withAuth({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '공연 수정에 실패했습니다.');
+  return parseJson(response, '怨듭뿰 ?섏젙???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function deleteEvent(id) {
@@ -160,7 +160,7 @@ export async function deleteEvent(id) {
   });
 
   if (!response.ok) {
-    throw new Error('공연 삭제에 실패했습니다.');
+    throw new Error('怨듭뿰 ??젣???ㅽ뙣?덉뒿?덈떎.');
   }
 }
 
@@ -173,7 +173,7 @@ export async function importBoothCsv(file) {
     headers: withAuth(),
     body: formData,
   });
-  return parseJson(response, '부스 CSV 업로드에 실패했습니다.');
+  return parseJson(response, '遺??CSV ?낅줈?쒖뿉 ?ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function importEventCsv(file) {
@@ -185,19 +185,19 @@ export async function importEventCsv(file) {
     headers: withAuth(),
     body: formData,
   });
-  return parseJson(response, '공연 CSV 업로드에 실패했습니다.');
+  return parseJson(response, '怨듭뿰 CSV ?낅줈?쒖뿉 ?ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function fetchActiveNotices() {
   const response = await fetch(`${API_BASE}/notices/active`);
-  return parseJson(response, '공지 목록을 가져오지 못했습니다.');
+  return parseJson(response, '怨듭? 紐⑸줉??媛?몄삤吏 紐삵뻽?듬땲??');
 }
 
 export async function fetchAdminNotices() {
   const response = await fetch(`${API_BASE}/admin/notices`, {
     headers: withAuth(),
   });
-  return parseJson(response, '관리자 공지 목록을 가져오지 못했습니다.');
+  return parseJson(response, '愿由ъ옄 怨듭? 紐⑸줉??媛?몄삤吏 紐삵뻽?듬땲??');
 }
 
 export async function createNotice(payload) {
@@ -206,7 +206,7 @@ export async function createNotice(payload) {
     headers: withAuth({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '공지 생성에 실패했습니다.');
+  return parseJson(response, '怨듭? ?앹꽦???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function updateNotice(id, payload) {
@@ -215,7 +215,7 @@ export async function updateNotice(id, payload) {
     headers: withAuth({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '공지 수정에 실패했습니다.');
+  return parseJson(response, '怨듭? ?섏젙???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function deleteNotice(id) {
@@ -224,7 +224,7 @@ export async function deleteNotice(id) {
     headers: withAuth(),
   });
   if (!response.ok) {
-    throw new Error('공지 삭제에 실패했습니다.');
+    throw new Error('怨듭? ??젣???ㅽ뙣?덉뒿?덈떎.');
   }
 }
 
@@ -232,14 +232,14 @@ export async function fetchAdminDashboardKpis() {
   const response = await fetch(`${API_BASE}/admin/dashboard/kpis`, {
     headers: withAuth(),
   });
-  return parseJson(response, '대시보드 KPI를 가져오지 못했습니다.');
+  return parseJson(response, '??쒕낫??KPI瑜?媛?몄삤吏 紐삵뻽?듬땲??');
 }
 
 export async function fetchAuditLogs() {
   const response = await fetch(`${API_BASE}/admin/audit-logs`, {
     headers: withAuth(),
   });
-  return parseJson(response, '감사 로그를 가져오지 못했습니다.');
+  return parseJson(response, '媛먯궗 濡쒓렇瑜?媛?몄삤吏 紐삵뻽?듬땲??');
 }
 
 export async function triggerCongestionReliefNotice() {
@@ -247,7 +247,7 @@ export async function triggerCongestionReliefNotice() {
     method: 'POST',
     headers: withAuth(),
   });
-  return parseJson(response, '혼잡 완화 공지 발행에 실패했습니다.');
+  return parseJson(response, '?쇱옟 ?꾪솕 怨듭? 諛쒗뻾???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function triggerEventStartNotice(eventId) {
@@ -255,22 +255,22 @@ export async function triggerEventStartNotice(eventId) {
     method: 'POST',
     headers: withAuth(),
   });
-  return parseJson(response, '공연 시작 공지 발행에 실패했습니다.');
+  return parseJson(response, '怨듭뿰 ?쒖옉 怨듭? 諛쒗뻾???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function fetchTrafficHourly() {
   const response = await fetch(`${API_BASE}/analytics/traffic-hourly`);
-  return parseJson(response, '시간대별 방문량 조회에 실패했습니다.');
+  return parseJson(response, '?쒓컙?蹂?諛⑸Ц??議고쉶???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function fetchPopularBooths() {
   const response = await fetch(`${API_BASE}/analytics/popular-booths`);
-  return parseJson(response, '인기 부스 랭킹 조회에 실패했습니다.');
+  return parseJson(response, '?멸린 遺????궧 議고쉶???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function fetchHeatmap() {
   const response = await fetch(`${API_BASE}/analytics/congestion-heatmap`);
-  return parseJson(response, '혼잡 히트맵 조회에 실패했습니다.');
+  return parseJson(response, '?쇱옟 ?덊듃留?議고쉶???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export function createCongestionStream() {
@@ -307,7 +307,7 @@ function withOpsKey(path, key) {
 
 export async function fetchOpsMasterBootstrap(key) {
   const response = await fetch(withOpsKey('/ops/master/bootstrap', key));
-  return parseJson(response, '통합 관리자 데이터를 가져오지 못했습니다.');
+  return parseJson(response, '?듯빀 愿由ъ옄 ?곗씠?곕? 媛?몄삤吏 紐삵뻽?듬땲??');
 }
 
 export async function updateOpsMasterBoothLiveStatus(boothId, payload, key) {
@@ -316,12 +316,12 @@ export async function updateOpsMasterBoothLiveStatus(boothId, payload, key) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '통합 관리자 실시간 정보 저장에 실패했습니다.');
+  return parseJson(response, '?듯빀 愿由ъ옄 ?ㅼ떆媛??뺣낫 ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function fetchOpsBoothBootstrap(boothId, key) {
   const response = await fetch(withOpsKey(`/ops/booth/${boothId}/bootstrap`, key));
-  return parseJson(response, '부스 관리자 데이터를 가져오지 못했습니다.');
+  return parseJson(response, '遺??愿由ъ옄 ?곗씠?곕? 媛?몄삤吏 紐삵뻽?듬땲??');
 }
 
 export async function updateOpsBoothLiveStatus(boothId, payload, key) {
@@ -330,7 +330,7 @@ export async function updateOpsBoothLiveStatus(boothId, payload, key) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '부스 실시간 정보 저장에 실패했습니다.');
+  return parseJson(response, '遺???ㅼ떆媛??뺣낫 ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function createOpsMasterNotice(payload, key) {
@@ -339,7 +339,7 @@ export async function createOpsMasterNotice(payload, key) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '통합 공지 등록에 실패했습니다.');
+  return parseJson(response, '?듯빀 怨듭? ?깅줉???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function updateOpsMasterNotice(id, payload, key) {
@@ -348,7 +348,7 @@ export async function updateOpsMasterNotice(id, payload, key) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '통합 공지 수정에 실패했습니다.');
+  return parseJson(response, '?듯빀 怨듭? ?섏젙???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function deleteOpsMasterNotice(id, key) {
@@ -356,7 +356,7 @@ export async function deleteOpsMasterNotice(id, key) {
     method: 'DELETE',
   });
   if (!response.ok) {
-    throw new Error('통합 공지 삭제에 실패했습니다.');
+    throw new Error('?듯빀 怨듭? ??젣???ㅽ뙣?덉뒿?덈떎.');
   }
 }
 
@@ -366,7 +366,7 @@ export async function createOpsMasterEvent(payload, key) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '공연 등록에 실패했습니다.');
+  return parseJson(response, '怨듭뿰 ?깅줉???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function updateOpsMasterEvent(id, payload, key) {
@@ -375,7 +375,7 @@ export async function updateOpsMasterEvent(id, payload, key) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '공연 수정에 실패했습니다.');
+  return parseJson(response, '怨듭뿰 ?섏젙???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function deleteOpsMasterEvent(id, key) {
@@ -383,7 +383,7 @@ export async function deleteOpsMasterEvent(id, key) {
     method: 'DELETE',
   });
   if (!response.ok) {
-    throw new Error('공연 삭제에 실패했습니다.');
+    throw new Error('怨듭뿰 ??젣???ㅽ뙣?덉뒿?덈떎.');
   }
 }
 
@@ -393,7 +393,7 @@ export async function createOpsMasterBooth(payload, key) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '부스 등록에 실패했습니다.');
+  return parseJson(response, '遺???깅줉???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function updateOpsMasterBooth(id, payload, key) {
@@ -402,7 +402,7 @@ export async function updateOpsMasterBooth(id, payload, key) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, '부스 수정에 실패했습니다.');
+  return parseJson(response, '遺???섏젙???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function deleteOpsMasterBooth(id, key) {
@@ -410,7 +410,7 @@ export async function deleteOpsMasterBooth(id, key) {
     method: 'DELETE',
   });
   if (!response.ok) {
-    throw new Error('부스 삭제에 실패했습니다.');
+    throw new Error('遺????젣???ㅽ뙣?덉뒿?덈떎.');
   }
 }
 
@@ -421,7 +421,7 @@ export async function reorderOpsMasterBooths(boothIds, key) {
     body: JSON.stringify({ boothIds }),
   });
   if (!response.ok) {
-    throw new Error('부스 순서 변경에 실패했습니다.');
+    throw new Error('遺???쒖꽌 蹂寃쎌뿉 ?ㅽ뙣?덉뒿?덈떎.');
   }
 }
 
@@ -429,17 +429,57 @@ export async function triggerOpsMasterCongestionReliefNotice(key) {
   const response = await fetch(withOpsKey('/ops/master/actions/congestion-relief-notice', key), {
     method: 'POST',
   });
-  return parseJson(response, '혼잡 완화 공지 발행에 실패했습니다.');
+  return parseJson(response, '?쇱옟 ?꾪솕 怨듭? 諛쒗뻾???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function triggerOpsMasterEventStartNotice(eventId, key) {
   const response = await fetch(withOpsKey(`/ops/master/actions/events/${eventId}/start-notice`, key), {
     method: 'POST',
   });
-  return parseJson(response, '공연 시작 공지 발행에 실패했습니다.');
+  return parseJson(response, '怨듭뿰 ?쒖옉 怨듭? 諛쒗뻾???ㅽ뙣?덉뒿?덈떎.');
 }
 
 export async function fetchStageCrowd(minutes = 10) {
   const response = await fetch(`${API_BASE}/analytics/stage-crowd?minutes=${minutes}`);
-  return parseJson(response, '무대 혼잡도 정보를 불러오지 못했습니다.');
+  return parseJson(response, '臾대? ?쇱옟???뺣낫瑜?遺덈윭?ㅼ? 紐삵뻽?듬땲??');
 }
+
+export async function fetchBoothReservations(boothId, userKey) {
+  const url = new URL(`${API_BASE}/booths/${boothId}/reservations`);
+  if (userKey) {
+    url.searchParams.set('userKey', userKey);
+  }
+  const response = await fetch(url.toString());
+  return parseJson(response, '예약 현황을 불러오지 못했습니다.');
+}
+
+export async function createBoothReservation(boothId, payload) {
+  const response = await fetch(`${API_BASE}/booths/${boothId}/reservations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '예약에 실패했습니다.');
+}
+
+export async function fetchOpsBoothReservations(boothId, key) {
+  const response = await fetch(withOpsKey(`/ops/booth/${boothId}/reservations`, key));
+  return parseJson(response, '예약 대시보드를 불러오지 못했습니다.');
+}
+
+export async function updateOpsBoothReservationConfig(boothId, payload, key) {
+  const response = await fetch(withOpsKey(`/ops/booth/${boothId}/reservations/config`, key), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, '예약 설정 저장에 실패했습니다.');
+}
+
+export async function checkInOpsBoothReservation(boothId, reservationId, key) {
+  const response = await fetch(withOpsKey(`/ops/booth/${boothId}/reservations/${reservationId}/check-in`, key), {
+    method: 'POST',
+  });
+  return parseJson(response, '체크인 처리에 실패했습니다.');
+}
+
