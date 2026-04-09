@@ -3,6 +3,7 @@ package com.festflow.backend.service;
 import com.festflow.backend.dto.BoothReservationConfigRequestDto;
 import com.festflow.backend.dto.BoothReservationDto;
 import com.festflow.backend.dto.BoothReservationStateDto;
+import com.festflow.backend.dto.ReservationCheckInTokenDto;
 import com.festflow.backend.dto.ReservationCreateRequestDto;
 import com.festflow.backend.dto.ReservationPenaltyDto;
 import com.festflow.backend.dto.ReservationTableDto;
@@ -10,11 +11,13 @@ import com.festflow.backend.dto.ReservationTableUpsertDto;
 import com.festflow.backend.entity.Booth;
 import com.festflow.backend.entity.BoothReservation;
 import com.festflow.backend.entity.BoothReservationTable;
+import com.festflow.backend.entity.ReservationCheckInToken;
 import com.festflow.backend.entity.ReservationStatus;
 import com.festflow.backend.entity.ReservationUserState;
 import com.festflow.backend.repository.BoothRepository;
 import com.festflow.backend.repository.BoothReservationRepository;
 import com.festflow.backend.repository.BoothReservationTableRepository;
+import com.festflow.backend.repository.ReservationCheckInTokenRepository;
 import com.festflow.backend.repository.ReservationUserStateRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -38,21 +42,27 @@ public class ReservationService {
     private final BoothReservationTableRepository boothReservationTableRepository;
     private final BoothReservationRepository boothReservationRepository;
     private final ReservationUserStateRepository reservationUserStateRepository;
+    private final ReservationCheckInTokenRepository checkInTokenRepository;
+    private final ReservationAuthService reservationAuthService;
 
     public ReservationService(
             BoothRepository boothRepository,
             BoothReservationTableRepository boothReservationTableRepository,
             BoothReservationRepository boothReservationRepository,
-            ReservationUserStateRepository reservationUserStateRepository
+            ReservationUserStateRepository reservationUserStateRepository,
+            ReservationCheckInTokenRepository checkInTokenRepository,
+            ReservationAuthService reservationAuthService
     ) {
         this.boothRepository = boothRepository;
         this.boothReservationTableRepository = boothReservationTableRepository;
         this.boothReservationRepository = boothReservationRepository;
         this.reservationUserStateRepository = reservationUserStateRepository;
+        this.checkInTokenRepository = checkInTokenRepository;
+        this.reservationAuthService = reservationAuthService;
     }
 
     @Transactional
-    public BoothReservationStateDto getBoothReservationState(Long boothId, String userKey) {
+    public BoothReservationStateDto getBoothReservationState(Long boothId, String authToken) {
         Booth booth = findBooth(boothId);
         LocalDateTime now = LocalDateTime.now();
         expireStaleReservations(now);
@@ -70,14 +80,14 @@ public class ReservationService {
         BoothReservationDto myReservation = null;
         ReservationPenaltyDto penalty = null;
 
-        String normalizedUserKey = normalizeUserKey(userKey);
-        if (normalizedUserKey != null) {
+        String userKey = reservationAuthService.resolveUserKeyOrNull(authToken);
+        if (userKey != null) {
             myReservation = boothReservationRepository
-                    .findFirstByUserKeyAndStatusOrderByReservedAtDesc(normalizedUserKey, ReservationStatus.RESERVED)
+                    .findFirstByUserKeyAndStatusOrderByReservedAtDesc(userKey, ReservationStatus.RESERVED)
                     .map(this::toReservationDto)
                     .orElse(null);
 
-            penalty = reservationUserStateRepository.findByUserKey(normalizedUserKey)
+            penalty = reservationUserStateRepository.findByUserKey(userKey)
                     .map(state -> toPenaltyDto(state, now))
                     .orElse(new ReservationPenaltyDto(0, null, false));
         }
@@ -134,14 +144,11 @@ public class ReservationService {
     }
 
     @Transactional
-    public BoothReservationDto createReservation(Long boothId, ReservationCreateRequestDto requestDto) {
+    public BoothReservationDto createReservation(Long boothId, ReservationCreateRequestDto requestDto, String authToken) {
         LocalDateTime now = LocalDateTime.now();
         expireStaleReservations(now);
 
-        String userKey = normalizeUserKey(requestDto.userKey());
-        if (userKey == null) {
-            throw new ResponseStatusException(CONFLICT, "User key is required.");
-        }
+        String userKey = reservationAuthService.requireUserKey(authToken);
 
         ReservationUserState userState = reservationUserStateRepository.findByUserKey(userKey)
                 .orElseGet(() -> reservationUserStateRepository.save(new ReservationUserState(userKey)));
@@ -186,6 +193,43 @@ public class ReservationService {
     }
 
     @Transactional
+    public ReservationCheckInTokenDto issueCheckInToken(Long boothId, Long reservationId, String authToken) {
+        LocalDateTime now = LocalDateTime.now();
+        expireStaleReservations(now);
+        String userKey = reservationAuthService.requireUserKey(authToken);
+
+        BoothReservation reservation = boothReservationRepository.findByIdAndBoothId(reservationId, boothId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Reservation not found."));
+
+        if (reservation.getStatus() != ReservationStatus.RESERVED) {
+            throw new ResponseStatusException(CONFLICT, "Reservation is no longer active.");
+        }
+        if (!reservation.getUserKey().equals(userKey)) {
+            throw new ResponseStatusException(CONFLICT, "Reservation does not belong to the current user.");
+        }
+        if (reservation.getExpiresAt().isBefore(now)) {
+            expireReservation(reservation, now);
+            throw new ResponseStatusException(CONFLICT, "Reservation has expired.");
+        }
+
+        Optional<ReservationCheckInToken> existing = checkInTokenRepository
+                .findFirstByReservationIdAndUsedAtIsNullAndExpiresAtAfterOrderByIdDesc(reservation.getId(), now);
+        if (existing.isPresent()) {
+            return new ReservationCheckInTokenDto(existing.get().getToken(), existing.get().getExpiresAt());
+        }
+
+        String token = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
+        ReservationCheckInToken created = checkInTokenRepository.save(new ReservationCheckInToken(
+                reservation,
+                token,
+                now,
+                now.plusSeconds(60)
+        ));
+
+        return new ReservationCheckInTokenDto(created.getToken(), created.getExpiresAt());
+    }
+
+    @Transactional
     public BoothReservationDto checkIn(Long boothId, Long reservationId) {
         LocalDateTime now = LocalDateTime.now();
         expireStaleReservations(now);
@@ -205,6 +249,32 @@ public class ReservationService {
         reservation.markCheckedIn(now);
         boothReservationRepository.save(reservation);
         return toReservationDto(reservation);
+    }
+
+    @Transactional
+    public BoothReservationDto checkInByToken(Long boothId, String token) {
+        LocalDateTime now = LocalDateTime.now();
+        expireStaleReservations(now);
+
+        ReservationCheckInToken checkInToken = checkInTokenRepository.findByToken(token)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Check-in token not found."));
+
+        if (checkInToken.isUsed()) {
+            throw new ResponseStatusException(CONFLICT, "Check-in token is already used.");
+        }
+        if (checkInToken.isExpired(now)) {
+            throw new ResponseStatusException(CONFLICT, "Check-in token has expired.");
+        }
+
+        BoothReservation reservation = checkInToken.getReservation();
+        if (!reservation.getBooth().getId().equals(boothId)) {
+            throw new ResponseStatusException(CONFLICT, "Check-in token belongs to another booth.");
+        }
+
+        BoothReservationDto checkedIn = checkIn(boothId, reservation.getId());
+        checkInToken.markUsed(now);
+        checkInTokenRepository.save(checkInToken);
+        return checkedIn;
     }
 
     private void expireStaleReservations(LocalDateTime now) {
@@ -295,19 +365,4 @@ public class ReservationService {
         }
         return Math.min(rawAvailableSeats, totalSeats);
     }
-
-    private String normalizeUserKey(String userKey) {
-        if (userKey == null) {
-            return null;
-        }
-        String normalized = userKey.trim();
-        if (normalized.isEmpty()) {
-            return null;
-        }
-        if (normalized.length() > 120) {
-            return normalized.substring(0, 120);
-        }
-        return normalized;
-    }
 }
-

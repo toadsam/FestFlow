@@ -13,6 +13,7 @@ import com.festflow.backend.dto.NoticeResponseDto;
 import com.festflow.backend.dto.NoticeUpsertRequestDto;
 import com.festflow.backend.dto.OpsBoothBootstrapDto;
 import com.festflow.backend.dto.OpsMasterBootstrapDto;
+import com.festflow.backend.dto.ReservationCheckInByTokenRequestDto;
 import com.festflow.backend.service.AdminActionService;
 import com.festflow.backend.service.AdminDashboardService;
 import com.festflow.backend.service.AuditLogService;
@@ -240,6 +241,18 @@ public class OpsController {
         ensureBoothAccess(authentication, id);
         BoothReservationDto checkedIn = reservationService.checkIn(id, reservationId);
         auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_CHECKIN", "BOOTH", id, "reservation " + reservationId);
+        return checkedIn;
+    }
+
+    @PostMapping("/booth/{id}/reservations/check-in/by-token")
+    public BoothReservationDto checkInBoothReservationByToken(
+            @PathVariable Long id,
+            @Valid @RequestBody ReservationCheckInByTokenRequestDto requestDto,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        BoothReservationDto checkedIn = reservationService.checkInByToken(id, requestDto.token());
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_CHECKIN_TOKEN", "BOOTH", id, "token check-in");
         return checkedIn;
     }
 

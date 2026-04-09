@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import {
   checkInOpsBoothReservation,
+  checkInOpsBoothReservationByToken,
   fetchOpsBoothBootstrap,
   updateOpsBoothLiveStatus,
   updateOpsBoothReservationConfig,
@@ -37,6 +38,14 @@ export default function OpsBoothPage() {
     maxReservationMinutes: 10,
     tables: [],
   });
+
+  const [qrTokenInput, setQrTokenInput] = useState('');
+  const [cameraError, setCameraError] = useState('');
+  const [scannerActive, setScannerActive] = useState(false);
+  const [scannerSupported, setScannerSupported] = useState(false);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const scanTimerRef = useRef(null);
 
   async function load() {
     if (!id || !key) {
@@ -74,6 +83,13 @@ export default function OpsBoothPage() {
   useEffect(() => {
     load();
   }, [id, key]);
+
+  useEffect(() => {
+    setScannerSupported(typeof window !== 'undefined' && 'BarcodeDetector' in window);
+    return () => {
+      stopScanner();
+    };
+  }, []);
 
   async function handleSaveLiveStatus() {
     if (!confirmAction('실시간 운영 정보를 저장합니다.')) return;
@@ -128,6 +144,80 @@ export default function OpsBoothPage() {
     }
   }
 
+  async function handleCheckInByToken() {
+    const token = qrTokenInput.trim();
+    if (!token) {
+      setError('QR 토큰을 입력해주세요.');
+      return;
+    }
+
+    try {
+      await checkInOpsBoothReservationByToken(id, token, key);
+      setMessage('QR 체크인이 완료되었습니다.');
+      setQrTokenInput('');
+      await load();
+    } catch (e) {
+      setError(e.message === 'Failed to fetch' ? 'QR 체크인 요청에 실패했습니다.' : e.message);
+    }
+  }
+
+  function stopScanner() {
+    if (scanTimerRef.current) {
+      window.clearInterval(scanTimerRef.current);
+      scanTimerRef.current = null;
+    }
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+    setScannerActive(false);
+  }
+
+  async function startScanner() {
+    if (!scannerSupported) {
+      setCameraError('이 브라우저는 카메라 QR 스캔을 지원하지 않습니다.');
+      return;
+    }
+
+    try {
+      setCameraError('');
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } },
+        audio: false,
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      const detector = new window.BarcodeDetector({ formats: ['qr_code'] });
+      scanTimerRef.current = window.setInterval(async () => {
+        if (!videoRef.current) return;
+        try {
+          const results = await detector.detect(videoRef.current);
+          if (!results.length) return;
+
+          const rawValue = results[0].rawValue?.trim();
+          if (!rawValue) return;
+
+          setQrTokenInput(rawValue);
+          await checkInOpsBoothReservationByToken(id, rawValue, key);
+          setMessage('QR 체크인이 완료되었습니다.');
+          await load();
+          stopScanner();
+        } catch {
+          // ignore intermittent detector errors
+        }
+      }, 700);
+
+      setScannerActive(true);
+    } catch {
+      setCameraError('카메라를 열 수 없습니다. 권한을 확인해주세요.');
+      stopScanner();
+    }
+  }
+
   function updateTableDraft(index, patch) {
     setReservationDraft((prev) => {
       const tables = [...prev.tables];
@@ -178,10 +268,7 @@ export default function OpsBoothPage() {
     setLoading(false);
   }
 
-  const activeReservations = useMemo(() => {
-    if (!data?.reservations?.activeReservations) return [];
-    return data.reservations.activeReservations;
-  }, [data]);
+  const activeReservations = useMemo(() => data?.reservations?.activeReservations ?? [], [data]);
 
   return (
     <section className="cyber-page pt-4 space-y-3">
@@ -309,6 +396,49 @@ export default function OpsBoothPage() {
               </button>
             </div>
 
+            <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-2">
+              <p className="text-sm font-semibold text-cyan-900">QR 체크인</p>
+              <div className="flex gap-2">
+                {!scannerActive ? (
+                  <button
+                    type="button"
+                    onClick={startScanner}
+                    className="rounded border border-cyan-500 px-3 py-1.5 text-xs font-semibold"
+                    disabled={!scannerSupported}
+                  >
+                    카메라 스캔 시작
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={stopScanner}
+                    className="rounded border border-slate-400 px-3 py-1.5 text-xs font-semibold"
+                  >
+                    카메라 스캔 중지
+                  </button>
+                )}
+              </div>
+              {scannerActive && (
+                <video ref={videoRef} className="w-full rounded border border-cyan-300 bg-black" muted playsInline />
+              )}
+              {cameraError && <p className="text-xs text-rose-700">{cameraError}</p>}
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <input
+                  className="border rounded px-2 py-2 text-sm"
+                  value={qrTokenInput}
+                  onChange={(e) => setQrTokenInput(e.target.value)}
+                  placeholder="사용자 QR 토큰 입력"
+                />
+                <button
+                  type="button"
+                  onClick={handleCheckInByToken}
+                  className="rounded bg-cyan-700 text-white px-3 py-2 text-xs font-semibold"
+                >
+                  QR 체크인
+                </button>
+              </div>
+            </div>
+
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
               <p className="text-sm font-semibold text-amber-900">예약 큐</p>
               {activeReservations.length ? activeReservations.map((reservation) => (
@@ -324,7 +454,7 @@ export default function OpsBoothPage() {
                     onClick={() => handleCheckIn(reservation.id)}
                     className="rounded bg-amber-600 text-white px-3 py-2 text-xs font-semibold"
                   >
-                    체크인
+                    수동 체크인
                   </button>
                 </div>
               )) : (
@@ -337,4 +467,3 @@ export default function OpsBoothPage() {
     </section>
   );
 }
-
