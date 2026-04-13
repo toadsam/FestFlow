@@ -1,4 +1,4 @@
-const RESERVATION_USER_KEY = 'festflow_reservation_user_key';
+const RESERVATION_USER_KEY = "festflow_reservation_user_key";
 
 export function getReservationUserKey() {
   const existing = localStorage.getItem(RESERVATION_USER_KEY);
@@ -10,4 +10,3 @@ export function getReservationUserKey() {
   localStorage.setItem(RESERVATION_USER_KEY, created);
   return created;
 }
-
