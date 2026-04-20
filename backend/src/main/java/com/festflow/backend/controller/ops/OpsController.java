@@ -1,6 +1,9 @@
 package com.festflow.backend.controller.ops;
 
 import com.festflow.backend.dto.BoothLiveStatusRequestDto;
+import com.festflow.backend.dto.BoothReservationConfigRequestDto;
+import com.festflow.backend.dto.BoothReservationDto;
+import com.festflow.backend.dto.BoothReservationStateDto;
 import com.festflow.backend.dto.BoothReorderRequestDto;
 import com.festflow.backend.dto.BoothResponseDto;
 import com.festflow.backend.dto.BoothUpsertRequestDto;
@@ -10,12 +13,14 @@ import com.festflow.backend.dto.NoticeResponseDto;
 import com.festflow.backend.dto.NoticeUpsertRequestDto;
 import com.festflow.backend.dto.OpsBoothBootstrapDto;
 import com.festflow.backend.dto.OpsMasterBootstrapDto;
+import com.festflow.backend.dto.ReservationCheckInByTokenRequestDto;
 import com.festflow.backend.service.AdminActionService;
 import com.festflow.backend.service.AdminDashboardService;
 import com.festflow.backend.service.AuditLogService;
 import com.festflow.backend.service.BoothService;
 import com.festflow.backend.service.EventService;
 import com.festflow.backend.service.NoticeService;
+import com.festflow.backend.service.ReservationService;
 import com.festflow.backend.service.stream.StreamService;
 import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
@@ -42,6 +47,7 @@ public class OpsController {
     private final AdminDashboardService adminDashboardService;
     private final AuditLogService auditLogService;
     private final StreamService streamService;
+    private final ReservationService reservationService;
 
     public OpsController(
             BoothService boothService,
@@ -50,7 +56,8 @@ public class OpsController {
             AdminActionService adminActionService,
             AdminDashboardService adminDashboardService,
             AuditLogService auditLogService,
-            StreamService streamService
+            StreamService streamService,
+            ReservationService reservationService
     ) {
         this.boothService = boothService;
         this.eventService = eventService;
@@ -59,6 +66,7 @@ public class OpsController {
         this.adminDashboardService = adminDashboardService;
         this.auditLogService = auditLogService;
         this.streamService = streamService;
+        this.reservationService = reservationService;
     }
 
     @GetMapping("/master/bootstrap")
@@ -188,7 +196,8 @@ public class OpsController {
         ensureBoothAccess(authentication, id);
         return new OpsBoothBootstrapDto(
                 boothService.getBoothById(id),
-                boothService.getCongestionByBoothId(id)
+                boothService.getCongestionByBoothId(id),
+                reservationService.getBoothReservationState(id, null)
         );
     }
 
@@ -203,6 +212,48 @@ public class OpsController {
         auditLogService.log(authentication.getName(), "OPS_BOOTH_LIVE_STATUS", "BOOTH", id, "update own booth live status");
         streamService.publishBooths(boothService.getAllBooths());
         return updated;
+    }
+
+    @GetMapping("/booth/{id}/reservations")
+    public BoothReservationStateDto getBoothReservations(@PathVariable Long id, Authentication authentication) {
+        ensureBoothAccess(authentication, id);
+        return reservationService.getBoothReservationState(id, null);
+    }
+
+    @PutMapping("/booth/{id}/reservations/config")
+    public BoothReservationStateDto upsertBoothReservationConfig(
+            @PathVariable Long id,
+            @Valid @RequestBody BoothReservationConfigRequestDto requestDto,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        BoothReservationStateDto updated = reservationService.upsertBoothReservationConfig(id, requestDto);
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_CONFIG", "BOOTH", id, "update reservation config");
+        return updated;
+    }
+
+    @PostMapping("/booth/{id}/reservations/{reservationId}/check-in")
+    public BoothReservationDto checkInBoothReservation(
+            @PathVariable Long id,
+            @PathVariable Long reservationId,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        BoothReservationDto checkedIn = reservationService.checkIn(id, reservationId);
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_CHECKIN", "BOOTH", id, "reservation " + reservationId);
+        return checkedIn;
+    }
+
+    @PostMapping("/booth/{id}/reservations/check-in/by-token")
+    public BoothReservationDto checkInBoothReservationByToken(
+            @PathVariable Long id,
+            @Valid @RequestBody ReservationCheckInByTokenRequestDto requestDto,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        BoothReservationDto checkedIn = reservationService.checkInByToken(id, requestDto.token());
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_CHECKIN_TOKEN", "BOOTH", id, "token check-in");
+        return checkedIn;
     }
 
     private void ensureBoothAccess(Authentication authentication, Long requestedBoothId) {

@@ -1,12 +1,12 @@
-﻿const ACCESS_TOKEN_KEY = 'festflow_access_token';
-const ADMIN_NAME_KEY = 'festflow_admin_name';
+﻿const ACCESS_TOKEN_KEY = "festflow_access_token";
+const ADMIN_NAME_KEY = "festflow_admin_name";
 
 export function getAccessToken() {
-  return localStorage.getItem(ACCESS_TOKEN_KEY) || '';
+  return localStorage.getItem(ACCESS_TOKEN_KEY) || "";
 }
 
 export function getAdminName() {
-  return localStorage.getItem(ADMIN_NAME_KEY) || '';
+  return localStorage.getItem(ADMIN_NAME_KEY) || "";
 }
 
 export function isLoggedIn() {

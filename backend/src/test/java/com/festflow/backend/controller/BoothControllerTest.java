@@ -5,6 +5,7 @@ import com.festflow.backend.dto.CongestionResponseDto;
 import com.festflow.backend.security.JwtService;
 import com.festflow.backend.security.OpsKeyService;
 import com.festflow.backend.service.BoothService;
+import com.festflow.backend.service.ReservationService;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +29,9 @@ class BoothControllerTest {
 
     @MockBean
     private BoothService boothService;
+
+    @MockBean
+    private ReservationService reservationService;
 
     @MockBean
     private JwtService jwtService;

@@ -1,6 +1,6 @@
-﻿const FAVORITES_KEY = 'festflow_favorites';
-const RECENTS_KEY = 'festflow_recents';
-const MEMOS_KEY = 'festflow_memos';
+﻿const FAVORITES_KEY = "festflow_favorites";
+const RECENTS_KEY = "festflow_recents";
+const MEMOS_KEY = "festflow_memos";
 
 function safeParse(value, fallback) {
   try {
@@ -38,7 +38,7 @@ export function getRecentBoothIds() {
 
 export function getBoothMemo(id) {
   const memos = safeParse(localStorage.getItem(MEMOS_KEY), {});
-  return memos[id] ?? '';
+  return memos[id] ?? "";
 }
 
 export function saveBoothMemo(id, memo) {

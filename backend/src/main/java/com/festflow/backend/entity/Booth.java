@@ -44,11 +44,20 @@ public class Booth {
 
     private LocalDateTime liveStatusUpdatedAt;
 
+    @Column
+    private Integer maxReservationMinutes;
+
     protected Booth() {
     }
 
     public Booth(String name, double latitude, double longitude, String description, Integer displayOrder, String imageUrl,
                  Integer estimatedWaitMinutes, Integer remainingStock, String liveStatusMessage, LocalDateTime liveStatusUpdatedAt) {
+        this(name, latitude, longitude, description, displayOrder, imageUrl, estimatedWaitMinutes, remainingStock, liveStatusMessage, liveStatusUpdatedAt, 10);
+    }
+
+    public Booth(String name, double latitude, double longitude, String description, Integer displayOrder, String imageUrl,
+                 Integer estimatedWaitMinutes, Integer remainingStock, String liveStatusMessage, LocalDateTime liveStatusUpdatedAt,
+                 Integer maxReservationMinutes) {
         this.name = name;
         this.latitude = latitude;
         this.longitude = longitude;
@@ -59,10 +68,17 @@ public class Booth {
         this.remainingStock = remainingStock;
         this.liveStatusMessage = liveStatusMessage;
         this.liveStatusUpdatedAt = liveStatusUpdatedAt;
+        this.maxReservationMinutes = maxReservationMinutes == null || maxReservationMinutes < 1 ? 10 : maxReservationMinutes;
     }
 
     public void update(String name, double latitude, double longitude, String description, Integer displayOrder, String imageUrl,
                        Integer estimatedWaitMinutes, Integer remainingStock, String liveStatusMessage, LocalDateTime liveStatusUpdatedAt) {
+        update(name, latitude, longitude, description, displayOrder, imageUrl, estimatedWaitMinutes, remainingStock, liveStatusMessage, liveStatusUpdatedAt, this.maxReservationMinutes);
+    }
+
+    public void update(String name, double latitude, double longitude, String description, Integer displayOrder, String imageUrl,
+                       Integer estimatedWaitMinutes, Integer remainingStock, String liveStatusMessage, LocalDateTime liveStatusUpdatedAt,
+                       Integer maxReservationMinutes) {
         this.name = name;
         this.latitude = latitude;
         this.longitude = longitude;
@@ -73,6 +89,9 @@ public class Booth {
         this.remainingStock = remainingStock;
         this.liveStatusMessage = liveStatusMessage;
         this.liveStatusUpdatedAt = liveStatusUpdatedAt;
+        if (maxReservationMinutes != null && maxReservationMinutes > 0) {
+            this.maxReservationMinutes = maxReservationMinutes;
+        }
     }
 
     public void setImageUrl(String imageUrl) {
@@ -141,5 +160,17 @@ public class Booth {
 
     public void setLiveStatusUpdatedAt(LocalDateTime liveStatusUpdatedAt) {
         this.liveStatusUpdatedAt = liveStatusUpdatedAt;
+    }
+
+    public Integer getMaxReservationMinutes() {
+        return maxReservationMinutes;
+    }
+
+    public void setMaxReservationMinutes(Integer maxReservationMinutes) {
+        if (maxReservationMinutes == null || maxReservationMinutes < 1) {
+            this.maxReservationMinutes = 10;
+            return;
+        }
+        this.maxReservationMinutes = maxReservationMinutes;
     }
 }
