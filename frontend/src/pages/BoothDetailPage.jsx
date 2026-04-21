@@ -186,6 +186,10 @@ export default function BoothDetailPage() {
   const [opsKeyInput, setOpsKeyInput] = useState("");
   const [nowTick, setNowTick] = useState(Date.now());
   const authPanelRef = useRef(null);
+  const reservationPanelRef = useRef(null);
+  const [showAboutSection, setShowAboutSection] = useState(false);
+  const [showMenuBoardSection, setShowMenuBoardSection] = useState(false);
+  const [showReservationSection, setShowReservationSection] = useState(true);
 
   async function loadPage() {
     try {
@@ -306,6 +310,14 @@ export default function BoothDetailPage() {
     setReservationError("1단계: 먼저 전화번호 인증을 완료해 주세요.");
     setReservationMessage("");
     authPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  function handleQuickReserveStart() {
+    setShowReservationSection(true);
+    reservationPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!reservationToken) {
+      window.setTimeout(() => guideToAuth(), 220);
+    }
   }
 
   async function reserveTable(tableId, count) {
@@ -466,7 +478,7 @@ export default function BoothDetailPage() {
 
   return (
     <>
-      <section className="cyber-page pt-4 space-y-4">
+      <section className="cyber-page pt-4 space-y-4 pb-24 md:pb-4">
       <button
         type="button"
         onClick={() => navigate("/")}
@@ -492,79 +504,126 @@ export default function BoothDetailPage() {
 
           <p className="text-sm text-slate-600">{booth.description}</p>
 
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 flex items-center justify-between gap-2">
+            <div className="text-xs text-emerald-900 space-y-0.5">
+              <p className="font-semibold">예약 우선 화면</p>
+              <p>인증 후 테이블 선택으로 바로 진행할 수 있어요.</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleQuickReserveStart}
+              className="shrink-0 rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white"
+            >
+              예약 시작
+            </button>
+          </div>
+
           {(booth.boothIntro || booth.menuImageUrl) && (
-            <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-2">
-              <p className="text-sm font-semibold text-cyan-900">부스 소개</p>
-              {booth.boothIntro && (
-                <p className="text-sm text-cyan-800 whitespace-pre-line">
-                  {booth.boothIntro}
-                </p>
-              )}
-              {booth.menuImageUrl && (
-                <div className="overflow-hidden rounded border border-cyan-200 bg-white">
-                  <img
-                    src={booth.menuImageUrl}
-                    alt={`${booth.name} 음식 사진`}
-                    className="h-40 w-full object-cover"
-                  />
+            <div className="rounded-lg border border-cyan-200 bg-cyan-50 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowAboutSection((prev) => !prev)}
+                className="w-full p-3 flex items-center justify-between text-left"
+              >
+                <p className="text-sm font-semibold text-cyan-900">부스 소개</p>
+                <span className="text-xs text-cyan-700">{showAboutSection ? "접기" : "펼치기"}</span>
+              </button>
+              {showAboutSection && (
+                <div className="px-3 pb-3 space-y-2">
+                  {booth.boothIntro && (
+                    <p className="text-sm text-cyan-800 whitespace-pre-line">
+                      {booth.boothIntro}
+                    </p>
+                  )}
+                  {booth.menuImageUrl && (
+                    <div className="overflow-hidden rounded border border-cyan-200 bg-white">
+                      <img
+                        src={booth.menuImageUrl}
+                        alt={`${booth.name} 음식 사진`}
+                        className="h-40 w-full object-cover"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           )}
 
           {menuItems.length > 0 && (
-            <div className="rounded-lg border border-fuchsia-200 bg-gradient-to-b from-fuchsia-50 to-indigo-50 p-3 space-y-2">
-              <div className="flex items-center justify-between">
+            <div className="rounded-lg border border-fuchsia-200 bg-gradient-to-b from-fuchsia-50 to-indigo-50 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => setShowMenuBoardSection((prev) => !prev)}
+                className="w-full p-3 flex items-center justify-between text-left"
+              >
                 <p className="text-sm font-semibold text-fuchsia-900">메뉴판</p>
-                <span className="text-[11px] text-fuchsia-700">MENU BOARD</span>
-              </div>
-              <div className="space-y-2">
-                {menuItems.map((item, index) => (
-                  <article
-                    key={`menu-board-${index}`}
-                    className={`rounded-md border p-2 ${
-                      item.soldOut
-                        ? "border-slate-300 bg-slate-100"
-                        : "border-fuchsia-200 bg-white"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className={`font-bold ${item.soldOut ? "text-slate-500 line-through" : "text-slate-800"}`}>
-                        {item.name}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        {item.price && (
-                          <span className={`text-sm font-extrabold ${item.soldOut ? "text-slate-500" : "text-fuchsia-700"}`}>
-                            {item.price}
-                          </span>
-                        )}
-                        {item.soldOut && (
-                          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">
-                            품절
-                          </span>
-                        )}
+                <span className="text-[11px] text-fuchsia-700">{showMenuBoardSection ? "접기" : "펼치기"}</span>
+              </button>
+              {showMenuBoardSection && (
+                <div className="px-3 pb-3 space-y-2">
+                  {menuItems.map((item, index) => (
+                    <article
+                      key={`menu-board-${index}`}
+                      className={`rounded-md border p-2 ${
+                        item.soldOut
+                          ? "border-slate-300 bg-slate-100"
+                          : "border-fuchsia-200 bg-white"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className={`font-bold ${item.soldOut ? "text-slate-500 line-through" : "text-slate-800"}`}>
+                          {item.name}
+                        </p>
+                        <div className="flex items-center gap-2">
+                          {item.price && (
+                            <span className={`text-sm font-extrabold ${item.soldOut ? "text-slate-500" : "text-fuchsia-700"}`}>
+                              {item.price}
+                            </span>
+                          )}
+                          {item.soldOut && (
+                            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                              품절
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    {item.description && (
-                      <p className={`mt-1 text-xs ${item.soldOut ? "text-slate-400" : "text-slate-600"}`}>
-                        {item.description}
-                      </p>
-                    )}
-                  </article>
-                ))}
-              </div>
+                      {item.description && (
+                        <p className={`mt-1 text-xs ${item.soldOut ? "text-slate-400" : "text-slate-600"}`}>
+                          {item.description}
+                        </p>
+                      )}
+                    </article>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
-          <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
-            <p className="text-sm font-semibold text-indigo-800">실시간 운영 정보</p>
-            <p className="text-sm text-indigo-700 mt-1">대기 {booth.estimatedWaitMinutes ?? "-"}분</p>
-            <p className="text-sm text-indigo-700">잔여 수량: {booth.remainingStock ?? "-"}</p>
-            <p className="text-sm text-indigo-700">운영 메모: {booth.liveStatusMessage || "없음"}</p>
-          </div>
-
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-2">
-            <p className="text-sm font-semibold text-emerald-900">예약</p>
+          <div ref={reservationPanelRef} className="rounded-lg border border-emerald-200 bg-emerald-50 overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setShowReservationSection((prev) => !prev)}
+              className="w-full p-3 flex items-center justify-between text-left"
+            >
+              <p className="text-sm font-semibold text-emerald-900">예약</p>
+              <span className="text-xs text-emerald-700">{showReservationSection ? "접기" : "펼치기"}</span>
+            </button>
+            {showReservationSection && (
+              <div className="px-3 pb-3 space-y-2">
+            <div className="grid grid-cols-3 gap-2 rounded-md border border-emerald-200 bg-white p-2 text-[11px]">
+              <div>
+                <p className="text-slate-500">대기</p>
+                <p className="font-semibold text-emerald-800">{booth.estimatedWaitMinutes ?? "-"}분</p>
+              </div>
+              <div>
+                <p className="text-slate-500">재고</p>
+                <p className="font-semibold text-emerald-800">{booth.remainingStock ?? "-"}</p>
+              </div>
+              <div>
+                <p className="text-slate-500">메모</p>
+                <p className="font-semibold text-emerald-800 line-clamp-1">{booth.liveStatusMessage || "없음"}</p>
+              </div>
+            </div>
             <p className="text-xs text-emerald-800">
               최대 예약 유지 시간: {reservationState.maxReservationMinutes}분
             </p>
@@ -778,6 +837,8 @@ export default function BoothDetailPage() {
             {reservationError && (
               <p className="text-xs text-rose-700">{reservationError}</p>
             )}
+              </div>
+            )}
           </div>
 
           <button
@@ -809,6 +870,18 @@ export default function BoothDetailPage() {
         </div>
       </article>
       </section>
+
+      {!myReservation && (
+        <div className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 md:hidden">
+          <button
+            type="button"
+            onClick={handleQuickReserveStart}
+            className="w-full rounded-xl border border-emerald-300 bg-emerald-600 py-3 text-sm font-bold text-white shadow-[0_8px_24px_rgba(5,150,105,0.35)]"
+          >
+            {reservationToken ? "테이블 선택하고 예약하기" : "전화번호 인증하고 예약하기"}
+          </button>
+        </div>
+      )}
 
       {confirmTargetTable && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center px-4">
