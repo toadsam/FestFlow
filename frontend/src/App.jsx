@@ -191,12 +191,6 @@ export default function App() {
         <div className="neon-header-hud">
           <div className="neon-header-grid" aria-hidden />
           <div className="neon-header-core">
-            <img
-              src="/images/header-main.png"
-              alt=""
-              className="neon-logo-strip"
-              aria-hidden
-            />
             <p className="text-xs tracking-[0.22em] uppercase neon-kicker">
               2026 Ajou Culture Festival
             </p>

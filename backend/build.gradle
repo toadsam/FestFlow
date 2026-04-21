@@ -16,6 +16,14 @@ tasks.withType(JavaCompile).configureEach {
     options.release = 17
 }
 
+tasks.named("bootRun") {
+    def activeProfile = System.getProperty("spring.profiles.active")
+    if (!activeProfile) {
+        activeProfile = System.getenv("SPRING_PROFILES_ACTIVE")
+    }
+    systemProperty "spring.profiles.active", activeProfile ?: "local"
+}
+
 repositories {
     mavenCentral()
 }

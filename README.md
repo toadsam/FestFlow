@@ -39,6 +39,11 @@ cd backend
 ```
 
 - 서버: `http://localhost:8080`
+- `bootRun`은 기본적으로 `local` 프로파일로 실행됩니다.
+- 로컬 DB 비밀번호가 다르면 환경변수로 오버라이드하세요.
+  - `SPRING_DATASOURCE_PASSWORD_LOCAL`
+  - `SPRING_DATASOURCE_USERNAME_LOCAL`
+  - `SPRING_DATASOURCE_URL_LOCAL`
 - 첫 실행 시 테이블 자동 생성
 - 더미 데이터 자동 삽입(CommandLineRunner)
 - 기본 관리자 계정 자동 생성

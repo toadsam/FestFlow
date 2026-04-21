@@ -2096,3 +2096,109 @@ a:focus-visible {
 .mobile-stable .app-shell .leaflet-container {
   filter: none !important;
 }
+
+/* Readability tuning (desktop + mobile): keep theme, reduce visual noise. */
+:root {
+  --txt-main: #ecf3ff;
+  --hud-border: #7fc3ff4d;
+}
+
+body::before {
+  opacity: 0.35;
+}
+
+body::after {
+  opacity: 0.28;
+  mix-blend-mode: normal;
+}
+
+.neon-shell {
+  background:
+    linear-gradient(180deg, #081325f7, #071021f7),
+    radial-gradient(120% 200% at 50% 0, #48b8ff22 0%, transparent 52%);
+  box-shadow:
+    0 0 0 1px #6faad933,
+    0 18px 56px #020814d4,
+    inset 0 1px 0 #b0d7ff1f;
+}
+
+.neon-header-hud::after,
+.neon-header-hud::before {
+  animation: none !important;
+}
+
+.neon-header-grid {
+  opacity: 0.28;
+  animation: none !important;
+}
+
+.neon-title {
+  letter-spacing: 0.01em;
+  text-shadow:
+    0 0 8px #4cb9ff5e,
+    0 0 14px #4e6fff38;
+  animation: none !important;
+}
+
+.glitch-title::before,
+.glitch-title::after {
+  display: none !important;
+}
+
+.app-shell h1,
+.app-shell h2,
+.app-shell h3 {
+  letter-spacing: 0.02em;
+  text-transform: none;
+  text-shadow: 0 0 6px #6fbeff3f;
+}
+
+.app-shell p,
+.app-shell span,
+.app-shell label,
+.app-shell li {
+  color: #d8e4f6 !important;
+}
+
+.app-shell .text-slate-500,
+.app-shell .text-slate-600,
+.app-shell .text-slate-700,
+.app-shell .text-slate-800 {
+  color: #cad9ee !important;
+}
+
+.app-shell article,
+.app-shell .bg-white,
+.app-shell .bg-white\/95,
+.app-shell .bg-slate-50,
+.app-shell .bg-slate-100 {
+  background: linear-gradient(155deg, #0a182d, #0a1729) !important;
+  box-shadow:
+    inset 0 0 0 1px #b7d6ff1e,
+    0 8px 20px #0209168f !important;
+  animation: none !important;
+}
+
+.app-shell article,
+.app-shell .rounded-xl,
+.app-shell .rounded-2xl,
+.app-shell .rounded-lg {
+  clip-path: none;
+  border-radius: 12px !important;
+}
+
+.app-shell button {
+  box-shadow:
+    inset 0 0 0 1px #c7ddff12,
+    0 0 10px #4a98d425;
+}
+
+.app-shell button::before {
+  display: none;
+}
+
+.app-shell button:hover {
+  box-shadow:
+    inset 0 0 0 1px #d8e8ff1f,
+    0 0 12px #67aeff36;
+}
