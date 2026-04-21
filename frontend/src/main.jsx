@@ -15,10 +15,6 @@ import OpsBoothPage from "./pages/OpsBoothPage";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 
-if (window.matchMedia("(pointer: coarse), (hover: none)").matches) {
-  document.documentElement.classList.add("mobile-stable");
-}
-
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/service-worker.js").catch(() => {
