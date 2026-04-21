@@ -54,6 +54,10 @@ export default function App() {
   }, [location.pathname]);
 
   useEffect(() => {
+    if (window.matchMedia("(pointer: coarse)").matches) {
+      return;
+    }
+
     function makeSparks(intensity = 1) {
       return Array.from({ length: 9 }, (_, idx) => ({
         angle: idx * 40 + Math.round(Math.random() * 16),

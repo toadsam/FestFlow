@@ -187,10 +187,14 @@ npm run dev
 
 - `APP_OPS_MASTER_KEY`
 - `APP_OPS_BOOTH_KEYS` (예: `1:key1,2:key2`)
-- `APP_SMS_PROVIDER` (`none` 또는 `twilio`)
+- `APP_SMS_PROVIDER` (`none`, `twilio`, `aligo`)
 - `APP_SMS_TWILIO_ACCOUNT_SID`
 - `APP_SMS_TWILIO_AUTH_TOKEN`
 - `APP_SMS_TWILIO_FROM_NUMBER`
+- `APP_SMS_ALIGO_API_KEY`
+- `APP_SMS_ALIGO_USER_ID`
+- `APP_SMS_ALIGO_SENDER`
+- `APP_SMS_ALIGO_TEST_MODE` (`true`/`false`)
 
 `server.port`는 `${PORT:8080}`으로 설정되어 있어 Railway가 주는 `PORT`를 자동 사용합니다.
 
