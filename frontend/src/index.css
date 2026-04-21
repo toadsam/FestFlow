@@ -2070,3 +2070,29 @@ a:focus-visible {
     filter: none !important;
   }
 }
+
+/* Hard mobile stability mode: force-disable motion/compositing hotspots. */
+.mobile-stable *,
+.mobile-stable *::before,
+.mobile-stable *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+.mobile-stable body::before,
+.mobile-stable body::after {
+  content: none !important;
+}
+
+.mobile-stable .hud-scan,
+.mobile-stable .hud-particles,
+.mobile-stable .event-grid-noise,
+.mobile-stable .event-cursor-glow,
+.mobile-stable .global-fx,
+.mobile-stable .fx-burst {
+  display: none !important;
+}
+
+.mobile-stable .app-shell .leaflet-container {
+  filter: none !important;
+}
