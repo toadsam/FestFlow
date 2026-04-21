@@ -137,6 +137,24 @@ function ReservationStepPill({ step, label, active, done }) {
   );
 }
 
+function parseMenuBoardJson(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => ({
+        name: String(item?.name || "").trim(),
+        price: String(item?.price || "").trim(),
+        description: String(item?.description || "").trim(),
+        soldOut: Boolean(item?.soldOut),
+      }))
+      .filter((item) => item.name);
+  } catch {
+    return [];
+  }
+}
+
 export default function BoothDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -412,6 +430,7 @@ export default function BoothDetailPage() {
 
   const selectedTable =
     reservationState?.tables?.find((table) => table.id === selectedTableId) || null;
+  const menuItems = useMemo(() => parseMenuBoardJson(booth?.menuBoardJson), [booth?.menuBoardJson]);
   const requestedSeatCount = Math.max(1, Number(seatCount) || 1);
   const noSeat = selectedTable ? selectedTable.availableSeats < requestedSeatCount : true;
 
@@ -472,6 +491,70 @@ export default function BoothDetailPage() {
           </div>
 
           <p className="text-sm text-slate-600">{booth.description}</p>
+
+          {(booth.boothIntro || booth.menuImageUrl) && (
+            <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-2">
+              <p className="text-sm font-semibold text-cyan-900">부스 소개</p>
+              {booth.boothIntro && (
+                <p className="text-sm text-cyan-800 whitespace-pre-line">
+                  {booth.boothIntro}
+                </p>
+              )}
+              {booth.menuImageUrl && (
+                <div className="overflow-hidden rounded border border-cyan-200 bg-white">
+                  <img
+                    src={booth.menuImageUrl}
+                    alt={`${booth.name} 음식 사진`}
+                    className="h-40 w-full object-cover"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+
+          {menuItems.length > 0 && (
+            <div className="rounded-lg border border-fuchsia-200 bg-gradient-to-b from-fuchsia-50 to-indigo-50 p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold text-fuchsia-900">메뉴판</p>
+                <span className="text-[11px] text-fuchsia-700">MENU BOARD</span>
+              </div>
+              <div className="space-y-2">
+                {menuItems.map((item, index) => (
+                  <article
+                    key={`menu-board-${index}`}
+                    className={`rounded-md border p-2 ${
+                      item.soldOut
+                        ? "border-slate-300 bg-slate-100"
+                        : "border-fuchsia-200 bg-white"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={`font-bold ${item.soldOut ? "text-slate-500 line-through" : "text-slate-800"}`}>
+                        {item.name}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        {item.price && (
+                          <span className={`text-sm font-extrabold ${item.soldOut ? "text-slate-500" : "text-fuchsia-700"}`}>
+                            {item.price}
+                          </span>
+                        )}
+                        {item.soldOut && (
+                          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-[10px] font-bold text-rose-700">
+                            품절
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    {item.description && (
+                      <p className={`mt-1 text-xs ${item.soldOut ? "text-slate-400" : "text-slate-600"}`}>
+                        {item.description}
+                      </p>
+                    )}
+                  </article>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-3">
             <p className="text-sm font-semibold text-indigo-800">실시간 운영 정보</p>

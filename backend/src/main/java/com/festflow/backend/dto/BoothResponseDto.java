@@ -13,7 +13,10 @@ public record BoothResponseDto(
         Integer estimatedWaitMinutes,
         Integer remainingStock,
         String liveStatusMessage,
-        LocalDateTime liveStatusUpdatedAt
+        LocalDateTime liveStatusUpdatedAt,
+        String boothIntro,
+        String menuImageUrl,
+        String menuBoardJson
 ) {
 }
 

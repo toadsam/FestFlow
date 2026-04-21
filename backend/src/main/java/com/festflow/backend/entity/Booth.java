@@ -47,6 +47,15 @@ public class Booth {
     @Column
     private Integer maxReservationMinutes;
 
+    @Column(length = 2000)
+    private String boothIntro;
+
+    @Column(length = 1000)
+    private String menuImageUrl;
+
+    @Column(length = 4000)
+    private String menuBoardJson;
+
     protected Booth() {
     }
 
@@ -172,5 +181,29 @@ public class Booth {
             return;
         }
         this.maxReservationMinutes = maxReservationMinutes;
+    }
+
+    public String getBoothIntro() {
+        return boothIntro;
+    }
+
+    public void setBoothIntro(String boothIntro) {
+        this.boothIntro = boothIntro;
+    }
+
+    public String getMenuImageUrl() {
+        return menuImageUrl;
+    }
+
+    public void setMenuImageUrl(String menuImageUrl) {
+        this.menuImageUrl = menuImageUrl;
+    }
+
+    public String getMenuBoardJson() {
+        return menuBoardJson;
+    }
+
+    public void setMenuBoardJson(String menuBoardJson) {
+        this.menuBoardJson = menuBoardJson;
     }
 }

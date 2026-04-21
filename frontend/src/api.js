@@ -1,4 +1,4 @@
-import { getAccessToken } from "./utils/auth";
+﻿import { getAccessToken } from "./utils/auth";
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api"
@@ -34,29 +34,29 @@ export async function loginAdmin(username, password) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
-  return parseJson(response, "嚥≪뮄??紐꾨퓠 ??쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "?β돦裕??筌뤾쑬?????덉넮???곕????덈펲.");
 }
 
 export async function fetchBooths() {
   const response = await fetch(`${API_BASE}/booths`);
-  return parseJson(response, "?봔??筌뤴뫖以??揶쎛?紐꾩궎筌왖 筌륁궢六??щ빍??");
+  return parseJson(response, "?遊붋??嶺뚮ㅄ維뽨빳???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??");
 }
 
 export async function fetchBoothById(boothId) {
   const response = await fetch(`${API_BASE}/booths/${boothId}`);
-  return parseJson(response, "?봔???類ｋ궖??揶쎛?紐꾩궎筌왖 筌륁궢六??щ빍??");
+  return parseJson(response, "?遊붋???筌먲퐢沅???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??");
 }
 
 export async function fetchCongestion(boothId) {
   const response = await fetch(`${API_BASE}/booths/${boothId}/congestion`);
-  return parseJson(response, "??깆삜??鈺곌퀬?????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "??源놁궃???브퀗???????덉넮???곕????덈펲.");
 }
 
 export async function fetchEvents() {
   const response = await fetch(`${API_BASE}/events`);
   return parseJson(
     response,
-    "?⑤벊肉?筌뤴뫖以??揶쎛?紐꾩궎筌왖 筌륁궢六??щ빍??",
+    "??ㅻ쾴??嶺뚮ㅄ維뽨빳???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??",
   );
 }
 
@@ -66,7 +66,7 @@ export async function sendGps(latitude, longitude) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ latitude, longitude }),
   });
-  return parseJson(response, "GPS ?袁⑸꽊????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "GPS ?熬곣뫖苑?????덉넮???곕????덈펲.");
 }
 
 export async function askChat(question) {
@@ -75,7 +75,7 @@ export async function askChat(question) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question }),
   });
-  return parseJson(response, "筌?ロ겦 ?臾먮뼗????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "嶺????꺅 ??얜Ŧ堉?????덉넮???곕????덈펲.");
 }
 
 export async function createBooth(payload) {
@@ -84,7 +84,7 @@ export async function createBooth(payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?봔????밴쉐????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "?遊붋????諛댁뎽?????덉넮???곕????덈펲.");
 }
 
 export async function updateBooth(id, payload) {
@@ -93,7 +93,7 @@ export async function updateBooth(id, payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?봔????륁젟????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "?遊붋????瑜곸젧?????덉넮???곕????덈펲.");
 }
 
 export async function updateBoothLiveStatus(id, payload) {
@@ -104,7 +104,7 @@ export async function updateBoothLiveStatus(id, payload) {
   });
   return parseJson(
     response,
-    "?봔????쇰뻻揶??類ｋ궖 ??낅쑓??꾨뱜????쎈솭??됰뮸??덈뼄.",
+    "?遊붋?????곕뻣???筌먲퐢沅????낆몥??袁⑤콦?????덉넮???곕????덈펲.",
   );
 }
 
@@ -117,7 +117,7 @@ export async function uploadBoothImage(id, file) {
     headers: withAuth(),
     body: formData,
   });
-  return parseJson(response, "???筌왖 ??낆쨮??뽯퓠 ??쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "????嶺뚯솘? ???놁Ŧ??戮?뱺 ???덉넮???곕????덈펲.");
 }
 
 export async function reorderBooths(boothIds) {
@@ -128,7 +128,7 @@ export async function reorderBooths(boothIds) {
   });
 
   if (!response.ok) {
-    throw new Error("?봔????뽮퐣 ???關肉???쎈솭??됰뮸??덈뼄.");
+    throw new Error("?遊붋????戮?맋 ????쒑굢????덉넮???곕????덈펲.");
   }
 }
 
@@ -139,7 +139,7 @@ export async function deleteBooth(id) {
   });
 
   if (!response.ok) {
-    throw new Error("?봔?????????쎈솭??됰뮸??덈뼄.");
+    throw new Error("?遊붋??????????덉넮???곕????덈펲.");
   }
 }
 
@@ -149,7 +149,7 @@ export async function createEvent(payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?⑤벊肉???밴쉐????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "??ㅻ쾴????諛댁뎽?????덉넮???곕????덈펲.");
 }
 
 export async function updateEvent(id, payload) {
@@ -158,7 +158,7 @@ export async function updateEvent(id, payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?⑤벊肉???륁젟????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "??ㅻ쾴????瑜곸젧?????덉넮???곕????덈펲.");
 }
 
 export async function deleteEvent(id) {
@@ -168,7 +168,7 @@ export async function deleteEvent(id) {
   });
 
   if (!response.ok) {
-    throw new Error("?⑤벊肉????????쎈솭??됰뮸??덈뼄.");
+    throw new Error("??ㅻ쾴??????????덉넮???곕????덈펲.");
   }
 }
 
@@ -181,7 +181,7 @@ export async function importBoothCsv(file) {
     headers: withAuth(),
     body: formData,
   });
-  return parseJson(response, "?봔??CSV ??낆쨮??뽯퓠 ??쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "?遊붋??CSV ???놁Ŧ??戮?뱺 ???덉넮???곕????덈펲.");
 }
 
 export async function importEventCsv(file) {
@@ -193,12 +193,12 @@ export async function importEventCsv(file) {
     headers: withAuth(),
     body: formData,
   });
-  return parseJson(response, "?⑤벊肉?CSV ??낆쨮??뽯퓠 ??쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "??ㅻ쾴??CSV ???놁Ŧ??戮?뱺 ???덉넮???곕????덈펲.");
 }
 
 export async function fetchActiveNotices() {
   const response = await fetch(`${API_BASE}/notices/active`);
-  return parseJson(response, "?⑤벊? 筌뤴뫖以??揶쎛?紐꾩궎筌왖 筌륁궢六??щ빍??");
+  return parseJson(response, "??ㅻ쾴? 嶺뚮ㅄ維뽨빳???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??");
 }
 
 export async function fetchAdminNotices() {
@@ -207,7 +207,7 @@ export async function fetchAdminNotices() {
   });
   return parseJson(
     response,
-    "?온?귐딆쁽 ?⑤벊? 筌뤴뫖以??揶쎛?紐꾩궎筌왖 筌륁궢六??щ빍??",
+    "??㉱?洹먮봿????ㅻ쾴? 嶺뚮ㅄ維뽨빳???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??",
   );
 }
 
@@ -217,7 +217,7 @@ export async function createNotice(payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?⑤벊? ??밴쉐????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "??ㅻ쾴? ??諛댁뎽?????덉넮???곕????덈펲.");
 }
 
 export async function updateNotice(id, payload) {
@@ -226,7 +226,7 @@ export async function updateNotice(id, payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?⑤벊? ??륁젟????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "??ㅻ쾴? ??瑜곸젧?????덉넮???곕????덈펲.");
 }
 
 export async function deleteNotice(id) {
@@ -235,7 +235,7 @@ export async function deleteNotice(id) {
     headers: withAuth(),
   });
   if (!response.ok) {
-    throw new Error("?⑤벊? ???????쎈솭??됰뮸??덈뼄.");
+    throw new Error("??ㅻ쾴? ????????덉넮???곕????덈펲.");
   }
 }
 
@@ -243,7 +243,7 @@ export async function fetchAdminDashboardKpis() {
   const response = await fetch(`${API_BASE}/admin/dashboard/kpis`, {
     headers: withAuth(),
   });
-  return parseJson(response, "????뺣궖??KPI??揶쎛?紐꾩궎筌왖 筌륁궢六??щ빍??");
+  return parseJson(response, "????類ｊ텠??KPI???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??");
 }
 
 export async function fetchAuditLogs() {
@@ -252,7 +252,7 @@ export async function fetchAuditLogs() {
   });
   return parseJson(
     response,
-    "揶쏅Ŋ沅?嚥≪뮄?뉒몴?揶쎛?紐꾩궎筌왖 筌륁궢六??щ빍??",
+    "?띠룆흮亦??β돦裕??믩ご??띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??",
   );
 }
 
@@ -266,7 +266,7 @@ export async function triggerCongestionReliefNotice() {
   );
   return parseJson(
     response,
-    "??깆삜 ?袁れ넅 ?⑤벊? 獄쏆뮉六????쎈솭??됰뮸??덈뼄.",
+    "??源놁궃 ?熬곥굦????ㅻ쾴? ?꾩룇裕됵쭛?????덉넮???곕????덈펲.",
   );
 }
 
@@ -280,7 +280,7 @@ export async function triggerEventStartNotice(eventId) {
   );
   return parseJson(
     response,
-    "?⑤벊肉???뽰삂 ?⑤벊? 獄쏆뮉六????쎈솭??됰뮸??덈뼄.",
+    "??ㅻ쾴????戮곗굚 ??ㅻ쾴? ?꾩룇裕됵쭛?????덉넮???곕????덈펲.",
   );
 }
 
@@ -288,18 +288,18 @@ export async function fetchTrafficHourly() {
   const response = await fetch(`${API_BASE}/analytics/traffic-hourly`);
   return parseJson(
     response,
-    "??볦퍢??癰?獄쎻뫖揆??鈺곌퀬?????쎈솭??됰뮸??덈뼄.",
+    "??蹂?뜟?????꾩렮維뽪룇???브퀗???????덉넮???곕????덈펲.",
   );
 }
 
 export async function fetchPopularBooths() {
   const response = await fetch(`${API_BASE}/analytics/popular-booths`);
-  return parseJson(response, "?硫몃┛ ?봔????沅?鈺곌퀬?????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "?筌롫챶???遊붋????亦??브퀗???????덉넮???곕????덈펲.");
 }
 
 export async function fetchHeatmap() {
   const response = await fetch(`${API_BASE}/analytics/congestion-heatmap`);
-  return parseJson(response, "??깆삜 ??딅뱜筌?鈺곌퀬?????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "??源놁궃 ???낅콦嶺??브퀗???????덉넮???곕????덈펲.");
 }
 
 export function createCongestionStream() {
@@ -338,7 +338,7 @@ export async function fetchOpsMasterBootstrap(key) {
   const response = await fetch(withOpsKey("/ops/master/bootstrap", key));
   return parseJson(
     response,
-    "???? ?온?귐딆쁽 ?怨쀬뵠?怨? 揶쎛?紐꾩궎筌왖 筌륁궢六??щ빍??",
+    "???? ??㉱?洹먮봿????⑥щ턄??? ?띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??",
   );
 }
 
@@ -353,7 +353,7 @@ export async function updateOpsMasterBoothLiveStatus(boothId, payload, key) {
   );
   return parseJson(
     response,
-    "???? ?온?귐딆쁽 ??쇰뻻揶??類ｋ궖 ???關肉???쎈솭??됰뮸??덈뼄.",
+    "???? ??㉱?洹먮봿?????곕뻣???筌먲퐢沅?????쒑굢????덉넮???곕????덈펲.",
   );
 }
 
@@ -363,7 +363,7 @@ export async function fetchOpsBoothBootstrap(boothId, key) {
   );
   return parseJson(
     response,
-    "?봔???온?귐딆쁽 ?怨쀬뵠?怨? 揶쎛?紐꾩궎筌왖 筌륁궢六??щ빍??",
+    "?遊붋????㉱?洹먮봿????⑥щ턄??? ?띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??",
   );
 }
 
@@ -378,17 +378,29 @@ export async function updateOpsBoothLiveStatus(boothId, payload, key) {
   );
   return parseJson(
     response,
-    "?봔????쇰뻻揶??類ｋ궖 ???關肉???쎈솭??됰뮸??덈뼄.",
+    "?遊붋?????곕뻣???筌먲퐢沅?????쒑굢????덉넮???곕????덈펲.",
   );
 }
 
+export async function uploadOpsBoothMenuImage(boothId, file, key) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(
+    withOpsKey(`/ops/booth/${boothId}/menu-image`, key),
+    {
+      method: "POST",
+      body: formData,
+    },
+  );
+  return parseJson(response, "메뉴 이미지 업로드에 실패했습니다.");
+}
 export async function createOpsMasterNotice(payload, key) {
   const response = await fetch(withOpsKey("/ops/master/notices", key), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "???? ?⑤벊? ?源낆쨯????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "???? ??ㅻ쾴? ?繹먮굞夷?????덉넮???곕????덈펲.");
 }
 
 export async function updateOpsMasterNotice(id, payload, key) {
@@ -397,7 +409,7 @@ export async function updateOpsMasterNotice(id, payload, key) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "???? ?⑤벊? ??륁젟????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "???? ??ㅻ쾴? ??瑜곸젧?????덉넮???곕????덈펲.");
 }
 
 export async function deleteOpsMasterNotice(id, key) {
@@ -405,7 +417,7 @@ export async function deleteOpsMasterNotice(id, key) {
     method: "DELETE",
   });
   if (!response.ok) {
-    throw new Error("???? ?⑤벊? ???????쎈솭??됰뮸??덈뼄.");
+    throw new Error("???? ??ㅻ쾴? ????????덉넮???곕????덈펲.");
   }
 }
 
@@ -415,7 +427,7 @@ export async function createOpsMasterEvent(payload, key) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?⑤벊肉??源낆쨯????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "??ㅻ쾴???繹먮굞夷?????덉넮???곕????덈펲.");
 }
 
 export async function updateOpsMasterEvent(id, payload, key) {
@@ -424,7 +436,7 @@ export async function updateOpsMasterEvent(id, payload, key) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?⑤벊肉???륁젟????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "??ㅻ쾴????瑜곸젧?????덉넮???곕????덈펲.");
 }
 
 export async function deleteOpsMasterEvent(id, key) {
@@ -432,7 +444,7 @@ export async function deleteOpsMasterEvent(id, key) {
     method: "DELETE",
   });
   if (!response.ok) {
-    throw new Error("?⑤벊肉????????쎈솭??됰뮸??덈뼄.");
+    throw new Error("??ㅻ쾴??????????덉넮???곕????덈펲.");
   }
 }
 
@@ -442,7 +454,7 @@ export async function createOpsMasterBooth(payload, key) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?봔???源낆쨯????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "?遊붋???繹먮굞夷?????덉넮???곕????덈펲.");
 }
 
 export async function updateOpsMasterBooth(id, payload, key) {
@@ -451,7 +463,7 @@ export async function updateOpsMasterBooth(id, payload, key) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?봔????륁젟????쎈솭??됰뮸??덈뼄.");
+  return parseJson(response, "?遊붋????瑜곸젧?????덉넮???곕????덈펲.");
 }
 
 export async function deleteOpsMasterBooth(id, key) {
@@ -459,7 +471,7 @@ export async function deleteOpsMasterBooth(id, key) {
     method: "DELETE",
   });
   if (!response.ok) {
-    throw new Error("?봔?????????쎈솭??됰뮸??덈뼄.");
+    throw new Error("?遊붋??????????덉넮???곕????덈펲.");
   }
 }
 
@@ -470,7 +482,7 @@ export async function reorderOpsMasterBooths(boothIds, key) {
     body: JSON.stringify({ boothIds }),
   });
   if (!response.ok) {
-    throw new Error("?봔????뽮퐣 癰궰野껋럩肉???쎈솭??됰뮸??덈뼄.");
+    throw new Error("?遊붋????戮?맋 ?곌떠??롪퍔?⑵굢????덉넮???곕????덈펲.");
   }
 }
 
@@ -483,7 +495,7 @@ export async function triggerOpsMasterCongestionReliefNotice(key) {
   );
   return parseJson(
     response,
-    "??깆삜 ?袁れ넅 ?⑤벊? 獄쏆뮉六????쎈솭??됰뮸??덈뼄.",
+    "??源놁궃 ?熬곥굦????ㅻ쾴? ?꾩룇裕됵쭛?????덉넮???곕????덈펲.",
   );
 }
 
@@ -496,7 +508,7 @@ export async function triggerOpsMasterEventStartNotice(eventId, key) {
   );
   return parseJson(
     response,
-    "?⑤벊肉???뽰삂 ?⑤벊? 獄쏆뮉六????쎈솭??됰뮸??덈뼄.",
+    "??ㅻ쾴????戮곗굚 ??ㅻ쾴? ?꾩룇裕됵쭛?????덉넮???곕????덈펲.",
   );
 }
 
@@ -506,7 +518,7 @@ export async function fetchStageCrowd(minutes = 10) {
   );
   return parseJson(
     response,
-    "?얜?? ??깆삜???類ｋ궖???븍뜄???? 筌륁궢六??щ빍??",
+    "???? ??源놁궃???筌먲퐢沅???釉띾쐞???? 嶺뚮쪇沅?쭛???鍮??",
   );
 }
 
@@ -516,7 +528,7 @@ export async function fetchBoothReservations(boothId, reservationToken) {
       ? { "X-Reservation-Token": reservationToken }
       : undefined,
   });
-  return parseJson(response, "예약 현황을 불러오지 못했습니다.");
+  return parseJson(response, "?덉빟 ?꾪솴??遺덈윭?ㅼ? 紐삵뻽?듬땲??");
 }
 
 export async function createBoothReservation(
@@ -534,7 +546,7 @@ export async function createBoothReservation(
       : { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "예약에 실패했습니다.");
+  return parseJson(response, "?덉빟???ㅽ뙣?덉뒿?덈떎.");
 }
 
 export async function createBoothReservationCheckInToken(
@@ -551,14 +563,14 @@ export async function createBoothReservationCheckInToken(
         : undefined,
     },
   );
-  return parseJson(response, "QR 토큰 발급에 실패했습니다.");
+  return parseJson(response, "QR ?좏겙 諛쒓툒???ㅽ뙣?덉뒿?덈떎.");
 }
 
 export async function fetchOpsBoothReservations(boothId, key) {
   const response = await fetch(
     withOpsKey(`/ops/booth/${boothId}/reservations`, key),
   );
-  return parseJson(response, "예약 대시보드를 불러오지 못했습니다.");
+  return parseJson(response, "?덉빟 ??쒕낫?쒕? 遺덈윭?ㅼ? 紐삵뻽?듬땲??");
 }
 
 export async function updateOpsBoothReservationConfig(boothId, payload, key) {
@@ -570,7 +582,7 @@ export async function updateOpsBoothReservationConfig(boothId, payload, key) {
       body: JSON.stringify(payload),
     },
   );
-  return parseJson(response, "예약 설정 저장에 실패했습니다.");
+  return parseJson(response, "?덉빟 ?ㅼ젙 ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.");
 }
 
 export async function checkInOpsBoothReservation(boothId, reservationId, key) {
@@ -583,7 +595,7 @@ export async function checkInOpsBoothReservation(boothId, reservationId, key) {
       method: "POST",
     },
   );
-  return parseJson(response, "체크인 처리에 실패했습니다.");
+  return parseJson(response, "泥댄겕??泥섎━???ㅽ뙣?덉뒿?덈떎.");
 }
 
 export async function checkInOpsBoothReservationByToken(boothId, token, key) {
@@ -595,7 +607,7 @@ export async function checkInOpsBoothReservationByToken(boothId, token, key) {
       body: JSON.stringify({ token }),
     },
   );
-  return parseJson(response, "QR 체크인 처리에 실패했습니다.");
+  return parseJson(response, "QR 泥댄겕??泥섎━???ㅽ뙣?덉뒿?덈떎.");
 }
 
 export async function sendReservationAuthCode(phoneNumber) {
@@ -604,7 +616,7 @@ export async function sendReservationAuthCode(phoneNumber) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phoneNumber }),
   });
-  return parseJson(response, "인증번호 발송에 실패했습니다.");
+  return parseJson(response, "?몄쬆踰덊샇 諛쒖넚???ㅽ뙣?덉뒿?덈떎.");
 }
 
 export async function verifyReservationAuthCode(phoneNumber, code) {
@@ -613,5 +625,6 @@ export async function verifyReservationAuthCode(phoneNumber, code) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phoneNumber, code }),
   });
-  return parseJson(response, "인증번호 확인에 실패했습니다.");
+  return parseJson(response, "?몄쬆踰덊샇 ?뺤씤???ㅽ뙣?덉뒿?덈떎.");
 }
+

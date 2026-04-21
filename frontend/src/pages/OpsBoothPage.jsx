@@ -4,6 +4,7 @@ import {
   checkInOpsBoothReservation,
   checkInOpsBoothReservationByToken,
   fetchOpsBoothBootstrap,
+  uploadOpsBoothMenuImage,
   updateOpsBoothLiveStatus,
   updateOpsBoothReservationConfig,
 } from "../api";
@@ -25,6 +26,24 @@ function clampNumber(value, min, fallback = min) {
 function formatTime(value) {
   if (!value) return "-";
   return value.replace("T", " ").slice(5, 16);
+}
+
+function parseMenuBoardJson(raw) {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => ({
+        name: String(item?.name || "").trim(),
+        price: String(item?.price || "").trim(),
+        description: String(item?.description || "").trim(),
+        soldOut: Boolean(item?.soldOut),
+      }))
+      .filter((item) => item.name);
+  } catch {
+    return [];
+  }
 }
 
 function TableSeatLayout({ tableName, totalSeats, availableSeats, onSeatClick }) {
@@ -136,7 +155,11 @@ export default function OpsBoothPage() {
     estimatedWaitMinutes: "",
     remainingStock: "",
     liveStatusMessage: "",
+    boothIntro: "",
+    menuImageUrl: "",
   });
+  const [menuImageFile, setMenuImageFile] = useState(null);
+  const [menuItems, setMenuItems] = useState([]);
 
   const [reservationDraft, setReservationDraft] = useState({
     maxReservationMinutes: 10,
@@ -165,7 +188,10 @@ export default function OpsBoothPage() {
         estimatedWaitMinutes: next.booth.estimatedWaitMinutes ?? "",
         remainingStock: next.booth.remainingStock ?? "",
         liveStatusMessage: next.booth.liveStatusMessage ?? "",
+        boothIntro: next.booth.boothIntro ?? "",
+        menuImageUrl: next.booth.menuImageUrl ?? "",
       });
+      setMenuItems(parseMenuBoardJson(next.booth.menuBoardJson));
       setReservationDraft({
         maxReservationMinutes: next.reservations?.maxReservationMinutes ?? 10,
         tables: (next.reservations?.tables ?? []).map((table) => ({
@@ -218,6 +244,9 @@ export default function OpsBoothPage() {
           remainingStock:
             draft.remainingStock === "" ? null : Number(draft.remainingStock),
           liveStatusMessage: draft.liveStatusMessage || null,
+          boothIntro: draft.boothIntro || null,
+          menuImageUrl: draft.menuImageUrl || null,
+          menuBoardJson: JSON.stringify(menuItems),
         },
         key,
       );
@@ -227,6 +256,29 @@ export default function OpsBoothPage() {
       setError(
         e.message === "Failed to fetch"
           ? "실시간 정보 저장 요청이 실패했습니다."
+          : e.message,
+      );
+    }
+  }
+
+  async function handleUploadMenuImage() {
+    if (!menuImageFile) {
+      setError("업로드할 음식 사진 파일을 선택해 주세요.");
+      return;
+    }
+    try {
+      const updatedBooth = await uploadOpsBoothMenuImage(id, menuImageFile, key);
+      setDraft((prev) => ({
+        ...prev,
+        menuImageUrl: updatedBooth.menuImageUrl || "",
+      }));
+      setMenuImageFile(null);
+      setMessage("음식 사진이 업로드되었습니다.");
+      await load();
+    } catch (e) {
+      setError(
+        e.message === "Failed to fetch"
+          ? "이미지 업로드 요청이 실패했습니다."
           : e.message,
       );
     }
@@ -270,6 +322,25 @@ export default function OpsBoothPage() {
           : e.message,
       );
     }
+  }
+
+  function addMenuItem() {
+    setMenuItems((prev) => [
+      ...prev,
+      { name: "", price: "", description: "", soldOut: false },
+    ]);
+  }
+
+  function updateMenuItem(index, patch) {
+    setMenuItems((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...patch };
+      return next;
+    });
+  }
+
+  function removeMenuItem(index) {
+    setMenuItems((prev) => prev.filter((_, idx) => idx !== index));
   }
 
   async function handleCheckIn(reservationId) {
@@ -628,6 +699,119 @@ export default function OpsBoothPage() {
                   }))
                 }
               />
+              <textarea
+                className="w-full border rounded px-2 py-2 text-sm min-h-20"
+                placeholder="부스 소개 (메뉴/특징/추천 포인트)"
+                value={draft.boothIntro}
+                onChange={(e) =>
+                  setDraft((prev) => ({
+                    ...prev,
+                    boothIntro: e.target.value,
+                  }))
+                }
+              />
+              <div className="rounded border border-slate-200 bg-slate-50 p-2 space-y-2">
+                <p className="text-xs font-semibold text-slate-700">음식 사진 업로드</p>
+                <div className="grid grid-cols-[1fr_auto] gap-2">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="border rounded px-2 py-2 text-sm bg-white"
+                    onChange={(e) => setMenuImageFile(e.target.files?.[0] || null)}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleUploadMenuImage}
+                    className="rounded border border-teal-500 px-3 py-2 text-xs font-semibold text-teal-700"
+                  >
+                    업로드
+                  </button>
+                </div>
+              </div>
+              {draft.menuImageUrl && (
+                <div className="rounded border border-slate-200 bg-slate-50 p-2">
+                  <p className="text-[11px] text-slate-600 mb-1">음식 사진 미리보기</p>
+                  <img
+                    src={draft.menuImageUrl}
+                    alt="음식 사진 미리보기"
+                    className="h-32 w-full rounded object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                </div>
+              )}
+
+              <div className="rounded border border-slate-200 bg-slate-50 p-2 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-slate-700">메뉴판 편집</p>
+                  <button
+                    type="button"
+                    onClick={addMenuItem}
+                    className="rounded border border-cyan-500 px-2 py-1 text-[11px] font-semibold text-cyan-700"
+                  >
+                    메뉴 추가
+                  </button>
+                </div>
+                {menuItems.length ? (
+                  <div className="space-y-2">
+                    {menuItems.map((item, index) => (
+                      <div
+                        key={`menu-item-${index}`}
+                        className="rounded border border-slate-200 bg-white p-2 space-y-2"
+                      >
+                        <div className="grid grid-cols-[1fr_auto] gap-2">
+                          <input
+                            className="border rounded px-2 py-1.5 text-sm"
+                            placeholder="메뉴명 (예: 닭강정)"
+                            value={item.name}
+                            onChange={(e) =>
+                              updateMenuItem(index, { name: e.target.value })
+                            }
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeMenuItem(index)}
+                            className="rounded border px-2 py-1 text-xs"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                        <div className="grid grid-cols-[1fr_auto] gap-2">
+                          <input
+                            className="border rounded px-2 py-1.5 text-sm"
+                            placeholder="가격 (예: 5000원)"
+                            value={item.price}
+                            onChange={(e) =>
+                              updateMenuItem(index, { price: e.target.value })
+                            }
+                          />
+                          <label className="inline-flex items-center gap-1 rounded border px-2 text-xs">
+                            <input
+                              type="checkbox"
+                              checked={item.soldOut}
+                              onChange={(e) =>
+                                updateMenuItem(index, { soldOut: e.target.checked })
+                              }
+                            />
+                            품절
+                          </label>
+                        </div>
+                        <input
+                          className="w-full border rounded px-2 py-1.5 text-sm"
+                          placeholder="설명 (예: 국내산 닭다리살)"
+                          value={item.description}
+                          onChange={(e) =>
+                            updateMenuItem(index, { description: e.target.value })
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-[11px] text-slate-500">아직 메뉴가 없습니다. 메뉴 추가로 시작해 주세요.</p>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={handleSaveLiveStatus}

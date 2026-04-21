@@ -23,6 +23,8 @@ import com.festflow.backend.service.NoticeService;
 import com.festflow.backend.service.ReservationService;
 import com.festflow.backend.service.stream.StreamService;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,8 +33,15 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 
@@ -48,6 +57,8 @@ public class OpsController {
     private final AuditLogService auditLogService;
     private final StreamService streamService;
     private final ReservationService reservationService;
+    @Value("${app.upload.dir}")
+    private String uploadDir;
 
     public OpsController(
             BoothService boothService,
@@ -210,6 +221,29 @@ public class OpsController {
         ensureBoothAccess(authentication, id);
         BoothResponseDto updated = boothService.updateLiveStatus(id, requestDto);
         auditLogService.log(authentication.getName(), "OPS_BOOTH_LIVE_STATUS", "BOOTH", id, "update own booth live status");
+        streamService.publishBooths(boothService.getAllBooths());
+        return updated;
+    }
+
+    @PostMapping(value = "/booth/{id}/menu-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public BoothResponseDto uploadBoothMenuImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication
+    ) throws IOException {
+        ensureBoothAccess(authentication, id);
+        Path dir = Path.of(uploadDir);
+        Files.createDirectories(dir);
+
+        String ext = file.getOriginalFilename() != null && file.getOriginalFilename().contains(".")
+                ? file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.'))
+                : ".jpg";
+        String filename = "booth-menu-" + id + "-" + UUID.randomUUID() + ext;
+        Path path = dir.resolve(filename);
+        Files.write(path, file.getBytes());
+
+        BoothResponseDto updated = boothService.updateBoothMenuImage(id, "/uploads/" + filename);
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_MENU_IMAGE", "BOOTH", id, filename);
         streamService.publishBooths(boothService.getAllBooths());
         return updated;
     }

@@ -43,6 +43,9 @@ public class AdminImportService {
                         null,
                         null,
                         null,
+                        null,
+                        null,
+                        null,
                         null
                 ));
                 count++;
