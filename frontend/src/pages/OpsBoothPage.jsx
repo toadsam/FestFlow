@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
   checkInOpsBoothReservation,
@@ -14,6 +14,107 @@ const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
 
 function confirmAction(message) {
   return window.confirm(`실행할까요?\n\n${message}`);
+}
+
+function clampNumber(value, min, fallback = min) {
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return fallback;
+  return Math.max(min, parsed);
+}
+
+function formatTime(value) {
+  if (!value) return "-";
+  return value.replace("T", " ").slice(5, 16);
+}
+
+function TableSeatLayout({ tableName, totalSeats, availableSeats, onSeatClick }) {
+  const seatCount = Math.max(1, Number(totalSeats) || 1);
+  const activeSeats = Math.min(seatCount, Math.max(0, Number(availableSeats) || 0));
+  const visibleCount = Math.min(16, seatCount);
+  const visibleActiveCount = Math.min(visibleCount, activeSeats);
+  const hiddenCount = Math.max(0, seatCount - visibleCount);
+  const arenaSize = 196;
+  const tableSize = 86;
+  const seatSize = 28;
+  const seatRadius =
+    visibleActiveCount <= 4 ? 62 : visibleActiveCount <= 8 ? 68 : 72;
+
+  return (
+    <div
+      className="border border-slate-200 bg-slate-50 p-2"
+      style={{ borderRadius: "10px" }}
+    >
+      <div
+        className="relative mx-auto overflow-visible"
+        style={{ width: `${arenaSize}px`, height: `${arenaSize}px` }}
+      >
+        <div
+          className="absolute rounded-full border-2 border-slate-400 bg-white text-center shadow-sm"
+          style={{
+            width: `${tableSize}px`,
+            height: `${tableSize}px`,
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          <div className="flex h-full w-full flex-col items-center justify-center">
+            <p className="text-[11px] text-slate-500">TABLE</p>
+            <p className="mt-0.5 max-w-[72px] line-clamp-1 text-sm font-bold text-slate-800">
+              {tableName}
+            </p>
+            <p className="mt-1 text-[11px] text-slate-600">
+              {activeSeats}/{seatCount}
+            </p>
+          </div>
+        </div>
+
+        <div className="pointer-events-none absolute inset-2 rounded-full border border-dashed border-slate-300/80" />
+
+        {Array.from({ length: visibleActiveCount }, (_, idx) => {
+          const count = Math.max(visibleActiveCount, 1);
+          const angle = (360 / count) * idx - 90;
+          return (
+            <div
+              key={`seat-circle-${idx}`}
+              className="absolute left-1/2 top-1/2"
+              style={{
+                transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-${seatRadius}px)`,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => onSeatClick?.(idx)}
+                className="rounded-full border border-emerald-300 bg-emerald-500 text-[10px] font-bold text-white"
+                style={{
+                  width: `${seatSize}px`,
+                  height: `${seatSize}px`,
+                  transform: `rotate(${-angle}deg)`,
+                }}
+                title={`${idx + 1}번 의자 사용 가능`}
+              >
+                {idx + 1}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="mt-2 rounded-md border border-slate-200 bg-white px-2 py-1.5">
+        <p className="text-[11px] text-slate-600">
+          {visibleActiveCount === 0
+            ? "가용 좌석이 없습니다. + 버튼이나 슬라이더로 추가해 주세요."
+            : "의자를 누르면 가용 좌석 수를 줄일 수 있어요."}
+        </p>
+      </div>
+
+      {hiddenCount > 0 && (
+        <p className="mt-2 text-[11px] text-slate-500">
+          +{hiddenCount}개 좌석은 슬라이더/숫자 버튼으로 조정
+        </p>
+      )}
+    </div>
+  );
 }
 
 export default function OpsBoothPage() {
@@ -79,7 +180,7 @@ export default function OpsBoothPage() {
       setData(null);
       setError(
         e.message === "Failed to fetch"
-          ? "서버 연결에 실패했습니다. 백엔드 상태를 확인해주세요."
+          ? "서버 연결에 실패했습니다. 백엔드 상태를 확인해 주세요."
           : e.message,
       );
     } finally {
@@ -89,19 +190,23 @@ export default function OpsBoothPage() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, key]);
 
   useEffect(() => {
     setScannerSupported(
       typeof window !== "undefined" && "BarcodeDetector" in window,
     );
+
     return () => {
       stopScanner();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleSaveLiveStatus() {
     if (!confirmAction("실시간 운영 정보를 저장합니다.")) return;
+
     try {
       await updateOpsBoothLiveStatus(
         id,
@@ -121,52 +226,63 @@ export default function OpsBoothPage() {
     } catch (e) {
       setError(
         e.message === "Failed to fetch"
-          ? "저장 요청에 실패했습니다."
+          ? "실시간 정보 저장 요청이 실패했습니다."
           : e.message,
       );
     }
   }
 
   async function handleSaveReservationConfig() {
-    if (!confirmAction("예약 설정을 저장합니다.")) return;
+    if (!confirmAction("예약/테이블 설정을 저장합니다.")) return;
+
     try {
       await updateOpsBoothReservationConfig(
         id,
         {
-          maxReservationMinutes: Math.max(
+          maxReservationMinutes: clampNumber(
+            reservationDraft.maxReservationMinutes,
             1,
-            Number(reservationDraft.maxReservationMinutes) || 10,
+            10,
           ),
-          tables: reservationDraft.tables.map((table) => ({
-            id: table.id ?? null,
-            tableName: table.tableName,
-            totalSeats: Math.max(1, Number(table.totalSeats) || 1),
-            availableSeats: Math.max(0, Number(table.availableSeats) || 0),
-          })),
+          tables: reservationDraft.tables.map((table) => {
+            const totalSeats = clampNumber(table.totalSeats, 1, 1);
+            const availableSeats = Math.min(
+              totalSeats,
+              Math.max(0, Number(table.availableSeats) || 0),
+            );
+
+            return {
+              id: table.id ?? null,
+              tableName: table.tableName,
+              totalSeats,
+              availableSeats,
+            };
+          }),
         },
         key,
       );
-      setMessage("예약 설정이 저장되었습니다.");
+      setMessage("예약/테이블 설정이 저장되었습니다.");
       await load();
     } catch (e) {
       setError(
         e.message === "Failed to fetch"
-          ? "예약 설정 저장 요청에 실패했습니다."
+          ? "예약 설정 저장 요청이 실패했습니다."
           : e.message,
       );
     }
   }
 
   async function handleCheckIn(reservationId) {
-    if (!confirmAction(`예약 #${reservationId} 체크인 처리할까요?`)) return;
+    if (!confirmAction(`예약 #${reservationId}를 체크인 처리할까요?`)) return;
+
     try {
       await checkInOpsBoothReservation(id, reservationId, key);
-      setMessage(`예약 #${reservationId} 체크인 완료`);
+      setMessage(`예약 #${reservationId} 체크인이 완료되었습니다.`);
       await load();
     } catch (e) {
       setError(
         e.message === "Failed to fetch"
-          ? "체크인 요청에 실패했습니다."
+          ? "체크인 요청이 실패했습니다."
           : e.message,
       );
     }
@@ -175,7 +291,7 @@ export default function OpsBoothPage() {
   async function handleCheckInByToken() {
     const token = qrTokenInput.trim();
     if (!token) {
-      setError("QR 토큰을 입력해주세요.");
+      setError("QR 토큰을 입력해 주세요.");
       return;
     }
 
@@ -187,7 +303,7 @@ export default function OpsBoothPage() {
     } catch (e) {
       setError(
         e.message === "Failed to fetch"
-          ? "QR 체크인 요청에 실패했습니다."
+          ? "QR 체크인 요청이 실패했습니다."
           : e.message,
       );
     }
@@ -198,10 +314,12 @@ export default function OpsBoothPage() {
       window.clearInterval(scanTimerRef.current);
       scanTimerRef.current = null;
     }
+
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
+
     setScannerActive(false);
   }
 
@@ -217,6 +335,7 @@ export default function OpsBoothPage() {
         video: { facingMode: { ideal: "environment" } },
         audio: false,
       });
+
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
@@ -226,6 +345,7 @@ export default function OpsBoothPage() {
       const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
       scanTimerRef.current = window.setInterval(async () => {
         if (!videoRef.current) return;
+
         try {
           const results = await detector.detect(videoRef.current);
           if (!results.length) return;
@@ -245,7 +365,7 @@ export default function OpsBoothPage() {
 
       setScannerActive(true);
     } catch {
-      setCameraError("카메라를 열 수 없습니다. 권한을 확인해주세요.");
+      setCameraError("카메라를 사용할 수 없습니다. 권한을 확인해 주세요.");
       stopScanner();
     }
   }
@@ -253,24 +373,92 @@ export default function OpsBoothPage() {
   function updateTableDraft(index, patch) {
     setReservationDraft((prev) => {
       const tables = [...prev.tables];
-      tables[index] = { ...tables[index], ...patch };
+      const target = { ...tables[index], ...patch };
+
+      const total = Math.max(1, Number(target.totalSeats) || 1);
+      const available = Math.max(
+        0,
+        Math.min(total, Number(target.availableSeats) || 0),
+      );
+
+      tables[index] = {
+        ...target,
+        totalSeats: total,
+        availableSeats: available,
+      };
+
       return { ...prev, tables };
     });
   }
 
-  function addTableDraft() {
-    setReservationDraft((prev) => ({
-      ...prev,
-      tables: [
-        ...prev.tables,
-        {
-          id: null,
-          tableName: `Table ${prev.tables.length + 1}`,
-          totalSeats: 4,
-          availableSeats: 4,
-        },
-      ],
-    }));
+  function stepTable(index, field, delta) {
+    setReservationDraft((prev) => {
+      const tables = [...prev.tables];
+      const table = { ...tables[index] };
+
+      if (field === "totalSeats") {
+        const nextTotal = Math.max(1, (Number(table.totalSeats) || 1) + delta);
+        table.totalSeats = nextTotal;
+        table.availableSeats = Math.min(
+          nextTotal,
+          Math.max(0, Number(table.availableSeats) || 0),
+        );
+      }
+
+      if (field === "availableSeats") {
+        const max = Math.max(1, Number(table.totalSeats) || 1);
+        table.availableSeats = Math.max(
+          0,
+          Math.min(max, (Number(table.availableSeats) || 0) + delta),
+        );
+      }
+
+      tables[index] = table;
+      return { ...prev, tables };
+    });
+  }
+
+  function setTableAvailableSeats(index, value) {
+    setReservationDraft((prev) => {
+      const tables = [...prev.tables];
+      const table = { ...tables[index] };
+      const total = Math.max(1, Number(table.totalSeats) || 1);
+      table.availableSeats = Math.max(0, Math.min(total, Number(value) || 0));
+      tables[index] = table;
+      return { ...prev, tables };
+    });
+  }
+
+  function handleSeatVisualToggle(index, seatIndex) {
+    const table = reservationDraft.tables[index];
+    if (!table) return;
+    const currentAvailable = Math.max(0, Number(table.availableSeats) || 0);
+    const clickedSeat = seatIndex + 1;
+
+    const nextAvailable =
+      clickedSeat === currentAvailable
+        ? Math.max(0, currentAvailable - 1)
+        : clickedSeat;
+
+    setTableAvailableSeats(index, nextAvailable);
+  }
+
+  function addTableDraft(template = 4) {
+    setReservationDraft((prev) => {
+      const nextIndex = prev.tables.length + 1;
+      return {
+        ...prev,
+        tables: [
+          ...prev.tables,
+          {
+            id: null,
+            tableName: `테이블 ${nextIndex}`,
+            totalSeats: template,
+            availableSeats: template,
+          },
+        ],
+      };
+    });
   }
 
   function removeTableDraft(index) {
@@ -298,6 +486,7 @@ export default function OpsBoothPage() {
     setError("");
     setMessage("");
     setLoading(false);
+    stopScanner();
   }
 
   const activeReservations = useMemo(
@@ -305,9 +494,29 @@ export default function OpsBoothPage() {
     [data],
   );
 
+  const tableSummary = useMemo(() => {
+    const tables = reservationDraft.tables || [];
+    const totalTables = tables.length;
+    const totalSeats = tables.reduce(
+      (acc, table) => acc + (Number(table.totalSeats) || 0),
+      0,
+    );
+    const availableSeats = tables.reduce(
+      (acc, table) => acc + (Number(table.availableSeats) || 0),
+      0,
+    );
+
+    return {
+      totalTables,
+      totalSeats,
+      availableSeats,
+      occupiedSeats: Math.max(0, totalSeats - availableSeats),
+    };
+  }, [reservationDraft.tables]);
+
   return (
     <section className="cyber-page pt-4 space-y-3">
-      <h2 className="text-lg font-bold">부스 운영자 화면</h2>
+      <h2 className="text-lg font-bold">부스 운영 대시보드</h2>
 
       <form
         onSubmit={submitKey}
@@ -337,14 +546,14 @@ export default function OpsBoothPage() {
         </div>
       </form>
 
-      {!key && <p className="text-sm text-rose-600">운영 키를 입력해주세요.</p>}
+      {!key && <p className="text-sm text-rose-600">운영 키를 입력해 주세요.</p>}
       {loading && <p className="text-sm text-slate-600">불러오는 중...</p>}
       {error && <p className="text-sm text-rose-600">{error}</p>}
       {message && <p className="text-sm text-teal-700">{message}</p>}
 
       {data && (
         <article className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-          <div className="aspect-[16/9] bg-slate-100">
+          <div className="aspect-[16/8] bg-slate-100">
             <img
               src={resolveBoothImageUrl(data.booth)}
               alt={`${data.booth.name} 이미지`}
@@ -358,12 +567,36 @@ export default function OpsBoothPage() {
               <CongestionBadge level={data.congestion.level} />
             </div>
 
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg border border-sky-200 bg-sky-50 p-2">
+                <p className="text-[11px] text-sky-700">⏱ 대기(분)</p>
+                <p className="text-lg font-bold text-sky-800">{data.booth.estimatedWaitMinutes ?? "-"}</p>
+              </div>
+              <div className="rounded-lg border border-purple-200 bg-purple-50 p-2">
+                <p className="text-[11px] text-purple-700">📦 재고</p>
+                <p className="text-lg font-bold text-purple-800">{data.booth.remainingStock ?? "-"}</p>
+              </div>
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-2">
+                <p className="text-[11px] text-amber-700">🧾 활성 예약</p>
+                <p className="text-lg font-bold text-amber-800">{activeReservations.length}건</p>
+              </div>
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2">
+                <p className="text-[11px] text-emerald-700">🪑 사용 좌석</p>
+                <p className="text-lg font-bold text-emerald-800">
+                  {tableSummary.occupiedSeats}/{tableSummary.totalSeats || 0}
+                </p>
+              </div>
+            </div>
+
             <div className="rounded-lg border border-slate-200 p-3 space-y-2">
-              <p className="text-sm font-semibold">실시간 운영 정보</p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">실시간 운영 상태</p>
+                <span className="text-xs text-slate-500">빠른 수정</span>
+              </div>
               <div className="grid grid-cols-2 gap-2">
                 <input
                   className="border rounded px-2 py-2 text-sm"
-                  placeholder="대기(분)"
+                  placeholder="대기 분"
                   value={draft.estimatedWaitMinutes}
                   onChange={(e) =>
                     setDraft((prev) => ({
@@ -374,7 +607,7 @@ export default function OpsBoothPage() {
                 />
                 <input
                   className="border rounded px-2 py-2 text-sm"
-                  placeholder="잔여 수량"
+                  placeholder="남은 재고"
                   value={draft.remainingStock}
                   onChange={(e) =>
                     setDraft((prev) => ({
@@ -386,7 +619,7 @@ export default function OpsBoothPage() {
               </div>
               <input
                 className="w-full border rounded px-2 py-2 text-sm"
-                placeholder="운영 메모"
+                placeholder="운영 메모 (예: 10분 뒤 재료 재입고)"
                 value={draft.liveStatusMessage}
                 onChange={(e) =>
                   setDraft((prev) => ({
@@ -400,27 +633,53 @@ export default function OpsBoothPage() {
                 onClick={handleSaveLiveStatus}
                 className="w-full rounded bg-teal-700 text-white py-2 text-sm font-semibold"
               >
-                실시간 정보 저장
+                실시간 상태 저장
               </button>
             </div>
 
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-2">
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-emerald-900">
-                  예약 설정
-                </p>
-                <button
-                  type="button"
-                  onClick={addTableDraft}
-                  className="rounded border border-emerald-400 px-2 py-1 text-xs"
-                >
-                  테이블 추가
-                </button>
+                <p className="text-sm font-semibold text-emerald-900">테이블/좌석 설정</p>
+                <div className="flex gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => addTableDraft(2)}
+                    className="rounded border border-emerald-400 px-2 py-1 text-[11px]"
+                  >
+                    +2석
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addTableDraft(4)}
+                    className="rounded border border-emerald-400 px-2 py-1 text-[11px]"
+                  >
+                    +4석
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => addTableDraft(6)}
+                    className="rounded border border-emerald-400 px-2 py-1 text-[11px]"
+                  >
+                    +6석
+                  </button>
+                </div>
               </div>
+
+              <div className="grid grid-cols-2 gap-2 rounded border border-emerald-200 bg-white p-2">
+                <div>
+                  <p className="text-[11px] text-slate-600">테이블</p>
+                  <p className="font-bold text-slate-800">{tableSummary.totalTables}개</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-600">좌석(가용/전체)</p>
+                  <p className="font-bold text-slate-800">
+                    {tableSummary.availableSeats}/{tableSummary.totalSeats}
+                  </p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-                <span className="text-xs text-emerald-900">
-                  최대 예약시간(분)
-                </span>
+                <span className="text-xs text-emerald-900">최대 예약 유지시간(분)</span>
                 <input
                   className="border rounded px-2 py-1.5 text-sm w-24"
                   type="number"
@@ -441,14 +700,14 @@ export default function OpsBoothPage() {
                     key={`${table.id ?? "new"}-${index}`}
                     className="rounded border border-emerald-200 bg-white p-2 space-y-2"
                   >
-                    <div className="grid grid-cols-[1fr_auto] gap-2">
+                    <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
                       <input
                         className="border rounded px-2 py-1.5 text-sm"
                         value={table.tableName}
                         onChange={(e) =>
                           updateTableDraft(index, { tableName: e.target.value })
                         }
-                        placeholder="테이블명"
+                        placeholder="테이블 이름"
                       />
                       <button
                         type="button"
@@ -458,38 +717,81 @@ export default function OpsBoothPage() {
                         삭제
                       </button>
                     </div>
+
                     <div className="grid grid-cols-2 gap-2">
+                      <div className="rounded border border-slate-200 p-2">
+                        <p className="text-[11px] text-slate-600">전체 좌석</p>
+                        <div className="mt-1 flex items-center justify-between">
+                          <button
+                            type="button"
+                            className="rounded border px-2 py-1 text-xs"
+                            onClick={() => stepTable(index, "totalSeats", -1)}
+                          >
+                            -
+                          </button>
+                          <span className="font-bold text-slate-800">{table.totalSeats}</span>
+                          <button
+                            type="button"
+                            className="rounded border px-2 py-1 text-xs"
+                            onClick={() => stepTable(index, "totalSeats", 1)}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="rounded border border-slate-200 p-2">
+                        <p className="text-[11px] text-slate-600">가용 좌석</p>
+                        <div className="mt-1 flex items-center justify-between">
+                          <button
+                            type="button"
+                            className="rounded border px-2 py-1 text-xs"
+                            onClick={() => stepTable(index, "availableSeats", -1)}
+                          >
+                            -
+                          </button>
+                          <span className="font-bold text-slate-800">{table.availableSeats}</span>
+                          <button
+                            type="button"
+                            className="rounded border px-2 py-1 text-xs"
+                            onClick={() => stepTable(index, "availableSeats", 1)}
+                          >
+                            +
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded border border-slate-200 bg-slate-50 p-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-[11px] text-slate-600">좌석 상태 시각 설정</p>
+                        <p className="text-[11px] font-semibold text-slate-700">
+                          {table.availableSeats}/{table.totalSeats}
+                        </p>
+                      </div>
                       <input
-                        className="border rounded px-2 py-1.5 text-sm"
-                        type="number"
-                        min="1"
-                        value={table.totalSeats}
-                        onChange={(e) =>
-                          updateTableDraft(index, {
-                            totalSeats: e.target.value,
-                          })
-                        }
-                        placeholder="총 좌석"
-                      />
-                      <input
-                        className="border rounded px-2 py-1.5 text-sm"
-                        type="number"
+                        type="range"
                         min="0"
-                        value={table.availableSeats}
-                        onChange={(e) =>
-                          updateTableDraft(index, {
-                            availableSeats: e.target.value,
-                          })
-                        }
-                        placeholder="남은 좌석"
+                        max={Math.max(1, Number(table.totalSeats) || 1)}
+                        value={Math.max(0, Number(table.availableSeats) || 0)}
+                        onChange={(e) => setTableAvailableSeats(index, e.target.value)}
+                        className="mt-2 w-full"
                       />
                     </div>
+
+                    <TableSeatLayout
+                      tableName={table.tableName}
+                      totalSeats={table.totalSeats}
+                      availableSeats={table.availableSeats}
+                      onSeatClick={(seatIndex) =>
+                        handleSeatVisualToggle(index, seatIndex)
+                      }
+                    />
                   </div>
                 ))}
+
                 {!reservationDraft.tables.length && (
-                  <p className="text-xs text-slate-600">
-                    설정된 테이블이 없습니다.
-                  </p>
+                  <p className="text-xs text-slate-600">설정된 테이블이 없습니다. +2/+4/+6석 버튼으로 빠르게 추가해 주세요.</p>
                 )}
               </div>
 
@@ -498,12 +800,13 @@ export default function OpsBoothPage() {
                 onClick={handleSaveReservationConfig}
                 className="w-full rounded bg-emerald-700 text-white py-2 text-sm font-semibold"
               >
-                예약 설정 저장
+                예약/테이블 설정 저장
               </button>
             </div>
 
             <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-2">
               <p className="text-sm font-semibold text-cyan-900">QR 체크인</p>
+
               <div className="flex gap-2">
                 {!scannerActive ? (
                   <button
@@ -520,10 +823,11 @@ export default function OpsBoothPage() {
                     onClick={stopScanner}
                     className="rounded border border-slate-400 px-3 py-1.5 text-xs font-semibold"
                   >
-                    카메라 스캔 중지
+                    스캔 중지
                   </button>
                 )}
               </div>
+
               {scannerActive && (
                 <video
                   ref={videoRef}
@@ -532,28 +836,31 @@ export default function OpsBoothPage() {
                   playsInline
                 />
               )}
+
               {cameraError && (
                 <p className="text-xs text-rose-700">{cameraError}</p>
               )}
+
               <div className="grid grid-cols-[1fr_auto] gap-2">
                 <input
                   className="border rounded px-2 py-2 text-sm"
                   value={qrTokenInput}
                   onChange={(e) => setQrTokenInput(e.target.value)}
-                  placeholder="사용자 QR 토큰 입력"
+                  placeholder="QR 토큰 직접 입력"
                 />
                 <button
                   type="button"
                   onClick={handleCheckInByToken}
                   className="rounded bg-cyan-700 text-white px-3 py-2 text-xs font-semibold"
                 >
-                  QR 체크인
+                  체크인
                 </button>
               </div>
             </div>
 
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
-              <p className="text-sm font-semibold text-amber-900">예약 큐</p>
+              <p className="text-sm font-semibold text-amber-900">활성 예약 목록</p>
+
               {activeReservations.length ? (
                 activeReservations.map((reservation) => (
                   <div
@@ -561,15 +868,10 @@ export default function OpsBoothPage() {
                     className="rounded border border-amber-300 bg-white p-2 flex items-center justify-between gap-2"
                   >
                     <div className="text-xs text-slate-700">
-                      <p className="font-semibold">
-                        #{reservation.id} · {reservation.tableName}
-                      </p>
-                      <p>User: {reservation.userKey}</p>
-                      <p>Seats: {reservation.seatCount}</p>
-                      <p>
-                        Expires:{" "}
-                        {reservation.expiresAt?.replace("T", " ").slice(5, 16)}
-                      </p>
+                      <p className="font-semibold">#{reservation.id} · {reservation.tableName}</p>
+                      <p>예약자: {reservation.userKey}</p>
+                      <p>좌석: {reservation.seatCount}</p>
+                      <p>만료: {formatTime(reservation.expiresAt)}</p>
                     </div>
                     <button
                       type="button"
@@ -581,9 +883,7 @@ export default function OpsBoothPage() {
                   </div>
                 ))
               ) : (
-                <p className="text-xs text-slate-600">
-                  현재 활성 예약이 없습니다.
-                </p>
+                <p className="text-xs text-slate-600">현재 활성 예약이 없습니다.</p>
               )}
             </div>
           </div>

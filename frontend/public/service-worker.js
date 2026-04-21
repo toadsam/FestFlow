@@ -1,4 +1,4 @@
-﻿const CACHE_NAME = 'festflow-cache-v2';
+﻿const CACHE_NAME = 'festflow-cache-v3';
 const APP_SHELL = ['/', '/index.html', '/manifest.json', '/offline.html'];
 
 self.addEventListener('install', (event) => {
@@ -55,3 +55,4 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
