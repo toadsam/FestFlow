@@ -2030,3 +2030,43 @@ a:focus-visible {
     transform: none !important;
   }
 }
+
+/* Mobile performance-safe mode: disable aggressive flicker/glitch effects. */
+@media (pointer: coarse), (max-width: 768px) {
+  body::before,
+  body::after,
+  .hud-scan,
+  .hud-particles,
+  .neon-header-hud::before,
+  .neon-header-hud::after,
+  .neon-header-grid,
+  .glitch-title::before,
+  .glitch-title::after,
+  .event-cursor-glow,
+  .event-grid-noise,
+  .event-alert::before,
+  .event-cta::after,
+  .cyber-page::after,
+  .global-fx,
+  .fx-burst {
+    animation: none !important;
+  }
+
+  .neon-shell,
+  .neon-title,
+  .neon-logo-strip,
+  .app-shell article,
+  .cyber-page,
+  .neon-radial-open,
+  .neon-radial-close,
+  .neon-nav-active,
+  .event-progress,
+  .event-card-active,
+  .lineup-card-spin .lineup-card-inner {
+    animation: none !important;
+  }
+
+  .app-shell .leaflet-container {
+    filter: none !important;
+  }
+}

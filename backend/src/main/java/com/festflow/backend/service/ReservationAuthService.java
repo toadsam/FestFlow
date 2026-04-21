@@ -11,11 +11,12 @@ import com.festflow.backend.repository.ReservationVerificationCodeRepository;
 import com.festflow.backend.service.sms.SmsSender;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
-import java.util.Random;
+import java.security.SecureRandom;
 import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
@@ -29,21 +30,27 @@ public class ReservationAuthService {
     private final ReservationUserAccountRepository userAccountRepository;
     private final ReservationAuthSessionRepository authSessionRepository;
     private final SmsSender smsSender;
-    private final Random random = new Random();
+    private final PasswordEncoder passwordEncoder;
+    private final SecureRandom random = new SecureRandom();
 
-    @Value("${app.sms.debug-return-code:true}")
+    @Value("${app.sms.debug-return-code:false}")
     private boolean debugReturnCode;
+
+    @Value("${app.sms.max-verify-attempts:5}")
+    private int maxVerifyAttempts;
 
     public ReservationAuthService(
             ReservationVerificationCodeRepository verificationCodeRepository,
             ReservationUserAccountRepository userAccountRepository,
             ReservationAuthSessionRepository authSessionRepository,
-            SmsSender smsSender
+            SmsSender smsSender,
+            PasswordEncoder passwordEncoder
     ) {
         this.verificationCodeRepository = verificationCodeRepository;
         this.userAccountRepository = userAccountRepository;
         this.authSessionRepository = authSessionRepository;
         this.smsSender = smsSender;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
@@ -67,8 +74,9 @@ public class ReservationAuthService {
 
         String code = String.format("%06d", random.nextInt(1_000_000));
         LocalDateTime expiresAt = now.plusMinutes(3);
+        String hashedCode = passwordEncoder.encode(code);
 
-        verificationCodeRepository.save(new ReservationVerificationCode(phoneNumber, code, expiresAt, now));
+        verificationCodeRepository.save(new ReservationVerificationCode(phoneNumber, hashedCode, expiresAt, now));
         smsSender.sendVerificationCode(phoneNumber, code);
 
         return new ReservationAuthSendCodeResponseDto(
@@ -93,7 +101,14 @@ public class ReservationAuthService {
         if (latest.isExpired(now)) {
             throw new ResponseStatusException(BAD_REQUEST, "Verification code has expired.");
         }
-        if (!latest.getCode().equals(code)) {
+        if (!matchesVerificationCode(latest.getCode(), code)) {
+            int attempts = latest.incrementFailedAttempts();
+            if (attempts >= Math.max(1, maxVerifyAttempts)) {
+                latest.markUsed(now);
+                verificationCodeRepository.save(latest);
+                throw new ResponseStatusException(TOO_MANY_REQUESTS, "Too many verification attempts. Request a new code.");
+            }
+            verificationCodeRepository.save(latest);
             throw new ResponseStatusException(BAD_REQUEST, "Verification code is incorrect.");
         }
 
@@ -173,5 +188,18 @@ public class ReservationAuthService {
         }
         String trimmed = rawToken.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private boolean matchesVerificationCode(String storedCode, String inputCode) {
+        if (storedCode == null || storedCode.isBlank()) {
+            return false;
+        }
+
+        // Backward compatibility for rows created before hashing rollout.
+        if (storedCode.matches("\\d{6}")) {
+            return storedCode.equals(inputCode);
+        }
+
+        return passwordEncoder.matches(inputCode, storedCode);
     }
 }

@@ -8,6 +8,7 @@ import com.festflow.backend.repository.AdminUserRepository;
 import com.festflow.backend.repository.BoothRepository;
 import com.festflow.backend.repository.EventRepository;
 import com.festflow.backend.repository.NoticeRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,6 +20,12 @@ import java.util.List;
 
 @Configuration
 public class DataInitializer {
+
+    @Value("${app.init.admin.username:}")
+    private String initialAdminUsername;
+
+    @Value("${app.init.admin.password:}")
+    private String initialAdminPassword;
 
     @Bean
     public CommandLineRunner seedData(
@@ -105,8 +112,16 @@ public class DataInitializer {
                 }
             }
 
-            if (adminUserRepository.count() == 0) {
-                adminUserRepository.save(new AdminUser("admin", passwordEncoder.encode("admin1234"), "ADMIN"));
+            if (adminUserRepository.count() == 0
+                    && initialAdminUsername != null
+                    && initialAdminPassword != null
+                    && !initialAdminUsername.isBlank()
+                    && !initialAdminPassword.isBlank()) {
+                adminUserRepository.save(new AdminUser(
+                        initialAdminUsername.trim(),
+                        passwordEncoder.encode(initialAdminPassword),
+                        "ADMIN"
+                ));
             }
 
             if (noticeRepository.count() == 0) {

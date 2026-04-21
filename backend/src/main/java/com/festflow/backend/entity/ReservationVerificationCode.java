@@ -20,7 +20,7 @@ public class ReservationVerificationCode {
     @Column(nullable = false, length = 20)
     private String phoneNumber;
 
-    @Column(nullable = false, length = 6)
+    @Column(nullable = false, length = 120)
     private String code;
 
     @Column(nullable = false)
@@ -28,6 +28,9 @@ public class ReservationVerificationCode {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    @Column(nullable = false)
+    private int failedAttempts;
 
     private LocalDateTime usedAt;
 
@@ -39,6 +42,7 @@ public class ReservationVerificationCode {
         this.code = code;
         this.expiresAt = expiresAt;
         this.createdAt = createdAt;
+        this.failedAttempts = 0;
     }
 
     public boolean isExpired(LocalDateTime now) {
@@ -51,6 +55,11 @@ public class ReservationVerificationCode {
 
     public void markUsed(LocalDateTime now) {
         this.usedAt = now;
+    }
+
+    public int incrementFailedAttempts() {
+        this.failedAttempts += 1;
+        return this.failedAttempts;
     }
 
     public String getCode() {
@@ -67,5 +76,9 @@ public class ReservationVerificationCode {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public int getFailedAttempts() {
+        return failedAttempts;
     }
 }
