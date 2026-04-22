@@ -2586,8 +2586,8 @@ body::after {
   }
 }
 
-/* High-energy cyber pass: clearly visible motion on all devices */
-@media (prefers-reduced-motion: no-preference) {
+/* High-energy cyber pass: desktop only (prevents mobile flicker/jank) */
+@media (prefers-reduced-motion: no-preference) and (min-width: 1024px) and (pointer: fine) {
   body::before {
     animation: grid-pan-hyper 10s linear infinite !important;
     opacity: 0.62 !important;

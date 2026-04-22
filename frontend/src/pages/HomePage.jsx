@@ -63,10 +63,17 @@ function normalizeCongestion(item) {
   return item ? { ...item, level: normalizeLevel(item.level) } : item;
 }
 
-function ZoomWatcher({ onZoomChange }) {
-  useMapEvents({
+function ZoomWatcher({ onZoomChange, onMapReady }) {
+  const map = useMapEvents({
     zoomend: (event) => onZoomChange(event.target.getZoom()),
   });
+
+  useEffect(() => {
+    if (onMapReady) {
+      onMapReady(map);
+    }
+  }, [map, onMapReady]);
+
   return null;
 }
 
@@ -138,7 +145,34 @@ export default function HomePage() {
   const [dismissedNoticeIds, setDismissedNoticeIds] = useState([]);
   const [locationText, setLocationText] = useState("");
   const [gpsSending, setGpsSending] = useState(false);
+  const [locatingMe, setLocatingMe] = useState(false);
+  const [myLocation, setMyLocation] = useState(null);
+  const mapRef = useRef(null);
   const previousCongestionRef = useRef({});
+
+  function getPosition(options) {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
+  }
+
+  async function getCurrentPositionFast() {
+    // 1) 캐시/저정밀로 빠르게 1차 위치 확보
+    try {
+      return await getPosition({
+        enableHighAccuracy: false,
+        maximumAge: 120000,
+        timeout: 2500,
+      });
+    } catch {
+      // 2) 실패 시 고정밀 fallback
+      return getPosition({
+        enableHighAccuracy: true,
+        maximumAge: 0,
+        timeout: 10000,
+      });
+    }
+  }
 
   useEffect(() => {
     async function load() {
@@ -369,29 +403,58 @@ export default function HomePage() {
     }
 
     setGpsSending(true);
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
+    try {
+      const position = await getCurrentPositionFast();
+      const latitude = position.coords.latitude;
+      const longitude = position.coords.longitude;
+      await sendGps(latitude, longitude);
+      const area = await reverseGeocodeKoreanShort(latitude, longitude);
+      setLocationText(
+        `${area} (위도 ${latitude.toFixed(4)}, 경도 ${longitude.toFixed(4)})`,
+      );
+      await refreshAllCongestion();
+    } catch (e) {
+      setError(e.message || "위치 권한이 거부되어 GPS를 전송하지 못했습니다.");
+    } finally {
+      setGpsSending(false);
+    }
+  }
+
+  function handleMoveToMyLocation() {
+    if (!navigator.geolocation) {
+      setError("현재 브라우저에서 GPS를 지원하지 않습니다.");
+      return;
+    }
+
+    setLocatingMe(true);
+    getCurrentPositionFast()
+      .then(async (position) => {
+        const latitude = position.coords.latitude;
+        const longitude = position.coords.longitude;
+        setMyLocation({ latitude, longitude });
+
         try {
-          const latitude = position.coords.latitude;
-          const longitude = position.coords.longitude;
-          await sendGps(latitude, longitude);
           const area = await reverseGeocodeKoreanShort(latitude, longitude);
           setLocationText(
             `${area} (위도 ${latitude.toFixed(4)}, 경도 ${longitude.toFixed(4)})`,
           );
-          await refreshAllCongestion();
-        } catch (e) {
-          setError(e.message);
-        } finally {
-          setGpsSending(false);
+        } catch {
+          // reverse geocode 실패는 지도 이동에는 영향 없음
         }
-      },
-      () => {
-        setGpsSending(false);
-        setError("위치 권한이 거부되어 GPS를 전송하지 못했습니다.");
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+
+        if (mapRef.current) {
+          const nextZoom = Math.max(mapRef.current.getZoom(), 18);
+          mapRef.current.flyTo([latitude, longitude], nextZoom, {
+            duration: 0.6,
+          });
+        }
+      })
+      .catch(() => {
+        setError("위치 권한이 거부되어 내 위치로 이동할 수 없습니다.");
+      })
+      .finally(() => {
+        setLocatingMe(false);
+      });
   }
 
   function openBoothDetail(boothId) {
@@ -534,7 +597,7 @@ export default function HomePage() {
 
       {activeView !== "list" && (
         <>
-          <div className="rounded-2xl overflow-hidden border border-slate-200">
+          <div className="relative rounded-2xl overflow-hidden border border-slate-200">
             <MapContainer
               center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]}
               zoom={17}
@@ -547,7 +610,12 @@ export default function HomePage() {
                 maxZoom={22}
                 maxNativeZoom={19}
               />
-              <ZoomWatcher onZoomChange={setMapZoom} />
+              <ZoomWatcher
+                onZoomChange={setMapZoom}
+                onMapReady={(map) => {
+                  mapRef.current = map;
+                }}
+              />
 
               {mapZoom >= 16 &&
                 booths.map((booth) => {
@@ -616,7 +684,36 @@ export default function HomePage() {
                     </Popup>
                   </CircleMarker>
                 ))}
+
+              {myLocation && (
+                <CircleMarker
+                  center={[myLocation.latitude, myLocation.longitude]}
+                  radius={8}
+                  pathOptions={{
+                    color: "#ffffff",
+                    weight: 2,
+                    fillColor: "#0ea5e9",
+                    fillOpacity: 0.95,
+                  }}
+                >
+                  <Popup>
+                    <p className="text-xs font-semibold">내 위치</p>
+                  </Popup>
+                </CircleMarker>
+              )}
             </MapContainer>
+            <div className="pointer-events-none absolute inset-0 z-[500]">
+              <div className="pointer-events-auto absolute right-3 top-3">
+                <button
+                  type="button"
+                  onClick={handleMoveToMyLocation}
+                  disabled={locatingMe}
+                  className="rounded-lg border border-cyan-300/80 bg-slate-950/80 px-3 py-2 text-xs font-semibold text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.35)] backdrop-blur disabled:opacity-60"
+                >
+                  {locatingMe ? "위치 찾는 중..." : "내 위치로 가기"}
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-3">

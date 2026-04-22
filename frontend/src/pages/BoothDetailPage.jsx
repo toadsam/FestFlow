@@ -479,13 +479,17 @@ export default function BoothDetailPage() {
   return (
     <>
       <section className="cyber-page pt-4 space-y-4 pb-24 md:pb-4">
-      <button
-        type="button"
-        onClick={() => navigate("/")}
-        className="text-sm text-teal-700 font-semibold"
-      >
-        홈으로 돌아가기
-      </button>
+      <div className="sticky top-2 z-40">
+        <button
+          type="button"
+          onClick={() => navigate("/")}
+          aria-label="홈으로 돌아가기"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-cyan-300/70 bg-cyan-950/70 text-xl font-bold text-cyan-100 shadow-[0_10px_24px_rgba(6,182,212,0.28)] backdrop-blur-md"
+        >
+          <span aria-hidden="true">←</span>
+          <span className="sr-only">홈으로 돌아가기</span>
+        </button>
+      </div>
 
       <article className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
         <div className="aspect-[16/10] bg-slate-100">
@@ -496,7 +500,7 @@ export default function BoothDetailPage() {
           />
         </div>
 
-        <div className="p-4 space-y-3">
+        <div className="p-4 space-y-4">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-xl font-bold text-slate-800">{booth.name}</h2>
             <CongestionBadge level={congestion.level} />
@@ -529,7 +533,7 @@ export default function BoothDetailPage() {
                 <span className="text-xs text-cyan-700">{showAboutSection ? "접기" : "펼치기"}</span>
               </button>
               {showAboutSection && (
-                <div className="px-3 pb-3 space-y-2">
+                <div className="px-3 pt-3 pb-3 space-y-2">
                   {booth.boothIntro && (
                     <p className="text-sm text-cyan-800 whitespace-pre-line">
                       {booth.boothIntro}
@@ -550,7 +554,7 @@ export default function BoothDetailPage() {
           )}
 
           {menuItems.length > 0 && (
-            <div className="rounded-lg border border-fuchsia-200 bg-gradient-to-b from-fuchsia-50 to-indigo-50 overflow-hidden">
+            <div className="mt-1 rounded-lg border border-fuchsia-200 bg-gradient-to-b from-fuchsia-50 to-indigo-50 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowMenuBoardSection((prev) => !prev)}
@@ -560,7 +564,7 @@ export default function BoothDetailPage() {
                 <span className="text-[11px] text-fuchsia-700">{showMenuBoardSection ? "접기" : "펼치기"}</span>
               </button>
               {showMenuBoardSection && (
-                <div className="px-3 pb-3 space-y-2">
+                <div className="px-3 pt-3 pb-3 space-y-2">
                   {menuItems.map((item, index) => (
                     <article
                       key={`menu-board-${index}`}
@@ -609,7 +613,7 @@ export default function BoothDetailPage() {
               <span className="text-xs text-emerald-700">{showReservationSection ? "접기" : "펼치기"}</span>
             </button>
             {showReservationSection && (
-              <div className="px-3 pb-3 space-y-2">
+              <div className="px-3 pt-3 pb-3 space-y-2">
             <div className="grid grid-cols-3 gap-2 rounded-md border border-emerald-200 bg-white p-2 text-[11px]">
               <div>
                 <p className="text-slate-500">대기</p>

@@ -195,8 +195,18 @@ export default function App() {
               2026 Ajou Culture Festival
             </p>
             <h1
-              className="mt-1 text-2xl font-extrabold neon-title glitch-title"
+              className="mt-1 text-2xl font-extrabold neon-title glitch-title cursor-pointer select-none"
               data-text="ACENTIA FESTFLOW"
+              role="link"
+              tabIndex={0}
+              aria-label="홈으로 이동"
+              onClick={() => navigate("/")}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  navigate("/");
+                }
+              }}
             >
               ACENTIA FESTFLOW
             </h1>
