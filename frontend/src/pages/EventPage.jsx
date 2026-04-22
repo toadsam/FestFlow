@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { createEventStream, downloadEventCsv, fetchEvents } from "../api";
+import { IconCalendar, IconDownload, IconMusic, IconTrophy } from "../components/UxIcons";
 
 const statusClassName = {
   예정: "bg-sky-500/20 text-sky-200 border border-sky-300/50",
@@ -194,7 +195,8 @@ export default function EventPage() {
       <div className="event-grid-noise" aria-hidden />
       <div ref={cursorGlowRef} className="event-cursor-glow" aria-hidden />
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold glitch-title" data-text="LIVE LINEUP">
+        <h2 className="text-lg font-bold glitch-title inline-flex items-center gap-2" data-text="LIVE LINEUP">
+          <IconMusic className="h-5 w-5" />
           LIVE LINEUP
         </h2>
         <div className="flex items-center gap-1.5">
@@ -203,6 +205,7 @@ export default function EventPage() {
             className="event-cta text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)] inline-flex items-center"
             onClick={(e) => spawnBurst(e.nativeEvent, 1.3)}
           >
+            <IconCalendar className="mr-1 h-3.5 w-3.5" />
             라인업 보기
           </Link>
           <button
@@ -213,6 +216,7 @@ export default function EventPage() {
             }}
             className="event-cta text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)]"
           >
+            <IconDownload className="mr-1 inline h-3.5 w-3.5" />
             CSV
           </button>
         </div>
@@ -234,7 +238,8 @@ export default function EventPage() {
 
       {upcoming && (
         <div className="rounded-xl border border-cyan-300/40 bg-slate-900/80 p-3 text-sm text-cyan-100 event-alert">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-cyan-200">
+          <p className="text-[11px] uppercase tracking-[0.12em] text-cyan-200 inline-flex items-center gap-1">
+            <IconCalendar className="h-3.5 w-3.5" />
             Next On Stage
           </p>
           <p className="mt-1 font-semibold">{upcoming.title}</p>
@@ -265,7 +270,10 @@ export default function EventPage() {
       {selectedEvent && (
         <article className="event-highlight rounded-xl border border-cyan-300/60 p-3">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="font-bold text-sm">{selectedEvent.title}</h3>
+            <h3 className="font-bold text-sm inline-flex items-center gap-1.5">
+              <IconTrophy className="h-4 w-4" />
+              {selectedEvent.title}
+            </h3>
             <span
               className={`text-xs font-bold px-2.5 py-1 rounded-full ${statusClassName[selectedEvent.status] || "bg-slate-100 text-slate-600"}`}
             >
@@ -359,3 +367,5 @@ export default function EventPage() {
     </section>
   );
 }
+
+

@@ -9,6 +9,14 @@ import {
   updateOpsBoothReservationConfig,
 } from "../api";
 import CongestionBadge from "../components/CongestionBadge";
+import {
+  IconCalendar,
+  IconClipboard,
+  IconMapPin,
+  IconSettings,
+  IconShield,
+  IconUsers,
+} from "../components/UxIcons";
 import { resolveBoothImageUrl } from "../config/boothImages";
 
 const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
@@ -587,13 +595,19 @@ export default function OpsBoothPage() {
 
   return (
     <section className="cyber-page pt-4 space-y-3">
-      <h2 className="text-lg font-bold">부스 운영 대시보드</h2>
+      <h2 className="text-lg font-bold inline-flex items-center gap-1.5">
+        <IconShield className="h-5 w-5" />
+        부스 운영 대시보드
+      </h2>
 
       <form
         onSubmit={submitKey}
         className="rounded-xl border border-slate-200 bg-white p-3 space-y-2"
       >
-        <p className="text-sm font-semibold">운영 키 입력</p>
+        <p className="text-sm font-semibold inline-flex items-center gap-1.5">
+          <IconSettings className="h-4 w-4" />
+          운영 키 입력
+        </p>
         <div className="grid grid-cols-[1fr_auto_auto] gap-2">
           <input
             className="border rounded px-2 py-2 text-sm"
@@ -634,7 +648,10 @@ export default function OpsBoothPage() {
 
           <div className="p-3 space-y-4">
             <div className="flex items-center justify-between gap-2">
-              <h3 className="text-base font-bold">{data.booth.name}</h3>
+              <h3 className="text-base font-bold inline-flex items-center gap-1.5">
+                <IconMapPin className="h-4 w-4" />
+                {data.booth.name}
+              </h3>
               <CongestionBadge level={data.congestion.level} />
             </div>
 
@@ -661,7 +678,10 @@ export default function OpsBoothPage() {
 
             <div className="rounded-lg border border-slate-200 p-3 space-y-2">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">실시간 운영 상태</p>
+                <p className="text-sm font-semibold inline-flex items-center gap-1.5">
+                  <IconClipboard className="h-4 w-4" />
+                  실시간 운영 상태
+                </p>
                 <span className="text-xs text-slate-500">빠른 수정</span>
               </div>
               <div className="grid grid-cols-2 gap-2">
@@ -823,7 +843,10 @@ export default function OpsBoothPage() {
 
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-3">
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-emerald-900">테이블/좌석 설정</p>
+              <p className="text-sm font-semibold text-emerald-900 inline-flex items-center gap-1.5">
+                <IconUsers className="h-4 w-4" />
+                테이블/좌석 설정
+              </p>
                 <div className="flex gap-1.5">
                   <button
                     type="button"
@@ -989,7 +1012,10 @@ export default function OpsBoothPage() {
             </div>
 
             <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-2">
-              <p className="text-sm font-semibold text-cyan-900">QR 체크인</p>
+              <p className="text-sm font-semibold text-cyan-900 inline-flex items-center gap-1.5">
+                <IconCalendar className="h-4 w-4" />
+                QR 체크인
+              </p>
 
               <div className="flex gap-2">
                 {!scannerActive ? (

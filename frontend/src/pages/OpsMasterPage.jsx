@@ -16,6 +16,14 @@ import {
   updateOpsMasterEvent,
   updateOpsMasterNotice,
 } from "../api";
+import {
+  IconAlert,
+  IconCalendar,
+  IconClipboard,
+  IconMapPin,
+  IconSettings,
+  IconShield,
+} from "../components/UxIcons";
 
 const MASTER_KEY_STORAGE_KEY = "festflow_ops_master_key";
 const NOTICE_CATEGORIES = ["긴급", "분실물", "안내", "일반"];
@@ -348,7 +356,10 @@ export default function OpsMasterPage() {
   return (
     <section className="cyber-page pt-4 space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">통합 운영 콘솔</h2>
+        <h2 className="text-lg font-bold inline-flex items-center gap-1.5">
+          <IconShield className="h-5 w-5" />
+          통합 운영 콘솔
+        </h2>
         <button
           type="button"
           onClick={load}
@@ -362,7 +373,10 @@ export default function OpsMasterPage() {
         onSubmit={submitKey}
         className="rounded-xl border border-slate-200 bg-white p-3 space-y-2"
       >
-        <p className="text-sm font-semibold">운영 키 입력</p>
+        <p className="text-sm font-semibold inline-flex items-center gap-1.5">
+          <IconSettings className="h-4 w-4" />
+          운영 키 입력
+        </p>
         <div className="grid grid-cols-[1fr_auto_auto] gap-2">
           <input
             className="border rounded px-2 py-2 text-sm"
@@ -398,7 +412,10 @@ export default function OpsMasterPage() {
       {data && (
         <>
           <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-            <h3 className="font-semibold">상황 요약</h3>
+            <h3 className="font-semibold inline-flex items-center gap-1.5">
+              <IconClipboard className="h-4 w-4" />
+              상황 요약
+            </h3>
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="rounded bg-teal-50 p-2">
                 <p className="text-[10px] text-teal-700">오늘 총 방문</p>
@@ -476,7 +493,10 @@ export default function OpsMasterPage() {
 
           {tab === "notice" && (
             <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-              <h3 className="font-semibold">실시간 공지 관리</h3>
+              <h3 className="font-semibold inline-flex items-center gap-1.5">
+                <IconAlert className="h-4 w-4" />
+                실시간 공지 관리
+              </h3>
               <form className="space-y-2" onSubmit={handleNoticeSubmit}>
                 <input
                   className="w-full rounded border px-2 py-2 text-sm"
@@ -582,7 +602,10 @@ export default function OpsMasterPage() {
 
           {tab === "event" && (
             <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-              <h3 className="font-semibold">공연 일정 관리</h3>
+              <h3 className="font-semibold inline-flex items-center gap-1.5">
+                <IconCalendar className="h-4 w-4" />
+                공연 일정 관리
+              </h3>
               <form className="space-y-2" onSubmit={handleEventSubmit}>
                 <input
                   className="w-full rounded border px-2 py-2 text-sm"
@@ -675,7 +698,10 @@ export default function OpsMasterPage() {
 
           {tab === "booth" && (
             <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-              <h3 className="font-semibold">부스 운영 관리</h3>
+              <h3 className="font-semibold inline-flex items-center gap-1.5">
+                <IconMapPin className="h-4 w-4" />
+                부스 운영 관리
+              </h3>
 
               <form className="space-y-2" onSubmit={handleBoothSubmit}>
                 <input
@@ -851,7 +877,10 @@ export default function OpsMasterPage() {
 
           {tab === "log" && (
             <article className="rounded-xl border border-slate-200 bg-white p-3">
-              <h3 className="font-semibold">최근 운영 로그</h3>
+              <h3 className="font-semibold inline-flex items-center gap-1.5">
+                <IconClipboard className="h-4 w-4" />
+                최근 운영 로그
+              </h3>
               <div className="mt-2 max-h-[420px] space-y-2 overflow-auto pr-1">
                 {data.auditLogs?.length === 0 && (
                   <p className="text-sm text-slate-500">

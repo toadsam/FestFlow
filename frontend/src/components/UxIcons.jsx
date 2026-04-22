@@ -114,3 +114,80 @@ export function IconBox(props) {
     </IconBase>
   );
 }
+
+export function IconCalendar(props) {
+  return (
+    <IconBase {...props}>
+      <rect x="4" y="5" width="16" height="15" rx="2" />
+      <path d="M8 3v4" />
+      <path d="M16 3v4" />
+      <path d="M4 9h16" />
+    </IconBase>
+  );
+}
+
+export function IconArrowLeft(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M18 12H6" />
+      <path d="m11 7-5 5 5 5" />
+    </IconBase>
+  );
+}
+
+export function IconMusic(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M16 5v10.2a2.8 2.8 0 1 1-1.8-2.6V7.1L9 8.2v8a2.8 2.8 0 1 1-1.8-2.6V6.8L16 5Z" />
+    </IconBase>
+  );
+}
+
+export function IconDownload(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 4v10" />
+      <path d="m8 10 4 4 4-4" />
+      <path d="M5 19h14" />
+    </IconBase>
+  );
+}
+
+export function IconShield(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 3 5 6v5c0 4.2 2.5 7.6 7 10 4.5-2.4 7-5.8 7-10V6l-7-3Z" />
+      <path d="m9.5 12 1.8 1.8 3.2-3.2" />
+    </IconBase>
+  );
+}
+
+export function IconSettings(props) {
+  return (
+    <IconBase {...props}>
+      <circle cx="12" cy="12" r="2.7" />
+      <path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a7.8 7.8 0 0 0-1.8-1L14.4 3h-4.8l-.3 3.1c-.6.2-1.2.6-1.8 1l-2.4-1-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1c.6.4 1.2.8 1.8 1l.3 3.1h4.8l.3-3.1c.6-.2 1.2-.6 1.8-1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z" />
+    </IconBase>
+  );
+}
+
+export function IconAlert(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 3 2.5 20h19L12 3Z" />
+      <path d="M12 9v5" />
+      <circle cx="12" cy="16.8" r=".8" fill="currentColor" stroke="none" />
+    </IconBase>
+  );
+}
+
+export function IconClipboard(props) {
+  return (
+    <IconBase {...props}>
+      <rect x="6" y="5" width="12" height="15" rx="2" />
+      <rect x="9" y="3" width="6" height="3" rx="1" />
+      <path d="M9 11h6" />
+      <path d="M9 14h6" />
+    </IconBase>
+  );
+}

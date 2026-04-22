@@ -21,6 +21,7 @@ import {
   sendGps,
 } from "../api";
 import CongestionBadge from "../components/CongestionBadge";
+import { IconCalendar, IconClock, IconMapPin, IconMusic, IconTrophy, IconUsers } from "../components/UxIcons";
 import { resolveBoothImageUrl } from "../config/boothImages";
 import {
   AJOU_ADDRESS,
@@ -472,7 +473,8 @@ export default function HomePage() {
         <p className="text-xs tracking-[0.03em] text-cyan-200/95 drop-shadow-[0_0_8px_rgba(34,211,238,0.45)]">
           아주대학교 축제 메인
         </p>
-        <h2 className="mt-1 text-xl font-extrabold text-cyan-100 drop-shadow-[0_0_12px_rgba(125,249,255,0.65)]">
+        <h2 className="mt-1 text-xl font-extrabold text-cyan-100 drop-shadow-[0_0_12px_rgba(125,249,255,0.65)] inline-flex items-center gap-2">
+          <IconMusic className="h-5 w-5" />
           지금 축제를 바로 즐겨보세요
         </h2>
         <p className="mt-1 text-xs text-cyan-200/95 drop-shadow-[0_0_7px_rgba(34,211,238,0.4)]">
@@ -484,15 +486,17 @@ export default function HomePage() {
           <button
             type="button"
             onClick={() => navigate("/stage-map")}
-            className="rounded-xl border border-cyan-300/60 bg-sky-500/20 px-3 py-2.5 min-h-11 text-sm font-semibold text-cyan-50 shadow-[0_0_22px_rgba(34,211,238,0.45)]"
+            className="rounded-xl border border-cyan-300/60 bg-sky-500/20 px-3 py-2.5 min-h-11 text-sm font-semibold text-cyan-50 shadow-[0_0_22px_rgba(34,211,238,0.45)] inline-flex items-center justify-center gap-1.5"
           >
+            <IconUsers className="h-4 w-4" />
             노천극장 인원 보기
           </button>
           <button
             type="button"
             onClick={() => navigate("/events")}
-            className="rounded-xl border border-cyan-200/70 bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 px-3 py-2.5 min-h-11 text-sm font-bold text-cyan-50 shadow-[0_0_24px_rgba(56,189,248,0.55)]"
+            className="rounded-xl border border-cyan-200/70 bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 px-3 py-2.5 min-h-11 text-sm font-bold text-cyan-50 shadow-[0_0_24px_rgba(56,189,248,0.55)] inline-flex items-center justify-center gap-1.5"
           >
+            <IconCalendar className="h-4 w-4" />
             공연 일정 보기
           </button>
         </div>
@@ -501,7 +505,7 @@ export default function HomePage() {
       <article className="rounded-xl border border-slate-200 bg-white p-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-semibold text-slate-800">
-            지금 덜 붐비는 추천 부스
+            <IconTrophy className="mr-1.5 inline h-4 w-4" />지금 덜 붐비는 추천 부스
           </p>
           <button
             type="button"
@@ -536,7 +540,7 @@ export default function HomePage() {
       </article>
 
       <article className="rounded-xl border border-teal-100 bg-teal-50/70 p-3">
-        <p className="text-sm font-semibold text-teal-900">실시간 운영 안내</p>
+        <p className="text-sm font-semibold text-teal-900 inline-flex items-center gap-1.5"><IconClock className="h-4 w-4" />실시간 운영 안내</p>
         <p className="text-xs text-teal-800 mt-1">기준 위치: {AJOU_ADDRESS}</p>
         {locationText && (
           <p className="text-xs text-teal-700 mt-1">내 위치: {locationText}</p>
@@ -719,7 +723,7 @@ export default function HomePage() {
           <div className="rounded-xl border border-slate-200 bg-white p-3">
             <div className="flex items-center justify-between mb-2">
               <p className="text-sm font-semibold text-slate-800">
-                빠른 부스 이동
+                <IconMapPin className="mr-1.5 inline h-4 w-4" />빠른 부스 이동
               </p>
               <button
                 type="button"
@@ -771,7 +775,7 @@ export default function HomePage() {
             <div className="rounded-xl border border-slate-200 bg-white p-3">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-semibold text-slate-800">
-                  지도 아래 부스 리스트
+                  <IconMapPin className="mr-1.5 inline h-4 w-4" />지도 아래 부스 리스트
                 </p>
                 <button
                   type="button"
@@ -904,7 +908,7 @@ export default function HomePage() {
 
           <div className="rounded-xl border border-slate-200 bg-white p-3">
             <p className="text-sm font-semibold text-slate-700 mb-2">
-              혼잡도 요약
+              <IconUsers className="mr-1.5 inline h-4 w-4" />혼잡도 요약
             </p>
             <div className="h-24 flex items-end gap-2 overflow-hidden">
               {chartData.map((item) => (
@@ -926,7 +930,7 @@ export default function HomePage() {
           {recentBooths.length > 0 && (
             <div className="rounded-xl border border-slate-200 bg-white p-3">
               <p className="text-sm font-semibold text-slate-700 mb-2">
-                최근 본 부스
+                <IconClock className="mr-1.5 inline h-4 w-4" />최근 본 부스
               </p>
               <div className="flex flex-wrap gap-2">
                 {recentBooths.map((booth) => (
@@ -1030,3 +1034,6 @@ export default function HomePage() {
     </section>
   );
 }
+
+
+
