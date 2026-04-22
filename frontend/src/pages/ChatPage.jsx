@@ -56,7 +56,7 @@ export default function ChatPage() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-start gap-2.5">
             <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cyan-100/50 bg-cyan-500/25">
-              <IconChat className="h-5 w-5" />
+              <IconChat className="h-5 w-5 icon-role-ops" />
             </span>
             <div>
               <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">
@@ -73,7 +73,7 @@ export default function ChatPage() {
             onClick={resetMessages}
             className="inline-flex items-center gap-1.5 text-xs rounded-lg border border-cyan-200/70 bg-cyan-500/20 px-3 py-1.5 text-cyan-100"
           >
-            <IconRefresh className="h-3.5 w-3.5" />
+            <IconRefresh className="h-3.5 w-3.5 icon-role-log" />
             대화 초기화
           </button>
         </div>
@@ -105,7 +105,7 @@ export default function ChatPage() {
                   </>
                 ) : (
                   <>
-                    <IconChat className="h-3 w-3" />
+                    <IconChat className="h-3 w-3 icon-role-ops" />
                     챗봇
                   </>
                 )}

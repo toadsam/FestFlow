@@ -357,7 +357,7 @@ export default function OpsMasterPage() {
     <section className="cyber-page pt-4 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold inline-flex items-center gap-1.5">
-          <IconShield className="h-5 w-5" />
+          <IconShield className="h-5 w-5 icon-role-ops" />
           통합 운영 콘솔
         </h2>
         <button
@@ -374,7 +374,7 @@ export default function OpsMasterPage() {
         className="rounded-xl border border-slate-200 bg-white p-3 space-y-2"
       >
         <p className="text-sm font-semibold inline-flex items-center gap-1.5">
-          <IconSettings className="h-4 w-4" />
+          <IconSettings className="h-4 w-4 icon-role-ops" />
           운영 키 입력
         </p>
         <div className="grid grid-cols-[1fr_auto_auto] gap-2">
@@ -413,7 +413,7 @@ export default function OpsMasterPage() {
         <>
           <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
             <h3 className="font-semibold inline-flex items-center gap-1.5">
-              <IconClipboard className="h-4 w-4" />
+              <IconClipboard className="h-4 w-4 icon-role-log" />
               상황 요약
             </h3>
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -494,7 +494,7 @@ export default function OpsMasterPage() {
           {tab === "notice" && (
             <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
               <h3 className="font-semibold inline-flex items-center gap-1.5">
-                <IconAlert className="h-4 w-4" />
+                <IconAlert className="h-4 w-4 icon-role-alert" />
                 실시간 공지 관리
               </h3>
               <form className="space-y-2" onSubmit={handleNoticeSubmit}>
@@ -603,7 +603,7 @@ export default function OpsMasterPage() {
           {tab === "event" && (
             <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
               <h3 className="font-semibold inline-flex items-center gap-1.5">
-                <IconCalendar className="h-4 w-4" />
+                <IconCalendar className="h-4 w-4 icon-role-schedule" />
                 공연 일정 관리
               </h3>
               <form className="space-y-2" onSubmit={handleEventSubmit}>
@@ -699,7 +699,7 @@ export default function OpsMasterPage() {
           {tab === "booth" && (
             <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
               <h3 className="font-semibold inline-flex items-center gap-1.5">
-                <IconMapPin className="h-4 w-4" />
+                <IconMapPin className="h-4 w-4 icon-role-map" />
                 부스 운영 관리
               </h3>
 
@@ -878,7 +878,7 @@ export default function OpsMasterPage() {
           {tab === "log" && (
             <article className="rounded-xl border border-slate-200 bg-white p-3">
               <h3 className="font-semibold inline-flex items-center gap-1.5">
-                <IconClipboard className="h-4 w-4" />
+                <IconClipboard className="h-4 w-4 icon-role-log" />
                 최근 운영 로그
               </h3>
               <div className="mt-2 max-h-[420px] space-y-2 overflow-auto pr-1">

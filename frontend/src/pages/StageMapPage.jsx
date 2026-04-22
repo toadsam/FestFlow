@@ -90,7 +90,7 @@ export default function StageMapPage() {
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-start gap-2.5">
             <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cyan-100/50 bg-cyan-500/25">
-              <IconMapPin className="h-5 w-5" />
+              <IconMapPin className="h-5 w-5 icon-role-map" />
             </span>
             <div>
               <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">Stage Monitor</p>
@@ -103,7 +103,7 @@ export default function StageMapPage() {
             onClick={load}
             className="inline-flex items-center gap-1.5 rounded-lg border border-cyan-200/70 bg-cyan-500/20 px-3 py-2 text-sm font-semibold text-cyan-100"
           >
-            <IconRefresh className="h-4 w-4" />
+            <IconRefresh className="h-4 w-4 icon-role-log" />
             새로고침
           </button>
         </div>
@@ -112,15 +112,15 @@ export default function StageMapPage() {
       <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3 space-y-2">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
-            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconUsers className="h-3.5 w-3.5" />현재 추정 인원</p>
+            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconUsers className="h-3.5 w-3.5 icon-role-ops" />현재 추정 인원</p>
             <p className="text-lg font-bold text-cyan-100">{theater?.crowdCount ?? 0}명</p>
           </div>
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
-            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconMapPin className="h-3.5 w-3.5" />혼잡도</p>
+            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconMapPin className="h-3.5 w-3.5 icon-role-map" />혼잡도</p>
             <p className="text-sm font-bold text-cyan-100">{theater?.level || "-"}</p>
           </div>
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
-            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconClock className="h-3.5 w-3.5" />업데이트</p>
+            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconClock className="h-3.5 w-3.5 icon-role-log" />업데이트</p>
             <p className="text-xs font-bold text-cyan-100">{formatUpdatedAt(stageData?.updatedAt)}</p>
           </div>
         </div>
@@ -202,7 +202,7 @@ export default function StageMapPage() {
 
       <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3">
         <p className="text-sm font-semibold text-cyan-100 inline-flex items-center gap-1.5">
-          <IconUsers className="h-4 w-4" />
+          <IconUsers className="h-4 w-4 icon-role-ops" />
           노천극장 혼잡 게이지
         </p>
         <p className="mt-1 text-xs text-cyan-200/80">기준 수용치 {theater?.capacityHint ?? 0}명 대비 {occupancyPercent}%</p>

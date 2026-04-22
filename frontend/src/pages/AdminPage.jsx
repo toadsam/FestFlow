@@ -370,7 +370,7 @@ export default function AdminPage() {
     return (
       <section className="cyber-page pt-4 space-y-3">
         <h2 className="text-lg font-bold inline-flex items-center gap-1.5">
-          <IconShield className="h-5 w-5" />
+          <IconShield className="h-5 w-5 icon-role-ops" />
           관리자 로그인
         </h2>
         <p className="text-xs text-slate-500">湲곕낯 怨꾩젙: admin / admin1234</p>
@@ -410,7 +410,7 @@ export default function AdminPage() {
     <section className="cyber-page pt-4 space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold inline-flex items-center gap-1.5">
-          <IconSettings className="h-5 w-5" />
+          <IconSettings className="h-5 w-5 icon-role-ops" />
           ?댁쁺 愿由ъ옄
         </h2>
         <button
@@ -427,7 +427,7 @@ export default function AdminPage() {
       <article className="sticky top-2 z-20 rounded-xl border border-slate-200 bg-white/95 backdrop-blur p-3 shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <h3 className="font-semibold inline-flex items-center gap-1.5">
-            <IconClipboard className="h-4 w-4" />
+            <IconClipboard className="h-4 w-4 icon-role-log" />
             ?ㅼ떆媛??댁쁺 KPI
           </h3>
           <button
@@ -470,7 +470,7 @@ export default function AdminPage() {
 
       <article className="rounded-xl border border-rose-200 bg-rose-50 p-3 space-y-2">
         <h3 className="font-semibold text-rose-800 inline-flex items-center gap-1.5">
-          <IconAlert className="h-4 w-4" />
+          <IconAlert className="h-4 w-4 icon-role-alert" />
           ?댁쁺??利됱떆 議곗튂 ?⑤꼸
         </h3>
         <button
@@ -499,7 +499,7 @@ export default function AdminPage() {
 
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <h3 className="font-semibold inline-flex items-center gap-1.5">
-          <IconAlert className="h-4 w-4" />
+          <IconAlert className="h-4 w-4 icon-role-alert" />
           운영 공지 관리
         </h3>
         <form className="space-y-2" onSubmit={handleNoticeSubmit}>
@@ -605,7 +605,7 @@ export default function AdminPage() {
 
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <h3 className="font-semibold inline-flex items-center gap-1.5">
-          <IconMapPin className="h-4 w-4" />
+          <IconMapPin className="h-4 w-4 icon-role-map" />
           遺???깅줉/?섏젙
         </h3>
         <form className="space-y-2" onSubmit={handleBoothSubmit}>
@@ -819,7 +819,7 @@ export default function AdminPage() {
 
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <h3 className="font-semibold inline-flex items-center gap-1.5">
-          <IconCalendar className="h-4 w-4" />
+          <IconCalendar className="h-4 w-4 icon-role-schedule" />
           怨듭뿰 ?깅줉/?섏젙
         </h3>
         <form className="space-y-2" onSubmit={handleEventSubmit}>
@@ -904,7 +904,7 @@ export default function AdminPage() {
 
             <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <h3 className="font-semibold inline-flex items-center gap-1.5">
-          <IconUsers className="h-4 w-4" />
+          <IconUsers className="h-4 w-4 icon-role-ops" />
           스태프 배치 편집
         </h3>
         <p className="text-xs text-slate-500">
@@ -1006,7 +1006,7 @@ export default function AdminPage() {
 
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
         <h3 className="font-semibold inline-flex items-center gap-1.5">
-          <IconClipboard className="h-4 w-4" />
+          <IconClipboard className="h-4 w-4 icon-role-log" />
           CSV 일괄 업로드
         </h3>
         <div className="grid grid-cols-2 gap-2">

@@ -596,7 +596,7 @@ export default function OpsBoothPage() {
   return (
     <section className="cyber-page pt-4 space-y-3">
       <h2 className="text-lg font-bold inline-flex items-center gap-1.5">
-        <IconShield className="h-5 w-5" />
+        <IconShield className="h-5 w-5 icon-role-ops" />
         부스 운영 대시보드
       </h2>
 
@@ -605,7 +605,7 @@ export default function OpsBoothPage() {
         className="rounded-xl border border-slate-200 bg-white p-3 space-y-2"
       >
         <p className="text-sm font-semibold inline-flex items-center gap-1.5">
-          <IconSettings className="h-4 w-4" />
+          <IconSettings className="h-4 w-4 icon-role-ops" />
           운영 키 입력
         </p>
         <div className="grid grid-cols-[1fr_auto_auto] gap-2">
@@ -649,7 +649,7 @@ export default function OpsBoothPage() {
           <div className="p-3 space-y-4">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-base font-bold inline-flex items-center gap-1.5">
-                <IconMapPin className="h-4 w-4" />
+                <IconMapPin className="h-4 w-4 icon-role-map" />
                 {data.booth.name}
               </h3>
               <CongestionBadge level={data.congestion.level} />
@@ -679,7 +679,7 @@ export default function OpsBoothPage() {
             <div className="rounded-lg border border-slate-200 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold inline-flex items-center gap-1.5">
-                  <IconClipboard className="h-4 w-4" />
+                  <IconClipboard className="h-4 w-4 icon-role-log" />
                   실시간 운영 상태
                 </p>
                 <span className="text-xs text-slate-500">빠른 수정</span>
@@ -844,7 +844,7 @@ export default function OpsBoothPage() {
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-3">
               <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-emerald-900 inline-flex items-center gap-1.5">
-                <IconUsers className="h-4 w-4" />
+                <IconUsers className="h-4 w-4 icon-role-ops" />
                 테이블/좌석 설정
               </p>
                 <div className="flex gap-1.5">
@@ -1013,7 +1013,7 @@ export default function OpsBoothPage() {
 
             <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-2">
               <p className="text-sm font-semibold text-cyan-900 inline-flex items-center gap-1.5">
-                <IconCalendar className="h-4 w-4" />
+                <IconCalendar className="h-4 w-4 icon-role-schedule" />
                 QR 체크인
               </p>
 

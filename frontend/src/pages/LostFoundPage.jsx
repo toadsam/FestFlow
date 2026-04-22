@@ -66,7 +66,7 @@ export default function LostFoundPage() {
       <article className="rounded-2xl border border-cyan-300/65 bg-gradient-to-br from-[#05345f] via-[#0c5f93] to-[#18b8da] p-4 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.28)]">
         <div className="flex items-start gap-2.5">
           <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cyan-100/50 bg-cyan-500/25">
-            <IconBox className="h-5 w-5" />
+            <IconBox className="h-5 w-5 icon-role-map" />
           </span>
           <div>
             <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">Lost & Found</p>
@@ -78,7 +78,7 @@ export default function LostFoundPage() {
 
       <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3 space-y-3">
         <div className="relative">
-          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-300/80" />
+          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 icon-role-log" />
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -109,18 +109,18 @@ export default function LostFoundPage() {
 
         <div className="grid grid-cols-2 gap-2 text-center">
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
-            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconSearch className="h-3.5 w-3.5" />검색 결과</p>
+            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconSearch className="h-3.5 w-3.5 icon-role-log" />검색 결과</p>
             <p className="text-base font-extrabold text-cyan-100">{filteredItems.length}건</p>
           </div>
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
-            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconBox className="h-3.5 w-3.5" />전체 물품</p>
+            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconBox className="h-3.5 w-3.5 icon-role-map" />전체 물품</p>
             <p className="text-base font-extrabold text-cyan-100">{items.length}건</p>
           </div>
         </div>
       </article>
 
       <article className="rounded-xl border border-cyan-900/70 bg-slate-950/60 p-3 text-xs text-cyan-100/80 inline-flex items-center gap-2">
-        <IconClock className="h-4 w-4 shrink-0" />
+        <IconClock className="h-4 w-4 shrink-0 icon-role-log" />
         물품 등록/반환 처리는 현장 스태프가 수행합니다. 본 화면은 조회 전용입니다.
       </article>
 
