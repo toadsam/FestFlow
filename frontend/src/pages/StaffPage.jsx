@@ -59,6 +59,7 @@ const ALL_TEAM = "ALL";
 const ALL_STATUS = "ALL";
 const LOW_CONFIDENCE_THRESHOLD = 0.72;
 const MAX_CONTEXT_TURNS = 3;
+const STATUS_BOARD_ORDER = ["URGENT", "ON_DUTY", "MOVING", "STANDBY"];
 
 const INTERPRETER_PRESETS = [
   {
@@ -279,6 +280,51 @@ export default function StaffPage() {
     return base;
   }, [enrichedStaff]);
 
+  const teamSummary = useMemo(() => {
+    const counts = new Map();
+    for (const member of filteredStaff) {
+      const team = member.team || "미분류";
+      counts.set(team, (counts.get(team) || 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .map(([team, count]) => ({ team, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [filteredStaff]);
+
+  const teamCountMap = useMemo(() => {
+    const counts = new Map();
+    for (const member of enrichedStaff) {
+      const team = member.team || "미분류";
+      counts.set(team, (counts.get(team) || 0) + 1);
+    }
+    return counts;
+  }, [enrichedStaff]);
+
+  const staffBoardByStatus = useMemo(() => {
+    const board = {
+      URGENT: [],
+      ON_DUTY: [],
+      MOVING: [],
+      STANDBY: [],
+    };
+
+    for (const member of filteredStaff) {
+      if (board[member.status]) {
+        board[member.status].push(member);
+      }
+    }
+
+    for (const status of Object.keys(board)) {
+      board[status].sort((a, b) => {
+        const aTime = a.lastUpdatedAt ? Date.parse(a.lastUpdatedAt) : 0;
+        const bTime = b.lastUpdatedAt ? Date.parse(b.lastUpdatedAt) : 0;
+        return bTime - aTime;
+      });
+    }
+
+    return board;
+  }, [filteredStaff]);
+
   async function handleLogin(event) {
     event.preventDefault();
     setLoginError("");
@@ -373,7 +419,9 @@ export default function StaffPage() {
   }
 
   async function handleLostItemSubmit(event) {
-    event.preventDefault();
+    if (event?.preventDefault) {
+      event.preventDefault();
+    }
     if (!staffToken) return;
 
     setLostItemSaving(true);
@@ -704,6 +752,21 @@ export default function StaffPage() {
     await copyText(enToKoText);
   }
 
+  function toggleExclusivePanel(panelKey) {
+    const current = {
+      interpreter: showInterpreter,
+      lost: showLostForm,
+      team: showTeamList,
+      map: showMap,
+    };
+    const willOpen = !current[panelKey];
+
+    setShowInterpreter(panelKey === "interpreter" ? willOpen : false);
+    setShowLostForm(panelKey === "lost" ? willOpen : false);
+    setShowTeamList(panelKey === "team" ? willOpen : false);
+    setShowMap(panelKey === "map" ? willOpen : false);
+  }
+
   if (!staffToken) {
     return (
       <section className="cyber-page pt-4 pb-12">
@@ -758,13 +821,13 @@ export default function StaffPage() {
 
   return (
     <section className="cyber-page pt-4 pb-24 space-y-4">
-      <article className="rounded-2xl border border-cyan-300/60 bg-slate-950/80 p-4 text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.2)]">
-        <div className="flex items-start justify-between gap-2">
+      <article className="rounded-2xl border border-cyan-300/60 bg-slate-950/80 p-4 text-cyan-50">
+        <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">Staff Field Mode</p>
-            <h2 className="mt-1 text-lg font-extrabold">현장 스태프 빠른 화면</h2>
-            <p className="mt-1 text-xs text-cyan-100/85">
-              {me?.name} ({me?.staffNo}) · {me?.team}
+            <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">Field Console</p>
+            <h2 className="mt-1 text-lg font-extrabold">{me?.name}</h2>
+            <p className="text-xs text-cyan-100/85">
+              {me?.staffNo} · {me?.team}
             </p>
           </div>
           <button
@@ -777,48 +840,108 @@ export default function StaffPage() {
         </div>
       </article>
 
-      <article className="rounded-xl border border-rose-300/70 bg-rose-50 p-3 space-y-2">
-        <button
-          type="button"
-          onClick={() => {
-            if (me) {
-              setMe({ ...me, status: "URGENT" });
-            }
-            updateMyRuntime("URGENT");
-          }}
-          className="w-full rounded-xl bg-rose-600 py-3 text-sm font-bold text-white shadow-[0_0_14px_rgba(225,29,72,0.35)]"
-        >
-          긴급 호출 / 지원 요청
-        </button>
-        <p className="text-[11px] text-rose-800">긴급 상태로 즉시 전환하고 위치/업무 상태를 함께 전송합니다.</p>
-      </article>
-
-      <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
-        <p className="text-sm font-semibold text-slate-800">내 상태</p>
-        <div className="grid grid-cols-2 gap-2">
+      <article className="rounded-xl border border-slate-200 bg-white p-3">
+        <div className="grid grid-cols-4 gap-2">
           {Object.keys(STATUS_META).map((status) => (
             <button
               key={status}
               type="button"
               aria-pressed={me?.status === status}
               onClick={() => {
-                if (me) {
-                  setMe({ ...me, status });
-                }
+                if (me) setMe({ ...me, status });
                 updateMyRuntime(status);
               }}
-              className={`rounded-xl px-3 py-3 text-sm font-bold transition ${
+              className={`rounded-lg border px-2 py-2 text-center ${
                 me?.status === status
-                  ? "bg-cyan-600 text-white shadow-[0_0_14px_rgba(8,145,178,0.35)]"
-                  : "border border-slate-300 bg-slate-50 text-slate-700"
+                  ? "border-cyan-500 bg-cyan-600 text-white"
+                  : "border-slate-300 bg-slate-50 text-slate-700"
               }`}
             >
-              {STATUS_META[status].label}
+              <p className="text-[10px] font-semibold">{STATUS_META[status].label}</p>
+              <p className="text-sm font-extrabold">{statusSummary[status] || 0}</p>
             </button>
           ))}
         </div>
+      </article>
 
-        <div className="mt-1 flex gap-1.5 overflow-x-auto pb-1">
+      <article className="rounded-xl border border-rose-300/70 bg-rose-50 p-3">
+        <button
+          type="button"
+          onClick={() => {
+            if (me) setMe({ ...me, status: "URGENT" });
+            updateMyRuntime("URGENT");
+          }}
+          className="w-full rounded-xl bg-rose-600 py-4 text-base font-extrabold text-white"
+        >
+          <span className="inline-flex items-center gap-2">
+            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
+              <path d="M12 2 1 21h22L12 2Zm1 14h-2v-5h2v5Zm0 3h-2v-2h2v2Z" />
+            </svg>
+            긴급 호출
+          </span>
+        </button>
+      </article>
+
+      <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            aria-pressed={showInterpreter}
+            onClick={() => toggleExclusivePanel("interpreter")}
+            className="rounded-lg border border-violet-300 bg-violet-50 px-3 py-3 text-sm font-bold text-violet-800"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+                <path d="M12 3 1 9l11 6 9-4.91V17h2V9L12 3Zm0 13L6.74 13.1 12 10.2l5.26 2.9L12 16Z" />
+              </svg>
+              통역 {showInterpreter ? "닫기" : "열기"}
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={showLostForm}
+            onClick={() => toggleExclusivePanel("lost")}
+            className="rounded-lg border border-emerald-300 bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-800"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+                <path d="M10 3h4l1 2h4a2 2 0 0 1 2 2v3H3V7a2 2 0 0 1 2-2h4l1-2Zm-7 9h18v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-7Z" />
+              </svg>
+              분실물 {showLostForm ? "닫기" : "열기"}
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={showTeamList}
+            onClick={() => toggleExclusivePanel("team")}
+            className="rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-3 text-sm font-bold text-cyan-800"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+                <path d="M16 11a3 3 0 1 0-2.99-3A3 3 0 0 0 16 11ZM8 11a3 3 0 1 0-2.99-3A3 3 0 0 0 8 11Zm0 2c-2.67 0-8 1.34-8 4v2h10v-2c0-1.16.48-2.18 1.26-3C10.22 13.39 8.85 13 8 13Zm8 0c-.29 0-.62.02-.97.05A4.99 4.99 0 0 1 18 17v2h6v-2c0-2.66-5.33-4-8-4Z" />
+              </svg>
+              팀현황 {showTeamList ? "닫기" : "보기"}
+            </span>
+          </button>
+          <button
+            type="button"
+            aria-pressed={showMap}
+            onClick={() => toggleExclusivePanel("map")}
+            className="rounded-lg border border-amber-300 bg-amber-50 px-3 py-3 text-sm font-bold text-amber-800"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden>
+                <path d="M15 5.1 9 3 3 5v16l6-2 6 2 6-2V3l-6 2.1ZM9 17l-4 1.34V6.66L9 5.33V17Zm6 1.67-4-1.34V5.33l4 1.34v12Zm6-.33-4 1.33V6.66l4-1.33v13.01Z" />
+              </svg>
+              지도 {showMap ? "닫기" : "보기"}
+            </span>
+          </button>
+        </div>
+      </article>
+
+      <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+        <p className="text-xs font-semibold text-slate-600">내 업무</p>
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
           {QUICK_TASKS.map((task) => (
             <button
               key={task}
@@ -830,18 +953,10 @@ export default function StaffPage() {
             </button>
           ))}
         </div>
-
         <input
           value={taskDraft}
           onChange={(e) => setTaskDraft(e.target.value)}
           placeholder="현재 업무"
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-        />
-        <textarea
-          value={noteDraft}
-          onChange={(e) => setNoteDraft(e.target.value)}
-          rows={2}
-          placeholder="현장 메모 (선택)"
           className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
         />
         <button
@@ -850,92 +965,46 @@ export default function StaffPage() {
           disabled={saving}
           className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
-          {saving ? "저장 중..." : "내 상태/업무 저장"}
+          {saving ? "저장 중..." : "저장"}
         </button>
       </article>
 
-      <article className="rounded-xl border border-amber-300/60 bg-amber-50/95 p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-amber-900">중요 공지</p>
-          <span className="text-xs text-amber-700">{notices.length}건</span>
-        </div>
-        <div className="mt-2 space-y-2">
-          {(notices || []).slice(0, 2).map((notice) => (
-            <div key={notice.id} className="rounded-md border border-amber-300 bg-white px-2.5 py-2">
-              <p className="text-xs font-bold text-amber-900">[{notice.category}] {notice.title}</p>
-              <p className="mt-1 text-xs text-amber-800">{notice.content}</p>
-            </div>
-          ))}
-          {notices.length === 0 && <p className="text-xs text-amber-700">현재 활성 공지가 없습니다.</p>}
-        </div>
-      </article>
-
-      <article className="rounded-xl border border-violet-300/60 bg-violet-50 p-3 space-y-3">
-        <button
-          type="button"
-          aria-pressed={showInterpreter}
-          onClick={() => setShowInterpreter((prev) => !prev)}
-          className="w-full rounded-lg border border-violet-300 bg-white px-3 py-2 text-left"
-        >
-          <p className="text-sm font-bold text-violet-900">
-            {showInterpreter ? "통역 모드 닫기" : "통역 모드 열기 (한↔영)"}
-          </p>
-          <p className="text-[11px] text-violet-800/90">
-            {networkOnline ? "온라인" : "오프라인"} · {showInterpreter ? "펼침" : "접힘"}
-          </p>
-        </button>
-
-        {showInterpreter && (
-          <>
-        <div className="grid grid-cols-2 gap-2">
+      {showInterpreter && (
+        <article className="rounded-xl border border-violet-300/60 bg-violet-50 p-3 space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              aria-pressed={interpreterLane === "koToEn"}
+              onClick={() => setInterpreterLane("koToEn")}
+              className={`rounded-lg px-3 py-2 text-xs font-bold ${
+                interpreterLane === "koToEn"
+                  ? "border border-cyan-500 bg-cyan-600 text-white"
+                  : "border border-slate-300 bg-white text-slate-700"
+              }`}
+            >
+              한국어 → 영어
+            </button>
+            <button
+              type="button"
+              aria-pressed={interpreterLane === "enToKo"}
+              onClick={() => setInterpreterLane("enToKo")}
+              className={`rounded-lg px-3 py-2 text-xs font-bold ${
+                interpreterLane === "enToKo"
+                  ? "border border-emerald-500 bg-emerald-600 text-white"
+                  : "border border-slate-300 bg-white text-slate-700"
+              }`}
+            >
+              영어 → 한국어
+            </button>
+          </div>
           <button
             type="button"
-            aria-pressed={interpreterLane === "koToEn"}
-            onClick={() => setInterpreterLane("koToEn")}
-            className={`rounded-lg px-3 py-2 text-xs font-bold ${
-              interpreterLane === "koToEn"
-                ? "border border-cyan-500 bg-cyan-600 text-white"
-                : "border border-slate-300 bg-white text-slate-700"
-            }`}
+            onClick={handleActiveVoiceTranslate}
+            disabled={interpreterBusy || !speechSupported}
+            className="w-full rounded-xl border border-violet-400 bg-violet-600 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-60"
           >
-            한국어 → 영어
+            {interpreterLane === "koToEn" ? "한국어로 말하기" : "영어로 말하기"}
           </button>
-          <button
-            type="button"
-            aria-pressed={interpreterLane === "enToKo"}
-            onClick={() => setInterpreterLane("enToKo")}
-            className={`rounded-lg px-3 py-2 text-xs font-bold ${
-              interpreterLane === "enToKo"
-                ? "border border-emerald-500 bg-emerald-600 text-white"
-                : "border border-slate-300 bg-white text-slate-700"
-            }`}
-          >
-            영어 → 한국어
-          </button>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleActiveVoiceTranslate}
-          disabled={interpreterBusy || !speechSupported}
-          className="w-full rounded-xl border border-violet-400 bg-violet-600 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-60"
-        >
-          {interpreterLane === "koToEn"
-            ? "버튼 누르고 한국어로 말하기"
-            : "버튼 누르고 영어로 말하기"}
-        </button>
-
-        <div className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs text-violet-900">
-          {interpreterMessage || "대기 중"} · 신뢰도{" "}
-          {lastRecognitionConfidence == null ? "-" : `${Math.round(lastRecognitionConfidence * 100)}%`}
-        </div>
-
-        <div className="rounded-lg border border-slate-200 bg-white p-2 space-y-2">
-          <p className="text-[11px] font-semibold text-slate-700">
-            {interpreterLane === "koToEn"
-              ? "직원이 말할 문장 (한국어)"
-              : "방문객이 말한 문장 (영어)"}
-          </p>
           <textarea
             value={interpreterLane === "koToEn" ? koSourceText : enSourceText}
             onChange={(e) =>
@@ -944,11 +1013,7 @@ export default function StaffPage() {
                 : setEnSourceText(e.target.value)
             }
             rows={2}
-            placeholder={
-              interpreterLane === "koToEn"
-                ? "예: 메인 무대는 오른쪽으로 100m 이동하시면 됩니다."
-                : "Example: I cannot find the lost-and-found center."
-            }
+            placeholder={interpreterLane === "koToEn" ? "한국어 입력" : "English input"}
             className="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm"
           />
           <div className="grid grid-cols-3 gap-2">
@@ -958,14 +1023,14 @@ export default function StaffPage() {
               disabled={interpreterBusy}
               className="rounded-lg border border-violet-300 bg-violet-100 px-2 py-2 text-xs font-semibold text-violet-800 disabled:opacity-60"
             >
-              번역하기
+              번역
             </button>
             <button
               type="button"
               onClick={copyActiveResult}
               className="rounded-lg border border-slate-300 bg-slate-50 px-2 py-2 text-xs font-semibold text-slate-700"
             >
-              결과 복사
+              복사
             </button>
             <button
               type="button"
@@ -973,18 +1038,14 @@ export default function StaffPage() {
               disabled={!(interpreterLane === "koToEn" ? koToEnText : enToKoText)}
               className="rounded-lg border border-slate-300 bg-slate-50 px-2 py-2 text-xs font-semibold text-slate-700 disabled:opacity-60"
             >
-              결과 들려주기
+              재생
             </button>
           </div>
           <p className="rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-2 text-sm text-cyan-900 min-h-12">
             {interpreterLane === "koToEn"
-              ? koToEnText || "여기에 영어 통역 결과가 표시됩니다."
-              : enToKoText || "여기에 한국어 통역 결과가 표시됩니다."}
+              ? koToEnText || "영어 결과"
+              : enToKoText || "한국어 결과"}
           </p>
-        </div>
-
-        <div className="space-y-1">
-          <p className="text-[11px] font-semibold text-violet-900">자주 쓰는 문장</p>
           <div className="flex flex-wrap gap-1.5">
             {INTERPRETER_PRESETS.map((preset) => (
               <button
@@ -995,7 +1056,7 @@ export default function StaffPage() {
                   setEnSourceText(preset.en);
                   setKoToEnText(preset.en);
                   setEnToKoText(preset.ko);
-                  setInterpreterMessage("프리셋 문장을 불러왔습니다.");
+                  setInterpreterMessage("프리셋 문장 적용");
                 }}
                 className="rounded-full border border-violet-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-violet-800"
               >
@@ -1003,121 +1064,61 @@ export default function StaffPage() {
               </button>
             ))}
           </div>
-        </div>
-          </>
-        )}
-      </article>
+        </article>
+      )}
 
-      <article className="rounded-xl border border-emerald-300/60 bg-emerald-50 p-3 space-y-2">
-        <button
-          type="button"
-          aria-pressed={showLostForm}
-          onClick={() => setShowLostForm((prev) => !prev)}
-          className="w-full rounded-lg border border-emerald-400 bg-white px-3 py-2 text-sm font-bold text-emerald-800"
-        >
-          {showLostForm ? "분실물 등록 닫기" : "분실물 등록 열기"}
-        </button>
-
-        {showLostForm && (
-          <form className="space-y-2" onSubmit={handleLostItemSubmit}>
-            <input
-              value={lostItemForm.title}
-              onChange={(e) => setLostItemForm((prev) => ({ ...prev, title: e.target.value }))}
-              placeholder="분실물명"
-              className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
-              required
-            />
-            <textarea
-              value={lostItemForm.description}
-              onChange={(e) => setLostItemForm((prev) => ({ ...prev, description: e.target.value }))}
-              placeholder="상세 설명"
-              rows={2}
-              className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
-              required
-            />
-            <input
-              value={lostItemForm.foundLocation}
-              onChange={(e) => setLostItemForm((prev) => ({ ...prev, foundLocation: e.target.value }))}
-              placeholder="발견 위치"
-              className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
-              required
-            />
-            <div className="grid grid-cols-3 gap-2">
-              {LOST_ITEM_CATEGORIES.map((category) => {
-                const active = lostItemForm.category === category;
-                return (
-                  <button
-                    key={category}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setLostItemForm((prev) => ({ ...prev, category }))}
-                    className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
-                      active
-                        ? "border-emerald-500 bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]"
-                        : "border-emerald-200 bg-white text-emerald-900 hover:border-emerald-400"
-                    }`}
-                  >
-                    {category}
-                  </button>
-                );
-              })}
-            </div>
-            <input
-              value={lostItemForm.finderContact}
-              onChange={(e) => setLostItemForm((prev) => ({ ...prev, finderContact: e.target.value }))}
-              placeholder="연락처(선택)"
-              className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
-            />
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setLostItemFile(e.target.files?.[0] || null)}
-              className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs"
-            />
-            <button
-              type="submit"
-              disabled={lostItemSaving}
-              className="w-full rounded-lg bg-emerald-700 py-2 text-sm font-semibold text-white disabled:opacity-60"
-            >
-              {lostItemSaving ? "등록 중..." : "분실물 등록"}
-            </button>
-          </form>
-        )}
-
-        {lostItemMessage && (
-          <p className="rounded-md border border-emerald-200 bg-white px-2 py-1.5 text-xs text-emerald-800">
-            {lostItemMessage}
-          </p>
-        )}
-      </article>
-
-      <article className="rounded-xl border border-slate-200 bg-white p-3">
-        <div className="grid grid-cols-2 gap-2">
+      {showLostForm && (
+        <article className="rounded-xl border border-emerald-300/60 bg-emerald-50 p-3 space-y-2">
+          <input
+            value={lostItemForm.title}
+            onChange={(e) => setLostItemForm((prev) => ({ ...prev, title: e.target.value }))}
+            placeholder="분실물명"
+            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+            required
+          />
+          <input
+            value={lostItemForm.foundLocation}
+            onChange={(e) => setLostItemForm((prev) => ({ ...prev, foundLocation: e.target.value }))}
+            placeholder="발견 위치"
+            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+            required
+          />
+          <textarea
+            value={lostItemForm.description}
+            onChange={(e) => setLostItemForm((prev) => ({ ...prev, description: e.target.value }))}
+            placeholder="설명"
+            rows={2}
+            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+            required
+          />
           <button
             type="button"
-            aria-pressed={showTeamList}
-            onClick={() => setShowTeamList((prev) => !prev)}
-            className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700"
+            onClick={handleLostItemSubmit}
+            disabled={lostItemSaving}
+            className="w-full rounded-lg bg-emerald-700 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {showTeamList ? "팀 현황 닫기" : "팀 현황 보기"}
+            {lostItemSaving ? "등록 중..." : "분실물 등록"}
           </button>
-          <button
-            type="button"
-            aria-pressed={showMap}
-            onClick={() => setShowMap((prev) => !prev)}
-            className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700"
-          >
-            {showMap ? "지도 닫기" : "지도 보기"}
-          </button>
-        </div>
+          {lostItemMessage && (
+            <p className="rounded-md border border-emerald-200 bg-white px-2 py-1.5 text-xs text-emerald-800">
+              {lostItemMessage}
+            </p>
+          )}
+        </article>
+      )}
 
-        <div className="mt-2 grid grid-cols-4 gap-2">
-          {Object.keys(STATUS_META).map((status) => (
-            <div key={status} className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-center">
-              <p className="text-[11px] text-slate-500">{STATUS_META[status].label}</p>
-              <p className="mt-0.5 text-sm font-extrabold text-slate-800">{statusSummary[status] || 0}</p>
+      <article className="rounded-xl border border-amber-300/60 bg-amber-50/95 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold text-amber-900">중요 공지</p>
+          <span className="text-xs text-amber-700">{notices.length}건</span>
+        </div>
+        <div className="mt-2 space-y-2">
+          {(notices || []).slice(0, 2).map((notice) => (
+            <div key={notice.id} className="rounded-md border border-amber-300 bg-white px-2.5 py-2">
+              <p className="text-xs font-bold text-amber-900">[{notice.category}] {notice.title}</p>
             </div>
           ))}
+          {notices.length === 0 && <p className="text-xs text-amber-700">현재 활성 공지가 없습니다.</p>}
         </div>
       </article>
 
@@ -1126,94 +1127,125 @@ export default function StaffPage() {
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="이름/번호/구역/업무 검색"
+            placeholder="이름/번호 검색"
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
 
-          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
-            {[{ value: ALL_TEAM, label: "전체 팀" }, ...teamOptions.map((team) => ({ value: team, label: team }))].map(
-              (option) => {
-                const active = teamFilter === option.value;
-                return (
-                  <button
-                    key={`team-filter-${option.value}`}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={() => setTeamFilter(option.value)}
-                    className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
-                      active
-                        ? "border-cyan-500 bg-cyan-600 text-white shadow-[0_0_12px_rgba(8,145,178,0.4)]"
-                        : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                );
-              },
-            )}
-          </div>
-
-          <div className="mt-2 grid grid-cols-2 gap-2">
-            {[
-              { value: ALL_STATUS, label: "전체 상태" },
-              ...Object.keys(STATUS_META).map((status) => ({
-                value: status,
-                label: STATUS_META[status].label,
-              })),
-            ].map((option) => {
-              const active = statusFilter === option.value;
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <button
+              type="button"
+              aria-pressed={teamFilter === ALL_TEAM}
+              onClick={() => setTeamFilter(ALL_TEAM)}
+              className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
+                teamFilter === ALL_TEAM
+                  ? "border-cyan-500 bg-cyan-600 text-white"
+                  : "border-cyan-200 bg-cyan-50 text-cyan-800"
+              }`}
+            >
+              전체 {enrichedStaff.length}
+            </button>
+            {teamOptions.map((team) => {
+              const active = teamFilter === team;
               return (
                 <button
-                  key={`status-filter-${option.value}`}
+                  key={`team-summary-${team}`}
                   type="button"
                   aria-pressed={active}
-                  onClick={() => setStatusFilter(option.value)}
-                  className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
+                  onClick={() => setTeamFilter(team)}
+                  className={`rounded-full border px-2.5 py-1 text-[11px] font-semibold ${
                     active
-                      ? "border-cyan-500 bg-cyan-600 text-white shadow-[0_0_12px_rgba(8,145,178,0.4)]"
-                      : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300"
+                      ? "border-cyan-500 bg-cyan-600 text-white"
+                      : "border-cyan-200 bg-cyan-50 text-cyan-800"
                   }`}
                 >
-                  {option.label}
+                  {team} {teamCountMap.get(team) || 0}
                 </button>
               );
             })}
           </div>
 
-          <p className="mt-2 text-xs text-slate-500">필터 결과 {filteredStaff.length}명 / 전체 {enrichedStaff.length}명</p>
+          <p className="mt-2 text-xs text-slate-500">표시 {filteredStaff.length}명 / 전체 {enrichedStaff.length}명</p>
 
-          <div className="mt-2 grid gap-2 md:grid-cols-2">
-            {filteredStaff.map((item) => (
-              <div
-                key={`staff-card-${item.staffNo}`}
-                className={`rounded-lg border p-2.5 ${
-                  item.staffNo === me?.staffNo ? "border-cyan-400 bg-cyan-50" : "border-slate-200 bg-slate-50"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">
-                      {item.name} <span className="text-xs text-slate-500">({item.staffNo})</span>
+          <section className="mt-2 rounded-lg border border-rose-300 bg-rose-50 p-2">
+            <div className="mb-1 flex items-center justify-between">
+              <p className="inline-flex items-center gap-1 text-xs font-bold text-rose-900">
+                <span className="inline-block h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                긴급
+              </p>
+              <span className="rounded-full border border-rose-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-rose-800">
+                {staffBoardByStatus.URGENT.length}
+              </span>
+            </div>
+            <div className="space-y-1">
+              {staffBoardByStatus.URGENT.length === 0 && (
+                <p className="text-[11px] text-rose-700">긴급 상태 없음</p>
+              )}
+              {staffBoardByStatus.URGENT.map((item) => (
+                <div
+                  key={`staff-board-URGENT-${item.staffNo}`}
+                  className="rounded-md border border-white/70 bg-white px-2 py-1.5"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-bold text-slate-800">
+                      {item.name} <span className="font-normal text-slate-500">({item.staffNo})</span>
                     </p>
-                    <p className="text-xs text-slate-600 mt-0.5">{item.team}</p>
+                    <span className="text-[11px] text-slate-500">
+                      {item.lastUpdatedAt?.replace("T", " ").slice(11, 16)}
+                    </span>
                   </div>
-                  <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
-                      STATUS_META[item.status]?.chip || "bg-slate-100 text-slate-700 border-slate-200"
-                    }`}
-                  >
-                    {item.statusLabel || STATUS_META[item.status]?.label}
+                  <p className="mt-0.5 text-[11px] text-slate-600">
+                    {item.team} · {item.zoneName}
+                  </p>
+                  {item.currentTask && (
+                    <p className="mt-0.5 text-[11px] text-slate-700">{item.currentTask}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <div className="mt-2 grid gap-2 md:grid-cols-3">
+            {STATUS_BOARD_ORDER.filter((status) => status !== "URGENT").map((status) => (
+              <section
+                key={`status-board-${status}`}
+                className="rounded-lg border border-slate-200 bg-slate-50 p-2"
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-xs font-bold text-slate-800">
+                    {STATUS_META[status]?.label || status}
+                  </p>
+                  <span className="rounded-full border border-slate-300 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+                    {staffBoardByStatus[status].length}
                   </span>
                 </div>
-                <p className="mt-2 text-xs text-slate-700">업무: {item.currentTask || "-"}</p>
-                <p className="mt-1 text-xs text-slate-700">위치: {item.zoneName}</p>
-                {item.currentNote && (
-                  <p className="mt-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600">
-                    메모: {item.currentNote}
-                  </p>
-                )}
-                <p className="mt-1 text-[11px] text-slate-500">갱신: {item.lastUpdatedAt?.replace("T", " ").slice(5, 16)}</p>
-              </div>
+
+                <div className="space-y-1">
+                  {staffBoardByStatus[status].length === 0 && (
+                    <p className="text-[11px] text-slate-500">해당 스태프 없음</p>
+                  )}
+                  {staffBoardByStatus[status].map((item) => (
+                    <div
+                      key={`staff-board-${status}-${item.staffNo}`}
+                      className="rounded-md border border-white/70 bg-white px-2 py-1.5"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="text-xs font-bold text-slate-800">
+                          {item.name} <span className="font-normal text-slate-500">({item.staffNo})</span>
+                        </p>
+                        <span className="text-[11px] text-slate-500">
+                          {item.lastUpdatedAt?.replace("T", " ").slice(11, 16)}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] text-slate-600">
+                        {item.team} · {item.zoneName}
+                      </p>
+                      {item.currentTask && (
+                        <p className="mt-0.5 text-[11px] text-slate-700">{item.currentTask}</p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
             ))}
           </div>
         </article>
@@ -1247,9 +1279,6 @@ export default function StaffPage() {
                       {item.name} ({item.staffNo})
                     </p>
                     <p className="text-xs mt-1">팀: {item.team}</p>
-                    <p className="text-xs">상태: {item.statusLabel || STATUS_META[item.status]?.label}</p>
-                    <p className="text-xs">업무: {item.currentTask || "-"}</p>
-                    <p className="text-xs">위치: {item.zoneName}</p>
                   </Popup>
                 </CircleMarker>
               ))}
