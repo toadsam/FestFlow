@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
 import {
+  createLostItem,
   createStaffStream,
   fetchStaffBootstrap,
   loginStaff,
@@ -43,6 +44,25 @@ const QUICK_TASKS = [
   "긴급 호출 대기",
 ];
 
+const LOST_ITEM_CATEGORIES = [
+  "전자기기",
+  "지갑/카드",
+  "의류/잡화",
+  "학생증",
+  "기타",
+];
+
+const LOST_ITEM_INITIAL_FORM = {
+  title: "",
+  description: "",
+  category: "기타",
+  foundLocation: "",
+  finderContact: "",
+};
+
+const ALL_TEAM = "ALL";
+const ALL_STATUS = "ALL";
+
 function getSavedToken() {
   return localStorage.getItem(STAFF_TOKEN_KEY) || "";
 }
@@ -67,10 +87,14 @@ export default function StaffPage() {
   const [booths, setBooths] = useState([]);
   const [notices, setNotices] = useState([]);
   const [query, setQuery] = useState("");
-  const [teamFilter, setTeamFilter] = useState("전체");
-  const [statusFilter, setStatusFilter] = useState("전체");
+  const [teamFilter, setTeamFilter] = useState(ALL_TEAM);
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUS);
   const [taskDraft, setTaskDraft] = useState("");
   const [noteDraft, setNoteDraft] = useState("");
+  const [lostItemForm, setLostItemForm] = useState(LOST_ITEM_INITIAL_FORM);
+  const [lostItemFile, setLostItemFile] = useState(null);
+  const [lostItemSaving, setLostItemSaving] = useState(false);
+  const [lostItemMessage, setLostItemMessage] = useState("");
 
   useEffect(() => {
     if (!staffToken) {
@@ -157,8 +181,8 @@ export default function StaffPage() {
         item.staffNo?.toLowerCase().includes(query.toLowerCase()) ||
         item.zoneName?.includes(query) ||
         item.currentTask?.includes(query);
-      const byTeam = teamFilter === "전체" || item.team === teamFilter;
-      const byStatus = statusFilter === "전체" || item.status === statusFilter;
+      const byTeam = teamFilter === ALL_TEAM || item.team === teamFilter;
+      const byStatus = statusFilter === ALL_STATUS || item.status === statusFilter;
       return byQuery && byTeam && byStatus;
     });
   }, [enrichedStaff, query, teamFilter, statusFilter]);
@@ -258,6 +282,24 @@ export default function StaffPage() {
       );
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleLostItemSubmit(event) {
+    event.preventDefault();
+    if (!staffToken) return;
+
+    setLostItemSaving(true);
+    setLostItemMessage("");
+    try {
+      await createLostItem(lostItemForm, lostItemFile, staffToken);
+      setLostItemForm(LOST_ITEM_INITIAL_FORM);
+      setLostItemFile(null);
+      setLostItemMessage("분실물이 등록되었습니다.");
+    } catch (error) {
+      setLostItemMessage(error?.message || "분실물 등록에 실패했습니다.");
+    } finally {
+      setLostItemSaving(false);
     }
   }
 
@@ -430,6 +472,89 @@ export default function StaffPage() {
         </button>
       </article>
 
+      <article className="rounded-xl border border-emerald-300/60 bg-emerald-50 p-3 space-y-2">
+        <p className="text-sm font-bold text-emerald-900">분실물 등록</p>
+        <form className="space-y-2" onSubmit={handleLostItemSubmit}>
+          <input
+            value={lostItemForm.title}
+            onChange={(e) =>
+              setLostItemForm((prev) => ({ ...prev, title: e.target.value }))
+            }
+            placeholder="분실물명"
+            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+            required
+          />
+          <textarea
+            value={lostItemForm.description}
+            onChange={(e) =>
+              setLostItemForm((prev) => ({ ...prev, description: e.target.value }))
+            }
+            placeholder="상세 설명"
+            rows={2}
+            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+            required
+          />
+          <input
+            value={lostItemForm.foundLocation}
+            onChange={(e) =>
+              setLostItemForm((prev) => ({ ...prev, foundLocation: e.target.value }))
+            }
+            placeholder="발견 위치"
+            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+            required
+          />
+
+          <div className="grid grid-cols-3 gap-2">
+            {LOST_ITEM_CATEGORIES.map((category) => {
+              const active = lostItemForm.category === category;
+              return (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() =>
+                    setLostItemForm((prev) => ({ ...prev, category }))
+                  }
+                  className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
+                    active
+                      ? "border-emerald-500 bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                      : "border-emerald-200 bg-white text-emerald-900 hover:border-emerald-400"
+                  }`}
+                >
+                  {category}
+                </button>
+              );
+            })}
+          </div>
+
+          <input
+            value={lostItemForm.finderContact}
+            onChange={(e) =>
+              setLostItemForm((prev) => ({ ...prev, finderContact: e.target.value }))
+            }
+            placeholder="연락처(선택)"
+            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+          />
+          <input
+            type="file"
+            accept="image/*"
+            onChange={(e) => setLostItemFile(e.target.files?.[0] || null)}
+            className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs"
+          />
+          <button
+            type="submit"
+            disabled={lostItemSaving}
+            className="w-full rounded-lg bg-emerald-700 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {lostItemSaving ? "등록 중..." : "분실물 등록"}
+          </button>
+        </form>
+        {lostItemMessage && (
+          <p className="rounded-md border border-emerald-200 bg-white px-2 py-1.5 text-xs text-emerald-800">
+            {lostItemMessage}
+          </p>
+        )}
+      </article>
+
       <article className="rounded-xl border border-slate-200 bg-white p-3">
         <p className="text-sm font-semibold text-slate-800">구역별 인원 분포</p>
         <div className="mt-2 space-y-2">
@@ -496,30 +621,54 @@ export default function StaffPage() {
             placeholder="이름/번호/구역/업무 검색"
             className="flex-1 min-w-[170px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
-          <select
-            value={teamFilter}
-            onChange={(e) => setTeamFilter(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="전체">전체 팀</option>
-            {teamOptions.map((team) => (
-              <option key={team} value={team}>
-                {team}
-              </option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="전체">전체 상태</option>
-            {Object.keys(STATUS_META).map((status) => (
-              <option key={status} value={status}>
-                {STATUS_META[status].label}
-              </option>
-            ))}
-          </select>
+        </div>
+
+        <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+          {[{ value: ALL_TEAM, label: "전체 팀" }, ...teamOptions.map((team) => ({ value: team, label: team }))].map(
+            (option) => {
+              const active = teamFilter === option.value;
+              return (
+                <button
+                  key={`team-filter-${option.value}`}
+                  type="button"
+                  onClick={() => setTeamFilter(option.value)}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                    active
+                      ? "border-cyan-500 bg-cyan-600 text-white shadow-[0_0_12px_rgba(8,145,178,0.4)]"
+                      : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              );
+            },
+          )}
+        </div>
+
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          {[
+            { value: ALL_STATUS, label: "전체 상태" },
+            ...Object.keys(STATUS_META).map((status) => ({
+              value: status,
+              label: STATUS_META[status].label,
+            })),
+          ].map((option) => {
+            const active = statusFilter === option.value;
+            return (
+              <button
+                key={`status-filter-${option.value}`}
+                type="button"
+                onClick={() => setStatusFilter(option.value)}
+                className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
+                  active
+                    ? "border-cyan-500 bg-cyan-600 text-white shadow-[0_0_12px_rgba(8,145,178,0.4)]"
+                    : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300"
+                }`}
+              >
+                {option.label}
+              </button>
+            );
+          })}
         </div>
 
         <p className="mt-2 text-xs text-slate-500">
