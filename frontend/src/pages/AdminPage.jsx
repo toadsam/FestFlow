@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import {
   createBooth,
   createEvent,
@@ -8,6 +8,7 @@ import {
   deleteNotice,
   fetchAdminDashboardKpis,
   fetchAdminNotices,
+  fetchAdminStaff,
   fetchAuditLogs,
   fetchBooths,
   fetchEvents,
@@ -18,6 +19,7 @@ import {
   triggerCongestionReliefNotice,
   triggerEventStartNotice,
   updateBooth,
+  updateAdminStaff,
   updateBoothLiveStatus,
   updateEvent,
   updateNotice,
@@ -39,7 +41,7 @@ const initialEvent = { title: "", startTime: "", endTime: "" };
 const initialNotice = {
   title: "",
   content: "",
-  category: "긴급",
+  category: "湲닿툒",
   active: true,
 };
 
@@ -72,6 +74,7 @@ export default function AdminPage() {
   const [booths, setBooths] = useState([]);
   const [events, setEvents] = useState([]);
   const [notices, setNotices] = useState([]);
+  const [staffMembers, setStaffMembers] = useState([]);
 
   const [boothForm, setBoothForm] = useState(initialBooth);
   const [eventForm, setEventForm] = useState(initialEvent);
@@ -89,6 +92,7 @@ export default function AdminPage() {
   const [draggingBoothId, setDraggingBoothId] = useState(null);
   const [uploadFiles, setUploadFiles] = useState({});
   const [boothLiveDrafts, setBoothLiveDrafts] = useState({});
+  const [staffDrafts, setStaffDrafts] = useState({});
 
   const sortedBooths = useMemo(
     () =>
@@ -99,13 +103,14 @@ export default function AdminPage() {
   );
 
   async function loadAll() {
-    const [boothData, eventData, noticeData, kpiData, logData] =
+    const [boothData, eventData, noticeData, kpiData, logData, staffData] =
       await Promise.all([
         fetchBooths(),
         fetchEvents(),
         fetchAdminNotices(),
         fetchAdminDashboardKpis(),
         fetchAuditLogs(),
+        fetchAdminStaff(),
       ]);
 
     setBooths(boothData);
@@ -113,6 +118,7 @@ export default function AdminPage() {
     setNotices(noticeData);
     setKpi(kpiData);
     setAuditLogs(logData);
+    setStaffMembers(staffData);
 
     const nextDrafts = {};
     boothData.forEach((booth) => {
@@ -123,6 +129,18 @@ export default function AdminPage() {
       };
     });
     setBoothLiveDrafts(nextDrafts);
+
+    const nextStaffDrafts = {};
+    staffData.forEach((staff) => {
+      nextStaffDrafts[staff.id] = {
+        team: staff.team ?? "",
+        status: staff.status ?? "STANDBY",
+        currentTask: staff.currentTask ?? "",
+        currentNote: staff.currentNote ?? "",
+        assignedBoothId: staff.assignedBoothId ?? "",
+      };
+    });
+    setStaffDrafts(nextStaffDrafts);
   }
 
   useEffect(() => {
@@ -137,7 +155,7 @@ export default function AdminPage() {
       saveLogin(data.token, data.username);
       setAdminName(data.username);
       setLoggedIn(true);
-      setMessage("관리자 로그인 성공");
+      setMessage("愿由ъ옄 濡쒓렇???깃났");
     } catch (error) {
       setMessage(error.message);
     }
@@ -147,13 +165,13 @@ export default function AdminPage() {
     clearLogin();
     setLoggedIn(false);
     setAdminName("");
-    setMessage("로그아웃되었습니다.");
+    setMessage("濡쒓렇?꾩썐?섏뿀?듬땲??");
   }
 
   async function handleQuickCongestionNotice() {
     try {
       await triggerCongestionReliefNotice();
-      setMessage("혼잡 완화 안내 공지를 즉시 발행했습니다.");
+      setMessage("?쇱옟 ?꾪솕 ?덈궡 怨듭?瑜?利됱떆 諛쒗뻾?덉뒿?덈떎.");
       await loadAll();
     } catch (error) {
       setMessage(error.message);
@@ -163,7 +181,7 @@ export default function AdminPage() {
   async function handleQuickEventStartNotice(eventId) {
     try {
       await triggerEventStartNotice(eventId);
-      setMessage("공연 시작 안내 공지를 발행했습니다.");
+      setMessage("怨듭뿰 ?쒖옉 ?덈궡 怨듭?瑜?諛쒗뻾?덉뒿?덈떎.");
       await loadAll();
     } catch (error) {
       setMessage(error.message);
@@ -182,7 +200,27 @@ export default function AdminPage() {
           draft.remainingStock === "" ? null : Number(draft.remainingStock),
         liveStatusMessage: draft.liveStatusMessage || null,
       });
-      setMessage("부스 실시간 운영 정보를 저장했습니다.");
+      setMessage("遺???ㅼ떆媛??댁쁺 ?뺣낫瑜???ν뻽?듬땲??");
+      await loadAll();
+    } catch (error) {
+      setMessage(error.message);
+    }
+  }
+
+  async function handleSaveStaff(staffId) {
+    const draft = staffDrafts[staffId] || {};
+    try {
+      await updateAdminStaff(staffId, {
+        team: draft.team || null,
+        status: draft.status || "STANDBY",
+        currentTask: draft.currentTask || null,
+        currentNote: draft.currentNote || null,
+        assignedBoothId:
+          draft.assignedBoothId === "" || draft.assignedBoothId == null
+            ? null
+            : Number(draft.assignedBoothId),
+      });
+      setMessage("?ㅽ깭??諛곗튂/?곹깭瑜???ν뻽?듬땲??");
       await loadAll();
     } catch (error) {
       setMessage(error.message);
@@ -208,10 +246,10 @@ export default function AdminPage() {
 
       if (editingBoothId) {
         await updateBooth(editingBoothId, payload);
-        setMessage("부스를 수정했습니다.");
+        setMessage("遺?ㅻ? ?섏젙?덉뒿?덈떎.");
       } else {
         await createBooth(payload);
-        setMessage("부스를 추가했습니다.");
+        setMessage("遺?ㅻ? 異붽??덉뒿?덈떎.");
       }
 
       setBoothForm(initialBooth);
@@ -234,10 +272,10 @@ export default function AdminPage() {
 
       if (editingEventId) {
         await updateEvent(editingEventId, payload);
-        setMessage("공연을 수정했습니다.");
+        setMessage("怨듭뿰???섏젙?덉뒿?덈떎.");
       } else {
         await createEvent(payload);
-        setMessage("공연을 추가했습니다.");
+        setMessage("怨듭뿰??異붽??덉뒿?덈떎.");
       }
 
       setEventForm(initialEvent);
@@ -254,10 +292,10 @@ export default function AdminPage() {
     try {
       if (editingNoticeId) {
         await updateNotice(editingNoticeId, noticeForm);
-        setMessage("공지를 수정했습니다.");
+        setMessage("怨듭?瑜??섏젙?덉뒿?덈떎.");
       } else {
         await createNotice(noticeForm);
-        setMessage("공지를 등록했습니다.");
+        setMessage("怨듭?瑜??깅줉?덉뒿?덈떎.");
       }
 
       setNoticeForm(initialNotice);
@@ -289,13 +327,13 @@ export default function AdminPage() {
   async function handleImageUpload(boothId) {
     const file = uploadFiles[boothId];
     if (!file) {
-      setMessage("업로드할 이미지를 먼저 선택해 주세요.");
+      setMessage("?낅줈?쒗븷 ?대?吏瑜?癒쇱? ?좏깮??二쇱꽭??");
       return;
     }
 
     try {
       await uploadBoothImage(boothId, file);
-      setMessage("부스 이미지를 업로드했습니다.");
+      setMessage("遺???대?吏瑜??낅줈?쒗뻽?듬땲??");
       await loadAll();
     } catch (error) {
       setMessage(error.message);
@@ -310,7 +348,7 @@ export default function AdminPage() {
 
     try {
       await reorderBooths(reordered.map((item) => item.id));
-      setMessage("부스 순서를 저장했습니다.");
+      setMessage("遺???쒖꽌瑜???ν뻽?듬땲??");
       await loadAll();
     } catch (error) {
       setMessage(error.message);
@@ -323,7 +361,7 @@ export default function AdminPage() {
     return (
       <section className="cyber-page pt-4 space-y-3">
         <h2 className="text-lg font-bold">관리자 로그인</h2>
-        <p className="text-xs text-slate-500">기본 계정: admin / admin1234</p>
+        <p className="text-xs text-slate-500">湲곕낯 怨꾩젙: admin / admin1234</p>
         <form
           className="space-y-2 rounded-xl border border-slate-200 bg-white p-3"
           onSubmit={handleLogin}
@@ -340,7 +378,7 @@ export default function AdminPage() {
           <input
             type="password"
             className="w-full border rounded px-2 py-2 text-sm"
-            placeholder="비밀번호"
+            placeholder="鍮꾨?踰덊샇"
             value={loginForm.password}
             onChange={(e) =>
               setLoginForm((prev) => ({ ...prev, password: e.target.value }))
@@ -348,7 +386,7 @@ export default function AdminPage() {
             required
           />
           <button className="w-full rounded bg-teal-700 text-white py-2 text-sm font-semibold">
-            로그인
+            濡쒓렇??
           </button>
         </form>
         {message && <p className="text-sm text-rose-600">{message}</p>}
@@ -359,32 +397,32 @@ export default function AdminPage() {
   return (
     <section className="cyber-page pt-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold">운영 관리자</h2>
+        <h2 className="text-lg font-bold">?댁쁺 愿由ъ옄</h2>
         <button
           type="button"
           onClick={handleLogout}
           className="text-xs rounded-lg border px-2 py-1"
         >
-          로그아웃
+          濡쒓렇?꾩썐
         </button>
       </div>
-      <p className="text-xs text-slate-500">로그인 사용자: {adminName}</p>
+      <p className="text-xs text-slate-500">濡쒓렇???ъ슜?? {adminName}</p>
       {message && <p className="text-sm text-teal-700">{message}</p>}
 
       <article className="sticky top-2 z-20 rounded-xl border border-slate-200 bg-white/95 backdrop-blur p-3 shadow-sm">
         <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">실시간 운영 KPI</h3>
+          <h3 className="font-semibold">?ㅼ떆媛??댁쁺 KPI</h3>
           <button
             type="button"
             onClick={loadAll}
             className="text-xs rounded border px-2 py-1"
           >
-            갱신
+            媛깆떊
           </button>
         </div>
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded-lg bg-teal-50 p-2">
-            <p className="text-[10px] text-teal-700">오늘 총 방문</p>
+            <p className="text-[10px] text-teal-700">?ㅻ뒛 珥?諛⑸Ц</p>
             <p className="text-lg font-bold text-teal-800">
               {kpi?.todayVisitorCount ?? 0}
             </p>
@@ -400,7 +438,7 @@ export default function AdminPage() {
             </p>
           </div>
           <div className="rounded-lg bg-indigo-50 p-2">
-            <p className="text-[10px] text-indigo-700">30분 내 공연</p>
+            <p className="text-[10px] text-indigo-700">30遺???怨듭뿰</p>
             <p className="text-xs font-bold text-indigo-800 line-clamp-1">
               {kpi?.upcomingWithin30Minutes?.title || "-"}
             </p>
@@ -413,13 +451,13 @@ export default function AdminPage() {
       </article>
 
       <article className="rounded-xl border border-rose-200 bg-rose-50 p-3 space-y-2">
-        <h3 className="font-semibold text-rose-800">운영자 즉시 조치 패널</h3>
+        <h3 className="font-semibold text-rose-800">?댁쁺??利됱떆 議곗튂 ?⑤꼸</h3>
         <button
           type="button"
           onClick={handleQuickCongestionNotice}
           className="w-full rounded-lg bg-rose-600 text-white py-2 text-sm font-semibold"
         >
-          혼잡 완화 안내 공지 자동 발행
+          ?쇱옟 ?꾪솕 ?덈궡 怨듭? ?먮룞 諛쒗뻾
         </button>
         <div className="space-y-1">
           {events.map((event) => (
@@ -431,7 +469,7 @@ export default function AdminPage() {
             >
               <span className="font-semibold">{event.title}</span>
               <span className="text-xs text-slate-500 ml-2">
-                공연 시작 안내 발행
+                怨듭뿰 ?쒖옉 ?덈궡 諛쒗뻾
               </span>
             </button>
           ))}
@@ -443,7 +481,7 @@ export default function AdminPage() {
         <form className="space-y-2" onSubmit={handleNoticeSubmit}>
           <input
             className="w-full border rounded px-2 py-2 text-sm"
-            placeholder="공지 제목"
+            placeholder="怨듭? ?쒕ぉ"
             value={noticeForm.title}
             onChange={(e) =>
               setNoticeForm((p) => ({ ...p, title: e.target.value }))
@@ -452,7 +490,7 @@ export default function AdminPage() {
           />
           <textarea
             className="w-full border rounded px-2 py-2 text-sm"
-            placeholder="공지 내용"
+            placeholder="怨듭? ?댁슜"
             rows={3}
             value={noticeForm.content}
             onChange={(e) =>
@@ -468,10 +506,10 @@ export default function AdminPage() {
                 setNoticeForm((p) => ({ ...p, category: e.target.value }))
               }
             >
-              <option>긴급</option>
+              <option>湲닿툒</option>
               <option>분실물</option>
-              <option>우천</option>
-              <option>일반</option>
+              <option>?곗쿇</option>
+              <option>?쇰컲</option>
             </select>
             <label className="border rounded px-2 py-2 text-sm flex items-center gap-2">
               <input
@@ -481,11 +519,11 @@ export default function AdminPage() {
                   setNoticeForm((p) => ({ ...p, active: e.target.checked }))
                 }
               />
-              홈 노출 활성화
+              ???몄텧 ?쒖꽦??
             </label>
           </div>
           <button className="w-full rounded bg-rose-600 text-white py-2 text-sm">
-            {editingNoticeId ? "공지 수정" : "공지 등록"}
+            {editingNoticeId ? "怨듭? ?섏젙" : "怨듭? ?깅줉"}
           </button>
         </form>
 
@@ -522,18 +560,18 @@ export default function AdminPage() {
                     });
                   }}
                 >
-                  수정
+                  ?섏젙
                 </button>
                 <button
                   type="button"
                   className="px-2 py-1 rounded bg-rose-100 text-rose-700 text-xs"
                   onClick={async () => {
-                    if (!confirm("이 공지를 삭제할까요?")) return;
+                    if (!confirm("??怨듭?瑜???젣?좉퉴??")) return;
                     await deleteNotice(notice.id);
                     await loadAll();
                   }}
                 >
-                  삭제
+                  ??젣
                 </button>
               </div>
             </div>
@@ -542,11 +580,11 @@ export default function AdminPage() {
       </article>
 
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-        <h3 className="font-semibold">부스 등록/수정</h3>
+        <h3 className="font-semibold">遺???깅줉/?섏젙</h3>
         <form className="space-y-2" onSubmit={handleBoothSubmit}>
           <input
             className="w-full border rounded px-2 py-2 text-sm"
-            placeholder="부스 이름"
+            placeholder="遺???대쫫"
             value={boothForm.name}
             onChange={(e) =>
               setBoothForm((p) => ({ ...p, name: e.target.value }))
@@ -556,7 +594,7 @@ export default function AdminPage() {
           <div className="grid grid-cols-2 gap-2">
             <input
               className="border rounded px-2 py-2 text-sm"
-              placeholder="위도"
+              placeholder="?꾨룄"
               value={boothForm.latitude}
               onChange={(e) =>
                 setBoothForm((p) => ({ ...p, latitude: e.target.value }))
@@ -565,7 +603,7 @@ export default function AdminPage() {
             />
             <input
               className="border rounded px-2 py-2 text-sm"
-              placeholder="경도"
+              placeholder="寃쎈룄"
               value={boothForm.longitude}
               onChange={(e) =>
                 setBoothForm((p) => ({ ...p, longitude: e.target.value }))
@@ -575,7 +613,7 @@ export default function AdminPage() {
           </div>
           <textarea
             className="w-full border rounded px-2 py-2 text-sm"
-            placeholder="설명"
+            placeholder="?ㅻ챸"
             value={boothForm.description}
             onChange={(e) =>
               setBoothForm((p) => ({ ...p, description: e.target.value }))
@@ -585,7 +623,7 @@ export default function AdminPage() {
           <div className="grid grid-cols-2 gap-2">
             <input
               className="border rounded px-2 py-2 text-sm"
-              placeholder="대기(분)"
+              placeholder="?湲?遺?"
               value={boothForm.estimatedWaitMinutes}
               onChange={(e) =>
                 setBoothForm((p) => ({
@@ -596,7 +634,7 @@ export default function AdminPage() {
             />
             <input
               className="border rounded px-2 py-2 text-sm"
-              placeholder="잔여 수량"
+              placeholder="?붿뿬 ?섎웾"
               value={boothForm.remainingStock}
               onChange={(e) =>
                 setBoothForm((p) => ({ ...p, remainingStock: e.target.value }))
@@ -605,7 +643,7 @@ export default function AdminPage() {
           </div>
           <input
             className="w-full border rounded px-2 py-2 text-sm"
-            placeholder="실시간 운영 메모"
+            placeholder="?ㅼ떆媛??댁쁺 硫붾え"
             value={boothForm.liveStatusMessage}
             onChange={(e) =>
               setBoothForm((p) => ({ ...p, liveStatusMessage: e.target.value }))
@@ -613,20 +651,20 @@ export default function AdminPage() {
           />
           <input
             className="w-full border rounded px-2 py-2 text-sm"
-            placeholder="이미지 URL(선택)"
+            placeholder="?대?吏 URL(?좏깮)"
             value={boothForm.imageUrl}
             onChange={(e) =>
               setBoothForm((p) => ({ ...p, imageUrl: e.target.value }))
             }
           />
           <button className="w-full rounded bg-teal-700 text-white py-2 text-sm">
-            {editingBoothId ? "부스 수정" : "부스 추가"}
+            {editingBoothId ? "遺???섏젙" : "遺??異붽?"}
           </button>
         </form>
 
         <div className="space-y-2">
           <p className="text-xs text-slate-500">
-            드래그 순서 저장 + 실시간 운영정보 즉시 입력
+            ?쒕옒洹??쒖꽌 ???+ ?ㅼ떆媛??댁쁺?뺣낫 利됱떆 ?낅젰
           </p>
           {sortedBooths.map((booth) => (
             <div
@@ -659,18 +697,18 @@ export default function AdminPage() {
                       });
                     }}
                   >
-                    수정
+                    ?섏젙
                   </button>
                   <button
                     type="button"
                     className="px-2 py-1 rounded bg-rose-100 text-rose-700"
                     onClick={async () => {
-                      if (!confirm("이 부스를 삭제할까요?")) return;
+                      if (!confirm("??遺?ㅻ? ??젣?좉퉴??")) return;
                       await deleteBooth(booth.id);
                       await loadAll();
                     }}
                   >
-                    삭제
+                    ??젣
                   </button>
                 </div>
               </div>
@@ -678,7 +716,7 @@ export default function AdminPage() {
               <div className="mt-2 grid grid-cols-3 gap-2">
                 <input
                   className="border rounded px-2 py-1 text-xs"
-                  placeholder="대기분"
+                  placeholder="?湲곕텇"
                   value={boothLiveDrafts[booth.id]?.estimatedWaitMinutes ?? ""}
                   onChange={(e) =>
                     setBoothLiveDrafts((p) => ({
@@ -692,7 +730,7 @@ export default function AdminPage() {
                 />
                 <input
                   className="border rounded px-2 py-1 text-xs"
-                  placeholder="잔여수량"
+                  placeholder="?붿뿬?섎웾"
                   value={boothLiveDrafts[booth.id]?.remainingStock ?? ""}
                   onChange={(e) =>
                     setBoothLiveDrafts((p) => ({
@@ -709,12 +747,12 @@ export default function AdminPage() {
                   className="rounded border py-1 text-xs font-semibold"
                   onClick={() => handleSaveBoothLiveStatus(booth.id)}
                 >
-                  실시간 저장
+                  ?ㅼ떆媛????
                 </button>
               </div>
               <input
                 className="mt-2 w-full border rounded px-2 py-1 text-xs"
-                placeholder="운영 메모"
+                placeholder="?댁쁺 硫붾え"
                 value={boothLiveDrafts[booth.id]?.liveStatusMessage ?? ""}
                 onChange={(e) =>
                   setBoothLiveDrafts((p) => ({
@@ -744,7 +782,7 @@ export default function AdminPage() {
                   onClick={() => handleImageUpload(booth.id)}
                   className="rounded border px-2 py-1 text-xs"
                 >
-                  이미지 업로드
+                  ?대?吏 ?낅줈??
                 </button>
               </div>
             </div>
@@ -753,11 +791,11 @@ export default function AdminPage() {
       </article>
 
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-        <h3 className="font-semibold">공연 등록/수정</h3>
+        <h3 className="font-semibold">怨듭뿰 ?깅줉/?섏젙</h3>
         <form className="space-y-2" onSubmit={handleEventSubmit}>
           <input
             className="w-full border rounded px-2 py-2 text-sm"
-            placeholder="공연 제목"
+            placeholder="怨듭뿰 ?쒕ぉ"
             value={eventForm.title}
             onChange={(e) =>
               setEventForm((p) => ({ ...p, title: e.target.value }))
@@ -785,7 +823,7 @@ export default function AdminPage() {
             />
           </div>
           <button className="w-full rounded bg-cyan-700 text-white py-2 text-sm">
-            {editingEventId ? "공연 수정" : "공연 추가"}
+            {editingEventId ? "怨듭뿰 ?섏젙" : "怨듭뿰 異붽?"}
           </button>
         </form>
 
@@ -800,7 +838,7 @@ export default function AdminPage() {
                     className="px-2 py-1 rounded bg-rose-50 text-rose-700"
                     onClick={() => handleQuickEventStartNotice(event.id)}
                   >
-                    시작안내
+                    ?쒖옉?덈궡
                   </button>
                   <button
                     type="button"
@@ -814,21 +852,120 @@ export default function AdminPage() {
                       });
                     }}
                   >
-                    수정
+                    ?섏젙
                   </button>
                   <button
                     type="button"
                     className="px-2 py-1 rounded bg-rose-100 text-rose-700"
                     onClick={async () => {
-                      if (!confirm("이 공연을 삭제할까요?")) return;
+                      if (!confirm("??怨듭뿰????젣?좉퉴??")) return;
                       await deleteEvent(event.id);
                       await loadAll();
                     }}
                   >
-                    삭제
+                    ??젣
                   </button>
                 </div>
               </div>
+            </div>
+          ))}
+        </div>
+      </article>
+
+            <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
+        <h3 className="font-semibold">스태프 배치 편집</h3>
+        <p className="text-xs text-slate-500">
+          팀/상태/담당 구역/업무를 수정하면 스태프 화면에 실시간 반영됩니다.
+        </p>
+        <div className="space-y-2 max-h-[34rem] overflow-auto pr-1">
+          {staffMembers.map((staff) => (
+            <div key={staff.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-800">
+                  {staff.name} ({staff.staffNo})
+                </p>
+                <span className="text-[11px] text-slate-500">{staff.statusLabel}</span>
+              </div>
+
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <input
+                  className="border rounded px-2 py-1 text-xs"
+                  placeholder="팀"
+                  value={staffDrafts[staff.id]?.team ?? ""}
+                  onChange={(e) =>
+                    setStaffDrafts((prev) => ({
+                      ...prev,
+                      [staff.id]: { ...prev[staff.id], team: e.target.value },
+                    }))
+                  }
+                />
+                <select
+                  className="border rounded px-2 py-1 text-xs"
+                  value={staffDrafts[staff.id]?.status ?? "STANDBY"}
+                  onChange={(e) =>
+                    setStaffDrafts((prev) => ({
+                      ...prev,
+                      [staff.id]: { ...prev[staff.id], status: e.target.value },
+                    }))
+                  }
+                >
+                  <option value="STANDBY">대기</option>
+                  <option value="MOVING">이동</option>
+                  <option value="ON_DUTY">업무중</option>
+                  <option value="URGENT">긴급</option>
+                </select>
+              </div>
+
+              <select
+                className="mt-2 w-full border rounded px-2 py-1 text-xs"
+                value={staffDrafts[staff.id]?.assignedBoothId ?? ""}
+                onChange={(e) =>
+                  setStaffDrafts((prev) => ({
+                    ...prev,
+                    [staff.id]: {
+                      ...prev[staff.id],
+                      assignedBoothId: e.target.value,
+                    },
+                  }))
+                }
+              >
+                <option value="">순환 구역(미지정)</option>
+                {sortedBooths.map((booth) => (
+                  <option key={`staff-booth-${staff.id}-${booth.id}`} value={booth.id}>
+                    #{booth.displayOrder} {booth.name}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                className="mt-2 w-full border rounded px-2 py-1 text-xs"
+                placeholder="현재 업무"
+                value={staffDrafts[staff.id]?.currentTask ?? ""}
+                onChange={(e) =>
+                  setStaffDrafts((prev) => ({
+                    ...prev,
+                    [staff.id]: { ...prev[staff.id], currentTask: e.target.value },
+                  }))
+                }
+              />
+              <input
+                className="mt-2 w-full border rounded px-2 py-1 text-xs"
+                placeholder="현장 메모"
+                value={staffDrafts[staff.id]?.currentNote ?? ""}
+                onChange={(e) =>
+                  setStaffDrafts((prev) => ({
+                    ...prev,
+                    [staff.id]: { ...prev[staff.id], currentNote: e.target.value },
+                  }))
+                }
+              />
+              <button
+                type="button"
+                onClick={() => handleSaveStaff(staff.id)}
+                className="mt-2 w-full rounded border py-1.5 text-xs font-semibold"
+              >
+                스태프 저장
+              </button>
             </div>
           ))}
         </div>
@@ -838,7 +975,7 @@ export default function AdminPage() {
         <h3 className="font-semibold">CSV 일괄 업로드</h3>
         <div className="grid grid-cols-2 gap-2">
           <div className="space-y-1">
-            <p className="text-xs text-slate-600">부스 CSV</p>
+            <p className="text-xs text-slate-600">遺??CSV</p>
             <input
               type="file"
               accept=".csv"
@@ -855,11 +992,11 @@ export default function AdminPage() {
               onClick={() => handleImport("booths")}
               className="w-full rounded border py-1.5 text-xs"
             >
-              부스 업로드
+              遺???낅줈??
             </button>
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-slate-600">공연 CSV</p>
+            <p className="text-xs text-slate-600">怨듭뿰 CSV</p>
             <input
               type="file"
               accept=".csv"
@@ -876,17 +1013,17 @@ export default function AdminPage() {
               onClick={() => handleImport("events")}
               className="w-full rounded border py-1.5 text-xs"
             >
-              공연 업로드
+              怨듭뿰 ?낅줈??
             </button>
           </div>
         </div>
       </article>
 
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-        <h3 className="font-semibold">최근 관리자 작업 이력</h3>
+        <h3 className="font-semibold">理쒓렐 愿由ъ옄 ?묒뾽 ?대젰</h3>
         <div className="space-y-2 max-h-72 overflow-auto pr-1">
           {auditLogs.length === 0 && (
-            <p className="text-sm text-slate-500">아직 기록이 없습니다.</p>
+            <p className="text-sm text-slate-500">?꾩쭅 湲곕줉???놁뒿?덈떎.</p>
           )}
           {auditLogs.map((log) => (
             <div
@@ -895,7 +1032,7 @@ export default function AdminPage() {
             >
               <div className="flex items-center justify-between">
                 <p className="text-xs font-bold text-slate-700">
-                  {log.adminUsername} · {log.action} · {log.targetType}
+                  {log.adminUsername} 쨌 {log.action} 쨌 {log.targetType}
                 </p>
                 <p className="text-[10px] text-slate-500">
                   {log.createdAt.replace("T", " ").slice(5, 16)}
@@ -909,3 +1046,4 @@ export default function AdminPage() {
     </section>
   );
 }
+

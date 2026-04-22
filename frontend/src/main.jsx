@@ -12,6 +12,7 @@ import BoothDetailPage from "./pages/BoothDetailPage";
 import AdminPage from "./pages/AdminPage";
 import OpsMasterPage from "./pages/OpsMasterPage";
 import OpsBoothPage from "./pages/OpsBoothPage";
+import StaffPage from "./pages/StaffPage";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 
@@ -37,6 +38,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="admin" element={<AdminPage />} />
           <Route path="ops/master" element={<OpsMasterPage />} />
           <Route path="ops/booth/:id" element={<OpsBoothPage />} />
+          <Route path="staff" element={<StaffPage />} />
           <Route path="booths/:id" element={<BoothDetailPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
