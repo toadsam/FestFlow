@@ -15,6 +15,8 @@ public class StreamService {
     private final List<SseEmitter> eventEmitters = new CopyOnWriteArrayList<>();
     private final List<SseEmitter> noticeEmitters = new CopyOnWriteArrayList<>();
     private final List<SseEmitter> boothEmitters = new CopyOnWriteArrayList<>();
+    private final List<SseEmitter> staffEmitters = new CopyOnWriteArrayList<>();
+    private final List<SseEmitter> lostItemEmitters = new CopyOnWriteArrayList<>();
 
     public SseEmitter subscribeCongestion() {
         return createEmitter(congestionEmitters);
@@ -32,6 +34,14 @@ public class StreamService {
         return createEmitter(boothEmitters);
     }
 
+    public SseEmitter subscribeStaff() {
+        return createEmitter(staffEmitters);
+    }
+
+    public SseEmitter subscribeLostItems() {
+        return createEmitter(lostItemEmitters);
+    }
+
     public void publishCongestion(Object payload) {
         send(congestionEmitters, "congestion", payload);
     }
@@ -46,6 +56,14 @@ public class StreamService {
 
     public void publishBooths(Object payload) {
         send(boothEmitters, "booths", payload);
+    }
+
+    public void publishStaff(Object payload) {
+        send(staffEmitters, "staff", payload);
+    }
+
+    public void publishLostItems(Object payload) {
+        send(lostItemEmitters, "lost-items", payload);
     }
 
     private SseEmitter createEmitter(List<SseEmitter> emitters) {

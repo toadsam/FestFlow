@@ -36,4 +36,14 @@ public class StreamController {
     public SseEmitter booths() {
         return streamService.subscribeBooths();
     }
+
+    @GetMapping(value = "/staff", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter staff() {
+        return streamService.subscribeStaff();
+    }
+
+    @GetMapping(value = "/lost-items", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter lostItems() {
+        return streamService.subscribeLostItems();
+    }
 }

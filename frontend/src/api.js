@@ -318,6 +318,30 @@ export function createBoothStream() {
   return new EventSource(`${API_BASE}/stream/booths`);
 }
 
+export async function fetchAdminStaff() {
+  const response = await fetch(`${API_BASE}/admin/staff`, {
+    headers: withAuth(),
+  });
+  return parseJson(response, "스태프 목록을 불러오지 못했습니다.");
+}
+
+export async function updateAdminStaff(id, payload) {
+  const response = await fetch(`${API_BASE}/admin/staff/${id}`, {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "스태프 정보 수정에 실패했습니다.");
+}
+
+export function createStaffStream() {
+  return new EventSource(`${API_BASE}/stream/staff`);
+}
+
+export function createLostItemStream() {
+  return new EventSource(`${API_BASE}/stream/lost-items`);
+}
+
 export function downloadBoothCsv() {
   window.open(`${API_BASE}/export/booths.csv`, "_blank", "noopener,noreferrer");
 }
@@ -626,5 +650,107 @@ export async function verifyReservationAuthCode(phoneNumber, code) {
     body: JSON.stringify({ phoneNumber, code }),
   });
   return parseJson(response, "?몄쬆踰덊샇 ?뺤씤???ㅽ뙣?덉뒿?덈떎.");
+}
+
+export async function loginStaff(staffNo, pin) {
+  const response = await fetch(`${API_BASE}/staff/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ staffNo, pin }),
+  });
+  return parseJson(response, "스태프 로그인에 실패했습니다.");
+}
+
+export async function logoutStaff(staffToken) {
+  const response = await fetch(`${API_BASE}/staff/auth/logout`, {
+    method: "POST",
+    headers: staffToken ? { "X-Staff-Token": staffToken } : undefined,
+  });
+  if (!response.ok) {
+    throw new Error("스태프 로그아웃에 실패했습니다.");
+  }
+}
+
+export async function fetchStaffBootstrap(staffToken) {
+  const response = await fetch(`${API_BASE}/staff/bootstrap`, {
+    headers: staffToken ? { "X-Staff-Token": staffToken } : undefined,
+  });
+  return parseJson(response, "스태프 대시보드를 불러오지 못했습니다.");
+}
+
+export async function updateMyStaffStatus(staffToken, payload) {
+  const response = await fetch(`${API_BASE}/staff/me/status`, {
+    method: "PUT",
+    headers: staffToken
+      ? { "Content-Type": "application/json", "X-Staff-Token": staffToken }
+      : { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "스태프 상태 업데이트에 실패했습니다.");
+}
+
+export async function fetchLostItems() {
+  const response = await fetch(`${API_BASE}/lost-items`);
+  return parseJson(response, "분실물 목록을 불러오지 못했습니다.");
+}
+
+export async function createLostItem(form, file, staffToken) {
+  const formData = new FormData();
+  formData.append("title", form.title || "");
+  formData.append("description", form.description || "");
+  formData.append("category", form.category || "기타");
+  formData.append("foundLocation", form.foundLocation || "");
+  formData.append("finderContact", form.finderContact || "");
+  if (file) {
+    formData.append("file", file);
+  }
+
+  const headers = {};
+  const adminToken = getAccessToken();
+  if (adminToken) {
+    headers.Authorization = `Bearer ${adminToken}`;
+  }
+  if (staffToken) {
+    headers["X-Staff-Token"] = staffToken;
+  }
+
+  const response = await fetch(`${API_BASE}/lost-items`, {
+    method: "POST",
+    headers,
+    body: formData,
+  });
+  return parseJson(response, "분실물 등록에 실패했습니다.");
+}
+
+export async function updateLostItemStatus(id, payload, staffToken) {
+  const headers = { "Content-Type": "application/json" };
+  const adminToken = getAccessToken();
+  if (adminToken) {
+    headers.Authorization = `Bearer ${adminToken}`;
+  }
+  if (staffToken) {
+    headers["X-Staff-Token"] = staffToken;
+  }
+
+  const response = await fetch(`${API_BASE}/lost-items/${id}/status`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "분실물 상태 변경에 실패했습니다.");
+}
+
+export async function translateText(payload) {
+  const response = await fetch(`${API_BASE}/translate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "실시간 번역에 실패했습니다.");
+}
+
+export async function fetchTranslateMetrics() {
+  const response = await fetch(`${API_BASE}/translate/metrics`);
+  return parseJson(response, "통역 지표를 불러오지 못했습니다.");
 }
 

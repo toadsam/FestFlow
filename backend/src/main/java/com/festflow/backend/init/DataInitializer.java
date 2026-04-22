@@ -4,10 +4,13 @@ import com.festflow.backend.entity.AdminUser;
 import com.festflow.backend.entity.Booth;
 import com.festflow.backend.entity.FestivalEvent;
 import com.festflow.backend.entity.Notice;
+import com.festflow.backend.entity.StaffMember;
+import com.festflow.backend.entity.StaffStatus;
 import com.festflow.backend.repository.AdminUserRepository;
 import com.festflow.backend.repository.BoothRepository;
 import com.festflow.backend.repository.EventRepository;
 import com.festflow.backend.repository.NoticeRepository;
+import com.festflow.backend.repository.StaffMemberRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
@@ -17,6 +20,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.ArrayList;
 
 @Configuration
 public class DataInitializer {
@@ -33,6 +37,7 @@ public class DataInitializer {
             EventRepository eventRepository,
             AdminUserRepository adminUserRepository,
             NoticeRepository noticeRepository,
+            StaffMemberRepository staffMemberRepository,
             PasswordEncoder passwordEncoder
     ) {
         return args -> {
@@ -131,6 +136,51 @@ public class DataInitializer {
                         "우천",
                         true
                 ));
+            }
+
+            if (staffMemberRepository.count() == 0) {
+                List<Booth> orderedBooths = boothRepository.findAll().stream()
+                        .sorted(Comparator.comparing(Booth::getDisplayOrder).thenComparing(Booth::getId))
+                        .toList();
+                List<String> teams = List.of("운영", "안내", "안전", "무대", "부스지원", "미디어");
+                List<String> tasks = List.of(
+                        "입구 동선 안내",
+                        "노천극장 인원 확인",
+                        "부스 대기열 정리",
+                        "분실물 대응",
+                        "행사장 순찰",
+                        "긴급 호출 대기",
+                        "Q&A 응대",
+                        "장비 점검"
+                );
+
+                List<StaffMember> seeds = new ArrayList<>();
+                for (int i = 0; i < 55; i++) {
+                    String staffNo = "S" + String.format("%03d", i + 1);
+                    String pin = String.valueOf(7001 + i);
+                    Booth booth = orderedBooths.isEmpty() ? null : orderedBooths.get(i % orderedBooths.size());
+                    StaffStatus status = switch (i % 10) {
+                        case 0 -> StaffStatus.URGENT;
+                        case 1, 2, 3 -> StaffStatus.MOVING;
+                        case 4, 5, 6, 7 -> StaffStatus.ON_DUTY;
+                        default -> StaffStatus.STANDBY;
+                    };
+
+                    seeds.add(new StaffMember(
+                            staffNo,
+                            passwordEncoder.encode(pin),
+                            "스태프 " + String.format("%02d", i + 1),
+                            teams.get(i % teams.size()),
+                            status,
+                            tasks.get(i % tasks.size()),
+                            "",
+                            booth != null ? booth.getId() : null,
+                            booth != null ? booth.getLatitude() : null,
+                            booth != null ? booth.getLongitude() : null,
+                            LocalDateTime.now().minusMinutes(i)
+                    ));
+                }
+                staffMemberRepository.saveAll(seeds);
             }
         };
     }
