@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { createLostItemStream, fetchLostItems } from "../api";
+import { IconBox, IconClock, IconSearch } from "../components/UxIcons";
 
 const STATUS_OPTIONS = [
   { value: "ALL", label: "전체" },
   { value: "REGISTERED", label: "보관 중" },
-  { value: "RETURNED", label: "수령 완료" },
+  { value: "RETURNED", label: "반환 완료" },
 ];
 
 export default function LostFoundPage() {
@@ -19,6 +20,7 @@ export default function LostFoundPage() {
     try {
       const data = await fetchLostItems();
       setItems(data || []);
+      setMessage("");
     } catch (error) {
       setMessage(error.message);
     } finally {
@@ -60,24 +62,30 @@ export default function LostFoundPage() {
   }, [items, query, statusFilter]);
 
   return (
-    <section className="cyber-page pt-4 pb-24 space-y-4">
-      <article className="rounded-2xl border border-cyan-300/60 bg-slate-950/80 p-4 text-cyan-50">
-        <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">
-          Lost & Found
-        </p>
-        <h2 className="mt-1 text-xl font-extrabold">분실물 센터</h2>
-        <p className="mt-1 text-sm text-cyan-100/85">
-          누구나 조회할 수 있고, 분실물 등록은 스태프 페이지에서 진행합니다.
-        </p>
+    <section className="cyber-page pt-4 pb-24 space-y-3 scan-enter">
+      <article className="rounded-2xl border border-cyan-300/65 bg-gradient-to-br from-[#05345f] via-[#0c5f93] to-[#18b8da] p-4 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.28)]">
+        <div className="flex items-start gap-2.5">
+          <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cyan-100/50 bg-cyan-500/25">
+            <IconBox className="h-5 w-5" />
+          </span>
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">Lost & Found</p>
+            <h2 className="mt-1 text-xl font-extrabold">분실물 센터</h2>
+            <p className="mt-1 text-xs text-cyan-100/90">접수된 물품 현황을 조회할 수 있습니다. 등록 및 상태 변경은 스태프 페이지에서 처리됩니다.</p>
+          </div>
+        </div>
       </article>
 
-      <article className="rounded-xl border border-cyan-200/70 bg-slate-950/75 p-3 space-y-3">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="분실물명, 위치, 설명으로 검색"
-          className="w-full rounded-lg border border-cyan-300/60 bg-slate-900/80 px-3 py-2 text-sm text-cyan-50 placeholder:text-cyan-200/55 outline-none focus:border-cyan-200"
-        />
+      <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3 space-y-3">
+        <div className="relative">
+          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-cyan-300/80" />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="분실물명, 위치, 설명으로 검색"
+            className="w-full rounded-lg border border-cyan-300/45 bg-slate-900/80 pl-9 pr-3 py-2 text-sm text-cyan-50 placeholder:text-cyan-200/55 outline-none"
+          />
+        </div>
 
         <div className="grid grid-cols-3 gap-2">
           {STATUS_OPTIONS.map((option) => {
@@ -87,10 +95,10 @@ export default function LostFoundPage() {
                 key={option.value}
                 type="button"
                 onClick={() => setStatusFilter(option.value)}
-                className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
+                className={`rounded-lg border px-2 py-2 text-xs font-semibold ${
                   active
-                    ? "border-cyan-200 bg-cyan-500 text-slate-950 shadow-[0_0_18px_rgba(34,211,238,0.45)]"
-                    : "border-cyan-700/70 bg-slate-900/60 text-cyan-100 hover:border-cyan-300"
+                    ? "border-cyan-200 bg-cyan-500 text-slate-950 shadow-[0_0_14px_rgba(34,211,238,0.38)]"
+                    : "border-cyan-700/70 bg-slate-900/60 text-cyan-100"
                 }`}
               >
                 {option.label}
@@ -99,73 +107,59 @@ export default function LostFoundPage() {
           })}
         </div>
 
-        <p className="text-xs text-cyan-100/80">
-          필터 결과 {filteredItems.length}건 / 전체 {items.length}건
-        </p>
+        <div className="grid grid-cols-2 gap-2 text-center">
+          <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
+            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconSearch className="h-3.5 w-3.5" />검색 결과</p>
+            <p className="text-base font-extrabold text-cyan-100">{filteredItems.length}건</p>
+          </div>
+          <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
+            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconBox className="h-3.5 w-3.5" />전체 물품</p>
+            <p className="text-base font-extrabold text-cyan-100">{items.length}건</p>
+          </div>
+        </div>
       </article>
 
-      <article className="rounded-xl border border-cyan-900/70 bg-slate-950/60 p-3 text-xs text-cyan-100/80">
-        분실물 등록과 상태 변경은 스태프 페이지에서만 가능합니다.
+      <article className="rounded-xl border border-cyan-900/70 bg-slate-950/60 p-3 text-xs text-cyan-100/80 inline-flex items-center gap-2">
+        <IconClock className="h-4 w-4 shrink-0" />
+        물품 등록/반환 처리는 현장 스태프가 수행합니다. 본 화면은 조회 전용입니다.
       </article>
 
       {message && (
-        <p className="rounded-lg border border-cyan-200 bg-cyan-50 px-3 py-2 text-xs text-cyan-800">
-          {message}
-        </p>
+        <p className="rounded-lg border border-cyan-300/60 bg-cyan-500/15 px-3 py-2 text-xs text-cyan-100">{message}</p>
       )}
 
       {loading ? (
-        <p className="text-sm text-slate-400">분실물 목록을 불러오는 중...</p>
+        <p className="text-sm text-cyan-200/80">분실물 목록을 불러오는 중...</p>
       ) : (
         <div className="space-y-2">
           {filteredItems.map((item) => (
-            <article
-              key={item.id}
-              className="rounded-xl border border-slate-200 bg-white p-3"
-            >
+            <article key={item.id} className="rounded-xl border border-cyan-300/35 bg-slate-950/78 p-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-sm font-bold text-slate-800">{item.title}</p>
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    {item.category} · {item.foundLocation}
-                  </p>
+                  <p className="text-sm font-bold text-cyan-100">{item.title}</p>
+                  <p className="mt-0.5 text-xs text-cyan-200/80">{item.category} · {item.foundLocation}</p>
                 </div>
                 <span
                   className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                     item.status === "RETURNED"
-                      ? "bg-slate-100 text-slate-600"
-                      : "bg-emerald-100 text-emerald-700"
+                      ? "bg-slate-200 text-slate-700"
+                      : "bg-emerald-200 text-emerald-900"
                   }`}
                 >
                   {item.statusLabel}
                 </span>
               </div>
               {item.imageUrl && (
-                <div className="mt-2 overflow-hidden rounded border border-slate-200">
-                  <img
-                    src={item.imageUrl}
-                    alt={`${item.title} 사진`}
-                    className="h-40 w-full object-cover"
-                  />
+                <div className="mt-2 overflow-hidden rounded border border-cyan-300/30">
+                  <img src={item.imageUrl} alt={`${item.title} 사진`} className="h-40 w-full object-cover" />
                 </div>
               )}
-              <p className="mt-2 text-sm text-slate-700">{item.description}</p>
-              {item.finderContact && (
-                <p className="mt-1 text-xs text-slate-600">
-                  연락처: {item.finderContact}
-                </p>
-              )}
-              <p className="mt-1 text-[11px] text-slate-500">
-                등록: {item.createdAt?.replace("T", " ").slice(5, 16)} · 등록자{" "}
-                {item.reporterType} {item.reporterRef}
-              </p>
+              <p className="mt-2 text-sm text-cyan-100/90">{item.description}</p>
+              {item.finderContact && <p className="mt-1 text-xs text-cyan-200/80">연락처: {item.finderContact}</p>}
+              <p className="mt-1 text-[11px] text-cyan-200/70">등록: {item.createdAt?.replace("T", " ").slice(5, 16)} · 접수자: {item.reporterType} {item.reporterRef}</p>
             </article>
           ))}
-          {filteredItems.length === 0 && (
-            <p className="text-sm text-slate-400">
-              조건에 맞는 분실물이 없습니다.
-            </p>
-          )}
+          {filteredItems.length === 0 && <p className="text-sm text-cyan-200/80">조건에 맞는 분실물이 없습니다.</p>}
         </div>
       )}
     </section>
