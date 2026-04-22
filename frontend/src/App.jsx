@@ -7,6 +7,7 @@ const allTabs = [
   { to: "/events", label: "Events", icon: "E" },
   { to: "/stage-map", label: "Stage", icon: "S" },
   { to: "/analytics", label: "Data", icon: "D" },
+  { to: "/lost-found", label: "Lost", icon: "L" },
   { to: "/staff", label: "Staff", icon: "T" },
   { to: "/chat", label: "Chat", icon: "C" },
   { to: "/ops/master", label: "Ops", icon: "O" },

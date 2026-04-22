@@ -13,6 +13,7 @@ import AdminPage from "./pages/AdminPage";
 import OpsMasterPage from "./pages/OpsMasterPage";
 import OpsBoothPage from "./pages/OpsBoothPage";
 import StaffPage from "./pages/StaffPage";
+import LostFoundPage from "./pages/LostFoundPage";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 
@@ -35,6 +36,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="analytics" element={<AnalyticsPage />} />
           <Route path="stage-map" element={<StageMapPage />} />
           <Route path="chat" element={<ChatPage />} />
+          <Route path="lost-found" element={<LostFoundPage />} />
           <Route path="admin" element={<AdminPage />} />
           <Route path="ops/master" element={<OpsMasterPage />} />
           <Route path="ops/booth/:id" element={<OpsBoothPage />} />

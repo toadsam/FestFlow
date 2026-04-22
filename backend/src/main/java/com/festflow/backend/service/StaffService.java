@@ -136,6 +136,11 @@ public class StaffService {
         staffSessionRepository.findByToken(staffToken).ifPresent(staffSessionRepository::delete);
     }
 
+    @Transactional
+    public StaffMemberResponseDto authenticateByToken(String staffToken) {
+        return toDto(requireStaffByToken(staffToken));
+    }
+
     private StaffMember requireStaffByToken(String staffToken) {
         if (staffToken == null || staffToken.isBlank()) {
             throw new ResponseStatusException(UNAUTHORIZED, "Staff token is required.");
@@ -210,4 +215,3 @@ public class StaffService {
         };
     }
 }
-
