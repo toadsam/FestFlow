@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+﻿import { useEffect, useMemo, useState } from "react";
 import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
 import {
   createLostItem,
@@ -37,20 +37,14 @@ const STATUS_META = {
 
 const QUICK_TASKS = [
   "입구 동선 안내",
-  "부스 대기열 정리",
+  "대기열 정리",
   "현장 순찰",
   "분실물 대응",
-  "무대 근처 안전 관리",
+  "무대 안전 관리",
   "긴급 호출 대기",
 ];
 
-const LOST_ITEM_CATEGORIES = [
-  "전자기기",
-  "지갑/카드",
-  "의류/잡화",
-  "학생증",
-  "기타",
-];
+const LOST_ITEM_CATEGORIES = ["전자기기", "지갑/카드", "의류/잡화", "학생증", "기타"];
 
 const LOST_ITEM_INITIAL_FORM = {
   title: "",
@@ -79,22 +73,31 @@ export default function StaffPage() {
   const [staffNoInput, setStaffNoInput] = useState("");
   const [pinInput, setPinInput] = useState("");
   const [loginError, setLoginError] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [staffToken, setStaffToken] = useState(getSavedToken());
+
   const [me, setMe] = useState(null);
   const [staffList, setStaffList] = useState([]);
   const [booths, setBooths] = useState([]);
   const [notices, setNotices] = useState([]);
-  const [query, setQuery] = useState("");
-  const [teamFilter, setTeamFilter] = useState(ALL_TEAM);
-  const [statusFilter, setStatusFilter] = useState(ALL_STATUS);
+
   const [taskDraft, setTaskDraft] = useState("");
   const [noteDraft, setNoteDraft] = useState("");
+
   const [lostItemForm, setLostItemForm] = useState(LOST_ITEM_INITIAL_FORM);
   const [lostItemFile, setLostItemFile] = useState(null);
   const [lostItemSaving, setLostItemSaving] = useState(false);
   const [lostItemMessage, setLostItemMessage] = useState("");
+
+  const [showLostForm, setShowLostForm] = useState(false);
+  const [showTeamList, setShowTeamList] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+
+  const [query, setQuery] = useState("");
+  const [teamFilter, setTeamFilter] = useState(ALL_TEAM);
+  const [statusFilter, setStatusFilter] = useState(ALL_STATUS);
 
   useEffect(() => {
     if (!staffToken) {
@@ -104,6 +107,7 @@ export default function StaffPage() {
 
     let mounted = true;
     setLoading(true);
+
     fetchStaffBootstrap(staffToken)
       .then((data) => {
         if (!mounted) return;
@@ -135,17 +139,17 @@ export default function StaffPage() {
     stream.addEventListener("staff", (event) => {
       try {
         const next = JSON.parse(event.data);
-        setStaffList(Array.isArray(next) ? next : []);
+        const safe = Array.isArray(next) ? next : [];
+        setStaffList(safe);
         setMe((prev) => {
           if (!prev) return prev;
-          return (Array.isArray(next) ? next : []).find(
-            (item) => item.staffNo === prev.staffNo,
-          ) || prev;
+          return safe.find((item) => item.staffNo === prev.staffNo) || prev;
         });
       } catch {
-        // ignore parse errors
+        // ignore stream parse errors
       }
     });
+
     return () => stream.close();
   }, [staffToken]);
 
@@ -157,13 +161,10 @@ export default function StaffPage() {
     return (staffList || []).map((staff, index) => {
       const booth = staff.assignedBoothId ? boothMap.get(staff.assignedBoothId) : null;
       const latitude =
-        staff.latitude ??
-        booth?.latitude ??
-        AJOU_CENTER.latitude + ((index % 11) - 5) * 0.0002;
+        staff.latitude ?? booth?.latitude ?? AJOU_CENTER.latitude + ((index % 11) - 5) * 0.0002;
       const longitude =
-        staff.longitude ??
-        booth?.longitude ??
-        AJOU_CENTER.longitude + ((index % 9) - 4) * 0.0002;
+        staff.longitude ?? booth?.longitude ?? AJOU_CENTER.longitude + ((index % 9) - 4) * 0.0002;
+
       return {
         ...staff,
         latitude,
@@ -201,22 +202,11 @@ export default function StaffPage() {
     return base;
   }, [enrichedStaff]);
 
-  const zoneSummary = useMemo(() => {
-    const map = new Map();
-    for (const item of enrichedStaff) {
-      const key = item.zoneName || "순환 구역";
-      map.set(key, (map.get(key) || 0) + 1);
-    }
-    return Array.from(map.entries())
-      .map(([zone, count]) => ({ zone, count }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 6);
-  }, [enrichedStaff]);
-
   async function handleLogin(event) {
     event.preventDefault();
     setLoginError("");
     setLoading(true);
+
     try {
       const data = await loginStaff(staffNoInput.trim().toUpperCase(), pinInput.trim());
       setSavedToken(data.staffToken);
@@ -243,6 +233,12 @@ export default function StaffPage() {
       setNotices([]);
       setTaskDraft("");
       setNoteDraft("");
+      setLostItemForm(LOST_ITEM_INITIAL_FORM);
+      setLostItemFile(null);
+      setLostItemMessage("");
+      setShowLostForm(false);
+      setShowTeamList(false);
+      setShowMap(false);
     }
   }
 
@@ -252,6 +248,7 @@ export default function StaffPage() {
     setSaving(true);
     let latitude = null;
     let longitude = null;
+
     if (navigator.geolocation) {
       try {
         const position = await new Promise((resolve, reject) => {
@@ -264,7 +261,7 @@ export default function StaffPage() {
         latitude = position.coords.latitude;
         longitude = position.coords.longitude;
       } catch {
-        // 위치 실패 시 상태/업무 업데이트는 계속 진행
+        // continue without location
       }
     }
 
@@ -276,6 +273,7 @@ export default function StaffPage() {
         latitude,
         longitude,
       });
+
       setMe(updatedMe);
       setStaffList((prev) =>
         prev.map((item) => (item.staffNo === updatedMe.staffNo ? updatedMe : item)),
@@ -307,15 +305,10 @@ export default function StaffPage() {
     return (
       <section className="cyber-page pt-4 pb-12">
         <article className="mx-auto max-w-md rounded-2xl border border-cyan-300/60 bg-slate-950/80 p-5 text-cyan-50 shadow-[0_0_32px_rgba(34,211,238,0.28)]">
-          <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">
-            Staff Secure Access
-          </p>
+          <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">Staff Secure Access</p>
           <h2 className="mt-2 text-xl font-extrabold">스태프 전용 관제 페이지</h2>
           <p className="mt-1 text-sm text-cyan-100/85">
             배정받은 <span className="font-bold">스태프 번호 + PIN</span>으로 로그인하세요.
-          </p>
-          <p className="mt-1 text-[11px] text-cyan-200/80">
-            예시: S001 / 7001, S055 / 7055
           </p>
 
           <form onSubmit={handleLogin} className="mt-4 space-y-3">
@@ -363,12 +356,10 @@ export default function StaffPage() {
   return (
     <section className="cyber-page pt-4 pb-24 space-y-4">
       <article className="rounded-2xl border border-cyan-300/60 bg-slate-950/80 p-4 text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.2)]">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">
-              Staff Ops Dashboard
-            </p>
-            <h2 className="mt-1 text-lg font-extrabold">스태프 운영 현황판</h2>
+            <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">Staff Field Mode</p>
+            <h2 className="mt-1 text-lg font-extrabold">현장 스태프 빠른 화면</h2>
             <p className="mt-1 text-xs text-cyan-100/85">
               {me?.name} ({me?.staffNo}) · {me?.team}
             </p>
@@ -383,52 +374,40 @@ export default function StaffPage() {
         </div>
       </article>
 
-      <article className="rounded-xl border border-amber-300/60 bg-amber-50/95 p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-bold text-amber-900">중요 공지</p>
-          <span className="text-xs text-amber-700">{notices.length}건</span>
-        </div>
-        <div className="mt-2 space-y-2">
-          {(notices || []).slice(0, 4).map((notice) => (
-            <div key={notice.id} className="rounded-md border border-amber-300 bg-white px-2.5 py-2">
-              <p className="text-xs font-bold text-amber-900">
-                [{notice.category}] {notice.title}
-              </p>
-              <p className="mt-1 text-xs text-amber-800">{notice.content}</p>
-            </div>
-          ))}
-          {notices.length === 0 && (
-            <p className="text-xs text-amber-700">현재 활성화된 공지가 없습니다.</p>
-          )}
-        </div>
+      <article className="rounded-xl border border-rose-300/70 bg-rose-50 p-3 space-y-2">
+        <button
+          type="button"
+          onClick={() => {
+            if (me) {
+              setMe({ ...me, status: "URGENT" });
+            }
+            updateMyRuntime("URGENT");
+          }}
+          className="w-full rounded-xl bg-rose-600 py-3 text-sm font-bold text-white shadow-[0_0_14px_rgba(225,29,72,0.35)]"
+        >
+          긴급 호출 / 지원 요청
+        </button>
+        <p className="text-[11px] text-rose-800">긴급 상태로 즉시 전환하고 위치/업무 상태를 함께 전송합니다.</p>
       </article>
 
-      <div className="grid grid-cols-2 gap-2">
-        {Object.keys(STATUS_META).map((status) => (
-          <article key={status} className="rounded-xl border border-slate-200 bg-white p-3">
-            <p className="text-xs text-slate-500">{STATUS_META[status].label}</p>
-            <p className="mt-1 text-2xl font-extrabold text-slate-800">{statusSummary[status] || 0}</p>
-          </article>
-        ))}
-      </div>
-
       <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
-        <p className="text-sm font-semibold text-slate-800">내 상태 업데이트</p>
+        <p className="text-sm font-semibold text-slate-800">내 상태</p>
         <div className="grid grid-cols-2 gap-2">
           {Object.keys(STATUS_META).map((status) => (
             <button
               key={status}
               type="button"
+              aria-pressed={me?.status === status}
               onClick={() => {
                 if (me) {
                   setMe({ ...me, status });
                 }
                 updateMyRuntime(status);
               }}
-              className={`rounded-lg px-3 py-2 text-xs font-semibold ${
+              className={`rounded-xl px-3 py-3 text-sm font-bold transition ${
                 me?.status === status
-                  ? "bg-cyan-600 text-white"
-                  : "border border-slate-300 text-slate-700"
+                  ? "bg-cyan-600 text-white shadow-[0_0_14px_rgba(8,145,178,0.35)]"
+                  : "border border-slate-300 bg-slate-50 text-slate-700"
               }`}
             >
               {STATUS_META[status].label}
@@ -436,7 +415,7 @@ export default function StaffPage() {
           ))}
         </div>
 
-        <div className="flex gap-2 overflow-x-auto pb-1">
+        <div className="mt-1 flex gap-1.5 overflow-x-auto pb-1">
           {QUICK_TASKS.map((task) => (
             <button
               key={task}
@@ -466,88 +445,104 @@ export default function StaffPage() {
           type="button"
           onClick={() => updateMyRuntime(me?.status)}
           disabled={saving}
-          className="w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-semibold text-white disabled:opacity-60"
+          className="w-full rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
-          {saving ? "저장 중..." : "내 상태 저장"}
+          {saving ? "저장 중..." : "내 상태/업무 저장"}
         </button>
       </article>
 
+      <article className="rounded-xl border border-amber-300/60 bg-amber-50/95 p-3">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold text-amber-900">중요 공지</p>
+          <span className="text-xs text-amber-700">{notices.length}건</span>
+        </div>
+        <div className="mt-2 space-y-2">
+          {(notices || []).slice(0, 2).map((notice) => (
+            <div key={notice.id} className="rounded-md border border-amber-300 bg-white px-2.5 py-2">
+              <p className="text-xs font-bold text-amber-900">[{notice.category}] {notice.title}</p>
+              <p className="mt-1 text-xs text-amber-800">{notice.content}</p>
+            </div>
+          ))}
+          {notices.length === 0 && <p className="text-xs text-amber-700">현재 활성 공지가 없습니다.</p>}
+        </div>
+      </article>
+
       <article className="rounded-xl border border-emerald-300/60 bg-emerald-50 p-3 space-y-2">
-        <p className="text-sm font-bold text-emerald-900">분실물 등록</p>
-        <form className="space-y-2" onSubmit={handleLostItemSubmit}>
-          <input
-            value={lostItemForm.title}
-            onChange={(e) =>
-              setLostItemForm((prev) => ({ ...prev, title: e.target.value }))
-            }
-            placeholder="분실물명"
-            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
-            required
-          />
-          <textarea
-            value={lostItemForm.description}
-            onChange={(e) =>
-              setLostItemForm((prev) => ({ ...prev, description: e.target.value }))
-            }
-            placeholder="상세 설명"
-            rows={2}
-            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
-            required
-          />
-          <input
-            value={lostItemForm.foundLocation}
-            onChange={(e) =>
-              setLostItemForm((prev) => ({ ...prev, foundLocation: e.target.value }))
-            }
-            placeholder="발견 위치"
-            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
-            required
-          />
+        <button
+          type="button"
+          aria-pressed={showLostForm}
+          onClick={() => setShowLostForm((prev) => !prev)}
+          className="w-full rounded-lg border border-emerald-400 bg-white px-3 py-2 text-sm font-bold text-emerald-800"
+        >
+          {showLostForm ? "분실물 등록 닫기" : "분실물 등록 열기"}
+        </button>
 
-          <div className="grid grid-cols-3 gap-2">
-            {LOST_ITEM_CATEGORIES.map((category) => {
-              const active = lostItemForm.category === category;
-              return (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() =>
-                    setLostItemForm((prev) => ({ ...prev, category }))
-                  }
-                  className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
-                    active
-                      ? "border-emerald-500 bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]"
-                      : "border-emerald-200 bg-white text-emerald-900 hover:border-emerald-400"
-                  }`}
-                >
-                  {category}
-                </button>
-              );
-            })}
-          </div>
+        {showLostForm && (
+          <form className="space-y-2" onSubmit={handleLostItemSubmit}>
+            <input
+              value={lostItemForm.title}
+              onChange={(e) => setLostItemForm((prev) => ({ ...prev, title: e.target.value }))}
+              placeholder="분실물명"
+              className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+              required
+            />
+            <textarea
+              value={lostItemForm.description}
+              onChange={(e) => setLostItemForm((prev) => ({ ...prev, description: e.target.value }))}
+              placeholder="상세 설명"
+              rows={2}
+              className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+              required
+            />
+            <input
+              value={lostItemForm.foundLocation}
+              onChange={(e) => setLostItemForm((prev) => ({ ...prev, foundLocation: e.target.value }))}
+              placeholder="발견 위치"
+              className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+              required
+            />
+            <div className="grid grid-cols-3 gap-2">
+              {LOST_ITEM_CATEGORIES.map((category) => {
+                const active = lostItemForm.category === category;
+                return (
+                  <button
+                    key={category}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setLostItemForm((prev) => ({ ...prev, category }))}
+                    className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
+                      active
+                        ? "border-emerald-500 bg-emerald-600 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]"
+                        : "border-emerald-200 bg-white text-emerald-900 hover:border-emerald-400"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                );
+              })}
+            </div>
+            <input
+              value={lostItemForm.finderContact}
+              onChange={(e) => setLostItemForm((prev) => ({ ...prev, finderContact: e.target.value }))}
+              placeholder="연락처(선택)"
+              className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
+            />
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setLostItemFile(e.target.files?.[0] || null)}
+              className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs"
+            />
+            <button
+              type="submit"
+              disabled={lostItemSaving}
+              className="w-full rounded-lg bg-emerald-700 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {lostItemSaving ? "등록 중..." : "분실물 등록"}
+            </button>
+          </form>
+        )}
 
-          <input
-            value={lostItemForm.finderContact}
-            onChange={(e) =>
-              setLostItemForm((prev) => ({ ...prev, finderContact: e.target.value }))
-            }
-            placeholder="연락처(선택)"
-            className="w-full rounded-lg border border-emerald-200 px-3 py-2 text-sm"
-          />
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setLostItemFile(e.target.files?.[0] || null)}
-            className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-xs"
-          />
-          <button
-            type="submit"
-            disabled={lostItemSaving}
-            className="w-full rounded-lg bg-emerald-700 py-2 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {lostItemSaving ? "등록 중..." : "분실물 등록"}
-          </button>
-        </form>
         {lostItemMessage && (
           <p className="rounded-md border border-emerald-200 bg-white px-2 py-1.5 text-xs text-emerald-800">
             {lostItemMessage}
@@ -556,83 +551,83 @@ export default function StaffPage() {
       </article>
 
       <article className="rounded-xl border border-slate-200 bg-white p-3">
-        <p className="text-sm font-semibold text-slate-800">구역별 인원 분포</p>
-        <div className="mt-2 space-y-2">
-          {zoneSummary.map((item) => (
-            <div key={item.zone} className="flex items-center gap-2">
-              <div className="w-24 truncate text-xs text-slate-600">{item.zone}</div>
-              <div className="h-2 flex-1 overflow-hidden rounded bg-slate-100">
-                <div
-                  className="h-full rounded bg-cyan-500"
-                  style={{ width: `${Math.round((item.count / Math.max(1, enrichedStaff.length)) * 100)}%` }}
-                />
-              </div>
-              <div className="w-7 text-right text-xs font-semibold text-slate-700">{item.count}</div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            aria-pressed={showTeamList}
+            onClick={() => setShowTeamList((prev) => !prev)}
+            className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700"
+          >
+            {showTeamList ? "팀 현황 닫기" : "팀 현황 보기"}
+          </button>
+          <button
+            type="button"
+            aria-pressed={showMap}
+            onClick={() => setShowMap((prev) => !prev)}
+            className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700"
+          >
+            {showMap ? "지도 닫기" : "지도 보기"}
+          </button>
+        </div>
+
+        <div className="mt-2 grid grid-cols-4 gap-2">
+          {Object.keys(STATUS_META).map((status) => (
+            <div key={status} className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-center">
+              <p className="text-[11px] text-slate-500">{STATUS_META[status].label}</p>
+              <p className="mt-0.5 text-sm font-extrabold text-slate-800">{statusSummary[status] || 0}</p>
             </div>
           ))}
         </div>
       </article>
 
-      <article className="rounded-xl border border-slate-200 bg-white p-3">
-        <p className="text-sm font-semibold text-slate-800">스태프 위치 맵</p>
-        <div className="mt-2 overflow-hidden rounded-lg border border-slate-200">
-          <MapContainer
-            center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]}
-            zoom={17}
-            maxZoom={21}
-            className="h-72 w-full"
-          >
-            <TileLayer
-              attribution="&copy; OpenStreetMap 기여자"
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            />
-            {filteredStaff.map((item) => (
-              <CircleMarker
-                key={item.staffNo}
-                center={[item.latitude, item.longitude]}
-                radius={7}
-                pathOptions={{
-                  color: "#ffffff",
-                  weight: 1.5,
-                  fillColor: STATUS_META[item.status]?.map || "#64748b",
-                  fillOpacity: 0.9,
-                }}
-              >
-                <Popup>
-                  <p className="text-xs font-bold">
-                    {item.name} ({item.staffNo})
-                  </p>
-                  <p className="text-xs mt-1">팀: {item.team}</p>
-                  <p className="text-xs">상태: {item.statusLabel || STATUS_META[item.status]?.label}</p>
-                  <p className="text-xs">업무: {item.currentTask || "-"}</p>
-                  <p className="text-xs">위치: {item.zoneName}</p>
-                </Popup>
-              </CircleMarker>
-            ))}
-          </MapContainer>
-        </div>
-      </article>
-
-      <article className="rounded-xl border border-slate-200 bg-white p-3">
-        <div className="flex flex-wrap gap-2">
+      {showTeamList && (
+        <article className="rounded-xl border border-slate-200 bg-white p-3">
           <input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="이름/번호/구역/업무 검색"
-            className="flex-1 min-w-[170px] rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
           />
-        </div>
 
-        <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
-          {[{ value: ALL_TEAM, label: "전체 팀" }, ...teamOptions.map((team) => ({ value: team, label: team }))].map(
-            (option) => {
-              const active = teamFilter === option.value;
+          <div className="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+            {[{ value: ALL_TEAM, label: "전체 팀" }, ...teamOptions.map((team) => ({ value: team, label: team }))].map(
+              (option) => {
+                const active = teamFilter === option.value;
+                return (
+                  <button
+                    key={`team-filter-${option.value}`}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setTeamFilter(option.value)}
+                    className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                      active
+                        ? "border-cyan-500 bg-cyan-600 text-white shadow-[0_0_12px_rgba(8,145,178,0.4)]"
+                        : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              },
+            )}
+          </div>
+
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {[
+              { value: ALL_STATUS, label: "전체 상태" },
+              ...Object.keys(STATUS_META).map((status) => ({
+                value: status,
+                label: STATUS_META[status].label,
+              })),
+            ].map((option) => {
+              const active = statusFilter === option.value;
               return (
                 <button
-                  key={`team-filter-${option.value}`}
+                  key={`status-filter-${option.value}`}
                   type="button"
-                  onClick={() => setTeamFilter(option.value)}
-                  className={`shrink-0 rounded-full border px-3 py-1.5 text-[11px] font-semibold transition ${
+                  aria-pressed={active}
+                  onClick={() => setStatusFilter(option.value)}
+                  className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
                     active
                       ? "border-cyan-500 bg-cyan-600 text-white shadow-[0_0_12px_rgba(8,145,178,0.4)]"
                       : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300"
@@ -641,77 +636,86 @@ export default function StaffPage() {
                   {option.label}
                 </button>
               );
-            },
-          )}
-        </div>
+            })}
+          </div>
 
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          {[
-            { value: ALL_STATUS, label: "전체 상태" },
-            ...Object.keys(STATUS_META).map((status) => ({
-              value: status,
-              label: STATUS_META[status].label,
-            })),
-          ].map((option) => {
-            const active = statusFilter === option.value;
-            return (
-              <button
-                key={`status-filter-${option.value}`}
-                type="button"
-                onClick={() => setStatusFilter(option.value)}
-                className={`rounded-lg border px-2 py-2 text-xs font-semibold transition ${
-                  active
-                    ? "border-cyan-500 bg-cyan-600 text-white shadow-[0_0_12px_rgba(8,145,178,0.4)]"
-                    : "border-slate-300 bg-white text-slate-700 hover:border-cyan-300"
+          <p className="mt-2 text-xs text-slate-500">필터 결과 {filteredStaff.length}명 / 전체 {enrichedStaff.length}명</p>
+
+          <div className="mt-2 grid gap-2 md:grid-cols-2">
+            {filteredStaff.map((item) => (
+              <div
+                key={`staff-card-${item.staffNo}`}
+                className={`rounded-lg border p-2.5 ${
+                  item.staffNo === me?.staffNo ? "border-cyan-400 bg-cyan-50" : "border-slate-200 bg-slate-50"
                 }`}
               >
-                {option.label}
-              </button>
-            );
-          })}
-        </div>
-
-        <p className="mt-2 text-xs text-slate-500">
-          총 {filteredStaff.length}명 표시 / 전체 {enrichedStaff.length}명
-        </p>
-
-        <div className="mt-2 grid gap-2 md:grid-cols-2">
-          {filteredStaff.map((item) => (
-            <div
-              key={`staff-card-${item.staffNo}`}
-              className={`rounded-lg border p-2.5 ${
-                item.staffNo === me?.staffNo
-                  ? "border-cyan-400 bg-cyan-50"
-                  : "border-slate-200 bg-slate-50"
-              }`}
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-bold text-slate-800">
-                    {item.name} <span className="text-xs text-slate-500">({item.staffNo})</span>
-                  </p>
-                  <p className="text-xs text-slate-600 mt-0.5">{item.team}</p>
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">
+                      {item.name} <span className="text-xs text-slate-500">({item.staffNo})</span>
+                    </p>
+                    <p className="text-xs text-slate-600 mt-0.5">{item.team}</p>
+                  </div>
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                      STATUS_META[item.status]?.chip || "bg-slate-100 text-slate-700 border-slate-200"
+                    }`}
+                  >
+                    {item.statusLabel || STATUS_META[item.status]?.label}
+                  </span>
                 </div>
-                <span
-                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${STATUS_META[item.status]?.chip || "bg-slate-100 text-slate-700 border-slate-200"}`}
-                >
-                  {item.statusLabel || STATUS_META[item.status]?.label}
-                </span>
+                <p className="mt-2 text-xs text-slate-700">업무: {item.currentTask || "-"}</p>
+                <p className="mt-1 text-xs text-slate-700">위치: {item.zoneName}</p>
+                {item.currentNote && (
+                  <p className="mt-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600">
+                    메모: {item.currentNote}
+                  </p>
+                )}
+                <p className="mt-1 text-[11px] text-slate-500">갱신: {item.lastUpdatedAt?.replace("T", " ").slice(5, 16)}</p>
               </div>
-              <p className="mt-2 text-xs text-slate-700">업무: {item.currentTask || "-"}</p>
-              <p className="mt-1 text-xs text-slate-700">위치: {item.zoneName}</p>
-              {item.currentNote && (
-                <p className="mt-1 rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-600">
-                  메모: {item.currentNote}
-                </p>
-              )}
-              <p className="mt-1 text-[11px] text-slate-500">
-                갱신: {item.lastUpdatedAt?.replace("T", " ").slice(5, 16)}
-              </p>
-            </div>
-          ))}
-        </div>
-      </article>
+            ))}
+          </div>
+        </article>
+      )}
+
+      {showMap && (
+        <article className="rounded-xl border border-slate-200 bg-white p-3">
+          <p className="text-sm font-semibold text-slate-800">스태프 위치 지도</p>
+          <div className="mt-2 overflow-hidden rounded-lg border border-slate-200">
+            <MapContainer
+              center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]}
+              zoom={17}
+              maxZoom={21}
+              className="h-72 w-full"
+            >
+              <TileLayer attribution="&copy; OpenStreetMap 기여자" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              {filteredStaff.map((item) => (
+                <CircleMarker
+                  key={item.staffNo}
+                  center={[item.latitude, item.longitude]}
+                  radius={7}
+                  pathOptions={{
+                    color: "#ffffff",
+                    weight: 1.5,
+                    fillColor: STATUS_META[item.status]?.map || "#64748b",
+                    fillOpacity: 0.9,
+                  }}
+                >
+                  <Popup>
+                    <p className="text-xs font-bold">
+                      {item.name} ({item.staffNo})
+                    </p>
+                    <p className="text-xs mt-1">팀: {item.team}</p>
+                    <p className="text-xs">상태: {item.statusLabel || STATUS_META[item.status]?.label}</p>
+                    <p className="text-xs">업무: {item.currentTask || "-"}</p>
+                    <p className="text-xs">위치: {item.zoneName}</p>
+                  </Popup>
+                </CircleMarker>
+              ))}
+            </MapContainer>
+          </div>
+        </article>
+      )}
     </section>
   );
 }
