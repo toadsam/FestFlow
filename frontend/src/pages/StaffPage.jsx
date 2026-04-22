@@ -6,6 +6,7 @@ import {
   fetchStaffBootstrap,
   loginStaff,
   logoutStaff,
+  translateText,
   updateMyStaffStatus,
 } from "../api";
 import { AJOU_CENTER } from "../utils/location";
@@ -56,6 +57,41 @@ const LOST_ITEM_INITIAL_FORM = {
 
 const ALL_TEAM = "ALL";
 const ALL_STATUS = "ALL";
+const LOW_CONFIDENCE_THRESHOLD = 0.72;
+const MAX_CONTEXT_TURNS = 3;
+
+const INTERPRETER_PRESETS = [
+  {
+    id: "restroom",
+    label: "화장실 안내",
+    ko: "화장실은 저쪽 출구 옆에 있습니다.",
+    en: "The restroom is next to that exit.",
+  },
+  {
+    id: "lostfound",
+    label: "분실물 센터",
+    ko: "분실물 센터는 본부 부스 옆에 있습니다.",
+    en: "The lost-and-found center is next to the main booth.",
+  },
+  {
+    id: "entrance",
+    label: "입출구 안내",
+    ko: "입구는 왼쪽이고 출구는 오른쪽입니다.",
+    en: "The entrance is on the left and the exit is on the right.",
+  },
+  {
+    id: "wait",
+    label: "잠시 대기",
+    ko: "잠시만 기다려 주세요. 바로 도와드릴게요.",
+    en: "Please wait a moment. I will help you right away.",
+  },
+  {
+    id: "follow",
+    label: "안내 동행",
+    ko: "안전하게 안내해 드릴게요. 저를 따라오세요.",
+    en: "I will guide you safely. Please follow me.",
+  },
+];
 
 function getSavedToken() {
   return localStorage.getItem(STAFF_TOKEN_KEY) || "";
@@ -94,10 +130,23 @@ export default function StaffPage() {
   const [showLostForm, setShowLostForm] = useState(false);
   const [showTeamList, setShowTeamList] = useState(false);
   const [showMap, setShowMap] = useState(false);
+  const [showInterpreter, setShowInterpreter] = useState(false);
 
   const [query, setQuery] = useState("");
   const [teamFilter, setTeamFilter] = useState(ALL_TEAM);
   const [statusFilter, setStatusFilter] = useState(ALL_STATUS);
+  const [speechSupported, setSpeechSupported] = useState(false);
+  const [ttsSupported, setTtsSupported] = useState(false);
+  const [networkOnline, setNetworkOnline] = useState(true);
+  const [interpreterBusy, setInterpreterBusy] = useState(false);
+  const [interpreterMessage, setInterpreterMessage] = useState("");
+  const [koSourceText, setKoSourceText] = useState("");
+  const [enSourceText, setEnSourceText] = useState("");
+  const [koToEnText, setKoToEnText] = useState("");
+  const [enToKoText, setEnToKoText] = useState("");
+  const [lastRecognitionConfidence, setLastRecognitionConfidence] = useState(null);
+  const [interpreterHistory, setInterpreterHistory] = useState([]);
+  const [interpreterLane, setInterpreterLane] = useState("koToEn");
 
   useEffect(() => {
     if (!staffToken) {
@@ -152,6 +201,34 @@ export default function StaffPage() {
 
     return () => stream.close();
   }, [staffToken]);
+
+  useEffect(() => {
+    const canSpeech =
+      typeof window !== "undefined" &&
+      Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
+    const canTts =
+      typeof window !== "undefined" &&
+      "speechSynthesis" in window &&
+      typeof window.SpeechSynthesisUtterance !== "undefined";
+    setSpeechSupported(canSpeech);
+    setTtsSupported(canTts);
+    setNetworkOnline(typeof navigator !== "undefined" ? navigator.onLine : true);
+
+    function handleOnline() {
+      setNetworkOnline(true);
+    }
+
+    function handleOffline() {
+      setNetworkOnline(false);
+    }
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
 
   const boothMap = useMemo(() => {
     return new Map((booths || []).map((booth) => [booth.id, booth]));
@@ -239,6 +316,18 @@ export default function StaffPage() {
       setShowLostForm(false);
       setShowTeamList(false);
       setShowMap(false);
+      setShowInterpreter(false);
+      setInterpreterBusy(false);
+      setInterpreterMessage("");
+      setKoSourceText("");
+      setEnSourceText("");
+      setKoToEnText("");
+      setEnToKoText("");
+      setLastRecognitionConfidence(null);
+      setInterpreterHistory([]);
+      if (typeof window !== "undefined" && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
     }
   }
 
@@ -299,6 +388,320 @@ export default function StaffPage() {
     } finally {
       setLostItemSaving(false);
     }
+  }
+
+  function speakText(text, lang) {
+    if (!ttsSupported || !text?.trim()) return;
+
+    window.speechSynthesis.cancel();
+    const utterance = new window.SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  async function copyText(text) {
+    const clean = text?.trim();
+    if (!clean) {
+      setInterpreterMessage("복사할 문장이 없습니다.");
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(clean);
+      setInterpreterMessage("문장을 복사했습니다.");
+    } catch {
+      setInterpreterMessage("복사에 실패했습니다.");
+    }
+  }
+
+  function recognizeOnce(lang) {
+    return new Promise((resolve, reject) => {
+      const Recognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!Recognition) {
+        reject(new Error("이 기기에서는 음성 인식을 지원하지 않습니다."));
+        return;
+      }
+
+      const recognition = new Recognition();
+      recognition.lang = lang;
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 3;
+      recognition.continuous = false;
+
+      let completed = false;
+      const fail = (error) => {
+        if (completed) return;
+        completed = true;
+        reject(error);
+      };
+      const done = (payload) => {
+        if (completed) return;
+        completed = true;
+        resolve(payload);
+      };
+
+      recognition.onresult = (event) => {
+        const first = event.results?.[0]?.[0];
+        const transcript = first?.transcript?.trim() || "";
+        const confidence = typeof first?.confidence === "number" ? first.confidence : null;
+        if (!transcript) {
+          fail(new Error("음성을 인식하지 못했습니다."));
+          return;
+        }
+        done({ transcript, confidence });
+      };
+
+      recognition.onerror = (event) => {
+        fail(new Error(`음성 인식 오류: ${event.error || "unknown"}`));
+      };
+
+      recognition.onend = () => {
+        if (!completed) {
+          fail(new Error("음성 인식이 종료되었습니다. 다시 시도해 주세요."));
+        }
+      };
+
+      try {
+        recognition.start();
+      } catch {
+        fail(new Error("음성 인식을 시작하지 못했습니다."));
+      }
+    });
+  }
+
+  function detectLanguage(text) {
+    const clean = (text || "").trim();
+    if (!clean) return "auto";
+    const koreanChars = (clean.match(/[가-힣]/g) || []).length;
+    const latinChars = (clean.match(/[A-Za-z]/g) || []).length;
+    if (koreanChars > latinChars) return "ko";
+    if (latinChars > koreanChars) return "en";
+    return "auto";
+  }
+
+  function pushInterpreterHistory(sourceText, translatedText, sourceLang, targetLang, confidence) {
+    setInterpreterHistory((prev) => {
+      const next = [
+        ...prev,
+        {
+          sourceText,
+          translatedText,
+          sourceLang,
+          targetLang,
+          confidence,
+          at: Date.now(),
+        },
+      ];
+      return next.slice(-MAX_CONTEXT_TURNS);
+    });
+  }
+
+  function presetTranslate(text, sourceLang, targetLang) {
+    const clean = (text || "").trim();
+    if (!clean) return null;
+    const preset = INTERPRETER_PRESETS.find((item) =>
+      sourceLang === "ko" && targetLang === "en"
+        ? item.ko === clean
+        : sourceLang === "en" && targetLang === "ko"
+          ? item.en === clean
+          : false,
+    );
+    if (!preset) return null;
+    return sourceLang === "ko" ? preset.en : preset.ko;
+  }
+
+  async function translateForField(text, sourceLang, targetLang) {
+    const clean = text?.trim();
+    if (!clean) {
+      throw new Error("번역할 문장을 먼저 입력해 주세요.");
+    }
+
+    const preset = presetTranslate(clean, sourceLang, targetLang);
+    if (preset) {
+      return {
+        translatedText: preset,
+        confidence: 0.99,
+        provider: "preset-local",
+        latencyMs: 0,
+      };
+    }
+
+    if (!networkOnline) {
+      return {
+        translatedText:
+          sourceLang === "ko" && targetLang === "en"
+            ? `[EN] ${clean}`
+            : sourceLang === "en" && targetLang === "ko"
+              ? `[KO] ${clean}`
+              : clean,
+        confidence: 0.35,
+        provider: "offline-fallback",
+        latencyMs: 0,
+      };
+    }
+
+    const contextHints = interpreterHistory
+      .slice(-MAX_CONTEXT_TURNS)
+      .map((item) => `${item.sourceLang}->${item.targetLang}: ${item.sourceText}`);
+
+    return translateText({
+      text: clean,
+      sourceLang,
+      targetLang,
+      contextHints,
+    });
+  }
+
+  async function runVoiceTranslate(sourceLang, targetLang, sourceStateSetter, targetStateSetter, targetTtsLang) {
+    if (interpreterBusy) return;
+    setInterpreterBusy(true);
+    setInterpreterMessage(`${sourceLang === "ko" ? "한국어" : "영어"} 음성을 듣는 중...`);
+
+    try {
+      let sourcePayload = null;
+      let lastError = null;
+
+      for (let attempt = 1; attempt <= 2; attempt += 1) {
+        try {
+          sourcePayload = await recognizeOnce(sourceLang === "ko" ? "ko-KR" : "en-US");
+          break;
+        } catch (error) {
+          lastError = error;
+        }
+      }
+
+      if (!sourcePayload) {
+        throw lastError || new Error("음성 인식에 실패했습니다.");
+      }
+
+      const source = sourcePayload.transcript;
+      const recognitionConfidence =
+        typeof sourcePayload.confidence === "number" ? sourcePayload.confidence : null;
+      setLastRecognitionConfidence(recognitionConfidence);
+      sourceStateSetter(source);
+
+      if (
+        recognitionConfidence != null &&
+        recognitionConfidence < LOW_CONFIDENCE_THRESHOLD
+      ) {
+        setInterpreterMessage(
+          `인식 신뢰도 낮음(${Math.round(recognitionConfidence * 100)}%). 문장을 확인 후 다시 시도해 주세요.`,
+        );
+        setInterpreterBusy(false);
+        return;
+      }
+
+      const autoDetected = detectLanguage(source);
+      const effectiveSourceLang = autoDetected === "auto" ? sourceLang : autoDetected;
+      const effectiveTargetLang =
+        effectiveSourceLang === "ko" ? "en" : effectiveSourceLang === "en" ? "ko" : targetLang;
+
+      setInterpreterMessage(
+        `${effectiveSourceLang === "ko" ? "한→영" : "영→한"} 번역 중...`,
+      );
+      const translated = await translateForField(source, effectiveSourceLang, effectiveTargetLang);
+      targetStateSetter(translated.translatedText);
+      speakText(translated.translatedText, targetTtsLang);
+      pushInterpreterHistory(
+        source,
+        translated.translatedText,
+        effectiveSourceLang,
+        effectiveTargetLang,
+        translated.confidence,
+      );
+      setInterpreterMessage(
+        `${effectiveSourceLang === "ko" ? "한→영" : "영→한"} 통역 완료 · ${
+          translated.provider
+        } · ${(translated.confidence * 100).toFixed(0)}%`,
+      );
+    } catch (error) {
+      setInterpreterMessage(error?.message || "통역에 실패했습니다.");
+    } finally {
+      setInterpreterBusy(false);
+    }
+  }
+
+  async function runTextTranslate(sourceText, sourceLang, targetLang, targetStateSetter, ttsLang) {
+    if (interpreterBusy) return;
+    setInterpreterBusy(true);
+    setInterpreterMessage(`${sourceLang === "ko" ? "한→영" : "영→한"} 번역 중...`);
+    try {
+      const cleanSource = sourceText.trim();
+      const autoDetected = detectLanguage(cleanSource);
+      const effectiveSourceLang = autoDetected === "auto" ? sourceLang : autoDetected;
+      const effectiveTargetLang =
+        effectiveSourceLang === "ko" ? "en" : effectiveSourceLang === "en" ? "ko" : targetLang;
+      const translated = await translateForField(cleanSource, effectiveSourceLang, effectiveTargetLang);
+      targetStateSetter(translated.translatedText);
+      speakText(translated.translatedText, ttsLang);
+      pushInterpreterHistory(
+        cleanSource,
+        translated.translatedText,
+        effectiveSourceLang,
+        effectiveTargetLang,
+        translated.confidence,
+      );
+      setInterpreterMessage(
+        `${effectiveSourceLang === "ko" ? "한→영" : "영→한"} 번역 완료 · ${
+          translated.provider
+        } · ${(translated.confidence * 100).toFixed(0)}%`,
+      );
+    } catch (error) {
+      setInterpreterMessage(error?.message || "번역에 실패했습니다.");
+    } finally {
+      setInterpreterBusy(false);
+    }
+  }
+
+  async function handleKoToEnVoice() {
+    setInterpreterLane("koToEn");
+    await runVoiceTranslate("ko", "en", setKoSourceText, setKoToEnText, "en-US");
+  }
+
+  async function handleEnToKoVoice() {
+    setInterpreterLane("enToKo");
+    await runVoiceTranslate("en", "ko", setEnSourceText, setEnToKoText, "ko-KR");
+  }
+
+  async function handleKoToEnTextTranslate() {
+    setInterpreterLane("koToEn");
+    await runTextTranslate(koSourceText, "ko", "en", setKoToEnText, "en-US");
+  }
+
+  async function handleEnToKoTextTranslate() {
+    setInterpreterLane("enToKo");
+    await runTextTranslate(enSourceText, "en", "ko", setEnToKoText, "ko-KR");
+  }
+
+  async function handleActiveVoiceTranslate() {
+    if (interpreterLane === "koToEn") {
+      await handleKoToEnVoice();
+      return;
+    }
+    await handleEnToKoVoice();
+  }
+
+  async function handleActiveTextTranslate() {
+    if (interpreterLane === "koToEn") {
+      await handleKoToEnTextTranslate();
+      return;
+    }
+    await handleEnToKoTextTranslate();
+  }
+
+  function speakActiveResult() {
+    if (interpreterLane === "koToEn") {
+      speakText(koToEnText, "en-US");
+      return;
+    }
+    speakText(enToKoText, "ko-KR");
+  }
+
+  async function copyActiveResult() {
+    if (interpreterLane === "koToEn") {
+      await copyText(koToEnText);
+      return;
+    }
+    await copyText(enToKoText);
   }
 
   if (!staffToken) {
@@ -465,6 +868,144 @@ export default function StaffPage() {
           ))}
           {notices.length === 0 && <p className="text-xs text-amber-700">현재 활성 공지가 없습니다.</p>}
         </div>
+      </article>
+
+      <article className="rounded-xl border border-violet-300/60 bg-violet-50 p-3 space-y-3">
+        <button
+          type="button"
+          aria-pressed={showInterpreter}
+          onClick={() => setShowInterpreter((prev) => !prev)}
+          className="w-full rounded-lg border border-violet-300 bg-white px-3 py-2 text-left"
+        >
+          <p className="text-sm font-bold text-violet-900">
+            {showInterpreter ? "통역 모드 닫기" : "통역 모드 열기 (한↔영)"}
+          </p>
+          <p className="text-[11px] text-violet-800/90">
+            {networkOnline ? "온라인" : "오프라인"} · {showInterpreter ? "펼침" : "접힘"}
+          </p>
+        </button>
+
+        {showInterpreter && (
+          <>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            aria-pressed={interpreterLane === "koToEn"}
+            onClick={() => setInterpreterLane("koToEn")}
+            className={`rounded-lg px-3 py-2 text-xs font-bold ${
+              interpreterLane === "koToEn"
+                ? "border border-cyan-500 bg-cyan-600 text-white"
+                : "border border-slate-300 bg-white text-slate-700"
+            }`}
+          >
+            한국어 → 영어
+          </button>
+          <button
+            type="button"
+            aria-pressed={interpreterLane === "enToKo"}
+            onClick={() => setInterpreterLane("enToKo")}
+            className={`rounded-lg px-3 py-2 text-xs font-bold ${
+              interpreterLane === "enToKo"
+                ? "border border-emerald-500 bg-emerald-600 text-white"
+                : "border border-slate-300 bg-white text-slate-700"
+            }`}
+          >
+            영어 → 한국어
+          </button>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleActiveVoiceTranslate}
+          disabled={interpreterBusy || !speechSupported}
+          className="w-full rounded-xl border border-violet-400 bg-violet-600 px-4 py-4 text-sm font-extrabold text-white disabled:opacity-60"
+        >
+          {interpreterLane === "koToEn"
+            ? "버튼 누르고 한국어로 말하기"
+            : "버튼 누르고 영어로 말하기"}
+        </button>
+
+        <div className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs text-violet-900">
+          {interpreterMessage || "대기 중"} · 신뢰도{" "}
+          {lastRecognitionConfidence == null ? "-" : `${Math.round(lastRecognitionConfidence * 100)}%`}
+        </div>
+
+        <div className="rounded-lg border border-slate-200 bg-white p-2 space-y-2">
+          <p className="text-[11px] font-semibold text-slate-700">
+            {interpreterLane === "koToEn"
+              ? "직원이 말할 문장 (한국어)"
+              : "방문객이 말한 문장 (영어)"}
+          </p>
+          <textarea
+            value={interpreterLane === "koToEn" ? koSourceText : enSourceText}
+            onChange={(e) =>
+              interpreterLane === "koToEn"
+                ? setKoSourceText(e.target.value)
+                : setEnSourceText(e.target.value)
+            }
+            rows={2}
+            placeholder={
+              interpreterLane === "koToEn"
+                ? "예: 메인 무대는 오른쪽으로 100m 이동하시면 됩니다."
+                : "Example: I cannot find the lost-and-found center."
+            }
+            className="w-full rounded-lg border border-slate-300 px-2 py-2 text-sm"
+          />
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={handleActiveTextTranslate}
+              disabled={interpreterBusy}
+              className="rounded-lg border border-violet-300 bg-violet-100 px-2 py-2 text-xs font-semibold text-violet-800 disabled:opacity-60"
+            >
+              번역하기
+            </button>
+            <button
+              type="button"
+              onClick={copyActiveResult}
+              className="rounded-lg border border-slate-300 bg-slate-50 px-2 py-2 text-xs font-semibold text-slate-700"
+            >
+              결과 복사
+            </button>
+            <button
+              type="button"
+              onClick={speakActiveResult}
+              disabled={!(interpreterLane === "koToEn" ? koToEnText : enToKoText)}
+              className="rounded-lg border border-slate-300 bg-slate-50 px-2 py-2 text-xs font-semibold text-slate-700 disabled:opacity-60"
+            >
+              결과 들려주기
+            </button>
+          </div>
+          <p className="rounded-lg border border-cyan-200 bg-cyan-50 px-2 py-2 text-sm text-cyan-900 min-h-12">
+            {interpreterLane === "koToEn"
+              ? koToEnText || "여기에 영어 통역 결과가 표시됩니다."
+              : enToKoText || "여기에 한국어 통역 결과가 표시됩니다."}
+          </p>
+        </div>
+
+        <div className="space-y-1">
+          <p className="text-[11px] font-semibold text-violet-900">자주 쓰는 문장</p>
+          <div className="flex flex-wrap gap-1.5">
+            {INTERPRETER_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => {
+                  setKoSourceText(preset.ko);
+                  setEnSourceText(preset.en);
+                  setKoToEnText(preset.en);
+                  setEnToKoText(preset.ko);
+                  setInterpreterMessage("프리셋 문장을 불러왔습니다.");
+                }}
+                className="rounded-full border border-violet-300 bg-white px-2.5 py-1 text-[11px] font-semibold text-violet-800"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+          </>
+        )}
       </article>
 
       <article className="rounded-xl border border-emerald-300/60 bg-emerald-50 p-3 space-y-2">

@@ -740,3 +740,17 @@ export async function updateLostItemStatus(id, payload, staffToken) {
   return parseJson(response, "분실물 상태 변경에 실패했습니다.");
 }
 
+export async function translateText(payload) {
+  const response = await fetch(`${API_BASE}/translate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "실시간 번역에 실패했습니다.");
+}
+
+export async function fetchTranslateMetrics() {
+  const response = await fetch(`${API_BASE}/translate/metrics`);
+  return parseJson(response, "통역 지표를 불러오지 못했습니다.");
+}
+
