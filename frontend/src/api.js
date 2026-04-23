@@ -740,6 +740,53 @@ export async function updateLostItemStatus(id, payload, staffToken) {
   return parseJson(response, "분실물 상태 변경에 실패했습니다.");
 }
 
+export async function updateLostItem(id, payload, staffToken) {
+  const headers = { "Content-Type": "application/json" };
+  const adminToken = getAccessToken();
+  if (adminToken) {
+    headers.Authorization = `Bearer ${adminToken}`;
+  }
+  if (staffToken) {
+    headers["X-Staff-Token"] = staffToken;
+  }
+
+  const response = await fetch(`${API_BASE}/lost-items/${id}`, {
+    method: "PUT",
+    headers,
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "분실물 수정에 실패했습니다.");
+}
+
+export async function claimLostItem(id, payload) {
+  const response = await fetch(`${API_BASE}/lost-items/${id}/claim`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "내 물건 표시 요청에 실패했습니다.");
+}
+
+export async function deleteLostItem(id, staffToken) {
+  const headers = {};
+  const adminToken = getAccessToken();
+  if (adminToken) {
+    headers.Authorization = `Bearer ${adminToken}`;
+  }
+  if (staffToken) {
+    headers["X-Staff-Token"] = staffToken;
+  }
+
+  const response = await fetch(`${API_BASE}/lost-items/${id}`, {
+    method: "DELETE",
+    headers,
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}));
+    throw new Error(payload.message || "분실물 삭제에 실패했습니다.");
+  }
+}
+
 export async function translateText(payload) {
   const response = await fetch(`${API_BASE}/translate`, {
     method: "POST",

@@ -1,7 +1,9 @@
 package com.festflow.backend.controller;
 
+import com.festflow.backend.dto.LostItemClaimRequestDto;
 import com.festflow.backend.dto.LostItemResponseDto;
 import com.festflow.backend.dto.LostItemStatusUpdateRequestDto;
+import com.festflow.backend.dto.LostItemUpdateRequestDto;
 import com.festflow.backend.dto.StaffMemberResponseDto;
 import com.festflow.backend.service.LostItemService;
 import com.festflow.backend.service.StaffService;
@@ -9,6 +11,7 @@ import com.festflow.backend.service.stream.StreamService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -92,6 +95,40 @@ public class LostItemController {
         LostItemResponseDto updated = lostItemService.updateStatus(id, requestDto);
         streamService.publishLostItems(lostItemService.getAll());
         return updated;
+    }
+
+    @PutMapping("/{id}")
+    public LostItemResponseDto update(
+            @PathVariable Long id,
+            @RequestBody LostItemUpdateRequestDto requestDto,
+            @RequestHeader(value = "X-Staff-Token", required = false) String staffToken,
+            Authentication authentication
+    ) {
+        resolveReporter(authentication, staffToken);
+        LostItemResponseDto updated = lostItemService.update(id, requestDto);
+        streamService.publishLostItems(lostItemService.getAll());
+        return updated;
+    }
+
+    @PutMapping("/{id}/claim")
+    public LostItemResponseDto claim(
+            @PathVariable Long id,
+            @RequestBody LostItemClaimRequestDto requestDto
+    ) {
+        LostItemResponseDto updated = lostItemService.claim(id, requestDto);
+        streamService.publishLostItems(lostItemService.getAll());
+        return updated;
+    }
+
+    @DeleteMapping("/{id}")
+    public void delete(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-Staff-Token", required = false) String staffToken,
+            Authentication authentication
+    ) {
+        resolveReporter(authentication, staffToken);
+        lostItemService.delete(id);
+        streamService.publishLostItems(lostItemService.getAll());
     }
 
     private String saveFileIfAny(MultipartFile file) throws IOException {

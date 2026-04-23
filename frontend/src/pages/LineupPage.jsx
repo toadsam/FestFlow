@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { createEventStream, fetchEvents } from "../api";
+import { IconArrowLeft, IconCalendar, IconMusic, IconTrophy } from "../components/UxIcons";
 
 const THEMES = [
   {
@@ -179,20 +180,22 @@ export default function LineupPage() {
     <section className="cyber-page pt-4 space-y-3 lineup-page">
       <div className="flex items-center justify-between gap-2">
         <h2
-          className="text-lg font-bold glitch-title"
+          className="text-lg font-bold glitch-title text-role-ops inline-flex items-center gap-2"
           data-text="FESTIVAL LINEUP"
         >
+          <IconMusic className="h-5 w-5 icon-role-ops" />
           FESTIVAL LINEUP
         </h2>
         <Link
           to="/events"
-          className="lineup-back px-3 py-2 text-xs font-semibold rounded-lg"
+          className="lineup-back text-role-log px-3 py-2 text-xs font-semibold rounded-lg inline-flex items-center gap-1.5"
         >
+          <IconArrowLeft className="h-3.5 w-3.5 icon-role-log" />
           BACK
         </Link>
       </div>
 
-      <p className="text-xs text-cyan-200/90">
+      <p className="text-xs text-cyan-200/90 text-role-log">
         아티스트 카드형 라인업 · 좌우 스와이프
       </p>
 
@@ -312,12 +315,18 @@ export default function LineupPage() {
       {selected && (
         <article className="lineup-focus rounded-xl p-3 border border-cyan-300/50">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold">NOW SELECTED</h3>
+            <h3 className="text-sm font-bold text-role-ops inline-flex items-center gap-1.5">
+              <IconTrophy className="h-4 w-4 icon-role-ops" />
+              NOW SELECTED
+            </h3>
             <span className="text-xs px-2 py-1 rounded-full border border-cyan-300/60">
               {selected.status}
             </span>
           </div>
-          <p className="mt-1 text-base font-extrabold">{selected.title}</p>
+          <p className="mt-1 text-base font-extrabold text-role-schedule inline-flex items-center gap-1.5">
+            <IconCalendar className="h-4 w-4 icon-role-schedule" />
+            {selected.title}
+          </p>
           <p className="text-xs mt-1 text-cyan-200">
             {selected.startTime?.replace("T", " ")} ~{" "}
             {selected.endTime?.replace("T", " ")}
@@ -327,3 +336,7 @@ export default function LineupPage() {
     </section>
   );
 }
+
+
+
+

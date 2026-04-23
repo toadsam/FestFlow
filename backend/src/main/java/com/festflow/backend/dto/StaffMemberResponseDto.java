@@ -14,6 +14,7 @@ public record StaffMemberResponseDto(
         Long assignedBoothId,
         Double latitude,
         Double longitude,
+        Boolean locationSharingEnabled,
         LocalDateTime lastUpdatedAt
 ) {
 }
