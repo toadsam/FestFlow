@@ -5,7 +5,8 @@ public record StaffStatusUpdateRequestDto(
         String currentTask,
         String currentNote,
         Double latitude,
-        Double longitude
+        Double longitude,
+        Boolean locationSharingEnabled
 ) {
 }
 

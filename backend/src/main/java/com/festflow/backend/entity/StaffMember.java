@@ -51,6 +51,9 @@ public class StaffMember {
     private Double longitude;
 
     @Column(nullable = false)
+    private Boolean locationSharingEnabled = true;
+
+    @Column(nullable = false)
     private LocalDateTime lastUpdatedAt;
 
     protected StaffMember() {
@@ -156,5 +159,13 @@ public class StaffMember {
 
     public LocalDateTime getLastUpdatedAt() {
         return lastUpdatedAt;
+    }
+
+    public Boolean getLocationSharingEnabled() {
+        return locationSharingEnabled;
+    }
+
+    public void setLocationSharingEnabled(Boolean locationSharingEnabled) {
+        this.locationSharingEnabled = locationSharingEnabled;
     }
 }

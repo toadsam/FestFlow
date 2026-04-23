@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { CircleMarker, MapContainer, Popup, TileLayer } from "react-leaflet";
+import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import {
   createLostItem,
   createLostItemStream,
@@ -78,6 +78,79 @@ const LOW_CONFIDENCE_THRESHOLD = 0.72;
 const MAX_CONTEXT_TURNS = 3;
 const STATUS_BOARD_ORDER = ["URGENT", "ON_DUTY", "MOVING", "STANDBY"];
 const LOST_ITEM_MAX_FILE_SIZE = 10 * 1024 * 1024;
+const MARKER_COLORS = ["#06b6d4", "#3b82f6", "#8b5cf6", "#14b8a6", "#f97316", "#ec4899", "#84cc16", "#f59e0b"];
+
+function staffColorById(staffNo) {
+  const text = `${staffNo || ""}`;
+  const hash = text.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  return MARKER_COLORS[hash % MARKER_COLORS.length];
+}
+
+function staffInitial(name) {
+  const safe = `${name || ""}`.trim();
+  if (!safe) return "?";
+  return safe.slice(0, 1).toUpperCase();
+}
+
+function getFreshness(item, nowMs) {
+  const updatedMs = item?.lastUpdatedAt ? Date.parse(item.lastUpdatedAt) : 0;
+  if (!updatedMs) return { key: "offline", label: "오프라인", border: "#64748b" };
+  const ageSec = Math.max(0, Math.floor((nowMs - updatedMs) / 1000));
+  if (ageSec <= 30) {
+    return { key: "realtime", label: "실시간", border: "#10b981" };
+  }
+  if (ageSec <= 120) {
+    return { key: "delayed", label: "지연", border: "#f59e0b" };
+  }
+  return { key: "offline", label: "오프라인", border: "#64748b" };
+}
+
+function spreadOverlappingMarkers(staff) {
+  const grouped = new Map();
+  for (const item of staff) {
+    const key = `${item.latitude.toFixed(5)}|${item.longitude.toFixed(5)}`;
+    const bucket = grouped.get(key) || [];
+    bucket.push(item);
+    grouped.set(key, bucket);
+  }
+
+  const result = [];
+  for (const bucket of grouped.values()) {
+    if (bucket.length === 1) {
+      result.push(bucket[0]);
+      continue;
+    }
+    const offset = 0.00008;
+    bucket.forEach((item, idx) => {
+      const angle = (Math.PI * 2 * idx) / bucket.length;
+      result.push({
+        ...item,
+        latitude: item.latitude + Math.sin(angle) * offset,
+        longitude: item.longitude + Math.cos(angle) * offset,
+      });
+    });
+  }
+  return result;
+}
+
+function MapViewportController({ action, points, myPoint }) {
+  const map = useMap();
+  useEffect(() => {
+    if (action === "fit-all") {
+      if (!points.length) return;
+      if (points.length === 1) {
+        map.setView([points[0].latitude, points[0].longitude], 18);
+        return;
+      }
+      map.fitBounds(points.map((p) => [p.latitude, p.longitude]), { padding: [28, 28] });
+      return;
+    }
+    if (action === "focus-me" && myPoint) {
+      map.setView([myPoint.latitude, myPoint.longitude], 19);
+    }
+  }, [action, points, myPoint, map]);
+  return null;
+}
 
 const INTERPRETER_PRESETS = [
   {
@@ -171,6 +244,8 @@ export default function StaffPage() {
   const [lastRecognitionConfidence, setLastRecognitionConfidence] = useState(null);
   const [interpreterHistory, setInterpreterHistory] = useState([]);
   const [interpreterLane, setInterpreterLane] = useState("koToEn");
+  const [mapAction, setMapAction] = useState("idle");
+  const [nowMs, setNowMs] = useState(Date.now());
 
   useEffect(() => {
     if (!staffToken) {
@@ -273,20 +348,25 @@ export default function StaffPage() {
     };
   }, []);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNowMs(Date.now()), 10000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const boothMap = useMemo(() => {
     return new Map((booths || []).map((booth) => [booth.id, booth]));
   }, [booths]);
 
   const enrichedStaff = useMemo(() => {
-    return (staffList || []).map((staff, index) => {
+    return (staffList || []).map((staff) => {
       const booth = staff.assignedBoothId ? boothMap.get(staff.assignedBoothId) : null;
-      const latitude =
-        staff.latitude ?? booth?.latitude ?? AJOU_CENTER.latitude + ((index % 11) - 5) * 0.0002;
-      const longitude =
-        staff.longitude ?? booth?.longitude ?? AJOU_CENTER.longitude + ((index % 9) - 4) * 0.0002;
+      const sharingOn = staff.locationSharingEnabled !== false;
+      const latitude = sharingOn ? staff.latitude ?? null : null;
+      const longitude = sharingOn ? staff.longitude ?? null : null;
 
       return {
         ...staff,
+        locationSharingEnabled: sharingOn,
         latitude,
         longitude,
         zoneName: booth?.name || "순환 구역",
@@ -307,6 +387,24 @@ export default function StaffPage() {
       return byQuery && byTeam && byStatus;
     });
   }, [enrichedStaff, query, teamFilter, statusFilter]);
+
+  const visibleMapStaff = useMemo(
+    () =>
+      filteredStaff.filter(
+        (item) => item.locationSharingEnabled && item.latitude != null && item.longitude != null,
+      ),
+    [filteredStaff],
+  );
+
+  const mapMarkerStaff = useMemo(
+    () => spreadOverlappingMarkers(visibleMapStaff),
+    [visibleMapStaff],
+  );
+
+  const myMapPoint = useMemo(() => {
+    if (!me?.staffNo) return null;
+    return visibleMapStaff.find((item) => item.staffNo === me.staffNo) || null;
+  }, [visibleMapStaff, me?.staffNo]);
 
   const teamOptions = useMemo(() => {
     return Array.from(new Set(enrichedStaff.map((item) => item.team).filter(Boolean)));
@@ -434,14 +532,21 @@ export default function StaffPage() {
     }
   }
 
-  async function updateMyRuntime(nextStatus = me?.status) {
+  async function updateMyRuntime(
+    nextStatus = me?.status,
+    nextLocationSharingEnabled = me?.locationSharingEnabled !== false,
+    options = {},
+  ) {
     if (!staffToken || !me) return;
+    const silent = options.silent === true;
 
-    setSaving(true);
+    if (!silent) {
+      setSaving(true);
+    }
     let latitude = null;
     let longitude = null;
 
-    if (navigator.geolocation) {
+    if (nextLocationSharingEnabled && navigator.geolocation) {
       try {
         const position = await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -464,6 +569,7 @@ export default function StaffPage() {
         currentNote: noteDraft,
         latitude,
         longitude,
+        locationSharingEnabled: nextLocationSharingEnabled,
       });
 
       setMe(updatedMe);
@@ -471,9 +577,19 @@ export default function StaffPage() {
         prev.map((item) => (item.staffNo === updatedMe.staffNo ? updatedMe : item)),
       );
     } finally {
-      setSaving(false);
+      if (!silent) {
+        setSaving(false);
+      }
     }
   }
+
+  useEffect(() => {
+    if (!staffToken || !me || me.locationSharingEnabled === false) return undefined;
+    const timer = window.setInterval(() => {
+      updateMyRuntime(me.status, true, { silent: true });
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [staffToken, me?.staffNo, me?.status, me?.locationSharingEnabled, taskDraft, noteDraft]);
 
   async function handleLostItemSubmit(event) {
     if (event?.preventDefault) {
@@ -958,6 +1074,26 @@ export default function StaffPage() {
             <p className="text-xs text-cyan-100/85">
               {me?.staffNo} · {me?.team}
             </p>
+            <div className="mt-2 inline-flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextSharing = !(me?.locationSharingEnabled !== false);
+                  setMe((prev) => (prev ? { ...prev, locationSharingEnabled: nextSharing } : prev));
+                  updateMyRuntime(me?.status, nextSharing);
+                }}
+                className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${
+                  me?.locationSharingEnabled !== false
+                    ? "border-emerald-300 bg-emerald-500/20 text-emerald-100"
+                    : "border-slate-400 bg-slate-700/50 text-slate-200"
+                }`}
+              >
+                위치 공유 {me?.locationSharingEnabled !== false ? "ON" : "OFF"}
+              </button>
+              <span className="text-[11px] text-cyan-200/80">
+                {me?.locationSharingEnabled !== false ? "지도 실시간 표시 중" : "지도 표시 중지"}
+              </span>
+            </div>
           </div>
           <button
             type="button"
@@ -1563,6 +1699,27 @@ export default function StaffPage() {
             <IconMapPin className="h-4 w-4 icon-role-map" />
             스태프 위치 지도
           </p>
+          <div className="mt-1 flex items-center justify-between gap-2">
+            <p className="text-[11px] text-slate-500">
+            위치 공유 ON + 좌표 전송된 스태프만 지도에 표시됩니다. (표시 {visibleMapStaff.length}명)
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setMapAction(`focus-me-${Date.now()}`)}
+                className="rounded border border-cyan-300 bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-700"
+              >
+                내 위치
+              </button>
+              <button
+                type="button"
+                onClick={() => setMapAction(`fit-all-${Date.now()}`)}
+                className="rounded border border-slate-300 bg-slate-50 px-2 py-1 text-[11px] font-semibold text-slate-700"
+              >
+                전체 보기
+              </button>
+            </div>
+          </div>
           <div className="mt-2 overflow-hidden rounded-lg border border-slate-200">
             <MapContainer
               center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]}
@@ -1570,28 +1727,71 @@ export default function StaffPage() {
               maxZoom={21}
               className="h-72 w-full"
             >
+              <MapViewportController
+                action={
+                  mapAction.startsWith("focus-me")
+                    ? "focus-me"
+                    : mapAction.startsWith("fit-all")
+                      ? "fit-all"
+                      : "idle"
+                }
+                points={mapMarkerStaff}
+                myPoint={myMapPoint}
+              />
               <TileLayer attribution="&copy; OpenStreetMap 기여자" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-              {filteredStaff.map((item) => (
+              {mapMarkerStaff.map((item) => {
+                const freshness = getFreshness(item, nowMs);
+                return (
                 <CircleMarker
-                  key={item.staffNo}
+                  key={`${item.staffNo}-${item.latitude.toFixed(6)}-${item.longitude.toFixed(6)}`}
                   center={[item.latitude, item.longitude]}
                   radius={7}
                   pathOptions={{
-                    color: "#ffffff",
-                    weight: 1.5,
-                    fillColor: STATUS_META[item.status]?.map || "#64748b",
+                    color: freshness.border,
+                    weight: 2,
+                    fillColor: staffColorById(item.staffNo),
                     fillOpacity: 0.9,
                   }}
                 >
+                  <Tooltip direction="top" offset={[0, -10]} permanent>
+                    <span className="text-[10px] font-bold">
+                      {staffInitial(item.name)} · {item.name} · {freshness.label}
+                    </span>
+                  </Tooltip>
                   <Popup>
                     <p className="text-xs font-bold">
                       {item.name} ({item.staffNo})
                     </p>
                     <p className="text-xs mt-1">팀: {item.team}</p>
+                    <p className="text-xs mt-1">상태: {STATUS_META[item.status]?.label || item.status}</p>
+                    <p className="text-xs mt-1">통신 상태: {freshness.label}</p>
+                    {item.lastUpdatedAt && (
+                      <p className="text-xs mt-1 text-slate-500">
+                        위치 업데이트: {item.lastUpdatedAt.replace("T", " ").slice(5, 16)}
+                      </p>
+                    )}
                   </Popup>
                 </CircleMarker>
-              ))}
+              );
+              })}
             </MapContainer>
+          </div>
+          <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+            <p className="text-[11px] font-bold text-slate-700">상태 범례</p>
+            <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
+              <div className="inline-flex items-center gap-1.5 text-slate-700">
+                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                실시간 (30초 이내)
+              </div>
+              <div className="inline-flex items-center gap-1.5 text-slate-700">
+                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
+                지연 (2분 이내)
+              </div>
+              <div className="inline-flex items-center gap-1.5 text-slate-700">
+                <span className="h-2.5 w-2.5 rounded-full bg-slate-500" />
+                오프라인 (2분 초과)
+              </div>
+            </div>
           </div>
         </article>
       )}

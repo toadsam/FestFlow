@@ -96,9 +96,17 @@ public class StaffService {
         StaffStatus nextStatus = parseStatus(requestDto.status(), me.getStatus());
         String nextTask = normalizeText(requestDto.currentTask(), 250, me.getCurrentTask());
         String nextNote = normalizeText(requestDto.currentNote(), 1000, me.getCurrentNote());
+        boolean nextLocationSharingEnabled = requestDto.locationSharingEnabled() != null
+                ? requestDto.locationSharingEnabled()
+                : Boolean.TRUE.equals(me.getLocationSharingEnabled());
         Double nextLatitude = requestDto.latitude() != null ? requestDto.latitude() : me.getLatitude();
         Double nextLongitude = requestDto.longitude() != null ? requestDto.longitude() : me.getLongitude();
+        if (!nextLocationSharingEnabled) {
+            nextLatitude = null;
+            nextLongitude = null;
+        }
 
+        me.setLocationSharingEnabled(nextLocationSharingEnabled);
         me.updateRuntime(nextStatus, nextTask, nextNote, nextLatitude, nextLongitude, LocalDateTime.now());
         StaffMember saved = staffMemberRepository.save(me);
         streamService.publishStaff(getAllStaffMembers());
@@ -202,6 +210,7 @@ public class StaffService {
                 member.getAssignedBoothId(),
                 member.getLatitude(),
                 member.getLongitude(),
+                Boolean.TRUE.equals(member.getLocationSharingEnabled()),
                 member.getLastUpdatedAt()
         );
     }
