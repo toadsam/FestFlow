@@ -70,7 +70,7 @@ export default function LostFoundPage() {
           </span>
           <div>
             <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">Lost & Found</p>
-            <h2 className="mt-1 text-xl font-extrabold">분실물 센터</h2>
+            <h2 className="mt-1 text-xl font-extrabold text-role-map">분실물 센터</h2>
             <p className="mt-1 text-xs text-cyan-100/90">접수된 물품 현황을 조회할 수 있습니다. 등록 및 상태 변경은 스태프 페이지에서 처리됩니다.</p>
           </div>
         </div>
@@ -109,17 +109,17 @@ export default function LostFoundPage() {
 
         <div className="grid grid-cols-2 gap-2 text-center">
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
-            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconSearch className="h-3.5 w-3.5 icon-role-log" />검색 결과</p>
+            <p className="text-[10px] text-cyan-200/80 text-role-log inline-flex items-center gap-1"><IconSearch className="h-3.5 w-3.5 icon-role-log" />검색 결과</p>
             <p className="text-base font-extrabold text-cyan-100">{filteredItems.length}건</p>
           </div>
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
-            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconBox className="h-3.5 w-3.5 icon-role-map" />전체 물품</p>
+            <p className="text-[10px] text-cyan-200/80 text-role-map inline-flex items-center gap-1"><IconBox className="h-3.5 w-3.5 icon-role-map" />전체 물품</p>
             <p className="text-base font-extrabold text-cyan-100">{items.length}건</p>
           </div>
         </div>
       </article>
 
-      <article className="rounded-xl border border-cyan-900/70 bg-slate-950/60 p-3 text-xs text-cyan-100/80 inline-flex items-center gap-2">
+      <article className="rounded-xl border border-cyan-900/70 bg-slate-950/60 p-3 text-xs text-cyan-100/80 text-role-log inline-flex items-center gap-2">
         <IconClock className="h-4 w-4 shrink-0 icon-role-log" />
         물품 등록/반환 처리는 현장 스태프가 수행합니다. 본 화면은 조회 전용입니다.
       </article>

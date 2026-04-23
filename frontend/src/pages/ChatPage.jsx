@@ -62,7 +62,7 @@ export default function ChatPage() {
               <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">
                 Live Assistant
               </p>
-              <h2 className="mt-1 text-xl font-extrabold">축제 챗봇</h2>
+              <h2 className="mt-1 text-xl font-extrabold text-role-ops">축제 챗봇</h2>
               <p className="mt-1 text-xs text-cyan-100/90">
                 운영 정보, 공연 일정, 부스 추천을 빠르게 물어보세요.
               </p>
@@ -71,7 +71,7 @@ export default function ChatPage() {
           <button
             type="button"
             onClick={resetMessages}
-            className="inline-flex items-center gap-1.5 text-xs rounded-lg border border-cyan-200/70 bg-cyan-500/20 px-3 py-1.5 text-cyan-100"
+            className="inline-flex items-center gap-1.5 text-xs rounded-lg border border-cyan-200/70 bg-cyan-500/20 px-3 py-1.5 text-cyan-100 text-role-log"
           >
             <IconRefresh className="h-3.5 w-3.5 icon-role-log" />
             대화 초기화
@@ -97,7 +97,7 @@ export default function ChatPage() {
           const isUser = message.role === "user";
           return (
             <div key={`${message.role}-${idx}`} className={isUser ? "text-right" : "text-left"}>
-              <p className="text-[10px] text-cyan-200/70 mb-1 inline-flex items-center gap-1">
+              <p className={`text-[10px] text-cyan-200/70 mb-1 inline-flex items-center gap-1 ${isUser ? "" : "text-role-ops"}`}>
                 {isUser ? (
                   <>
                     <span className="inline-block h-1.5 w-1.5 rounded-full bg-cyan-300" />

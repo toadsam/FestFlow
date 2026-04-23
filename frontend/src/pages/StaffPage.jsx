@@ -779,7 +779,7 @@ export default function StaffPage() {
       <section className="cyber-page pt-4 pb-12">
         <article className="mx-auto max-w-md rounded-2xl border border-cyan-300/60 bg-slate-950/80 p-5 text-cyan-50 shadow-[0_0_32px_rgba(34,211,238,0.28)]">
           <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">Staff Secure Access</p>
-          <h2 className="mt-2 text-xl font-extrabold inline-flex items-center gap-1.5">
+          <h2 className="mt-2 text-xl font-extrabold text-role-ops inline-flex items-center gap-1.5">
             <IconShield className="h-5 w-5 icon-role-ops" />
             스태프 전용 관제 페이지
           </h2>
@@ -835,7 +835,7 @@ export default function StaffPage() {
         <div className="flex items-center justify-between gap-2">
           <div>
             <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">Field Console</p>
-            <h2 className="mt-1 text-lg font-extrabold inline-flex items-center gap-1.5">
+            <h2 className="mt-1 text-lg font-extrabold text-role-ops inline-flex items-center gap-1.5">
               <IconUsers className="h-5 w-5 icon-role-ops" />
               {me?.name}
             </h2>
@@ -1266,7 +1266,7 @@ export default function StaffPage() {
 
       {showMap && (
         <article className="rounded-xl border border-slate-200 bg-white p-3">
-          <p className="text-sm font-semibold text-slate-800 inline-flex items-center gap-1.5">
+          <p className="text-sm font-semibold text-slate-800 text-role-map inline-flex items-center gap-1.5">
             <IconMapPin className="h-4 w-4 icon-role-map" />
             스태프 위치 지도
           </p>

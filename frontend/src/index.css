@@ -2796,20 +2796,50 @@ body::after {
 /* Semantic icon colors */
 .icon-role-alert {
   color: #fda4af;
+  filter: drop-shadow(0 0 8px #fda4af66);
 }
 
 .icon-role-ops {
   color: #67e8f9;
+  filter: drop-shadow(0 0 8px #67e8f966);
 }
 
 .icon-role-log {
   color: #cbd5e1;
+  filter: drop-shadow(0 0 6px #cbd5e14d);
 }
 
 .icon-role-map {
   color: #86efac;
+  filter: drop-shadow(0 0 8px #86efac66);
 }
 
 .icon-role-schedule {
   color: #a5b4fc;
+  filter: drop-shadow(0 0 8px #a5b4fc66);
+}
+
+.text-role-alert {
+  color: #fda4af;
+  text-shadow: 0 0 8px #fda4af40;
+}
+
+.text-role-ops {
+  color: #67e8f9;
+  text-shadow: 0 0 8px #67e8f940;
+}
+
+.text-role-log {
+  color: #cbd5e1;
+  text-shadow: 0 0 6px #cbd5e133;
+}
+
+.text-role-map {
+  color: #86efac;
+  text-shadow: 0 0 8px #86efac40;
+}
+
+.text-role-schedule {
+  color: #a5b4fc;
+  text-shadow: 0 0 8px #a5b4fc40;
 }

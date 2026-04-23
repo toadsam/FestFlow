@@ -94,7 +94,7 @@ export default function StageMapPage() {
             </span>
             <div>
               <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">Stage Monitor</p>
-              <h2 className="mt-1 text-xl font-extrabold">노천극장 실시간 인원</h2>
+              <h2 className="mt-1 text-xl font-extrabold text-role-map">노천극장 실시간 인원</h2>
               <p className="mt-1 text-xs text-cyan-100/90">최근 {minutesWindow}분 기준 군중 밀집도를 시각화합니다.</p>
             </div>
           </div>
@@ -112,15 +112,15 @@ export default function StageMapPage() {
       <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3 space-y-2">
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
-            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconUsers className="h-3.5 w-3.5 icon-role-ops" />현재 추정 인원</p>
+            <p className="text-[10px] text-cyan-200/80 text-role-ops inline-flex items-center gap-1"><IconUsers className="h-3.5 w-3.5 icon-role-ops" />현재 추정 인원</p>
             <p className="text-lg font-bold text-cyan-100">{theater?.crowdCount ?? 0}명</p>
           </div>
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
-            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconMapPin className="h-3.5 w-3.5 icon-role-map" />혼잡도</p>
+            <p className="text-[10px] text-cyan-200/80 text-role-map inline-flex items-center gap-1"><IconMapPin className="h-3.5 w-3.5 icon-role-map" />혼잡도</p>
             <p className="text-sm font-bold text-cyan-100">{theater?.level || "-"}</p>
           </div>
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
-            <p className="text-[10px] text-cyan-200/80 inline-flex items-center gap-1"><IconClock className="h-3.5 w-3.5 icon-role-log" />업데이트</p>
+            <p className="text-[10px] text-cyan-200/80 text-role-log inline-flex items-center gap-1"><IconClock className="h-3.5 w-3.5 icon-role-log" />업데이트</p>
             <p className="text-xs font-bold text-cyan-100">{formatUpdatedAt(stageData?.updatedAt)}</p>
           </div>
         </div>
@@ -201,7 +201,7 @@ export default function StageMapPage() {
       </div>
 
       <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3">
-        <p className="text-sm font-semibold text-cyan-100 inline-flex items-center gap-1.5">
+        <p className="text-sm font-semibold text-cyan-100 text-role-ops inline-flex items-center gap-1.5">
           <IconUsers className="h-4 w-4 icon-role-ops" />
           노천극장 혼잡 게이지
         </p>

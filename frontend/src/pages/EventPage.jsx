@@ -195,7 +195,7 @@ export default function EventPage() {
       <div className="event-grid-noise" aria-hidden />
       <div ref={cursorGlowRef} className="event-cursor-glow" aria-hidden />
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold glitch-title inline-flex items-center gap-2" data-text="LIVE LINEUP">
+        <h2 className="text-lg font-bold glitch-title text-role-ops inline-flex items-center gap-2" data-text="LIVE LINEUP">
           <IconMusic className="h-5 w-5 icon-role-ops" />
           LIVE LINEUP
         </h2>
@@ -238,7 +238,7 @@ export default function EventPage() {
 
       {upcoming && (
         <div className="rounded-xl border border-cyan-300/40 bg-slate-900/80 p-3 text-sm text-cyan-100 event-alert">
-          <p className="text-[11px] uppercase tracking-[0.12em] text-cyan-200 inline-flex items-center gap-1">
+          <p className="text-[11px] uppercase tracking-[0.12em] text-cyan-200 text-role-schedule inline-flex items-center gap-1">
             <IconCalendar className="h-3.5 w-3.5 icon-role-schedule" />
             Next On Stage
           </p>
@@ -270,7 +270,7 @@ export default function EventPage() {
       {selectedEvent && (
         <article className="event-highlight rounded-xl border border-cyan-300/60 p-3">
           <div className="flex items-center justify-between gap-3">
-            <h3 className="font-bold text-sm inline-flex items-center gap-1.5">
+            <h3 className="font-bold text-sm text-role-ops inline-flex items-center gap-1.5">
               <IconTrophy className="h-4 w-4 icon-role-ops" />
               {selectedEvent.title}
             </h3>
