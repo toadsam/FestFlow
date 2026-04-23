@@ -780,7 +780,9 @@ export default function StaffPage() {
         <article className="mx-auto max-w-md rounded-2xl border border-cyan-300/60 bg-slate-950/80 p-5 text-cyan-50 shadow-[0_0_32px_rgba(34,211,238,0.28)]">
           <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">Staff Secure Access</p>
           <h2 className="mt-2 text-xl font-extrabold text-role-ops inline-flex items-center gap-1.5">
-            <IconShield className="h-5 w-5 icon-role-ops" />
+            <span className="visual-icon-badge visual-icon-badge--ops">
+              <IconShield className="h-5 w-5 icon-role-ops" />
+            </span>
             스태프 전용 관제 페이지
           </h2>
           <p className="mt-1 text-sm text-cyan-100/85">
@@ -836,7 +838,9 @@ export default function StaffPage() {
           <div>
             <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">Field Console</p>
             <h2 className="mt-1 text-lg font-extrabold text-role-ops inline-flex items-center gap-1.5">
-              <IconUsers className="h-5 w-5 icon-role-ops" />
+              <span className="visual-icon-badge visual-icon-badge--ops">
+                <IconUsers className="h-5 w-5 icon-role-ops" />
+              </span>
               {me?.name}
             </h2>
             <p className="text-xs text-cyan-100/85">
@@ -887,9 +891,9 @@ export default function StaffPage() {
           className="w-full rounded-xl bg-rose-600 py-4 text-base font-extrabold text-white"
         >
           <span className="inline-flex items-center gap-2">
-            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden>
-              <path d="M12 2 1 21h22L12 2Zm1 14h-2v-5h2v5Zm0 3h-2v-2h2v2Z" />
-            </svg>
+            <span className="visual-icon-badge-sm visual-icon-badge--alert">
+              <IconAlert className="h-4 w-4 icon-role-alert" />
+            </span>
             긴급 호출
           </span>
         </button>

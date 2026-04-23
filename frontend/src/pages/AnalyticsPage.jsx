@@ -54,7 +54,7 @@ export default function AnalyticsPage() {
       <article className="rounded-2xl border border-cyan-300/65 bg-gradient-to-br from-[#063463] via-[#0b4f86] to-[#1189be] p-4 text-cyan-50 shadow-[0_0_26px_rgba(34,211,238,0.28)]">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2.5">
-            <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cyan-100/50 bg-cyan-500/25">
+            <span className="mt-0.5 visual-icon-badge visual-icon-badge--ops shrink-0">
               <IconChart className="h-5 w-5 icon-role-ops" />
             </span>
             <div>
@@ -68,7 +68,9 @@ export default function AnalyticsPage() {
             onClick={loadAnalytics}
             className="inline-flex items-center gap-1.5 text-xs rounded-lg border border-cyan-300/60 bg-sky-500/20 px-3 py-1.5 min-h-11 text-cyan-100"
           >
-            <IconRefresh className="h-3.5 w-3.5 icon-role-log" />
+            <span className="visual-icon-badge-sm">
+              <IconRefresh className="h-3.5 w-3.5 icon-role-log" />
+            </span>
             새로고침
           </button>
         </div>
@@ -76,15 +78,15 @@ export default function AnalyticsPage() {
 
       <div className="grid grid-cols-3 gap-2">
         <article className="rounded-xl border border-cyan-300/50 bg-slate-950/70 p-2.5">
-          <p className="text-[10px] text-cyan-200/90 text-role-ops inline-flex items-center gap-1"><IconUsers className="h-3.5 w-3.5 icon-role-ops" />총 방문 집계</p>
+          <p className="text-[10px] text-cyan-200/90 text-role-ops inline-flex items-center gap-1"><span className="visual-icon-badge-sm visual-icon-badge--ops"><IconUsers className="h-3.5 w-3.5 icon-role-ops" /></span>총 방문 집계</p>
           <p className="mt-0.5 text-base font-extrabold text-cyan-100">{totalTraffic.toLocaleString()}명</p>
         </article>
         <article className="rounded-xl border border-cyan-300/50 bg-slate-950/70 p-2.5">
-          <p className="text-[10px] text-cyan-200/90 text-role-ops inline-flex items-center gap-1"><IconTrophy className="h-3.5 w-3.5 icon-role-ops" />현재 1위 부스</p>
+          <p className="text-[10px] text-cyan-200/90 text-role-ops inline-flex items-center gap-1"><span className="visual-icon-badge-sm visual-icon-badge--ops"><IconTrophy className="h-3.5 w-3.5 icon-role-ops" /></span>현재 1위 부스</p>
           <p className="mt-0.5 text-sm font-bold text-cyan-100 line-clamp-1">{topBooth?.boothName || "-"}</p>
         </article>
         <article className="rounded-xl border border-cyan-300/50 bg-slate-950/70 p-2.5">
-          <p className="text-[10px] text-cyan-200/90 text-role-alert inline-flex items-center gap-1"><IconFlame className="h-3.5 w-3.5 icon-role-alert" />최고 강도 포인트</p>
+          <p className="text-[10px] text-cyan-200/90 text-role-alert inline-flex items-center gap-1"><span className="visual-icon-badge-sm visual-icon-badge--alert"><IconFlame className="h-3.5 w-3.5 icon-role-alert" /></span>최고 강도 포인트</p>
           <p className="mt-0.5 text-sm font-bold text-cyan-100">{hottestPoint ? `Lv.${hottestPoint.intensity}` : "-"}</p>
         </article>
       </div>
@@ -93,7 +95,9 @@ export default function AnalyticsPage() {
 
       <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3">
         <h3 className="text-sm font-semibold text-cyan-100 text-role-log inline-flex items-center gap-1.5">
-          <IconChart className="h-4 w-4 icon-role-log" />
+          <span className="visual-icon-badge-sm">
+            <IconChart className="h-4 w-4 icon-role-log" />
+          </span>
           시간대별 방문량 (최근 24시간)
         </h3>
         <div className="mt-3 h-28 flex items-end gap-1 overflow-x-auto">
@@ -115,7 +119,9 @@ export default function AnalyticsPage() {
 
       <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3">
         <h3 className="text-sm font-semibold text-cyan-100 text-role-ops inline-flex items-center gap-1.5">
-          <IconTrophy className="h-4 w-4 icon-role-ops" />
+          <span className="visual-icon-badge-sm visual-icon-badge--ops">
+            <IconTrophy className="h-4 w-4 icon-role-ops" />
+          </span>
           인기 부스 랭킹 (최근 1시간)
         </h3>
         <div className="mt-2 space-y-1.5">
@@ -133,7 +139,9 @@ export default function AnalyticsPage() {
 
       <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3">
         <h3 className="text-sm font-semibold text-cyan-100 text-role-alert inline-flex items-center gap-1.5">
-          <IconFlame className="h-4 w-4 icon-role-alert" />
+          <span className="visual-icon-badge-sm visual-icon-badge--alert">
+            <IconFlame className="h-4 w-4 icon-role-alert" />
+          </span>
           혼잡 히트맵 포인트 (최근 1시간)
         </h3>
         <div className="mt-2 grid grid-cols-2 gap-2">
