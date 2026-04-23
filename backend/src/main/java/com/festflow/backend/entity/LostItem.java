@@ -49,6 +49,17 @@ public class LostItem {
     @Column(length = 500)
     private String resolveNote;
 
+    @Column(length = 120)
+    private String claimantName;
+
+    @Column(length = 120)
+    private String claimantContact;
+
+    @Column(length = 1000)
+    private String claimantNote;
+
+    private LocalDateTime claimedAt;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -92,9 +103,32 @@ public class LostItem {
         this.updatedAt = LocalDateTime.now();
     }
 
-    public void updateStatus(String status, String resolveNote) {
+    public void update(
+            String title,
+            String description,
+            String category,
+            String foundLocation,
+            String finderContact,
+            String imageUrl,
+            String status,
+            String resolveNote
+    ) {
+        this.title = title;
+        this.description = description;
+        this.category = category;
+        this.foundLocation = foundLocation;
+        this.finderContact = finderContact;
+        this.imageUrl = imageUrl;
         this.status = status;
         this.resolveNote = resolveNote;
+    }
+
+    public void markClaim(String claimantName, String claimantContact, String claimantNote, String status) {
+        this.claimantName = claimantName;
+        this.claimantContact = claimantContact;
+        this.claimantNote = claimantNote;
+        this.claimedAt = LocalDateTime.now();
+        this.status = status;
     }
 
     public Long getId() {
@@ -139,6 +173,22 @@ public class LostItem {
 
     public String getResolveNote() {
         return resolveNote;
+    }
+
+    public String getClaimantName() {
+        return claimantName;
+    }
+
+    public String getClaimantContact() {
+        return claimantContact;
+    }
+
+    public String getClaimantNote() {
+        return claimantNote;
+    }
+
+    public LocalDateTime getClaimedAt() {
+        return claimedAt;
     }
 
     public LocalDateTime getCreatedAt() {

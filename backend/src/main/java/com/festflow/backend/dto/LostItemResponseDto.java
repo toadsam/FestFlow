@@ -15,6 +15,10 @@ public record LostItemResponseDto(
         String reporterType,
         String reporterRef,
         String resolveNote,
+        String claimantName,
+        String claimantContact,
+        String claimantNote,
+        LocalDateTime claimedAt,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {
