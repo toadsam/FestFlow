@@ -48,13 +48,20 @@ public class ExportController {
     @GetMapping(value = "/events.csv", produces = "text/csv")
     public ResponseEntity<String> exportEvents() {
         List<EventResponseDto> events = eventService.getAllEvents();
-        StringBuilder sb = new StringBuilder("id,title,startTime,endTime,status\n");
+        StringBuilder sb = new StringBuilder("id,title,startTime,endTime,status,imageUrl,imageCredit,imageFocus,statusOverride,liveMessage,delayMinutes,statusUpdatedAt\n");
         events.forEach(event -> sb.append(csvLine(
                 String.valueOf(event.id()),
                 event.title(),
                 String.valueOf(event.startTime()),
                 String.valueOf(event.endTime()),
-                event.status()
+                event.status(),
+                event.imageUrl(),
+                event.imageCredit(),
+                event.imageFocus(),
+                event.statusOverride(),
+                event.liveMessage(),
+                event.delayMinutes() != null ? String.valueOf(event.delayMinutes()) : "",
+                event.statusUpdatedAt() != null ? String.valueOf(event.statusUpdatedAt()) : ""
         )));
 
         return ResponseEntity.ok()

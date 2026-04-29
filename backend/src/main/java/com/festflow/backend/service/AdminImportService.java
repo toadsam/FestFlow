@@ -69,7 +69,13 @@ public class AdminImportService {
                 eventService.createEvent(new EventUpsertRequestDto(
                         values[0].trim(),
                         LocalDateTime.parse(values[1].trim()),
-                        LocalDateTime.parse(values[2].trim())
+                        LocalDateTime.parse(values[2].trim()),
+                        values.length > 3 ? values[3].trim() : null,
+                        values.length > 4 ? values[4].trim() : null,
+                        values.length > 5 ? values[5].trim() : null,
+                        values.length > 6 ? values[6].trim() : null,
+                        values.length > 7 ? values[7].trim() : null,
+                        values.length > 8 && !values[8].isBlank() ? Integer.parseInt(values[8].trim()) : null
                 ));
                 count++;
             }

@@ -5,9 +5,15 @@ import { IconCalendar, IconDownload, IconMusic, IconTrophy } from "../components
 
 const statusClassName = {
   예정: "bg-sky-500/20 text-sky-200 border border-sky-300/50",
+  대기중: "bg-amber-400/20 text-amber-100 border border-amber-300/50",
+  "곧 시작": "bg-fuchsia-400/20 text-fuchsia-100 border border-fuchsia-300/50",
+  지연: "bg-rose-500/20 text-rose-100 border border-rose-300/50",
   진행중: "bg-cyan-400/20 text-cyan-200 border border-cyan-300/50",
   종료: "bg-slate-700/30 text-slate-200 border border-slate-400/40",
+  취소: "bg-zinc-800/60 text-zinc-200 border border-zinc-400/40",
 };
+
+const statusFilters = ["전체", "예정", "대기중", "곧 시작", "지연", "진행중", "종료", "취소"];
 
 function notify(title, body) {
   if ("Notification" in window && Notification.permission === "granted") {
@@ -86,7 +92,10 @@ export default function EventPage() {
   }, [events, statusFilter]);
 
   const statusStats = useMemo(() => {
-    const counters = { 전체: events.length, 예정: 0, 진행중: 0, 종료: 0 };
+    const counters = statusFilters.reduce((acc, status) => {
+      acc[status] = status === "전체" ? events.length : 0;
+      return acc;
+    }, {});
     events.forEach((event) => {
       counters[event.status] = (counters[event.status] || 0) + 1;
     });
@@ -97,7 +106,7 @@ export default function EventPage() {
     const now = new Date();
     return events.find((event) => {
       const diff = new Date(event.startTime) - now;
-      return event.status === "예정" && diff > 0 && diff < 60 * 60 * 1000;
+      return ["예정", "대기중", "곧 시작", "지연"].includes(event.status) && diff > 0 && diff < 60 * 60 * 1000;
     });
   }, [events]);
 
@@ -229,7 +238,7 @@ export default function EventPage() {
       </div>
 
       <div className="grid grid-cols-4 gap-2">
-        {["전체", "예정", "진행중", "종료"].map((label) => (
+        {["전체", "지연", "곧 시작", "진행중"].map((label) => (
           <div
             key={`metric-${label}`}
             className="event-metric rounded-lg p-2 text-center"
@@ -251,14 +260,18 @@ export default function EventPage() {
             Next On Stage
           </p>
           <p className="mt-1 font-semibold">{upcoming.title}</p>
+          {upcoming.liveMessage && (
+            <p className="mt-1 text-xs text-amber-100">{upcoming.liveMessage}</p>
+          )}
           <p className="text-xs mt-1">
             {upcoming.startTime.replace("T", " ")} · {countdownLabel(upcoming)}
+            {upcoming.delayMinutes ? ` · ${upcoming.delayMinutes}분 지연` : ""}
           </p>
         </div>
       )}
 
       <div className="grid grid-cols-4 gap-1 rounded-lg bg-slate-900/80 p-1">
-        {["전체", "예정", "진행중", "종료"].map((status) => (
+        {statusFilters.map((status) => (
           <button
             key={status}
             type="button"
@@ -293,7 +306,13 @@ export default function EventPage() {
           <p className="mt-1 text-xs text-cyan-200">
             {selectedEvent.startTime.replace("T", " ")} ~{" "}
             {selectedEvent.endTime.replace("T", " ")}
+            {selectedEvent.delayMinutes ? ` · ${selectedEvent.delayMinutes}분 지연` : ""}
           </p>
+          {selectedEvent.liveMessage && (
+            <p className="mt-2 rounded-lg border border-amber-300/30 bg-amber-400/10 px-2 py-1 text-xs text-amber-100">
+              {selectedEvent.liveMessage}
+            </p>
+          )}
           <div className="mt-2 h-2 rounded bg-slate-900/70 overflow-hidden">
             <div
               className="h-full event-progress"
@@ -330,7 +349,13 @@ export default function EventPage() {
                 <p className="text-sm text-slate-600 mt-1">
                   {event.startTime.replace("T", " ")} ~{" "}
                   {event.endTime.replace("T", " ")}
+                  {event.delayMinutes ? ` · ${event.delayMinutes}분 지연` : ""}
                 </p>
+                {event.liveMessage && (
+                  <p className="mt-2 rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
+                    {event.liveMessage}
+                  </p>
+                )}
                 <div className="mt-2 h-1.5 rounded bg-slate-900/60 overflow-hidden">
                   <div
                     className="event-progress h-full"

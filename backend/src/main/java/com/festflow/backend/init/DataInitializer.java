@@ -106,7 +106,7 @@ public class DataInitializer {
                     for (int i = 0; i < limit; i++) {
                         FestivalEvent target = existingEvents.get(i);
                         FestivalEvent source = targetEvents.get(i);
-                        target.update(source.getTitle(), source.getStartTime(), source.getEndTime());
+                        target.update(source.getTitle(), source.getStartTime(), source.getEndTime(), source.getImageUrl(), source.getImageCredit(), source.getImageFocus(), source.getStatusOverride(), source.getLiveMessage(), source.getDelayMinutes());
                         target.setStatus("예정");
                         eventRepository.save(target);
                     }
@@ -116,6 +116,7 @@ public class DataInitializer {
                     }
                 }
             }
+            applyDefaultEventImages(eventRepository);
 
             if (adminUserRepository.count() == 0
                     && initialAdminUsername != null
@@ -213,11 +214,78 @@ public class DataInitializer {
 
     private List<FestivalEvent> seedEvents(LocalDateTime now) {
         return List.of(
-                new FestivalEvent("\uB4DD\uADFC\uB4DD\uADFC \uD3EC\uC9D5 \uACF5\uC5F0", now.minusMinutes(25), now.plusMinutes(20), "\uC608\uC815"),
-                new FestivalEvent("\uD558\uCE20\uD22C\uD558\uD2B8", now.plusMinutes(50), now.plusHours(1).plusMinutes(40), "\uC608\uC815"),
-                new FestivalEvent("\uD558\uC774\uD0A4", now.plusHours(2), now.plusHours(3), "\uC608\uC815"),
-                new FestivalEvent("\uBCA0\uC774\uBE44\uBAAC\uC2A4\uD130", now.plusHours(3).plusMinutes(30), now.plusHours(4).plusMinutes(30), "\uC608\uC815"),
-                new FestivalEvent("\uD0A4\uD0A4", now.plusHours(5), now.plusHours(6), "\uC608\uC815")
+                new FestivalEvent("\uB4DD\uADFC\uB4DD\uADFC \uD3EC\uC9D5 \uACF5\uC5F0", now.minusMinutes(25), now.plusMinutes(20), "\uC608\uC815", defaultEventImageUrl("\uB4DD\uADFC\uB4DD\uADFC \uD3EC\uC9D5 \uACF5\uC5F0"), defaultEventImageCredit("\uB4DD\uADFC\uB4DD\uADFC \uD3EC\uC9D5 \uACF5\uC5F0"), defaultEventImageFocus("\uB4DD\uADFC\uB4DD\uADFC \uD3EC\uC9D5 \uACF5\uC5F0")),
+                new FestivalEvent("\uD558\uCE20\uD22C\uD558\uD2B8", now.plusMinutes(50), now.plusHours(1).plusMinutes(40), "\uC608\uC815", defaultEventImageUrl("\uD558\uCE20\uD22C\uD558\uD2B8"), defaultEventImageCredit("\uD558\uCE20\uD22C\uD558\uD2B8"), defaultEventImageFocus("\uD558\uCE20\uD22C\uD558\uD2B8")),
+                new FestivalEvent("\uD558\uC774\uD0A4", now.plusHours(2), now.plusHours(3), "\uC608\uC815", defaultEventImageUrl("\uD558\uC774\uD0A4"), defaultEventImageCredit("\uD558\uC774\uD0A4"), defaultEventImageFocus("\uD558\uC774\uD0A4")),
+                new FestivalEvent("\uBCA0\uC774\uBE44\uBAAC\uC2A4\uD130", now.plusHours(3).plusMinutes(30), now.plusHours(4).plusMinutes(30), "\uC608\uC815", defaultEventImageUrl("\uBCA0\uC774\uBE44\uBAAC\uC2A4\uD130"), defaultEventImageCredit("\uBCA0\uC774\uBE44\uBAAC\uC2A4\uD130"), defaultEventImageFocus("\uBCA0\uC774\uBE44\uBAAC\uC2A4\uD130")),
+                new FestivalEvent("\uD0A4\uD0A4", now.plusHours(5), now.plusHours(6), "\uC608\uC815", defaultEventImageUrl("\uD0A4\uD0A4"), defaultEventImageCredit("\uD0A4\uD0A4"), defaultEventImageFocus("\uD0A4\uD0A4"))
         );
+    }
+
+    private void applyDefaultEventImages(EventRepository eventRepository) {
+        eventRepository.findAll().forEach(event -> {
+            if (event.getImageUrl() != null && !event.getImageUrl().isBlank()) {
+                return;
+            }
+            String imageUrl = defaultEventImageUrl(event.getTitle());
+            if (imageUrl == null) {
+                return;
+            }
+            event.setImage(imageUrl, defaultEventImageCredit(event.getTitle()), defaultEventImageFocus(event.getTitle()));
+            eventRepository.save(event);
+        });
+    }
+
+    private String defaultEventImageUrl(String title) {
+        if (title.contains("\uB4DD\uADFC\uB4DD\uADFC")) {
+            return "https://commons.wikimedia.org/wiki/Special:Redirect/file/Bodybuilder.jpg?width=900";
+        }
+        if (title.contains("\uD558\uCE20\uD22C\uD558\uD2B8")) {
+            return "https://commons.wikimedia.org/wiki/Special:Redirect/file/Hearts2Hearts_250515.jpg?width=900";
+        }
+        if (title.contains("\uD558\uC774\uD0A4")) {
+            return "https://commons.wikimedia.org/wiki/Special:Redirect/file/H1-Key_in_February_2026.png?width=900";
+        }
+        if (title.contains("\uBCA0\uC774\uBE44\uBAAC\uC2A4\uD130")) {
+            return "https://commons.wikimedia.org/wiki/Special:Redirect/file/BABYMONSTER_in_Seattle.jpg?width=900";
+        }
+        if (title.contains("\uD0A4\uD0A4")) {
+            return "https://commons.wikimedia.org/wiki/Special:Redirect/file/Kiiikiii_250604.png?width=900";
+        }
+        return null;
+    }
+
+    private String defaultEventImageCredit(String title) {
+        if (title.contains("\uB4DD\uADFC\uB4DD\uADFC")) {
+            return "Wikimedia Commons / Bodybuilder.jpg";
+        }
+        if (title.contains("\uD558\uCE20\uD22C\uD558\uD2B8")) {
+            return "Wikimedia Commons / Hearts2Hearts_250515.jpg";
+        }
+        if (title.contains("\uD558\uC774\uD0A4")) {
+            return "Wikimedia Commons / H1-Key_in_February_2026.png";
+        }
+        if (title.contains("\uBCA0\uC774\uBE44\uBAAC\uC2A4\uD130")) {
+            return "Wikimedia Commons / BABYMONSTER_in_Seattle.jpg";
+        }
+        if (title.contains("\uD0A4\uD0A4")) {
+            return "Wikimedia Commons / Kiiikiii_250604.png";
+        }
+        return null;
+    }
+
+    private String defaultEventImageFocus(String title) {
+        if (title.contains("\uD558\uC774\uD0A4")) {
+            return "57% 42%";
+        }
+        if (title.contains("\uD558\uCE20\uD22C\uD558\uD2B8")
+                || title.contains("\uBCA0\uC774\uBE44\uBAAC\uC2A4\uD130")
+                || title.contains("\uD0A4\uD0A4")) {
+            return "center 42%";
+        }
+        if (title.contains("\uB4DD\uADFC\uB4DD\uADFC")) {
+            return "center 35%";
+        }
+        return null;
     }
 }

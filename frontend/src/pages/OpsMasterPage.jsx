@@ -27,6 +27,17 @@ import {
 
 const MASTER_KEY_STORAGE_KEY = "festflow_ops_master_key";
 const NOTICE_CATEGORIES = ["긴급", "분실물", "안내", "일반"];
+const EVENT_STATUS_OPTIONS = ["예정", "대기중", "곧 시작", "지연", "진행중", "종료", "취소"];
+const EVENT_QUICK_STATUS_OPTIONS = ["곧 시작", "지연", "진행중", "종료"];
+const EVENT_STATUS_STYLES = {
+  예정: "border-sky-200 bg-sky-50 text-sky-700",
+  대기중: "border-amber-200 bg-amber-50 text-amber-700",
+  "곧 시작": "border-fuchsia-200 bg-fuchsia-50 text-fuchsia-700",
+  지연: "border-rose-200 bg-rose-50 text-rose-700",
+  진행중: "border-cyan-200 bg-cyan-50 text-cyan-700",
+  종료: "border-slate-200 bg-slate-100 text-slate-600",
+  취소: "border-zinc-300 bg-zinc-100 text-zinc-700",
+};
 
 const initialNotice = {
   title: "",
@@ -34,7 +45,17 @@ const initialNotice = {
   category: "안내",
   active: true,
 };
-const initialEvent = { title: "", startTime: "", endTime: "" };
+const initialEvent = {
+  title: "",
+  startTime: "",
+  endTime: "",
+  imageUrl: "",
+  imageCredit: "",
+  imageFocus: "",
+  statusOverride: "",
+  liveMessage: "",
+  delayMinutes: "",
+};
 const initialBooth = {
   name: "",
   latitude: "",
@@ -58,6 +79,10 @@ function confirmAction(message) {
   return window.confirm(`정말 실행할까요?\n\n${message}`);
 }
 
+function formatEventTime(value) {
+  return value?.replace("T", " ").slice(5, 16) || "-";
+}
+
 export default function OpsMasterPage() {
   const [searchParams] = useSearchParams();
   const initialKey =
@@ -74,10 +99,13 @@ export default function OpsMasterPage() {
 
   const [data, setData] = useState(null);
   const [boothLiveDrafts, setBoothLiveDrafts] = useState({});
+  const [eventLiveDrafts, setEventLiveDrafts] = useState({});
 
   const [noticeForm, setNoticeForm] = useState(initialNotice);
   const [eventForm, setEventForm] = useState(initialEvent);
   const [boothForm, setBoothForm] = useState(initialBooth);
+  const [eventEditorOpen, setEventEditorOpen] = useState(false);
+  const [expandedEventIds, setExpandedEventIds] = useState(() => new Set());
 
   const [editingNoticeId, setEditingNoticeId] = useState(null);
   const [editingEventId, setEditingEventId] = useState(null);
@@ -112,10 +140,20 @@ export default function OpsMasterPage() {
       });
       setBoothLiveDrafts(nextLiveDrafts);
 
+      const nextEventDrafts = {};
+      next.events.forEach((event) => {
+        nextEventDrafts[event.id] = {
+          liveMessage: event.liveMessage || "",
+          delayMinutes: event.delayMinutes ?? "",
+        };
+      });
+      setEventLiveDrafts(nextEventDrafts);
+
       setError("");
     } catch (e) {
       setData(null);
       setBoothLiveDrafts({});
+      setEventLiveDrafts({});
       setError(
         e.message === "Failed to fetch"
           ? "서버 연결에 실패했습니다. 백엔드 실행 상태를 확인해 주세요."
@@ -224,6 +262,13 @@ export default function OpsMasterPage() {
         title: eventForm.title,
         startTime: toApiDateTime(eventForm.startTime),
         endTime: toApiDateTime(eventForm.endTime),
+        imageUrl: eventForm.imageUrl,
+        imageCredit: eventForm.imageCredit,
+        imageFocus: eventForm.imageFocus,
+        statusOverride: eventForm.statusOverride,
+        liveMessage: eventForm.liveMessage,
+        delayMinutes:
+          eventForm.delayMinutes === "" ? null : Number(eventForm.delayMinutes),
       };
 
       if (editingEventId) {
@@ -236,6 +281,7 @@ export default function OpsMasterPage() {
 
       setEventForm(initialEvent);
       setEditingEventId(null);
+      setEventEditorOpen(false);
       await load();
     } catch (e) {
       setError(e.message);
@@ -251,6 +297,76 @@ export default function OpsMasterPage() {
     } catch (e) {
       setError(e.message);
     }
+  }
+
+  function eventPayload(event, overrides = {}) {
+    return {
+      title: event.title,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      imageUrl: event.imageUrl || "",
+      imageCredit: event.imageCredit || "",
+      imageFocus: event.imageFocus || "",
+      statusOverride: event.statusOverride || "",
+      liveMessage: event.liveMessage || "",
+      delayMinutes: event.delayMinutes ?? null,
+      ...overrides,
+    };
+  }
+
+  async function handleQuickEventStatus(event, statusOverride) {
+    try {
+      const draft = eventLiveDrafts[event.id] || {};
+      await updateOpsMasterEvent(
+        event.id,
+        eventPayload(event, {
+          statusOverride,
+          liveMessage: draft.liveMessage || "",
+          delayMinutes:
+            draft.delayMinutes === "" || draft.delayMinutes == null
+              ? null
+              : Number(draft.delayMinutes),
+        }),
+        key,
+      );
+      setMessage(statusOverride ? `${event.title} 상태를 ${statusOverride}(으)로 변경했습니다.` : `${event.title} 상태를 자동 계산으로 변경했습니다.`);
+      await load();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  async function handleQuickEventMessage(event) {
+    try {
+      const draft = eventLiveDrafts[event.id] || {};
+      await updateOpsMasterEvent(
+        event.id,
+        eventPayload(event, {
+          liveMessage: draft.liveMessage || "",
+          delayMinutes:
+            draft.delayMinutes === "" || draft.delayMinutes == null
+              ? null
+              : Number(draft.delayMinutes),
+        }),
+        key,
+      );
+      setMessage(`${event.title} 현장 안내를 저장했습니다.`);
+      await load();
+    } catch (e) {
+      setError(e.message);
+    }
+  }
+
+  function toggleEventExpanded(eventId) {
+    setExpandedEventIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(eventId)) {
+        next.delete(eventId);
+      } else {
+        next.add(eventId);
+      }
+      return next;
+    });
   }
 
   async function handleBoothSubmit(e) {
@@ -601,99 +717,312 @@ export default function OpsMasterPage() {
           )}
 
           {tab === "event" && (
-            <article className="rounded-xl border border-slate-200 bg-white p-3 space-y-3">
-              <h3 className="font-semibold text-role-schedule inline-flex items-center gap-1.5">
-                <IconCalendar className="h-4 w-4 icon-role-schedule" />
-                공연 일정 관리
-              </h3>
-              <form className="space-y-2" onSubmit={handleEventSubmit}>
-                <input
-                  className="w-full rounded border px-2 py-2 text-sm"
-                  placeholder="공연명"
-                  value={eventForm.title}
-                  onChange={(e) =>
-                    setEventForm((p) => ({ ...p, title: e.target.value }))
-                  }
-                  required
-                />
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="datetime-local"
-                    className="rounded border px-2 py-2 text-sm"
-                    value={eventForm.startTime}
-                    onChange={(e) =>
-                      setEventForm((p) => ({ ...p, startTime: e.target.value }))
-                    }
-                    required
-                  />
-                  <input
-                    type="datetime-local"
-                    className="rounded border px-2 py-2 text-sm"
-                    value={eventForm.endTime}
-                    onChange={(e) =>
-                      setEventForm((p) => ({ ...p, endTime: e.target.value }))
-                    }
-                    required
-                  />
-                </div>
-                <button
-                  type="submit"
-                  className="w-full rounded bg-cyan-700 py-2 text-sm font-semibold text-white"
-                >
-                  {editingEventId ? "공연 수정" : "공연 등록"}
-                </button>
-              </form>
-
-              <div className="space-y-2">
-                {data.events.map((event) => (
-                  <div
-                    key={event.id}
-                    className="rounded border border-slate-200 p-2"
-                  >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold">{event.title}</p>
-                      <span className="text-xs text-slate-500">
-                        {event.status}
-                      </span>
-                    </div>
+            <section className="space-y-3">
+              <article className="rounded-xl border border-slate-200 bg-white p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold text-role-schedule inline-flex items-center gap-1.5">
+                      <IconCalendar className="h-4 w-4 icon-role-schedule" />
+                      공연 라이브 컨트롤
+                    </h3>
                     <p className="mt-1 text-xs text-slate-500">
-                      {event.startTime?.replace("T", " ").slice(0, 16)} ~{" "}
-                      {event.endTime?.replace("T", " ").slice(0, 16)}
+                      현장 상태, 안내 문구, 지연 시간을 공연 카드에서 바로 반영합니다.
                     </p>
-                    <div className="mt-2 grid grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        className="rounded border px-2 py-1 text-xs"
-                        onClick={() => handleQuickEventStartNotice(event.id)}
+                  </div>
+                  <button
+                    type="button"
+                    className="shrink-0 rounded-lg bg-cyan-700 px-3 py-2 text-xs font-semibold text-white"
+                    onClick={() => {
+                      setEditingEventId(null);
+                      setEventForm(initialEvent);
+                      setEventEditorOpen((open) => !open);
+                    }}
+                  >
+                    {eventEditorOpen ? "편집 닫기" : "공연 추가"}
+                  </button>
+                </div>
+
+                {eventEditorOpen && (
+                  <form className="mt-3 space-y-2 rounded-lg border border-cyan-100 bg-cyan-50/40 p-3" onSubmit={handleEventSubmit}>
+                    <div className="grid gap-2 sm:grid-cols-[1fr_150px_150px]">
+                      <input
+                        className="w-full rounded border px-2 py-2 text-sm"
+                        placeholder="공연명"
+                        value={eventForm.title}
+                        onChange={(e) =>
+                          setEventForm((p) => ({ ...p, title: e.target.value }))
+                        }
+                        required
+                      />
+                      <input
+                        type="datetime-local"
+                        className="rounded border px-2 py-2 text-sm"
+                        value={eventForm.startTime}
+                        onChange={(e) =>
+                          setEventForm((p) => ({ ...p, startTime: e.target.value }))
+                        }
+                        required
+                      />
+                      <input
+                        type="datetime-local"
+                        className="rounded border px-2 py-2 text-sm"
+                        value={eventForm.endTime}
+                        onChange={(e) =>
+                          setEventForm((p) => ({ ...p, endTime: e.target.value }))
+                        }
+                        required
+                      />
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-[1fr_120px]">
+                      <input
+                        className="rounded border px-2 py-2 text-sm"
+                        placeholder="사용자에게 보여줄 현장 안내"
+                        value={eventForm.liveMessage}
+                        onChange={(e) =>
+                          setEventForm((p) => ({ ...p, liveMessage: e.target.value }))
+                        }
+                      />
+                      <input
+                        type="number"
+                        min="0"
+                        className="rounded border px-2 py-2 text-sm"
+                        placeholder="지연분"
+                        value={eventForm.delayMinutes}
+                        onChange={(e) =>
+                          setEventForm((p) => ({ ...p, delayMinutes: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-[1fr_1fr_180px]">
+                      <input
+                        className="rounded border px-2 py-2 text-sm"
+                        placeholder="라인업 이미지 URL"
+                        value={eventForm.imageUrl}
+                        onChange={(e) =>
+                          setEventForm((p) => ({ ...p, imageUrl: e.target.value }))
+                        }
+                      />
+                      <input
+                        className="rounded border px-2 py-2 text-sm"
+                        placeholder="이미지 출처"
+                        value={eventForm.imageCredit}
+                        onChange={(e) =>
+                          setEventForm((p) => ({ ...p, imageCredit: e.target.value }))
+                        }
+                      />
+                      <input
+                        className="rounded border px-2 py-2 text-sm"
+                        placeholder="초점 예: 57% 42%"
+                        value={eventForm.imageFocus}
+                        onChange={(e) =>
+                          setEventForm((p) => ({ ...p, imageFocus: e.target.value }))
+                        }
+                      />
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-[1fr_140px_100px]">
+                      <select
+                        className="rounded border px-2 py-2 text-sm"
+                        value={eventForm.statusOverride}
+                        onChange={(e) =>
+                          setEventForm((p) => ({ ...p, statusOverride: e.target.value }))
+                        }
                       >
-                        시작 공지
-                      </button>
+                        <option value="">상태 자동 계산</option>
+                        {EVENT_STATUS_OPTIONS.map((status) => (
+                          <option key={status} value={status}>
+                            {status} 고정
+                          </option>
+                        ))}
+                      </select>
                       <button
                         type="button"
-                        className="rounded border px-2 py-1 text-xs"
+                        className="rounded border border-slate-300 bg-white py-2 text-sm"
                         onClick={() => {
-                          setEditingEventId(event.id);
-                          setEventForm({
-                            title: event.title,
-                            startTime: toInputDateTime(event.startTime),
-                            endTime: toInputDateTime(event.endTime),
-                          });
+                          setEditingEventId(null);
+                          setEventForm(initialEvent);
+                          setEventEditorOpen(false);
                         }}
                       >
-                        수정
+                        취소
                       </button>
                       <button
-                        type="button"
-                        className="rounded bg-rose-100 px-2 py-1 text-xs text-rose-700"
-                        onClick={() => handleDeleteEvent(event.id)}
+                        type="submit"
+                        className="rounded bg-cyan-700 py-2 text-sm font-semibold text-white"
                       >
-                        삭제
+                        {editingEventId ? "수정 저장" : "등록"}
                       </button>
                     </div>
-                  </div>
-                ))}
+                  </form>
+                )}
+              </article>
+
+              <div className="space-y-3">
+                {data.events.map((event) => {
+                  const draft = eventLiveDrafts[event.id] || {};
+                  const isManual = Boolean(event.statusOverride);
+                  const expanded = expandedEventIds.has(event.id);
+                  return (
+                    <article
+                      key={event.id}
+                      className="rounded-xl border border-cyan-300/25 bg-slate-950/55 p-3 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-cyan-200/70">
+                            공연명
+                          </p>
+                          <h4 className="mt-0.5 break-words text-lg font-extrabold leading-tight text-cyan-50">
+                            {event.title}
+                          </h4>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${EVENT_STATUS_STYLES[event.status] || "border-slate-200 bg-slate-100 text-slate-600"}`}>
+                              {event.status}
+                            </span>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] ${isManual ? "bg-cyan-100 text-cyan-700" : "bg-slate-100 text-slate-500"}`}>
+                              {isManual ? "수동" : "자동"}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-xs text-cyan-100/75">
+                            {formatEventTime(event.startTime)} ~ {formatEventTime(event.endTime)}
+                            {event.delayMinutes ? ` · ${event.delayMinutes}분 지연` : ""}
+                          </p>
+                        </div>
+                        <div className="flex shrink-0 gap-1">
+                          <button
+                            type="button"
+                            className="rounded-lg border border-slate-200 px-2 py-1 text-xs"
+                            onClick={() => toggleEventExpanded(event.id)}
+                          >
+                            {expanded ? "접기" : "관리"}
+                          </button>
+                        </div>
+                      </div>
+
+                      {event.liveMessage && (
+                        <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                          {event.liveMessage}
+                        </p>
+                      )}
+
+                      <div className="mt-3 grid grid-cols-5 gap-1.5">
+                        <button
+                          type="button"
+                          className={`rounded-lg border px-2 py-2 text-xs font-semibold ${!isManual ? "border-slate-900 bg-slate-900 text-white" : "border-slate-200 bg-white text-slate-600"}`}
+                          onClick={() => handleQuickEventStatus(event, "")}
+                        >
+                          자동
+                        </button>
+                        {EVENT_QUICK_STATUS_OPTIONS.map((status) => (
+                          <button
+                            key={`${event.id}-${status}`}
+                            type="button"
+                            className={`rounded-lg border px-2 py-2 text-xs font-semibold ${event.status === status && isManual ? "border-cyan-600 bg-cyan-600 text-white" : EVENT_STATUS_STYLES[status]}`}
+                            onClick={() => handleQuickEventStatus(event, status)}
+                          >
+                            {status}
+                          </button>
+                        ))}
+                      </div>
+
+                      {expanded && (
+                        <div className="mt-3 space-y-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
+                          <div className="grid grid-cols-4 gap-1.5">
+                            {["예정", "대기중", "취소"].map((status) => (
+                              <button
+                                key={`${event.id}-extra-${status}`}
+                                type="button"
+                                className={`rounded-lg border px-2 py-2 text-xs font-semibold ${event.status === status && isManual ? "border-cyan-600 bg-cyan-600 text-white" : EVENT_STATUS_STYLES[status]}`}
+                                onClick={() => handleQuickEventStatus(event, status)}
+                              >
+                                {status}
+                              </button>
+                            ))}
+                            <button
+                              type="button"
+                              className="rounded-lg border border-rose-200 bg-rose-50 px-2 py-2 text-xs font-semibold text-rose-700"
+                              onClick={() => handleQuickEventStartNotice(event.id)}
+                            >
+                              시작 공지
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-[1fr_76px_68px] gap-2">
+                            <input
+                              className="rounded-lg border border-slate-200 px-3 py-2 text-xs"
+                              placeholder="사용자에게 보여줄 현장 안내 문구"
+                              value={draft.liveMessage || ""}
+                              onChange={(e) =>
+                                setEventLiveDrafts((prev) => ({
+                                  ...prev,
+                                  [event.id]: {
+                                    ...(prev[event.id] || {}),
+                                    liveMessage: e.target.value,
+                                  },
+                                }))
+                              }
+                            />
+                            <input
+                              type="number"
+                              min="0"
+                              className="rounded-lg border border-slate-200 px-2 py-2 text-xs"
+                              placeholder="지연"
+                              value={draft.delayMinutes ?? ""}
+                              onChange={(e) =>
+                                setEventLiveDrafts((prev) => ({
+                                  ...prev,
+                                  [event.id]: {
+                                    ...(prev[event.id] || {}),
+                                    delayMinutes: e.target.value,
+                                  },
+                                }))
+                              }
+                            />
+                            <button
+                              type="button"
+                              className="rounded-lg bg-slate-900 px-2 py-2 text-xs font-semibold text-white"
+                              onClick={() => handleQuickEventMessage(event)}
+                            >
+                              반영
+                            </button>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-2">
+                            <button
+                              type="button"
+                              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-700"
+                              onClick={() => {
+                                setEditingEventId(event.id);
+                                setEventEditorOpen(true);
+                                setEventForm({
+                                  title: event.title,
+                                  startTime: toInputDateTime(event.startTime),
+                                  endTime: toInputDateTime(event.endTime),
+                                  imageUrl: event.imageUrl || "",
+                                  imageCredit: event.imageCredit || "",
+                                  imageFocus: event.imageFocus || "",
+                                  statusOverride: event.statusOverride || "",
+                                  liveMessage: event.liveMessage || "",
+                                  delayMinutes: event.delayMinutes ?? "",
+                                });
+                              }}
+                            >
+                              상세 수정
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs font-semibold text-slate-600"
+                              onClick={() => handleDeleteEvent(event.id)}
+                            >
+                              삭제
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
-            </article>
+            </section>
           )}
 
           {tab === "booth" && (

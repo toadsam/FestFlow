@@ -46,7 +46,17 @@ const initialBooth = {
   remainingStock: "",
   liveStatusMessage: "",
 };
-const initialEvent = { title: "", startTime: "", endTime: "" };
+const initialEvent = {
+  title: "",
+  startTime: "",
+  endTime: "",
+  imageUrl: "",
+  imageCredit: "",
+  imageFocus: "",
+  statusOverride: "",
+  liveMessage: "",
+  delayMinutes: "",
+};
 const initialNotice = {
   title: "",
   content: "",
@@ -277,6 +287,8 @@ export default function AdminPage() {
         ...eventForm,
         startTime: toApiDateTime(eventForm.startTime),
         endTime: toApiDateTime(eventForm.endTime),
+        delayMinutes:
+          eventForm.delayMinutes === "" ? null : Number(eventForm.delayMinutes),
       };
 
       if (editingEventId) {
@@ -852,6 +864,30 @@ export default function AdminPage() {
               required
             />
           </div>
+          <input
+            className="w-full border rounded px-2 py-2 text-sm"
+            placeholder="라인업 이미지 URL"
+            value={eventForm.imageUrl}
+            onChange={(e) =>
+              setEventForm((p) => ({ ...p, imageUrl: e.target.value }))
+            }
+          />
+          <input
+            className="w-full border rounded px-2 py-2 text-sm"
+            placeholder="이미지 출처"
+            value={eventForm.imageCredit}
+            onChange={(e) =>
+              setEventForm((p) => ({ ...p, imageCredit: e.target.value }))
+            }
+          />
+          <input
+            className="w-full border rounded px-2 py-2 text-sm"
+            placeholder="이미지 초점 위치 예: center 42% 또는 57% 42%"
+            value={eventForm.imageFocus}
+            onChange={(e) =>
+              setEventForm((p) => ({ ...p, imageFocus: e.target.value }))
+            }
+          />
           <button className="w-full rounded bg-cyan-700 text-white py-2 text-sm">
             {editingEventId ? "怨듭뿰 ?섏젙" : "怨듭뿰 異붽?"}
           </button>
@@ -879,6 +915,12 @@ export default function AdminPage() {
                         title: event.title,
                         startTime: event.startTime.slice(0, 16),
                         endTime: event.endTime.slice(0, 16),
+                        imageUrl: event.imageUrl || "",
+                        imageCredit: event.imageCredit || "",
+                        imageFocus: event.imageFocus || "",
+                        statusOverride: event.statusOverride || "",
+                        liveMessage: event.liveMessage || "",
+                        delayMinutes: event.delayMinutes ?? "",
                       });
                     }}
                   >

@@ -238,14 +238,35 @@ export default function LineupPage() {
                     <div className="lineup-card-guides" />
                     <p className="lineup-chip">{item.theme.accent}</p>
                     <p className="lineup-code">{item.code}</p>
-                    <div className="lineup-ring-meter">
-                      <span>{profile.aura}%</span>
-                    </div>
                     <p className="lineup-vertical-role">{item.theme.role}</p>
 
-                    <div className="lineup-portrait">
+                    <div
+                      className={`lineup-portrait ${item.imageUrl ? "lineup-portrait-has-image" : ""}`}
+                    >
+                      {item.imageUrl && (
+                        <>
+                          <img
+                            className="lineup-portrait-image-bg"
+                            src={item.imageUrl}
+                            style={{
+                              objectPosition: item.imageFocus || "center",
+                            }}
+                            alt=""
+                            aria-hidden="true"
+                            loading="lazy"
+                          />
+                          <img
+                            className="lineup-portrait-image"
+                            src={item.imageUrl}
+                            style={{
+                              objectPosition: item.imageFocus || "center",
+                            }}
+                            alt={`${item.title} 라인업 사진`}
+                            loading="lazy"
+                          />
+                        </>
+                      )}
                       <div className="lineup-portrait-glow" />
-                      <p className="lineup-portrait-title">{item.artist}</p>
                       <span className="lineup-artist-name">{item.artist}</span>
                     </div>
 
@@ -282,6 +303,9 @@ export default function LineupPage() {
                       {item.startTime?.replace("T", " ")} ~{" "}
                       {item.endTime?.replace("T", " ")}
                     </p>
+                    {item.imageCredit && (
+                      <p className="lineup-back-time">{item.imageCredit}</p>
+                    )}
                     <div className="lineup-back-row">
                       <span className="lineup-back-chip">
                         {item.theme.role}

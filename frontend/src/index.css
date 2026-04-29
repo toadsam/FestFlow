@@ -1155,6 +1155,7 @@ a:focus-visible {
 }
 
 .lineup-portrait {
+  position: relative;
   height: 196px;
   border: 1px solid #79a0ff7d;
   border-radius: 14px;
@@ -1168,6 +1169,44 @@ a:focus-visible {
     radial-gradient(circle at 24% 74%, #2de7ff30 0%, transparent 52%),
     linear-gradient(150deg, #3f1f88, #24104a 58%, #0e2144);
   overflow: hidden;
+}
+
+.lineup-portrait-has-image {
+  justify-content: flex-end;
+  align-items: flex-end;
+  background: #081934;
+}
+
+.lineup-portrait-image,
+.lineup-portrait-image-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-position: center;
+}
+
+.lineup-portrait-image-bg {
+  object-fit: cover;
+  filter: blur(14px) saturate(1.14) contrast(1.04);
+  opacity: 0.58;
+  transform: scale(1.08);
+}
+
+.lineup-portrait-image {
+  object-fit: cover;
+  filter: saturate(1.08) contrast(1.04);
+  opacity: 0.95;
+}
+
+.lineup-portrait-has-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(180deg, #05162a12 0%, #07152b38 48%, #050b1dd9 100%),
+    linear-gradient(90deg, #00eaff24 0%, transparent 34%, #7d63ff24 100%);
+  pointer-events: none;
 }
 
 .lineup-portrait-glow {
@@ -1193,7 +1232,7 @@ a:focus-visible {
 
 .lineup-artist-name {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   font-family: "Orbitron", "Rajdhani", sans-serif;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -1202,6 +1241,12 @@ a:focus-visible {
   text-shadow:
     0 0 12px #28edff6b,
     0 0 36px #7b63ff47;
+}
+
+.lineup-portrait-has-image .lineup-artist-name {
+  width: 100%;
+  font-size: 21px;
+  text-align: left;
 }
 
 .lineup-ring-meter {

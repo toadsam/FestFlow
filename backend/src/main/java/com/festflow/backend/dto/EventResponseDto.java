@@ -7,7 +7,14 @@ public record EventResponseDto(
         String title,
         LocalDateTime startTime,
         LocalDateTime endTime,
-        String status
+        String status,
+        String imageUrl,
+        String imageCredit,
+        String imageFocus,
+        String statusOverride,
+        String liveMessage,
+        Integer delayMinutes,
+        LocalDateTime statusUpdatedAt
 ) {
 }
 
