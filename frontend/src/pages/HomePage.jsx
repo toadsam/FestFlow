@@ -44,6 +44,8 @@ const markerIcon = L.icon({
 
 const levelToScore = { 여유: 1, 보통: 2, 혼잡: 3, 매우혼잡: 4 };
 const scoreToLevel = ["여유", "보통", "혼잡", "매우혼잡"];
+const BOOTH_CATEGORY_OPTIONS = ["전체", "주점", "음식", "체험", "이벤트", "굿즈", "안내", "응급", "포토존", "플리마켓", "기타"];
+const BOOTH_DAY_PART_OPTIONS = ["전체", "상시", "주간", "야간"];
 const noticeColor = {
   긴급: "border-rose-300 bg-rose-50 text-rose-700",
   분실물: "border-amber-300 bg-amber-50 text-amber-700",
@@ -62,6 +64,29 @@ function normalizeLevel(level) {
 
 function normalizeCongestion(item) {
   return item ? { ...item, level: normalizeLevel(item.level) } : item;
+}
+
+function isBoothOpenNow(booth, now = new Date()) {
+  if (!booth.openTime || !booth.closeTime) return true;
+  const [openHour, openMinute] = booth.openTime.split(":").map(Number);
+  const [closeHour, closeMinute] = booth.closeTime.split(":").map(Number);
+  if ([openHour, openMinute, closeHour, closeMinute].some(Number.isNaN)) {
+    return true;
+  }
+  const current = now.getHours() * 60 + now.getMinutes();
+  const open = openHour * 60 + openMinute;
+  const close = closeHour * 60 + closeMinute;
+  if (open === close) return true;
+  if (open < close) return current >= open && current <= close;
+  return current >= open || current <= close;
+}
+
+function boothMetaLabel(booth) {
+  const time =
+    booth.openTime || booth.closeTime
+      ? `${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
+      : "시간 미정";
+  return `${booth.category || "주점"} · ${booth.dayPart || "야간"} · ${time}`;
 }
 
 function ZoomWatcher({ onZoomChange, onMapReady }) {
@@ -138,6 +163,9 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("displayOrder");
   const [levelFilter, setLevelFilter] = useState("전체");
+  const [categoryFilter, setCategoryFilter] = useState("전체");
+  const [dayPartFilter, setDayPartFilter] = useState("전체");
+  const [openNowOnly, setOpenNowOnly] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favorites, setFavorites] = useState(getFavoriteIds());
   const [recentIds, setRecentIds] = useState(getRecentBoothIds());
@@ -278,6 +306,18 @@ export default function HomePage() {
       );
     }
 
+    if (categoryFilter !== "전체") {
+      list = list.filter((booth) => (booth.category || "주점") === categoryFilter);
+    }
+
+    if (dayPartFilter !== "전체") {
+      list = list.filter((booth) => (booth.dayPart || "야간") === dayPartFilter);
+    }
+
+    if (openNowOnly) {
+      list = list.filter((booth) => isBoothOpenNow(booth));
+    }
+
     if (favoritesOnly) {
       list = list.filter((booth) => favorites.includes(booth.id));
     }
@@ -299,7 +339,10 @@ export default function HomePage() {
     congestionMap,
     favorites,
     favoritesOnly,
+    categoryFilter,
+    dayPartFilter,
     levelFilter,
+    openNowOnly,
     query,
     sortBy,
   ]);
@@ -323,11 +366,11 @@ export default function HomePage() {
   );
 
   const clusters = useMemo(
-    () => buildClusters(booths, congestionMap),
-    [booths, congestionMap],
+    () => buildClusters(filteredBooths, congestionMap),
+    [filteredBooths, congestionMap],
   );
   const mapQuickBooths = useMemo(() => {
-    return [...booths]
+    return [...filteredBooths]
       .sort((a, b) => {
         const scoreDiff =
           (levelToScore[congestionMap[b.id]?.level] || 1) -
@@ -336,7 +379,7 @@ export default function HomePage() {
         return (a.displayOrder || 999) - (b.displayOrder || 999);
       })
       .slice(0, 12);
-  }, [booths, congestionMap]);
+  }, [filteredBooths, congestionMap]);
 
   const nextEvent = useMemo(() => {
     const now = new Date();
@@ -528,6 +571,9 @@ export default function HomePage() {
               </p>
               <p className="mt-1 text-[11px] text-slate-600">
                 대기 {booth.estimatedWaitMinutes ?? "-"}분
+              </p>
+              <p className="mt-1 text-[10px] font-semibold text-cyan-700 line-clamp-1">
+                {booth.category || "주점"} · {booth.dayPart || "야간"}
               </p>
               <div className="mt-1">
                 <CongestionBadge
@@ -755,6 +801,9 @@ export default function HomePage() {
                       <p className="text-xs font-semibold text-slate-800 line-clamp-1">
                         {booth.name}
                       </p>
+                      <p className="mt-1 text-[10px] font-semibold text-cyan-700 line-clamp-1">
+                        {booth.category || "주점"} · {booth.dayPart || "야간"}
+                      </p>
                       <div className="mt-1">
                         {congestion ? (
                           <CongestionBadge level={congestion.level} />
@@ -807,6 +856,10 @@ export default function HomePage() {
                       </div>
                       <p className="mt-1 text-xs text-slate-600 line-clamp-1">
                         {booth.description}
+                      </p>
+                      <p className="mt-1 text-[11px] font-semibold text-cyan-700 line-clamp-1">
+                        {boothMetaLabel(booth)}
+                        {isBoothOpenNow(booth) ? " · 운영중" : " · 운영전/종료"}
                       </p>
                     </button>
                   );
@@ -867,6 +920,9 @@ export default function HomePage() {
                 onClick={() => {
                   setFavoritesOnly(false);
                   setLevelFilter("전체");
+                  setCategoryFilter("전체");
+                  setDayPartFilter("전체");
+                  setOpenNowOnly(false);
                   setQuery("");
                 }}
                 className="rounded-lg border border-slate-300 min-h-11 py-2 text-sm font-semibold text-slate-700"
@@ -884,9 +940,41 @@ export default function HomePage() {
 
             <div className="grid grid-cols-2 gap-2">
               <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
+              >
+                {BOOTH_CATEGORY_OPTIONS.map((category) => (
+                  <option key={category} value={category}>
+                    {category === "전체" ? "전체 유형" : category}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={dayPartFilter}
+                onChange={(e) => setDayPartFilter(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
+              >
+                {BOOTH_DAY_PART_OPTIONS.map((part) => (
+                  <option key={part} value={part}>
+                    {part === "전체" ? "전체 시간대" : part}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setOpenNowOnly((prev) => !prev)}
+                className={`col-span-2 rounded-lg min-h-11 px-2 py-2 text-sm font-semibold ${openNowOnly ? "bg-emerald-600 text-white" : "border border-slate-300 text-slate-700"}`}
+              >
+                운영중
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <select
                 value={levelFilter}
                 onChange={(e) => setLevelFilter(e.target.value)}
-                className="rounded-lg border border-slate-300 px-2 py-2 min-h-11 text-sm"
+                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
               >
                 <option>전체</option>
                 <option>여유</option>
@@ -897,7 +985,7 @@ export default function HomePage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="rounded-lg border border-slate-300 px-2 py-2 min-h-11 text-sm"
+                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
               >
                 <option value="displayOrder">운영순</option>
                 <option value="name">이름순</option>
@@ -988,27 +1076,38 @@ export default function HomePage() {
                     />
                   </div>
                   <div className="p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-slate-800 leading-tight break-keep">
-                          {booth.name}
-                        </h3>
-                        <p className="text-xs text-slate-700 mt-1">
-                          혼잡도 {congestion?.level || "집계중"}
-                          {" · "}
-                          대기 {booth.estimatedWaitMinutes ?? "-"}분
-                        </p>
-                        <p className="text-xs text-slate-600 mt-1 line-clamp-1">
-                          {booth.description}
-                        </p>
-                      </div>
-                      <div className="shrink-0">
-                        {congestion ? (
-                          <CongestionBadge level={congestion.level} />
-                        ) : null}
-                      </div>
+                    <h3 className="text-sm font-bold text-slate-800 leading-snug line-clamp-2 break-keep">
+                      {booth.name}
+                    </h3>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      <span className="rounded-full border border-cyan-300/60 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-100">
+                        {booth.category || "주점"}
+                      </span>
+                      <span className="rounded-full border border-cyan-300/40 bg-slate-900/40 px-2 py-0.5 text-[10px] font-bold text-cyan-100">
+                        {booth.dayPart || "야간"}
+                      </span>
+                      <span className="rounded-full border border-slate-400/40 bg-slate-900/40 px-2 py-0.5 text-[10px] font-bold text-slate-100">
+                        {congestion?.level || "집계중"}
+                      </span>
                     </div>
-                    <div className="mt-2 flex items-center justify-between">
+                    <p className="mt-2 text-[11px] font-semibold text-cyan-700 line-clamp-1">
+                      대기 {booth.estimatedWaitMinutes ?? "-"}분
+                      {" · "}
+                      {booth.openTime || booth.closeTime
+                        ? `${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
+                        : "시간 미정"}
+                      {" · "}
+                      {isBoothOpenNow(booth) ? "운영중" : "운영전/종료"}
+                    </p>
+                    {booth.reservationEnabled === false && (
+                      <p className="mt-1 text-[11px] font-semibold text-slate-600">
+                        예약 없이 현장 이용
+                      </p>
+                    )}
+                    <p className={`${isGridView ? "hidden" : "mt-1 line-clamp-1"} text-xs text-slate-600`}>
+                      {booth.description}
+                    </p>
+                    <div className="mt-3 flex items-center justify-between">
                       <p className="text-xs text-teal-700 font-semibold">
                         자세히 보기 →
                       </p>

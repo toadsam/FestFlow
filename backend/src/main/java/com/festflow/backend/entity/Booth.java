@@ -8,6 +8,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "booths")
@@ -56,6 +57,22 @@ public class Booth {
     @Column(length = 4000)
     private String menuBoardJson;
 
+    private String category = "\uC8FC\uC810";
+
+    private String dayPart = "\uC57C\uAC04";
+
+    private LocalTime openTime;
+
+    private LocalTime closeTime;
+
+    @Column(length = 1000)
+    private String tags;
+
+    @Column(length = 4000)
+    private String contentJson;
+
+    private Boolean reservationEnabled = true;
+
     protected Booth() {
     }
 
@@ -101,6 +118,17 @@ public class Booth {
         if (maxReservationMinutes != null && maxReservationMinutes > 0) {
             this.maxReservationMinutes = maxReservationMinutes;
         }
+    }
+
+    public void updateContentInfo(String category, String dayPart, LocalTime openTime, LocalTime closeTime, String tags,
+                                  String contentJson, Boolean reservationEnabled) {
+        this.category = normalizeRequired(category, "\uC8FC\uC810");
+        this.dayPart = normalizeRequired(dayPart, "\uC57C\uAC04");
+        this.openTime = openTime;
+        this.closeTime = closeTime;
+        this.tags = normalizeBlank(tags);
+        this.contentJson = normalizeBlank(contentJson);
+        this.reservationEnabled = reservationEnabled != null ? reservationEnabled : true;
     }
 
     public void setImageUrl(String imageUrl) {
@@ -205,5 +233,45 @@ public class Booth {
 
     public void setMenuBoardJson(String menuBoardJson) {
         this.menuBoardJson = menuBoardJson;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public String getDayPart() {
+        return dayPart;
+    }
+
+    public LocalTime getOpenTime() {
+        return openTime;
+    }
+
+    public LocalTime getCloseTime() {
+        return closeTime;
+    }
+
+    public String getTags() {
+        return tags;
+    }
+
+    public String getContentJson() {
+        return contentJson;
+    }
+
+    public Boolean getReservationEnabled() {
+        return reservationEnabled;
+    }
+
+    private String normalizeBlank(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private String normalizeRequired(String value, String fallback) {
+        String normalized = normalizeBlank(value);
+        return normalized != null ? normalized : fallback;
     }
 }

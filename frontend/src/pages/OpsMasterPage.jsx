@@ -27,6 +27,8 @@ import {
 
 const MASTER_KEY_STORAGE_KEY = "festflow_ops_master_key";
 const NOTICE_CATEGORIES = ["긴급", "분실물", "안내", "일반"];
+const BOOTH_CATEGORIES = ["주점", "음식", "체험", "이벤트", "굿즈", "안내", "응급", "포토존", "플리마켓", "기타"];
+const BOOTH_DAY_PARTS = ["상시", "주간", "야간"];
 const EVENT_STATUS_OPTIONS = ["예정", "대기중", "곧 시작", "지연", "진행중", "종료", "취소"];
 const EVENT_QUICK_STATUS_OPTIONS = ["곧 시작", "지연", "진행중", "종료"];
 const EVENT_STATUS_STYLES = {
@@ -62,6 +64,13 @@ const initialBooth = {
   longitude: "",
   description: "",
   imageUrl: "",
+  category: "주점",
+  dayPart: "야간",
+  openTime: "",
+  closeTime: "",
+  tags: "",
+  contentJson: "",
+  reservationEnabled: true,
   estimatedWaitMinutes: "",
   remainingStock: "",
   liveStatusMessage: "",
@@ -384,6 +393,8 @@ export default function OpsMasterPage() {
         ...boothForm,
         latitude: Number(boothForm.latitude),
         longitude: Number(boothForm.longitude),
+        openTime: boothForm.openTime || null,
+        closeTime: boothForm.closeTime || null,
         estimatedWaitMinutes:
           boothForm.estimatedWaitMinutes === ""
             ? null
@@ -1079,6 +1090,81 @@ export default function OpsMasterPage() {
                     setBoothForm((p) => ({ ...p, imageUrl: e.target.value }))
                   }
                 />
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    className="rounded border px-2 py-2 text-sm"
+                    value={boothForm.category}
+                    onChange={(e) =>
+                      setBoothForm((p) => ({ ...p, category: e.target.value }))
+                    }
+                  >
+                    {BOOTH_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="rounded border px-2 py-2 text-sm"
+                    value={boothForm.dayPart}
+                    onChange={(e) =>
+                      setBoothForm((p) => ({ ...p, dayPart: e.target.value }))
+                    }
+                  >
+                    {BOOTH_DAY_PARTS.map((part) => (
+                      <option key={part} value={part}>
+                        {part}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="time"
+                    className="rounded border px-2 py-2 text-sm"
+                    value={boothForm.openTime}
+                    onChange={(e) =>
+                      setBoothForm((p) => ({ ...p, openTime: e.target.value }))
+                    }
+                  />
+                  <input
+                    type="time"
+                    className="rounded border px-2 py-2 text-sm"
+                    value={boothForm.closeTime}
+                    onChange={(e) =>
+                      setBoothForm((p) => ({ ...p, closeTime: e.target.value }))
+                    }
+                  />
+                </div>
+                <input
+                  className="w-full rounded border px-2 py-2 text-sm"
+                  placeholder="태그 (예: 예약필요, 무료, 실내)"
+                  value={boothForm.tags}
+                  onChange={(e) =>
+                    setBoothForm((p) => ({ ...p, tags: e.target.value }))
+                  }
+                />
+                <textarea
+                  className="w-full rounded border px-2 py-2 text-sm"
+                  placeholder="부스 유형별 추가 정보(JSON 또는 메모)"
+                  value={boothForm.contentJson}
+                  onChange={(e) =>
+                    setBoothForm((p) => ({ ...p, contentJson: e.target.value }))
+                  }
+                />
+                <label className="flex items-center gap-2 rounded border px-2 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={boothForm.reservationEnabled}
+                    onChange={(e) =>
+                      setBoothForm((p) => ({
+                        ...p,
+                        reservationEnabled: e.target.checked,
+                      }))
+                    }
+                  />
+                  예약/웨이팅 기능 사용
+                </label>
                 <button
                   type="submit"
                   className="w-full rounded bg-teal-700 py-2 text-sm font-semibold text-white"
@@ -1116,6 +1202,13 @@ export default function OpsMasterPage() {
                         </button>
                       </div>
                     </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {booth.category || "주점"} · {booth.dayPart || "야간"}
+                      {booth.openTime || booth.closeTime
+                        ? ` · ${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
+                        : ""}
+                      {booth.reservationEnabled === false ? " · 예약 없음" : ""}
+                    </p>
                     <div className="mt-2 grid grid-cols-3 gap-2">
                       <input
                         className="rounded border px-2 py-2 text-xs"
@@ -1180,9 +1273,16 @@ export default function OpsMasterPage() {
                             latitude: String(booth.latitude),
                             longitude: String(booth.longitude),
                             description: booth.description,
-                            imageUrl: booth.imageUrl || "",
-                            estimatedWaitMinutes:
-                              booth.estimatedWaitMinutes ?? "",
+                        imageUrl: booth.imageUrl || "",
+                        category: booth.category || "주점",
+                        dayPart: booth.dayPart || "야간",
+                        openTime: booth.openTime || "",
+                        closeTime: booth.closeTime || "",
+                        tags: booth.tags || "",
+                        contentJson: booth.contentJson || "",
+                        reservationEnabled: booth.reservationEnabled ?? true,
+                        estimatedWaitMinutes:
+                          booth.estimatedWaitMinutes ?? "",
                             remainingStock: booth.remainingStock ?? "",
                             liveStatusMessage: booth.liveStatusMessage || "",
                           });

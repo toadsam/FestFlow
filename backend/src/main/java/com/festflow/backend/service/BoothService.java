@@ -66,6 +66,15 @@ public class BoothService {
         saved.setBoothIntro(requestDto.boothIntro());
         saved.setMenuImageUrl(requestDto.menuImageUrl());
         saved.setMenuBoardJson(requestDto.menuBoardJson());
+        saved.updateContentInfo(
+                requestDto.category(),
+                requestDto.dayPart(),
+                requestDto.openTime(),
+                requestDto.closeTime(),
+                requestDto.tags(),
+                requestDto.contentJson(),
+                requestDto.reservationEnabled()
+        );
         return toDto(saved);
     }
 
@@ -88,6 +97,15 @@ public class BoothService {
         booth.setBoothIntro(requestDto.boothIntro() != null ? requestDto.boothIntro() : booth.getBoothIntro());
         booth.setMenuImageUrl(requestDto.menuImageUrl() != null ? requestDto.menuImageUrl() : booth.getMenuImageUrl());
         booth.setMenuBoardJson(requestDto.menuBoardJson() != null ? requestDto.menuBoardJson() : booth.getMenuBoardJson());
+        booth.updateContentInfo(
+                requestDto.category() != null ? requestDto.category() : booth.getCategory(),
+                requestDto.dayPart() != null ? requestDto.dayPart() : booth.getDayPart(),
+                requestDto.openTime() != null ? requestDto.openTime() : booth.getOpenTime(),
+                requestDto.closeTime() != null ? requestDto.closeTime() : booth.getCloseTime(),
+                requestDto.tags() != null ? requestDto.tags() : booth.getTags(),
+                requestDto.contentJson() != null ? requestDto.contentJson() : booth.getContentJson(),
+                requestDto.reservationEnabled() != null ? requestDto.reservationEnabled() : booth.getReservationEnabled()
+        );
 
         return toDto(boothRepository.save(booth));
     }
@@ -111,9 +129,18 @@ public class BoothService {
         booth.setEstimatedWaitMinutes(requestDto.estimatedWaitMinutes());
         booth.setRemainingStock(requestDto.remainingStock());
         booth.setLiveStatusMessage(requestDto.liveStatusMessage());
-        booth.setBoothIntro(requestDto.boothIntro());
-        booth.setMenuImageUrl(requestDto.menuImageUrl());
-        booth.setMenuBoardJson(requestDto.menuBoardJson());
+        booth.setBoothIntro(requestDto.boothIntro() != null ? requestDto.boothIntro() : booth.getBoothIntro());
+        booth.setMenuImageUrl(requestDto.menuImageUrl() != null ? requestDto.menuImageUrl() : booth.getMenuImageUrl());
+        booth.setMenuBoardJson(requestDto.menuBoardJson() != null ? requestDto.menuBoardJson() : booth.getMenuBoardJson());
+        booth.updateContentInfo(
+                requestDto.category() != null ? requestDto.category() : booth.getCategory(),
+                requestDto.dayPart() != null ? requestDto.dayPart() : booth.getDayPart(),
+                requestDto.openTime() != null ? requestDto.openTime() : booth.getOpenTime(),
+                requestDto.closeTime() != null ? requestDto.closeTime() : booth.getCloseTime(),
+                requestDto.tags() != null ? requestDto.tags() : booth.getTags(),
+                requestDto.contentJson() != null ? requestDto.contentJson() : booth.getContentJson(),
+                requestDto.reservationEnabled() != null ? requestDto.reservationEnabled() : booth.getReservationEnabled()
+        );
         booth.setLiveStatusUpdatedAt(LocalDateTime.now());
 
         return toDto(boothRepository.save(booth));
@@ -180,7 +207,14 @@ public class BoothService {
                 booth.getLiveStatusUpdatedAt(),
                 booth.getBoothIntro(),
                 booth.getMenuImageUrl(),
-                booth.getMenuBoardJson()
+                booth.getMenuBoardJson(),
+                booth.getCategory() != null ? booth.getCategory() : "\uC8FC\uC810",
+                booth.getDayPart() != null ? booth.getDayPart() : "\uC57C\uAC04",
+                booth.getOpenTime(),
+                booth.getCloseTime(),
+                booth.getTags(),
+                booth.getContentJson(),
+                booth.getReservationEnabled() != null ? booth.getReservationEnabled() : true
         );
     }
 

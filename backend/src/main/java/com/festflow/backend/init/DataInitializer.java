@@ -18,9 +18,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.ArrayList;
 
 @Configuration
 public class DataInitializer {
@@ -41,35 +42,22 @@ public class DataInitializer {
             PasswordEncoder passwordEncoder
     ) {
         return args -> {
-            List<Booth> departmentBooths = List.of(
-                    new Booth("디지털미디어학과 네온주점", 37.2832, 127.0451, "디지털미디어학과에서 운영하는 테마 주점", 1, "https://picsum.photos/seed/festflow-ajou-1/800/450", 7, 120, "시그니처 음료 판매 중", LocalDateTime.now()),
-                    new Booth("산업공학과 이음주점", 37.2824, 127.0439, "산업공학과 학생회가 운영하는 주점", 2, "https://picsum.photos/seed/festflow-ajou-2/800/450", 5, 60, "대기줄이 빠르게 줄고 있어요", LocalDateTime.now()),
-                    new Booth("기계공학과 톱니주점", 37.2817, 127.0447, "기계공학과 동아리 연합 주점", 3, "https://picsum.photos/seed/festflow-ajou-3/800/450", 3, 35, "인기 메뉴 재고 여유", LocalDateTime.now()),
-                    new Booth("첨단신소재공학과 합금주점", 37.2829, 127.0428, "첨단신소재공학과에서 준비한 축제 주점", 4, "https://picsum.photos/seed/festflow-ajou-4/800/450", 4, 80, "테이블 회전이 원활합니다", LocalDateTime.now()),
-                    new Booth("전자공학과 파동주점", 37.2830, 127.0441, "전자공학과의 시그니처 야식 주점", 5, "https://picsum.photos/seed/festflow-ajou-5/800/450", 6, 95, "핫도그 세트 인기", LocalDateTime.now()),
-                    new Booth("소프트웨어학과 버그제로주점", 37.2822, 127.0449, "소프트웨어학과 학생회 운영 주점", 6, "https://picsum.photos/seed/festflow-ajou-6/800/450", 8, 70, "주문 처리 원활", LocalDateTime.now()),
-                    new Booth("화학공학과 비커주점", 37.2819, 127.0436, "화학공학과 실험실 콘셉트 주점", 7, "https://picsum.photos/seed/festflow-ajou-7/800/450", 4, 88, "대표 음료 할인 중", LocalDateTime.now()),
-                    new Booth("건축학과 아치주점", 37.2827, 127.0454, "건축학과의 구조미 콘셉트 주점", 8, "https://picsum.photos/seed/festflow-ajou-8/800/450", 5, 65, "테이블 순환 빠름", LocalDateTime.now()),
-                    new Booth("경영학과 스프레드시트주점", 37.2834, 127.0443, "경영학과 연합 운영 주점", 9, "https://picsum.photos/seed/festflow-ajou-9/800/450", 9, 50, "베스트 메뉴 매진 임박", LocalDateTime.now()),
-                    new Booth("경제학과 균형주점", 37.2818, 127.0452, "경제학과 축제 운영위원회 주점", 10, "https://picsum.photos/seed/festflow-ajou-10/800/450", 3, 110, "좌석 여유 있음", LocalDateTime.now()),
-                    new Booth("국어국문학과 활자주점", 37.2825, 127.0431, "국어국문학과 감성 포차", 11, "https://picsum.photos/seed/festflow-ajou-11/800/450", 4, 72, "감성 포토존 운영", LocalDateTime.now()),
-                    new Booth("영어영문학과 리듬주점", 37.2831, 127.0429, "영어영문학과 뮤직 테마 주점", 12, "https://picsum.photos/seed/festflow-ajou-12/800/450", 6, 66, "음악 공연 예정", LocalDateTime.now()),
-                    new Booth("심리학과 마음주점", 37.2816, 127.0440, "심리학과 상담 부스 연계 주점", 13, "https://picsum.photos/seed/festflow-ajou-13/800/450", 2, 98, "편안한 좌석 구역 운영", LocalDateTime.now()),
-                    new Booth("사회학과 연결주점", 37.2820, 127.0427, "사회학과 커뮤니티 테마 주점", 14, "https://picsum.photos/seed/festflow-ajou-14/800/450", 5, 74, "단체석 일부 가능", LocalDateTime.now())
-            );
+            LocalDateTime seedTime = LocalDateTime.now();
+            List<Booth> seedBooths = new ArrayList<>(seedBooths(seedTime));
+            seedBooths.addAll(supplementalBooths(seedTime));
 
             if (boothRepository.count() == 0) {
-                boothRepository.saveAll(departmentBooths);
+                boothRepository.saveAll(seedBooths);
             } else {
                 List<Booth> existing = boothRepository.findAll().stream()
                         .sorted(Comparator.comparing(Booth::getDisplayOrder).thenComparing(Booth::getId))
                         .toList();
 
                 if (shouldRefreshSeedBooths(existing)) {
-                    int limit = Math.min(existing.size(), departmentBooths.size());
+                    int limit = Math.min(existing.size(), seedBooths.size());
                     for (int i = 0; i < limit; i++) {
                         Booth target = existing.get(i);
-                        Booth source = departmentBooths.get(i);
+                        Booth source = seedBooths.get(i);
                         target.update(
                                 source.getName(),
                                 source.getLatitude(),
@@ -82,14 +70,24 @@ public class DataInitializer {
                                 source.getLiveStatusMessage(),
                                 LocalDateTime.now()
                         );
+                        target.updateContentInfo(
+                                source.getCategory(),
+                                source.getDayPart(),
+                                source.getOpenTime(),
+                                source.getCloseTime(),
+                                source.getTags(),
+                                source.getContentJson(),
+                                source.getReservationEnabled()
+                        );
                         boothRepository.save(target);
                     }
 
-                    if (existing.size() < departmentBooths.size()) {
-                        boothRepository.saveAll(departmentBooths.subList(existing.size(), departmentBooths.size()));
+                    if (existing.size() < seedBooths.size()) {
+                        boothRepository.saveAll(seedBooths.subList(existing.size(), seedBooths.size()));
                     }
                 }
             }
+            ensureSeedBoothCatalog(boothRepository, seedBooths);
 
             if (eventRepository.count() == 0) {
                 LocalDateTime now = LocalDateTime.now();
@@ -132,9 +130,9 @@ public class DataInitializer {
 
             if (noticeRepository.count() == 0) {
                 noticeRepository.save(new Notice(
-                        "우천 안내",
-                        "18시 이후 우천 시 야외 무대가 아주체육관 보조무대로 변경될 수 있습니다.",
-                        "우천",
+                        "운영 안내",
+                        "축제 현장 상황에 따라 부스 운영시간과 공연 시작 시간이 실시간으로 조정될 수 있습니다.",
+                        "안내",
                         true
                 ));
             }
@@ -143,12 +141,12 @@ public class DataInitializer {
                 List<Booth> orderedBooths = boothRepository.findAll().stream()
                         .sorted(Comparator.comparing(Booth::getDisplayOrder).thenComparing(Booth::getId))
                         .toList();
-                List<String> teams = List.of("운영", "안내", "안전", "무대", "부스지원", "미디어");
+                List<String> teams = List.of("운영", "안내", "안전", "무대", "부스", "미디어");
                 List<String> tasks = List.of(
                         "입구 동선 안내",
-                        "노천극장 인원 확인",
+                        "혼잡 구역 인원 확인",
                         "부스 대기열 정리",
-                        "분실물 대응",
+                        "분실물 접수",
                         "행사장 순찰",
                         "긴급 호출 대기",
                         "Q&A 응대",
@@ -170,7 +168,7 @@ public class DataInitializer {
                     seeds.add(new StaffMember(
                             staffNo,
                             passwordEncoder.encode(pin),
-                            "스태프 " + String.format("%02d", i + 1),
+                            "스태프" + String.format("%02d", i + 1),
                             teams.get(i % teams.size()),
                             status,
                             tasks.get(i % tasks.size()),
@@ -186,14 +184,85 @@ public class DataInitializer {
         };
     }
 
+    private List<Booth> seedBooths(LocalDateTime now) {
+        return List.of(
+                booth("디지털미디어학과 네온주점", 37.2832, 127.0451, "디지털미디어학과에서 운영하는 테마 주점", 1, "https://picsum.photos/seed/festflow-ajou-pub-1/800/450", 7, 120, "시그니처 음료 판매 중", now, "주점", "야간", "18:00", "01:00", "야간, 주류, 음악", true),
+                booth("산업공학과 이음주점", 37.2824, 127.0439, "산업공학과 학생회가 운영하는 주점", 2, "https://picsum.photos/seed/festflow-ajou-pub-2/800/450", 5, 60, "대기줄이 빠르게 줄고 있어요", now, "주점", "야간", "18:00", "01:00", "야식, 단체석", true),
+                booth("푸드트럭 치즈랩", 37.2817, 127.0447, "치즈 핫도그와 감자튀김을 판매하는 푸드 부스", 3, "https://picsum.photos/seed/festflow-ajou-food-1/800/450", 4, 90, "감자튀김 재고 여유", now, "음식", "상시", "11:00", "23:30", "간식, 포장가능", false),
+                booth("타코야끼 스테이션", 37.2829, 127.0428, "따뜻한 타코야끼와 음료를 빠르게 제공하는 먹거리 부스", 4, "https://picsum.photos/seed/festflow-ajou-food-2/800/450", 8, 55, "타코야끼 10분 단위 조리 중", now, "음식", "야간", "17:00", "00:30", "야식, 인기", false),
+                booth("VR 리듬 챌린지", 37.2830, 127.0441, "VR 리듬 게임을 체험하고 랭킹에 도전하는 부스", 5, "https://picsum.photos/seed/festflow-ajou-vr/800/450", 6, 30, "2인 체험 가능", now, "체험", "주간", "12:00", "20:00", "체험, 랭킹전, 실내", false),
+                booth("AI 캐리커처 랩", 37.2822, 127.0449, "현장 사진으로 AI 캐리커처 이미지를 만들어 주는 체험 부스", 6, "https://picsum.photos/seed/festflow-ajou-ai-art/800/450", 9, 40, "출력 대기 약간 있음", now, "체험", "상시", "13:00", "22:00", "AI, 포토, 출력", false),
+                booth("스탬프 미션 센터", 37.2819, 127.0436, "축제 구역을 돌며 스탬프를 모으는 이벤트 접수처", 7, "https://picsum.photos/seed/festflow-ajou-stamp/800/450", 2, 200, "완주 기념품 여유", now, "이벤트", "주간", "10:00", "19:00", "미션, 경품", false),
+                booth("럭키드로우 박스", 37.2827, 127.0454, "시간대별 추첨 이벤트와 현장 미션을 운영하는 부스", 8, "https://picsum.photos/seed/festflow-ajou-lucky/800/450", 5, 120, "19시 추첨권 배부 중", now, "이벤트", "야간", "16:00", "23:00", "추첨, 경품", false),
+                booth("공식 굿즈 숍", 37.2834, 127.0443, "티셔츠, 키링, 응원봉 등 축제 공식 굿즈 판매", 9, "https://picsum.photos/seed/festflow-ajou-goods/800/450", 3, 45, "인기 키링 재입고", now, "굿즈", "상시", "11:00", "22:00", "굿즈, 카드가능", false),
+                booth("핸드메이드 플리마켓", 37.2818, 127.0452, "학생 작가들의 액세서리와 소품을 만나는 플리마켓", 10, "https://picsum.photos/seed/festflow-ajou-flea/800/450", 2, 70, "신규 셀러 입점", now, "플리마켓", "주간", "12:00", "18:00", "수공예, 소품", false),
+                booth("포토카드 프린트 존", 37.2825, 127.0431, "축제 사진을 포토카드로 바로 출력하는 포토 부스", 11, "https://picsum.photos/seed/festflow-ajou-photo-card/800/450", 6, 80, "인화지 재고 충분", now, "포토존", "상시", "11:30", "23:00", "사진, 출력", false),
+                booth("네온 포토 터널", 37.2831, 127.0429, "야간 조명과 함께 사진을 찍는 대표 포토존", 12, "https://picsum.photos/seed/festflow-ajou-neon-photo/800/450", 4, 999, "야간 조명 점등 완료", now, "포토존", "야간", "18:30", "01:00", "야간, 사진", false),
+                booth("종합 안내 데스크", 37.2816, 127.0440, "행사 위치, 분실물, 시간 변경을 안내하는 중앙 데스크", 13, "https://picsum.photos/seed/festflow-ajou-info/800/450", 1, 999, "공연 지연 안내 가능", now, "안내", "상시", "10:00", "01:00", "안내, 분실물", false),
+                booth("응급 케어 스팟", 37.2820, 127.0427, "간단한 응급 처치와 휴식 지원을 제공하는 안전 부스", 14, "https://picsum.photos/seed/festflow-ajou-care/800/450", 0, 999, "상비약 및 휴식석 운영", now, "응급", "상시", "10:00", "01:00", "응급, 휴식", false),
+                booth("전자공학과 파동주점", 37.2830, 127.0446, "전자공학과의 시그니처 야식 주점", 15, "https://picsum.photos/seed/festflow-ajou-pub-3/800/450", 6, 95, "핫도그 세트 인기", now, "주점", "야간", "18:00", "01:00", "야식, 주류", true),
+                booth("소프트웨어학과 버그제로 주점", 37.2822, 127.0455, "소프트웨어학과 학생회가 운영하는 게임 콘셉트 주점", 16, "https://picsum.photos/seed/festflow-ajou-pub-4/800/450", 8, 70, "주문 처리 원활", now, "주점", "야간", "18:00", "01:00", "게임, 단체석", true)
+        );
+    }
+
+    private Booth booth(String name, double latitude, double longitude, String description, Integer displayOrder,
+                        String imageUrl, Integer estimatedWaitMinutes, Integer remainingStock, String liveStatusMessage,
+                        LocalDateTime liveStatusUpdatedAt, String category, String dayPart, String openTime,
+                        String closeTime, String tags, Boolean reservationEnabled) {
+        Booth booth = new Booth(name, latitude, longitude, description, displayOrder, imageUrl, estimatedWaitMinutes,
+                remainingStock, liveStatusMessage, liveStatusUpdatedAt);
+        booth.updateContentInfo(category, dayPart, LocalTime.parse(openTime), LocalTime.parse(closeTime), tags, null, reservationEnabled);
+        return booth;
+    }
+
+    private List<Booth> supplementalBooths(LocalDateTime now) {
+        return List.of(
+                booth("비건 덮밥 키친", 37.2828, 127.0435, "채식 덮밥과 샐러드를 판매하는 건강식 부스", 17, "https://picsum.photos/seed/festflow-ajou-vegan/800/450", 3, 85, "두부 스테이크 덮밥 판매 중", now, "음식", "주간", "11:00", "19:00", "비건, 식사", false),
+                booth("크레페 디저트 바", 37.2815, 127.0448, "과일 크레페와 아이스 음료를 판매하는 디저트 부스", 18, "https://picsum.photos/seed/festflow-ajou-crepe/800/450", 5, 65, "딸기 크레페 인기", now, "음식", "상시", "12:00", "22:00", "디저트, 음료", false),
+                booth("보드게임 라운지", 37.2826, 127.0457, "친구들과 짧게 즐기는 보드게임 체험 공간", 19, "https://picsum.photos/seed/festflow-ajou-boardgame/800/450", 4, 40, "4인 테이블 여유", now, "체험", "상시", "12:00", "23:00", "실내, 게임", false),
+                booth("향수 블렌딩 클래스", 37.2835, 127.0438, "나만의 향을 조합해 미니 향수를 만드는 체험 부스", 20, "https://picsum.photos/seed/festflow-ajou-perfume/800/450", 7, 36, "예약 없이 현장 접수 가능", now, "체험", "주간", "13:00", "18:30", "공방, 만들기", false),
+                booth("방탈출 미니룸", 37.2814, 127.0434, "10분 안에 단서를 풀어 탈출하는 미니 방탈출", 21, "https://picsum.photos/seed/festflow-ajou-escape/800/450", 10, 25, "난이도 하 코스 운영", now, "체험", "야간", "17:00", "23:30", "퍼즐, 팀플", false),
+                booth("댄스 배틀 접수처", 37.2837, 127.0449, "즉석 댄스 배틀 참가 등록과 대진 안내 부스", 22, "https://picsum.photos/seed/festflow-ajou-dance/800/450", 2, 120, "20시 예선 참가 접수 중", now, "이벤트", "야간", "16:00", "21:00", "공연, 참가형", false),
+                booth("퀴즈 쇼 아레나", 37.2821, 127.0425, "현장 관객이 참여하는 상식 퀴즈 이벤트 부스", 23, "https://picsum.photos/seed/festflow-ajou-quiz/800/450", 1, 150, "매시 정각 라운드 시작", now, "이벤트", "상시", "13:00", "22:00", "퀴즈, 경품", false),
+                booth("랜덤 플레이 댄스 존", 37.2840, 127.0441, "랜덤 음악에 맞춰 누구나 참여하는 야외 이벤트", 24, "https://picsum.photos/seed/festflow-ajou-rpd/800/450", 0, 999, "19시 메인 라운드 예정", now, "이벤트", "야간", "18:00", "23:00", "댄스, 야외", false),
+                booth("아주대 굿즈 리셀렉트", 37.2819, 127.0460, "학과 굿즈와 한정판 축제 소품을 판매하는 부스", 25, "https://picsum.photos/seed/festflow-ajou-campus-goods/800/450", 4, 58, "한정 스티커 재고 여유", now, "굿즈", "상시", "11:00", "21:30", "스티커, 키링", false),
+                booth("응원봉 커스텀 샵", 37.2829, 127.0462, "응원봉과 팔찌를 꾸미는 커스텀 굿즈 부스", 26, "https://picsum.photos/seed/festflow-ajou-lightstick/800/450", 6, 44, "LED 팔찌 판매 중", now, "굿즈", "야간", "16:00", "00:00", "응원, 커스텀", false),
+                booth("빈티지 의류 마켓", 37.2813, 127.0456, "학생 셀러가 운영하는 빈티지 의류 플리마켓", 27, "https://picsum.photos/seed/festflow-ajou-vintage/800/450", 2, 76, "아우터 할인 진행", now, "플리마켓", "주간", "12:00", "18:30", "의류, 중고", false),
+                booth("레코드 앤 북 마켓", 37.2836, 127.0427, "LP, 독립출판물, 중고 도서를 만나는 마켓", 28, "https://picsum.photos/seed/festflow-ajou-records/800/450", 1, 90, "독립출판 코너 운영", now, "플리마켓", "주간", "11:30", "19:00", "책, 음악", false),
+                booth("달빛 인생네컷", 37.2841, 127.0432, "달빛 조명 콘셉트의 즉석 사진 포토존", 29, "https://picsum.photos/seed/festflow-ajou-moon-photo/800/450", 8, 999, "야간 촬영 대기 증가", now, "포토존", "야간", "18:00", "01:00", "사진, 조명", false),
+                booth("학과 깃발 포토월", 37.2811, 127.0442, "학과 깃발과 축제 배너 앞에서 촬영하는 포토월", 30, "https://picsum.photos/seed/festflow-ajou-flagwall/800/450", 2, 999, "낮 시간 촬영 추천", now, "포토존", "주간", "10:00", "18:00", "단체사진, 포토월", false),
+                booth("외국인 안내 센터", 37.2839, 127.0453, "영어 안내와 캠퍼스 길찾기를 지원하는 안내 부스", 31, "https://picsum.photos/seed/festflow-ajou-global-info/800/450", 1, 999, "영어 안내 가능", now, "안내", "상시", "10:00", "23:00", "영어, 길찾기", false),
+                booth("충전 스테이션", 37.2823, 127.0464, "휴대폰 충전과 보조배터리 대여를 지원하는 편의 부스", 32, "https://picsum.photos/seed/festflow-ajou-charge/800/450", 3, 35, "C타입 케이블 여유", now, "안내", "상시", "10:00", "01:00", "충전, 대여", false),
+                booth("쿨다운 휴식존", 37.2810, 127.0437, "탈수와 과열을 예방하는 그늘 휴식 부스", 33, "https://picsum.photos/seed/festflow-ajou-cooldown/800/450", 0, 999, "생수 보충 완료", now, "응급", "주간", "11:00", "20:00", "휴식, 생수", false),
+                booth("야간 안전 라운지", 37.2842, 127.0448, "늦은 시간 귀가 동선과 안전 상담을 지원하는 부스", 34, "https://picsum.photos/seed/festflow-ajou-night-safe/800/450", 1, 999, "귀가 동선 안내 중", now, "응급", "야간", "18:00", "01:00", "안전, 귀가", false),
+                booth("창업동아리 데모데이", 37.2833, 127.0466, "학생 창업팀의 제품을 시연하고 피드백을 받는 부스", 35, "https://picsum.photos/seed/festflow-ajou-demo/800/450", 2, 100, "체험 피드백 이벤트 중", now, "기타", "주간", "12:00", "18:00", "창업, 데모", false),
+                booth("멍때리기 힐링존", 37.2812, 127.0429, "짧게 쉬어갈 수 있는 조용한 힐링 콘텐츠 부스", 36, "https://picsum.photos/seed/festflow-ajou-healing/800/450", 0, 999, "좌석 여유", now, "기타", "상시", "11:00", "23:00", "휴식, 조용함", false)
+        );
+    }
+
+    private void ensureSeedBoothCatalog(BoothRepository boothRepository, List<Booth> seedBooths) {
+        List<Booth> existing = boothRepository.findAll();
+        List<String> existingNames = existing.stream().map(Booth::getName).toList();
+        List<Booth> missing = seedBooths.stream()
+                .filter(seed -> !existingNames.contains(seed.getName()))
+                .toList();
+        if (!missing.isEmpty()) {
+            boothRepository.saveAll(missing);
+        }
+    }
+
     private boolean shouldRefreshSeedBooths(List<Booth> booths) {
         if (booths.isEmpty()) {
             return false;
         }
         String firstName = booths.get(0).getName();
-        return firstName.contains("Ajou")
-                || firstName.startsWith("아주 ")
-                || firstName.startsWith("디지털미디어학과 ");
+        boolean legacyNames = firstName.contains("Ajou")
+                || firstName.startsWith("디지털미디어학과 ")
+                || firstName.startsWith("?")
+                || firstName.contains("二쇱젏");
+        boolean onlyPubCategory = booths.stream()
+                .allMatch(booth -> booth.getCategory() == null || "주점".equals(booth.getCategory()));
+        return legacyNames || onlyPubCategory;
     }
 
     private boolean shouldRefreshSeedEvents(List<FestivalEvent> events) {
@@ -207,8 +276,8 @@ public class DataInitializer {
         String firstTitle = events.get(0).getTitle();
         return firstTitle.contains("Ajou")
                 || firstTitle.contains("\uB9C8\uC2A4\uD130\uD53C\uC2A4")
-                || firstTitle.equals("아주 축제 오프닝 퍼레이드")
-                || firstTitle.equals("율곡관 밴드 라이브")
+                || firstTitle.equals("아주 축제 스프링 퍼레이드")
+                || firstTitle.equals("팔달관 밴드 라이브")
                 || firstTitle.equals("중앙광장 DJ 나이트");
     }
 

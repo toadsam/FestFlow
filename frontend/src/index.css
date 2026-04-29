@@ -2383,6 +2383,17 @@ body::after {
   border: 1px solid var(--line-strong) !important;
 }
 
+.app-shell select option {
+  background: #0e2135;
+  color: #eef5ff;
+}
+
+.app-shell select option:checked,
+.app-shell select option:hover {
+  background: #1e6fd6;
+  color: #ffffff;
+}
+
 .app-shell input::placeholder,
 .app-shell textarea::placeholder {
   color: #98afcc !important;

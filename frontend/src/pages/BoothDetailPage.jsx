@@ -155,6 +155,14 @@ function parseMenuBoardJson(raw) {
   }
 }
 
+function boothMetaLabel(booth) {
+  const time =
+    booth?.openTime || booth?.closeTime
+      ? `${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
+      : "시간 미정";
+  return `${booth?.category || "주점"} · ${booth?.dayPart || "야간"} · ${time}`;
+}
+
 export default function BoothDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -505,22 +513,37 @@ export default function BoothDetailPage() {
             <h2 className="text-xl font-bold text-slate-800">{booth.name}</h2>
             <CongestionBadge level={congestion.level} />
           </div>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-1 text-xs font-semibold text-cyan-800">
+              {boothMetaLabel(booth)}
+            </span>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800">
+              {booth.reservationEnabled === false ? "예약 없음" : "예약/웨이팅 가능"}
+            </span>
+            {booth.tags && (
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
+                {booth.tags}
+              </span>
+            )}
+          </div>
 
           <p className="text-sm text-slate-600">{booth.description}</p>
 
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 flex items-center justify-between gap-2">
-            <div className="text-xs text-emerald-900 space-y-0.5">
-              <p className="font-semibold">예약 우선 화면</p>
-              <p>인증 후 테이블 선택으로 바로 진행할 수 있어요.</p>
+          {booth.reservationEnabled !== false && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 flex items-center justify-between gap-2">
+              <div className="text-xs text-emerald-900 space-y-0.5">
+                <p className="font-semibold">예약 우선 화면</p>
+                <p>인증 후 테이블 선택으로 바로 진행할 수 있어요.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleQuickReserveStart}
+                className="shrink-0 rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white"
+              >
+                예약 시작
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleQuickReserveStart}
-              className="shrink-0 rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white"
-            >
-              예약 시작
-            </button>
-          </div>
+          )}
 
           {(booth.boothIntro || booth.menuImageUrl) && (
             <div className="rounded-lg border border-cyan-200 bg-cyan-50 overflow-hidden">
