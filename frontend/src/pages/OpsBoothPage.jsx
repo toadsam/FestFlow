@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   checkInOpsBoothReservation,
   checkInOpsBoothReservationByToken,
@@ -148,11 +148,7 @@ function TableSeatLayout({ tableName, totalSeats, availableSeats, onSeatClick })
 
 export default function OpsBoothPage() {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
-  const initialKey =
-    searchParams.get("key") ||
-    sessionStorage.getItem(BOOTH_KEY_STORAGE_KEY) ||
-    "";
+  const initialKey = sessionStorage.getItem(BOOTH_KEY_STORAGE_KEY) || "";
 
   const [keyInput, setKeyInput] = useState(initialKey);
   const [key, setKey] = useState(initialKey);
@@ -636,7 +632,7 @@ export default function OpsBoothPage() {
             className="border rounded px-2 py-2 text-sm"
             value={keyInput}
             onChange={(e) => setKeyInput(e.target.value)}
-            placeholder="부스 운영 키"
+            placeholder="부스 번호"
           />
           <button
             type="submit"

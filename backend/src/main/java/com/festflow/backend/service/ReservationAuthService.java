@@ -33,9 +33,6 @@ public class ReservationAuthService {
     private final PasswordEncoder passwordEncoder;
     private final SecureRandom random = new SecureRandom();
 
-    @Value("${app.sms.debug-return-code:false}")
-    private boolean debugReturnCode;
-
     @Value("${app.sms.max-verify-attempts:5}")
     private int maxVerifyAttempts;
 
@@ -79,11 +76,7 @@ public class ReservationAuthService {
         verificationCodeRepository.save(new ReservationVerificationCode(phoneNumber, hashedCode, expiresAt, now));
         smsSender.sendVerificationCode(phoneNumber, code);
 
-        return new ReservationAuthSendCodeResponseDto(
-                phoneNumber,
-                expiresAt,
-                debugReturnCode ? code : null
-        );
+        return new ReservationAuthSendCodeResponseDto(phoneNumber, expiresAt);
     }
 
     @Transactional

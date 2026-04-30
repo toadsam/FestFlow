@@ -53,13 +53,7 @@ const noticeColor = {
 };
 
 function normalizeLevel(level) {
-  const mapping = {
-    "?ъ쑀": "여유",
-    蹂댄넻: "보통",
-    "?쇱옟": "혼잡",
-    "留ㅼ슦?쇱옟": "매우혼잡",
-  };
-  return mapping[level] || level;
+  return level;
 }
 
 function normalizeCongestion(item) {
@@ -422,22 +416,6 @@ export default function HomePage() {
     const nextMap = Object.fromEntries(normalized);
     previousCongestionRef.current = nextMap;
     setCongestionMap(nextMap);
-  }
-
-  async function handleMockGpsBatch() {
-    if (booths.length === 0) return;
-
-    const picks = Array.from(
-      { length: 10 },
-      () => booths[Math.floor(Math.random() * booths.length)],
-    );
-
-    await Promise.all(
-      picks.map((booth) => {
-        const jitter = () => (Math.random() - 0.5) * 0.00045;
-        return sendGps(booth.latitude + jitter(), booth.longitude + jitter());
-      }),
-    );
   }
 
   async function handleSendCurrentGps() {
@@ -868,13 +846,7 @@ export default function HomePage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={handleMockGpsBatch}
-              className="rounded-xl bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50 min-h-11 py-2.5 font-semibold shadow-[0_0_22px_rgba(34,211,238,0.5)]"
-            >
-              GPS 샘플 생성
-            </button>
+          <div className="grid grid-cols-1 gap-2">
             <button
               type="button"
               onClick={handleSendCurrentGps}

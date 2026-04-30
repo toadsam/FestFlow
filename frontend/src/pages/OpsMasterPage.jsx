@@ -1,5 +1,4 @@
 ﻿import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import {
   createOpsMasterBooth,
   createOpsMasterEvent,
@@ -93,11 +92,7 @@ function formatEventTime(value) {
 }
 
 export default function OpsMasterPage() {
-  const [searchParams] = useSearchParams();
-  const initialKey =
-    searchParams.get("key") ||
-    sessionStorage.getItem(MASTER_KEY_STORAGE_KEY) ||
-    "";
+  const initialKey = sessionStorage.getItem(MASTER_KEY_STORAGE_KEY) || "";
 
   const [tab, setTab] = useState("notice");
   const [keyInput, setKeyInput] = useState(initialKey);
@@ -509,7 +504,7 @@ export default function OpsMasterPage() {
             className="border rounded px-2 py-2 text-sm"
             value={keyInput}
             onChange={(e) => setKeyInput(e.target.value)}
-            placeholder="통합 운영 키"
+            placeholder="0"
           />
           <button
             type="submit"
@@ -529,7 +524,7 @@ export default function OpsMasterPage() {
 
       {!key && (
         <p className="text-sm text-rose-600">
-          운영 키를 입력해 주세요. 현재 기본 통합 운영 키는 `0`입니다.
+          운영 키를 입력해 주세요.
         </p>
       )}
       {loading && <p className="text-sm text-slate-600">불러오는 중...</p>}

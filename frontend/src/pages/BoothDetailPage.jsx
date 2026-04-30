@@ -177,7 +177,6 @@ export default function BoothDetailPage() {
 
   const [phoneNumber, setPhoneNumber] = useState(getReservationPhone());
   const [verifyCode, setVerifyCode] = useState("");
-  const [debugCode, setDebugCode] = useState("");
   const [sendCooldownSeconds, setSendCooldownSeconds] = useState(0);
 
   const [reservationToken, setReservationToken] = useState(getReservationToken());
@@ -284,7 +283,6 @@ export default function BoothDetailPage() {
     try {
       setReservationError("");
       const response = await sendReservationAuthCode(phoneNumber);
-      setDebugCode(response.debugCode || "");
       setReservationMessage("인증번호를 발송했습니다.");
       setSendCooldownSeconds(30);
     } catch (e) {
@@ -300,7 +298,6 @@ export default function BoothDetailPage() {
       setReservationToken(response.reservationToken);
       setPhoneNumber(response.phoneNumber);
       setVerifyCode("");
-      setDebugCode("");
       setReservationMessage("전화번호 인증이 완료되었습니다.");
     } catch (e) {
       setReservationError(e.message);
@@ -714,9 +711,6 @@ export default function BoothDetailPage() {
                     ? `인증번호 재요청 (${sendCooldownSeconds}s)`
                     : "인증번호 받기"}
                 </button>
-                {debugCode && (
-                  <p className="text-[11px] text-slate-600">개발용 인증번호: {debugCode}</p>
-                )}
               </div>
             )}
 

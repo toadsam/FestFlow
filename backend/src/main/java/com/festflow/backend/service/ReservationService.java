@@ -164,7 +164,7 @@ public class ReservationService {
         }
 
         Booth booth = findBooth(boothId);
-        BoothReservationTable table = boothReservationTableRepository.findById(requestDto.tableId())
+        BoothReservationTable table = boothReservationTableRepository.findByIdForUpdate(requestDto.tableId())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Table not found."));
 
         if (!table.getBooth().getId().equals(boothId)) {

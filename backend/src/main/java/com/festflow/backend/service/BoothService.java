@@ -41,7 +41,7 @@ public class BoothService {
 
     public BoothResponseDto getBoothById(Long boothId) {
         Booth booth = boothRepository.findById(boothId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "遺?ㅻ? 李얠쓣 ???놁뒿?덈떎."));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "부스를 찾을 수 없습니다."));
 
         return toDto(booth);
     }
@@ -80,7 +80,7 @@ public class BoothService {
 
     public BoothResponseDto updateBooth(Long boothId, BoothUpsertRequestDto requestDto) {
         Booth booth = boothRepository.findById(boothId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "遺?ㅻ? 李얠쓣 ???놁뒿?덈떎."));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "부스를 찾을 수 없습니다."));
 
         booth.update(
                 requestDto.name(),
@@ -112,7 +112,7 @@ public class BoothService {
 
     public BoothResponseDto updateBoothImage(Long boothId, String imageUrl) {
         Booth booth = boothRepository.findById(boothId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "遺?ㅻ? 李얠쓣 ???놁뒿?덈떎."));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "부스를 찾을 수 없습니다."));
         booth.setImageUrl(imageUrl);
         return toDto(boothRepository.save(booth));
     }
@@ -124,7 +124,7 @@ public class BoothService {
     }
     public BoothResponseDto updateLiveStatus(Long boothId, BoothLiveStatusRequestDto requestDto) {
         Booth booth = boothRepository.findById(boothId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "遺?ㅻ? 李얠쓣 ???놁뒿?덈떎."));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "부스를 찾을 수 없습니다."));
 
         booth.setEstimatedWaitMinutes(requestDto.estimatedWaitMinutes());
         booth.setRemainingStock(requestDto.remainingStock());
@@ -150,7 +150,7 @@ public class BoothService {
         int order = 1;
         for (Long id : requestDto.boothIds()) {
             Booth booth = boothRepository.findById(id)
-                    .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "遺?ㅻ? 李얠쓣 ???놁뒿?덈떎: " + id));
+                    .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "부스를 찾을 수 없습니다: " + id));
             booth.setDisplayOrder(order++);
             boothRepository.save(booth);
         }
@@ -158,14 +158,14 @@ public class BoothService {
 
     public void deleteBooth(Long boothId) {
         if (!boothRepository.existsById(boothId)) {
-            throw new ResponseStatusException(NOT_FOUND, "遺?ㅻ? 李얠쓣 ???놁뒿?덈떎.");
+            throw new ResponseStatusException(NOT_FOUND, "부스를 찾을 수 없습니다.");
         }
         boothRepository.deleteById(boothId);
     }
 
     public CongestionResponseDto getCongestionByBoothId(Long boothId) {
         Booth booth = boothRepository.findById(boothId)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "遺?ㅻ? 李얠쓣 ???놁뒿?덈떎."));
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "부스를 찾을 수 없습니다."));
 
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(15);
         List<GpsLog> recentLogs = gpsLogRepository.findByCreatedAtAfter(threshold);
@@ -220,18 +220,18 @@ public class BoothService {
 
     private String convertLevel(int count) {
         if (count < 3) {
-            return "?ъ쑀";
+            return "여유";
         }
         if (count < 7) {
-            return "蹂댄넻";
+            return "보통";
         }
         if (count < 12) {
-            return "?쇱옟";
+            return "혼잡";
         }
-        return "留ㅼ슦?쇱옟";
+        return "매우혼잡";
     }
 
-    // 理쒓렐 15遺??곗씠?곗뿉 ?쒓컙 媛以묒튂瑜??곸슜?쒕떎. 理쒖떊 濡쒓렇?쇱닔濡??믪? 媛以묒튂瑜?以??
+    // 최근 15분 GPS 로그에 시간 가중치를 적용한다.
     private double timeWeight(LocalDateTime createdAt, LocalDateTime now) {
         long seconds = Duration.between(createdAt, now).toSeconds();
         double ratio = Math.max(0.0, Math.min(1.0, seconds / 900.0));

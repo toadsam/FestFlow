@@ -7,8 +7,8 @@ import com.festflow.backend.dto.LostItemUpdateRequestDto;
 import com.festflow.backend.dto.StaffMemberResponseDto;
 import com.festflow.backend.service.LostItemService;
 import com.festflow.backend.service.StaffService;
+import com.festflow.backend.service.UploadStorageService;
 import com.festflow.backend.service.stream.StreamService;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -25,10 +25,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
-import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 
@@ -39,23 +36,27 @@ public class LostItemController {
     private final LostItemService lostItemService;
     private final StaffService staffService;
     private final StreamService streamService;
-
-    @Value("${app.upload.dir}")
-    private String uploadDir;
+    private final UploadStorageService uploadStorageService;
 
     public LostItemController(
             LostItemService lostItemService,
             StaffService staffService,
-            StreamService streamService
+            StreamService streamService,
+            UploadStorageService uploadStorageService
     ) {
         this.lostItemService = lostItemService;
         this.staffService = staffService;
         this.streamService = streamService;
+        this.uploadStorageService = uploadStorageService;
     }
 
     @GetMapping
-    public List<LostItemResponseDto> getAll() {
-        return lostItemService.getAll();
+    public List<LostItemResponseDto> getAll(
+            @RequestHeader(value = "X-Staff-Token", required = false) String staffToken,
+            Authentication authentication
+    ) {
+        boolean canSeePrivateContacts = hasAdminRole(authentication) || isValidStaffToken(staffToken);
+        return lostItemService.getAll(!canSeePrivateContacts);
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -67,9 +68,9 @@ public class LostItemController {
             @RequestParam(value = "finderContact", required = false) String finderContact,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestHeader(value = "X-Staff-Token", required = false) String staffToken
-    ) throws IOException {
+        ) throws IOException {
         Reporter reporter = resolveStaffReporter(staffToken);
-        String imageUrl = saveFileIfAny(file);
+        String imageUrl = file == null || file.isEmpty() ? null : uploadStorageService.saveImage(file, "lost-item");
         LostItemResponseDto created = lostItemService.create(
                 title,
                 description,
@@ -131,26 +132,8 @@ public class LostItemController {
         streamService.publishLostItems(lostItemService.getAll());
     }
 
-    private String saveFileIfAny(MultipartFile file) throws IOException {
-        if (file == null || file.isEmpty()) {
-            return null;
-        }
-        Path dir = Path.of(uploadDir);
-        Files.createDirectories(dir);
-
-        String ext = file.getOriginalFilename() != null && file.getOriginalFilename().contains(".")
-                ? file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.'))
-                : ".jpg";
-        String filename = "lost-item-" + UUID.randomUUID() + ext;
-        Path path = dir.resolve(filename);
-        Files.write(path, file.getBytes());
-        return "/uploads/" + filename;
-    }
-
     private Reporter resolveReporter(Authentication authentication, String staffToken) {
-        boolean isAdmin = authentication != null && authentication.getAuthorities() != null
-                && authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        if (isAdmin) {
+        if (hasAdminRole(authentication)) {
             return new Reporter("ADMIN", authentication.getName());
         }
         if (staffToken != null && !staffToken.isBlank()) {
@@ -158,6 +141,23 @@ public class LostItemController {
             return new Reporter("STAFF", staff.staffNo());
         }
         throw new ResponseStatusException(FORBIDDEN, "Only admin or staff can modify lost items.");
+    }
+
+    private boolean hasAdminRole(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities() != null
+                && authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+    }
+
+    private boolean isValidStaffToken(String staffToken) {
+        if (staffToken == null || staffToken.isBlank()) {
+            return false;
+        }
+        try {
+            staffService.authenticateByToken(staffToken);
+            return true;
+        } catch (ResponseStatusException ignored) {
+            return false;
+        }
     }
 
     private Reporter resolveStaffReporter(String staffToken) {

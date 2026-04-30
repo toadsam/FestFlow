@@ -18,6 +18,7 @@ const STATUS_LABELS = {
 function toTelHref(value) {
   const raw = `${value || ""}`.trim();
   if (!raw) return "";
+  if (raw.includes("*")) return "";
   const digits = raw.replace(/[^0-9+]/g, "");
   if (!digits) return "";
   return `tel:${digits}`;

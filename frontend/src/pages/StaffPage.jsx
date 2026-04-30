@@ -256,7 +256,7 @@ export default function StaffPage() {
     let mounted = true;
     setLoading(true);
 
-    Promise.all([fetchStaffBootstrap(staffToken), fetchLostItems()])
+    Promise.all([fetchStaffBootstrap(staffToken), fetchLostItems(staffToken)])
       .then(([data, lostData]) => {
         if (!mounted) return;
         setMe(data.me);
@@ -608,7 +608,7 @@ export default function StaffPage() {
       setLostItemForm(LOST_ITEM_INITIAL_FORM);
       setLostItemFile(null);
       setLostItemMessage("분실물이 등록되었습니다.");
-      const refreshed = await fetchLostItems();
+      const refreshed = await fetchLostItems(staffToken);
       setLostItems(refreshed || []);
     } catch (error) {
       setLostItemMessage(error?.message || "분실물 등록에 실패했습니다.");
@@ -1023,7 +1023,7 @@ export default function StaffPage() {
               <input
                 value={staffNoInput}
                 onChange={(e) => setStaffNoInput(e.target.value)}
-                placeholder="S001"
+                placeholder="1"
                 className="mt-1 w-full rounded-lg border border-cyan-300/50 bg-slate-900/70 px-3 py-2.5 text-sm outline-none focus:border-cyan-200"
               />
             </label>

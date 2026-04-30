@@ -21,9 +21,9 @@ import com.festflow.backend.service.BoothService;
 import com.festflow.backend.service.EventService;
 import com.festflow.backend.service.NoticeService;
 import com.festflow.backend.service.ReservationService;
+import com.festflow.backend.service.UploadStorageService;
 import com.festflow.backend.service.stream.StreamService;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -39,10 +39,6 @@ import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.UUID;
-
 import static org.springframework.http.HttpStatus.FORBIDDEN;
 
 @RestController
@@ -57,8 +53,7 @@ public class OpsController {
     private final AuditLogService auditLogService;
     private final StreamService streamService;
     private final ReservationService reservationService;
-    @Value("${app.upload.dir}")
-    private String uploadDir;
+    private final UploadStorageService uploadStorageService;
 
     public OpsController(
             BoothService boothService,
@@ -68,7 +63,8 @@ public class OpsController {
             AdminDashboardService adminDashboardService,
             AuditLogService auditLogService,
             StreamService streamService,
-            ReservationService reservationService
+            ReservationService reservationService,
+            UploadStorageService uploadStorageService
     ) {
         this.boothService = boothService;
         this.eventService = eventService;
@@ -78,6 +74,7 @@ public class OpsController {
         this.auditLogService = auditLogService;
         this.streamService = streamService;
         this.reservationService = reservationService;
+        this.uploadStorageService = uploadStorageService;
     }
 
     @GetMapping("/master/bootstrap")
@@ -229,21 +226,12 @@ public class OpsController {
     public BoothResponseDto uploadBoothMenuImage(
             @PathVariable Long id,
             @RequestParam("file") MultipartFile file,
-            Authentication authentication
+        Authentication authentication
     ) throws IOException {
         ensureBoothAccess(authentication, id);
-        Path dir = Path.of(uploadDir);
-        Files.createDirectories(dir);
-
-        String ext = file.getOriginalFilename() != null && file.getOriginalFilename().contains(".")
-                ? file.getOriginalFilename().substring(file.getOriginalFilename().lastIndexOf('.'))
-                : ".jpg";
-        String filename = "booth-menu-" + id + "-" + UUID.randomUUID() + ext;
-        Path path = dir.resolve(filename);
-        Files.write(path, file.getBytes());
-
-        BoothResponseDto updated = boothService.updateBoothMenuImage(id, "/uploads/" + filename);
-        auditLogService.log(authentication.getName(), "OPS_BOOTH_MENU_IMAGE", "BOOTH", id, filename);
+        String imageUrl = uploadStorageService.saveImage(file, "booth-menu-" + id);
+        BoothResponseDto updated = boothService.updateBoothMenuImage(id, imageUrl);
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_MENU_IMAGE", "BOOTH", id, imageUrl);
         streamService.publishBooths(boothService.getAllBooths());
         return updated;
     }

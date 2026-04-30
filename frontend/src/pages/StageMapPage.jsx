@@ -25,13 +25,7 @@ const WINDOW_OPTIONS = [
 ];
 
 function normalizeLevel(level) {
-  const mapping = {
-    "?ъ쑀": "여유",
-    蹂댄넻: "보통",
-    "?쇱옟": "혼잡",
-    "留ㅼ슦?쇱옟": "매우혼잡",
-  };
-  return mapping[level] || level;
+  return level;
 }
 
 function getLevelStyle(level) {
