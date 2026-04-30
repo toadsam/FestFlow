@@ -2944,3 +2944,182 @@ body::after {
     inset 0 0 0 1px #ffd8df2e,
     0 0 18px #fb718557;
 }
+
+/* Outdoor mode: high-contrast daylight UI for field use. */
+.app-shell[data-display-mode="outdoor"] {
+  --hud-border: #0f172a33;
+  --txt-main: #07111f;
+  --brand-cyan: #005fcc;
+  color: #07111f !important;
+  background: #f8fafc !important;
+  border-left: 1px solid #cbd5e1 !important;
+  border-right: 1px solid #cbd5e1 !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"]::before,
+.app-shell[data-display-mode="outdoor"]::after,
+.app-shell[data-display-mode="outdoor"] .hud-vignette,
+.app-shell[data-display-mode="outdoor"] .hud-scan,
+.app-shell[data-display-mode="outdoor"] .hud-particles,
+.app-shell[data-display-mode="outdoor"] .neon-header-grid,
+.app-shell[data-display-mode="outdoor"] .neon-header-hud::before,
+.app-shell[data-display-mode="outdoor"] .neon-header-hud::after,
+.app-shell[data-display-mode="outdoor"] .fx-burst,
+.app-shell[data-display-mode="outdoor"] .global-fx {
+  display: none !important;
+  animation: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] .neon-header,
+.app-shell[data-display-mode="outdoor"] .neon-header-hud,
+.app-shell[data-display-mode="outdoor"] .neon-divider,
+.app-shell[data-display-mode="outdoor"] .cyber-page {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] .neon-header {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  border-bottom: 2px solid #0f172a !important;
+}
+
+.app-shell[data-display-mode="outdoor"] .cyber-main::before,
+.app-shell[data-display-mode="outdoor"] .cyber-page::before,
+.app-shell[data-display-mode="outdoor"] .cyber-page::after {
+  display: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] main,
+.app-shell[data-display-mode="outdoor"] section {
+  color: #07111f !important;
+}
+
+.app-shell[data-display-mode="outdoor"] article,
+.app-shell[data-display-mode="outdoor"] .rounded-xl,
+.app-shell[data-display-mode="outdoor"] .rounded-2xl,
+.app-shell[data-display-mode="outdoor"] .rounded-lg,
+.app-shell[data-display-mode="outdoor"] .bg-white,
+.app-shell[data-display-mode="outdoor"] .bg-white\/95,
+.app-shell[data-display-mode="outdoor"] .bg-slate-50,
+.app-shell[data-display-mode="outdoor"] .bg-slate-100,
+.app-shell[data-display-mode="outdoor"] .bg-amber-50,
+.app-shell[data-display-mode="outdoor"] .bg-indigo-50,
+.app-shell[data-display-mode="outdoor"] .bg-emerald-50,
+.app-shell[data-display-mode="outdoor"] .bg-rose-50 {
+  color: #07111f !important;
+  background: #ffffff !important;
+  border-color: #94a3b8 !important;
+  box-shadow: 0 1px 0 #0f172a12 !important;
+  text-shadow: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] article::before,
+.app-shell[data-display-mode="outdoor"] article::after,
+.app-shell[data-display-mode="outdoor"] .rounded-xl::before,
+.app-shell[data-display-mode="outdoor"] .rounded-xl::after,
+.app-shell[data-display-mode="outdoor"] .rounded-2xl::before,
+.app-shell[data-display-mode="outdoor"] .rounded-2xl::after,
+.app-shell[data-display-mode="outdoor"] .rounded-lg::before,
+.app-shell[data-display-mode="outdoor"] .rounded-lg::after {
+  display: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] h1,
+.app-shell[data-display-mode="outdoor"] h2,
+.app-shell[data-display-mode="outdoor"] h3,
+.app-shell[data-display-mode="outdoor"] p,
+.app-shell[data-display-mode="outdoor"] span,
+.app-shell[data-display-mode="outdoor"] label,
+.app-shell[data-display-mode="outdoor"] li,
+.app-shell[data-display-mode="outdoor"] small,
+.app-shell[data-display-mode="outdoor"] .neon-kicker,
+.app-shell[data-display-mode="outdoor"] .neon-title,
+.app-shell[data-display-mode="outdoor"] .neon-sub,
+.app-shell[data-display-mode="outdoor"] .text-slate-500,
+.app-shell[data-display-mode="outdoor"] .text-slate-600,
+.app-shell[data-display-mode="outdoor"] .text-slate-700,
+.app-shell[data-display-mode="outdoor"] .text-slate-800,
+.app-shell[data-display-mode="outdoor"] .text-cyan-100,
+.app-shell[data-display-mode="outdoor"] .text-cyan-200,
+.app-shell[data-display-mode="outdoor"] .text-cyan-300 {
+  color: #07111f !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] .neon-title {
+  letter-spacing: 0 !important;
+}
+
+.app-shell[data-display-mode="outdoor"] input,
+.app-shell[data-display-mode="outdoor"] select,
+.app-shell[data-display-mode="outdoor"] textarea {
+  color: #07111f !important;
+  background: #ffffff !important;
+  border: 2px solid #475569 !important;
+  box-shadow: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] input::placeholder,
+.app-shell[data-display-mode="outdoor"] textarea::placeholder {
+  color: #475569 !important;
+  opacity: 1;
+}
+
+.app-shell[data-display-mode="outdoor"] button,
+.app-shell[data-display-mode="outdoor"] .neon-btn-outline,
+.app-shell[data-display-mode="outdoor"] .radial-fab,
+.app-shell[data-display-mode="outdoor"] .radial-item {
+  color: #07111f !important;
+  background: #ffffff !important;
+  border: 2px solid #334155 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  animation: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] button::before {
+  display: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] button[aria-pressed="true"],
+.app-shell[data-display-mode="outdoor"] .neon-nav-active {
+  color: #ffffff !important;
+  background: #0f172a !important;
+  border-color: #0f172a !important;
+  box-shadow: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] .neon-bottom-nav {
+  background: #ffffff !important;
+  border-top: 2px solid #0f172a !important;
+  box-shadow: 0 -2px 10px #0f172a1f !important;
+}
+
+.app-shell[data-display-mode="outdoor"] .neon-nav-idle {
+  color: #0f172a !important;
+  background: #ffffff !important;
+}
+
+.app-shell[data-display-mode="outdoor"] a {
+  color: #004fc4 !important;
+  text-shadow: none !important;
+}
+
+.app-shell[data-display-mode="outdoor"] .leaflet-container {
+  filter: contrast(1.12) saturate(0.95) brightness(1.05);
+  border: 2px solid #334155 !important;
+}
+
+.app-shell[data-display-mode="outdoor"] .visual-icon-badge,
+.app-shell[data-display-mode="outdoor"] .visual-icon-badge-sm {
+  background: #ffffff !important;
+  border-color: #334155 !important;
+  box-shadow: none !important;
+}

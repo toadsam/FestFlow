@@ -19,6 +19,8 @@ const quickTabs = [
   { to: "/events", label: "Events", icon: "E" },
 ];
 
+const DISPLAY_MODE_KEY = "festflow_display_mode";
+
 function mod(n, m) {
   return ((n % m) + m) % m;
 }
@@ -28,8 +30,10 @@ export default function App() {
   const navigate = useNavigate();
 
   const [noticeMessage, setNoticeMessage] = useState("");
-  const [showSplash, setShowSplash] = useState(true);
-  const [splashFading, setSplashFading] = useState(false);
+  const [outdoorMode, setOutdoorMode] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(DISPLAY_MODE_KEY) === "outdoor";
+  });
 
   const [radialOpen, setRadialOpen] = useState(false);
   const [radialIndex, setRadialIndex] = useState(0);
@@ -37,13 +41,11 @@ export default function App() {
   const touchStartX = useRef(null);
 
   useEffect(() => {
-    const fadeTimer = window.setTimeout(() => setSplashFading(true), 1500);
-    const hideTimer = window.setTimeout(() => setShowSplash(false), 2000);
-    return () => {
-      window.clearTimeout(fadeTimer);
-      window.clearTimeout(hideTimer);
-    };
-  }, []);
+    window.localStorage.setItem(
+      DISPLAY_MODE_KEY,
+      outdoorMode ? "outdoor" : "neon",
+    );
+  }, [outdoorMode]);
 
   useEffect(() => {
     setRadialOpen(false);
@@ -72,6 +74,7 @@ export default function App() {
     function onPointerDown(event) {
       const shell = document.querySelector(".app-shell");
       if (!shell || !shell.contains(event.target)) return;
+      if (shell.dataset.displayMode === "outdoor") return;
       if (event.target.closest('[data-burst-scope="local"]')) return;
       const interactive = event.target.closest(
         "button, a, article, .rounded-xl, .rounded-2xl, .rounded-lg",
@@ -116,10 +119,6 @@ export default function App() {
     document.addEventListener("pointerdown", onPointerDown, { passive: true });
     return () => document.removeEventListener("pointerdown", onPointerDown);
   }, []);
-
-  function skipSplash() {
-    setShowSplash(false);
-  }
 
   async function requestNotificationPermission() {
     if (!("Notification" in window)) {
@@ -185,7 +184,10 @@ export default function App() {
   }
 
   return (
-    <div className="mx-auto app-shell neon-shell relative">
+    <div
+      className="mx-auto app-shell neon-shell relative"
+      data-display-mode={outdoorMode ? "outdoor" : "neon"}
+    >
       <div className="hud-vignette" aria-hidden />
       <div className="hud-scan" aria-hidden />
       <div className="hud-particles" aria-hidden />
@@ -225,13 +227,23 @@ export default function App() {
         <div className="px-5 py-3 neon-divider">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs neon-sub">Festival Control Interface</p>
-            <button
-              type="button"
-              onClick={requestNotificationPermission}
-              className="text-[11px] px-3 py-1.5 min-h-11 rounded-lg neon-btn-outline whitespace-nowrap"
-            >
-              Alerts
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-pressed={outdoorMode}
+                onClick={() => setOutdoorMode((current) => !current)}
+                className="text-[11px] px-3 py-1.5 min-h-11 rounded-lg neon-btn-outline whitespace-nowrap"
+              >
+                {outdoorMode ? "기본 모드" : "야외 모드"}
+              </button>
+              <button
+                type="button"
+                onClick={requestNotificationPermission}
+                className="text-[11px] px-3 py-1.5 min-h-11 rounded-lg neon-btn-outline whitespace-nowrap"
+              >
+                Alerts
+              </button>
+            </div>
           </div>
           {noticeMessage && (
             <p className="text-xs mt-2 neon-chip rounded px-2 py-1 inline-block">
@@ -349,26 +361,6 @@ export default function App() {
         ))}
       </nav>
 
-      {showSplash && (
-        <div
-          className={`fixed inset-0 z-[3000] bg-slate-950 transition-opacity duration-500 ${splashFading ? "opacity-0" : "opacity-100"}`}
-        >
-          <div className="h-full w-full flex items-start justify-center pt-0">
-            <img
-              src="/images/스플래시화면.png?v=20260406-1"
-              alt="Splash"
-              className="w-full max-w-[430px] h-auto object-contain object-top"
-            />
-            <button
-              type="button"
-              onClick={skipSplash}
-              className="absolute top-4 right-4 rounded-full bg-black/45 px-3 py-2 min-h-11 text-xs font-semibold text-white"
-            >
-              Skip
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
