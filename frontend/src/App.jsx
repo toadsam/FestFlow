@@ -39,6 +39,7 @@ export default function App() {
   const [radialIndex, setRadialIndex] = useState(0);
   const [globalBursts, setGlobalBursts] = useState([]);
   const touchStartX = useRef(null);
+  const showRadialMenu = location.pathname !== "/chat";
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -300,6 +301,7 @@ export default function App() {
             />
           )}
 
+          {showRadialMenu && (
           <div className="fixed right-4 bottom-24 z-[1300]">
             {radialOpen && (
               <div
@@ -338,6 +340,7 @@ export default function App() {
               {radialOpen ? "X" : "+"}
             </button>
           </div>
+          )}
         </>,
         document.body,
       )}
