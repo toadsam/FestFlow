@@ -530,6 +530,57 @@ export async function triggerOpsMasterEventStartNotice(eventId, key) {
   return parseJson(response, "공연 시작 공지 발행에 실패했습니다.");
 }
 
+export async function fetchOpsMasterAiBriefing(key) {
+  const response = await fetch(opsUrl("/ops/master/ai/briefing"), {
+    method: "POST",
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ type: "briefing" }),
+  });
+  return parseJson(response, "AI 운영 브리핑을 생성하지 못했습니다.");
+}
+
+export async function createOpsMasterAiNoticeDraft(type, prompt, key) {
+  const response = await fetch(opsUrl("/ops/master/ai/notice-draft"), {
+    method: "POST",
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ type, prompt }),
+  });
+  return parseJson(response, "AI 공지 초안을 생성하지 못했습니다.");
+}
+
+export async function fetchStaffAiZoneSummary(staffToken) {
+  const response = await fetch(`${API_BASE}/staff/ai/zone-summary`, {
+    method: "POST",
+    headers: staffToken
+      ? { "Content-Type": "application/json", "X-Staff-Token": staffToken }
+      : { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "zone-summary" }),
+  });
+  return parseJson(response, "AI 구역 요약을 생성하지 못했습니다.");
+}
+
+export async function createStaffAiLostItemAssist(prompt, staffToken) {
+  const response = await fetch(`${API_BASE}/staff/ai/lost-item-assist`, {
+    method: "POST",
+    headers: staffToken
+      ? { "Content-Type": "application/json", "X-Staff-Token": staffToken }
+      : { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "lost-item", prompt }),
+  });
+  return parseJson(response, "분실물 AI 응대를 생성하지 못했습니다.");
+}
+
+export async function createStaffAiReplyDraft(prompt, staffToken) {
+  const response = await fetch(`${API_BASE}/staff/ai/reply-draft`, {
+    method: "POST",
+    headers: staffToken
+      ? { "Content-Type": "application/json", "X-Staff-Token": staffToken }
+      : { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "reply", prompt }),
+  });
+  return parseJson(response, "응대 문구를 생성하지 못했습니다.");
+}
+
 export async function fetchStageCrowd(minutes = 10) {
   const response = await fetch(
     `${API_BASE}/analytics/stage-crowd?minutes=${minutes}`,

@@ -3,9 +3,11 @@ import {
   createOpsMasterBooth,
   createOpsMasterEvent,
   createOpsMasterNotice,
+  createOpsMasterAiNoticeDraft,
   deleteOpsMasterBooth,
   deleteOpsMasterEvent,
   deleteOpsMasterNotice,
+  fetchOpsMasterAiBriefing,
   fetchOpsMasterBootstrap,
   reorderOpsMasterBooths,
   triggerOpsMasterCongestionReliefNotice,
@@ -114,6 +116,9 @@ export default function OpsMasterPage() {
   const [editingNoticeId, setEditingNoticeId] = useState(null);
   const [editingEventId, setEditingEventId] = useState(null);
   const [editingBoothId, setEditingBoothId] = useState(null);
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiPanel, setAiPanel] = useState(null);
+  const [aiDraftType, setAiDraftType] = useState("congestion");
 
   const booths = useMemo(
     () =>
@@ -300,6 +305,41 @@ export default function OpsMasterPage() {
       await load();
     } catch (e) {
       setError(e.message);
+    }
+  }
+
+  async function handleAiBriefing() {
+    setAiBusy(true);
+    setError("");
+    try {
+      const result = await fetchOpsMasterAiBriefing(key);
+      setAiPanel(result);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function handleAiNoticeDraft(type = aiDraftType) {
+    setAiBusy(true);
+    setError("");
+    try {
+      const result = await createOpsMasterAiNoticeDraft(type, "", key);
+      setAiPanel(result);
+      setNoticeForm((prev) => ({
+        ...prev,
+        title: result.draftTitle || prev.title,
+        content: result.draftContent || prev.content,
+        category: result.draftCategory || prev.category,
+        active: true,
+      }));
+      setTab("notice");
+      setMessage("AI 공지 초안을 공지 입력칸에 반영했습니다. 확인 후 등록해 주세요.");
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setAiBusy(false);
     }
   }
 
@@ -557,6 +597,76 @@ export default function OpsMasterPage() {
                   {data.kpi?.upcomingWithin30Minutes?.title || "-"}
                 </p>
               </div>
+            </div>
+
+            <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <p className="text-sm font-extrabold text-cyan-950">AI 운영 코파일럿</p>
+                  <p className="mt-0.5 text-xs text-cyan-800">
+                    현재 데이터로 위험 요소를 요약하고 공지 초안을 준비합니다.
+                  </p>
+                </div>
+                <span className="rounded-full border border-cyan-300 bg-white px-2 py-0.5 text-[10px] font-bold text-cyan-800">
+                  검토 후 실행
+                </span>
+              </div>
+              <div className="mt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={handleAiBriefing}
+                  disabled={aiBusy}
+                  className="rounded-lg bg-cyan-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-60"
+                >
+                  {aiBusy ? "분석 중..." : "현재 상황 AI 요약"}
+                </button>
+                <div className="grid grid-cols-[1fr_auto] gap-1.5">
+                  <select
+                    value={aiDraftType}
+                    onChange={(e) => setAiDraftType(e.target.value)}
+                    className="rounded-lg border border-cyan-200 bg-white px-2 text-xs font-semibold text-cyan-900"
+                  >
+                    <option value="congestion">혼잡 공지</option>
+                    <option value="event">공연 공지</option>
+                    <option value="lost">분실물 공지</option>
+                    <option value="booth">부스 공지</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => handleAiNoticeDraft()}
+                    disabled={aiBusy}
+                    className="rounded-lg border border-cyan-300 bg-white px-2 py-2 text-xs font-bold text-cyan-800 disabled:opacity-60"
+                  >
+                    초안
+                  </button>
+                </div>
+              </div>
+              {aiPanel && (
+                <div className="mt-2 rounded-lg border border-cyan-200 bg-white p-2">
+                  <p className="text-xs font-extrabold text-cyan-900">{aiPanel.title}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-xs leading-relaxed text-slate-700">
+                    {aiPanel.summary}
+                  </p>
+                  {aiPanel.highlights?.length > 0 && (
+                    <div className="mt-2 grid gap-1">
+                      {aiPanel.highlights.slice(0, 4).map((item) => (
+                        <p key={item} className="rounded bg-slate-50 px-2 py-1 text-[11px] text-slate-700">
+                          {item}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                  {aiPanel.recommendedActions?.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      {aiPanel.recommendedActions.slice(0, 3).map((item) => (
+                        <p key={item} className="text-[11px] font-semibold text-cyan-900">
+                          조치: {item}
+                        </p>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">

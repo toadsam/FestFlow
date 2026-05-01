@@ -3,8 +3,11 @@ import { CircleMarker, MapContainer, Popup, TileLayer, Tooltip, useMap } from "r
 import {
   createLostItem,
   createLostItemStream,
+  createStaffAiLostItemAssist,
+  createStaffAiReplyDraft,
   deleteLostItem,
   createStaffStream,
+  fetchStaffAiZoneSummary,
   fetchLostItems,
   fetchStaffBootstrap,
   loginStaff,
@@ -246,6 +249,9 @@ export default function StaffPage() {
   const [interpreterLane, setInterpreterLane] = useState("koToEn");
   const [mapAction, setMapAction] = useState("idle");
   const [nowMs, setNowMs] = useState(Date.now());
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiPanel, setAiPanel] = useState(null);
+  const [aiPrompt, setAiPrompt] = useState("");
 
   useEffect(() => {
     if (!staffToken) {
@@ -580,6 +586,61 @@ export default function StaffPage() {
       if (!silent) {
         setSaving(false);
       }
+    }
+  }
+
+  async function handleStaffAiZoneSummary() {
+    setAiBusy(true);
+    try {
+      const result = await fetchStaffAiZoneSummary(staffToken);
+      setAiPanel(result);
+    } catch (error) {
+      setAiPanel({
+        title: "AI 요약 실패",
+        summary: error?.message || "AI 요약을 생성하지 못했습니다.",
+        highlights: [],
+        recommendedActions: [],
+      });
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function handleStaffAiReply() {
+    const prompt = aiPrompt.trim();
+    if (!prompt) return;
+    setAiBusy(true);
+    try {
+      const result = await createStaffAiReplyDraft(prompt, staffToken);
+      setAiPanel(result);
+    } catch (error) {
+      setAiPanel({
+        title: "응대 문구 실패",
+        summary: error?.message || "응대 문구를 생성하지 못했습니다.",
+        highlights: [],
+        recommendedActions: [],
+      });
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function handleStaffAiLostAssist() {
+    const prompt = aiPrompt.trim();
+    if (!prompt) return;
+    setAiBusy(true);
+    try {
+      const result = await createStaffAiLostItemAssist(prompt, staffToken);
+      setAiPanel(result);
+    } catch (error) {
+      setAiPanel({
+        title: "분실물 응대 실패",
+        summary: error?.message || "분실물 응대를 생성하지 못했습니다.",
+        highlights: [],
+        recommendedActions: [],
+      });
+    } finally {
+      setAiBusy(false);
     }
   }
 
@@ -1103,6 +1164,77 @@ export default function StaffPage() {
             로그아웃
           </button>
         </div>
+      </article>
+
+      <article className="rounded-xl border border-cyan-300/60 bg-cyan-50 p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-sm font-extrabold text-cyan-950">AI 현장 코파일럿</p>
+            <p className="mt-0.5 text-xs text-cyan-800">
+              내 담당 구역 요약, 방문객 응대, 분실물 후보 확인을 빠르게 도와줍니다.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleStaffAiZoneSummary}
+            disabled={aiBusy}
+            className="shrink-0 rounded-lg bg-cyan-700 px-3 py-2 text-xs font-bold text-white disabled:opacity-60"
+          >
+            {aiBusy ? "분석 중" : "내 구역 요약"}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-[1fr_auto_auto] gap-2">
+          <input
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+            className="min-w-0 rounded-lg border border-cyan-200 bg-white px-3 py-2 text-sm text-slate-900"
+            placeholder="예: 검은 지갑 / 화장실 위치 문의"
+          />
+          <button
+            type="button"
+            onClick={handleStaffAiReply}
+            disabled={aiBusy || !aiPrompt.trim()}
+            className="rounded-lg border border-cyan-300 bg-white px-2 py-2 text-xs font-bold text-cyan-800 disabled:opacity-60"
+          >
+            응대
+          </button>
+          <button
+            type="button"
+            onClick={handleStaffAiLostAssist}
+            disabled={aiBusy || !aiPrompt.trim()}
+            className="rounded-lg border border-emerald-300 bg-white px-2 py-2 text-xs font-bold text-emerald-800 disabled:opacity-60"
+          >
+            분실물
+          </button>
+        </div>
+
+        {aiPanel && (
+          <div className="rounded-lg border border-cyan-200 bg-white p-2">
+            <p className="text-xs font-extrabold text-cyan-900">{aiPanel.title}</p>
+            <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-800">
+              {aiPanel.summary}
+            </p>
+            {aiPanel.highlights?.length > 0 && (
+              <div className="mt-2 grid gap-1">
+                {aiPanel.highlights.slice(0, 4).map((item) => (
+                  <p key={item} className="rounded bg-slate-50 px-2 py-1 text-[11px] text-slate-700">
+                    {item}
+                  </p>
+                ))}
+              </div>
+            )}
+            {aiPanel.recommendedActions?.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {aiPanel.recommendedActions.slice(0, 3).map((item) => (
+                  <p key={item} className="text-[11px] font-semibold text-cyan-900">
+                    다음 행동: {item}
+                  </p>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </article>
 
       <article className="rounded-xl border border-slate-200 bg-white p-3">

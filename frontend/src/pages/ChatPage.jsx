@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { askChat } from "../api";
 import {
   IconBox,
@@ -58,6 +59,15 @@ const compactActions = [
   },
 ];
 
+const categoryQuestions = [
+  { label: "주점", question: "주점 카테고리에서 지금 가기 좋은 부스를 추천해줘." },
+  { label: "음식", question: "먹거리나 음식 위주로 지금 가기 좋은 부스를 추천해줘." },
+  { label: "포토", question: "사진 찍기 좋은 포토 관련 부스를 추천해줘." },
+  { label: "체험", question: "체험형 부스 중 지금 가기 좋은 곳을 추천해줘." },
+  { label: "굿즈", question: "굿즈나 상품 관련 부스 중 추천할 만한 곳을 알려줘." },
+  { label: "예약", question: "예약 가능한 부스 중 지금 이용하기 좋은 곳을 추천해줘." },
+];
+
 const followUpQuestions = [
   "더 가까운 곳",
   "대기 더 짧게",
@@ -65,6 +75,7 @@ const followUpQuestions = [
 ];
 
 export default function ChatPage() {
+  const navigate = useNavigate();
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
@@ -257,6 +268,25 @@ export default function ChatPage() {
         })}
       </div>
 
+      <div className="rounded-2xl border border-cyan-300/35 bg-slate-950/70 p-2">
+        <p className="px-1 pb-1 text-[11px] font-bold text-cyan-100/75">
+          카테고리별 바로 조회
+        </p>
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {categoryQuestions.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() => submitQuestion(item.question)}
+              disabled={loading}
+              className="min-h-9 shrink-0 rounded-full border border-cyan-300/35 bg-cyan-950/55 px-3 text-xs font-extrabold text-cyan-100 disabled:opacity-50"
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <article className="rounded-2xl border border-cyan-300/45 bg-slate-950/80 p-3 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.16)]">
         <div className="space-y-3">
           {visibleMessages.map((message, idx) => {
@@ -269,6 +299,7 @@ export default function ChatPage() {
                 isLatest={idx === lastVisibleIndex}
                 loading={loading}
                 onFollowUp={submitQuestion}
+                onNavigate={navigate}
               />
             );
           })}
@@ -305,7 +336,7 @@ function QuickAction({ action, loading, onPick }) {
   );
 }
 
-function MessageBubble({ message, isUser, isLatest, loading, onFollowUp }) {
+function MessageBubble({ message, isUser, isLatest, loading, onFollowUp, onNavigate }) {
   return (
     <div className={isUser ? "text-right" : "text-left"}>
       <p
@@ -336,10 +367,12 @@ function MessageBubble({ message, isUser, isLatest, loading, onFollowUp }) {
         <p className="whitespace-pre-wrap text-left">{message.text}</p>
         {!isUser && (
           <>
+            <PrimaryEvidenceActions evidence={message.evidence} onNavigate={onNavigate} />
             <ChatTrustDetails
               confidence={message.confidence}
               evidence={message.evidence}
               warnings={message.warnings}
+              onNavigate={onNavigate}
             />
             {isLatest && !loading && <FollowUps onPick={onFollowUp} />}
           </>
@@ -349,7 +382,60 @@ function MessageBubble({ message, isUser, isLatest, loading, onFollowUp }) {
   );
 }
 
-function ChatTrustDetails({ confidence, evidence = [], warnings = [] }) {
+function PrimaryEvidenceActions({ evidence = [], onNavigate }) {
+  const primaryActions = buildPrimaryActions(evidence).slice(0, 3);
+  if (primaryActions.length === 0) return null;
+
+  return (
+    <div className="mt-3 grid gap-2 border-t border-cyan-400/20 pt-2">
+      {primaryActions.map((action) => {
+        const Icon = action.icon;
+        return (
+          <button
+            key={`${action.label}-${action.to}`}
+            type="button"
+            onClick={() => onNavigate(action.to)}
+            className="flex min-h-12 items-center justify-between gap-3 rounded-xl border border-cyan-300/45 bg-cyan-500/15 px-3 text-left text-cyan-50 shadow-[0_0_14px_rgba(34,211,238,0.12)]"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-cyan-300/35 bg-slate-950/55">
+                <Icon className="h-4 w-4" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-extrabold">{action.label}</span>
+                <span className="block truncate text-[11px] font-semibold text-cyan-100/70">
+                  {action.caption}
+                </span>
+              </span>
+            </span>
+            <span className="shrink-0 text-xs font-black text-cyan-100">보기</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function buildPrimaryActions(evidence = []) {
+  const actions = [];
+  const seen = new Set();
+
+  for (const item of evidence) {
+    for (const action of getEvidenceActions(item)) {
+      const key = action.to;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      actions.push({
+        ...action,
+        caption: item.label,
+        icon: action.icon,
+      });
+    }
+  }
+  return actions;
+}
+
+function ChatTrustDetails({ confidence, evidence = [], warnings = [], onNavigate }) {
   if (!confidence && evidence.length === 0 && warnings.length === 0) {
     return null;
   }
@@ -368,10 +454,13 @@ function ChatTrustDetails({ confidence, evidence = [], warnings = [] }) {
       {evidence.length > 0 && (
         <div className="mt-2 space-y-1">
           {evidence.slice(0, 4).map((item) => (
-            <p key={`${item.type}-${item.id}`} className="rounded-lg bg-cyan-950/40 px-2 py-1">
-              <span className="font-semibold">{item.label}</span>
-              <span className="text-cyan-100/70"> · {item.reason}</span>
-            </p>
+            <div key={`${item.type}-${item.id}`} className="rounded-lg bg-cyan-950/40 px-2 py-1">
+              <p>
+                <span className="font-semibold">{item.label}</span>
+                <span className="text-cyan-100/70"> · {item.reason}</span>
+              </p>
+              <EvidenceActions evidence={item} onNavigate={onNavigate} />
+            </div>
           ))}
         </div>
       )}
@@ -384,6 +473,45 @@ function ChatTrustDetails({ confidence, evidence = [], warnings = [] }) {
       )}
     </details>
   );
+}
+
+function EvidenceActions({ evidence, onNavigate }) {
+  const actions = getEvidenceActions(evidence);
+  if (actions.length === 0) return null;
+
+  return (
+    <div className="mt-1 flex flex-wrap gap-1">
+      {actions.map((action) => (
+        <button
+          key={action.label}
+          type="button"
+          onClick={() => onNavigate(action.to)}
+          className="min-h-7 rounded-full border border-cyan-300/30 bg-slate-900/75 px-2 text-[10px] font-bold text-cyan-100"
+        >
+          {action.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function getEvidenceActions(evidence) {
+  if (!evidence?.type || evidence.id == null) return [];
+
+  if (evidence.type === "booth") {
+    return [
+      { label: "부스 상세보기", to: `/booths/${evidence.id}`, icon: IconMapPin },
+      { label: "전체 부스 보기", to: "/", icon: IconBox },
+    ];
+  }
+  if (evidence.type === "lost_item") {
+    const query = encodeURIComponent(evidence.label || "");
+    return [{ label: "분실물 바로 찾기", to: `/lost-found?query=${query}`, icon: IconSearch }];
+  }
+  if (evidence.type === "event") {
+    return [{ label: "공연 일정 보기", to: "/events", icon: IconCalendar }];
+  }
+  return [];
 }
 
 function FollowUps({ onPick }) {

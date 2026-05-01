@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 public class ChatService {
 
     private static final String OPENAI_RESPONSES_PATH = "/v1/responses";
-    private static final int MAX_EVIDENCE = 8;
+    private static final int MAX_EVIDENCE = 5;
 
     private final BoothService boothService;
     private final EventService eventService;
@@ -77,7 +77,7 @@ public class ChatService {
                     "model", model,
                     "instructions", buildInstructions(),
                     "input", buildInput(question, retrieval),
-                    "max_output_tokens", 700
+                    "max_output_tokens", 450
             );
 
             String response = restClient.post()
@@ -119,66 +119,76 @@ public class ChatService {
         String normalizedQuestion = normalize(question);
         Set<String> terms = terms(normalizedQuestion);
         LocalDateTime now = LocalDateTime.now();
+        boolean wantsLostItems = wantsLostItems(normalizedQuestion);
+        boolean wantsEvents = wantsEvents(normalizedQuestion);
+        boolean wantsBooths = wantsBooths(normalizedQuestion) || (!wantsLostItems && !wantsEvents);
+        boolean wantsCongestion = wantsCongestion(normalizedQuestion);
 
-        List<BoothResponseDto> booths = boothService.getAllBooths();
-        Map<Long, CongestionResponseDto> congestionByBoothId = safeCongestionByBoothId();
-        for (BoothResponseDto booth : booths) {
-            CongestionResponseDto congestion = congestionByBoothId.get(booth.id());
-            int score = scoreBooth(booth, congestion, normalizedQuestion, terms);
-            if (score <= 0) {
-                continue;
+        if (wantsBooths) {
+            List<BoothResponseDto> booths = boothService.getAllBooths();
+            Map<Long, CongestionResponseDto> congestionByBoothId = wantsCongestion ? safeCongestionByBoothId() : Map.of();
+            for (BoothResponseDto booth : booths) {
+                CongestionResponseDto congestion = congestionByBoothId.get(booth.id());
+                int score = scoreBooth(booth, congestion, normalizedQuestion, terms);
+                if (score <= 0) {
+                    continue;
+                }
+
+                if (booth.liveStatusUpdatedAt() != null && Duration.between(booth.liveStatusUpdatedAt(), now).toMinutes() > 15) {
+                    warnings.add(booth.name() + " 운영 상태는 15분 이상 지난 정보일 수 있습니다.");
+                }
+
+                candidates.add(new EvidenceCandidate(
+                        score,
+                        new ChatEvidenceDto(
+                                "booth",
+                                booth.id(),
+                                booth.name(),
+                                boothReason(booth, congestion),
+                                stringify(booth.liveStatusUpdatedAt())
+                        )
+                ));
             }
-
-            if (booth.liveStatusUpdatedAt() != null && Duration.between(booth.liveStatusUpdatedAt(), now).toMinutes() > 15) {
-                warnings.add(booth.name() + " 운영 상태는 15분 이상 지난 정보일 수 있습니다.");
-            }
-
-            candidates.add(new EvidenceCandidate(
-                    score,
-                    new ChatEvidenceDto(
-                            "booth",
-                            booth.id(),
-                            booth.name(),
-                            boothReason(booth, congestion),
-                            stringify(booth.liveStatusUpdatedAt())
-                    )
-            ));
         }
 
-        List<EventResponseDto> events = eventService.getAllEvents();
-        for (EventResponseDto event : events) {
-            int score = scoreEvent(event, normalizedQuestion, terms, now);
-            if (score <= 0) {
-                continue;
+        if (wantsEvents) {
+            List<EventResponseDto> events = eventService.getAllEvents();
+            for (EventResponseDto event : events) {
+                int score = scoreEvent(event, normalizedQuestion, terms, now);
+                if (score <= 0) {
+                    continue;
+                }
+                candidates.add(new EvidenceCandidate(
+                        score,
+                        new ChatEvidenceDto(
+                                "event",
+                                event.id(),
+                                event.title(),
+                                eventReason(event, now),
+                                stringify(event.statusUpdatedAt())
+                        )
+                ));
             }
-            candidates.add(new EvidenceCandidate(
-                    score,
-                    new ChatEvidenceDto(
-                            "event",
-                            event.id(),
-                            event.title(),
-                            eventReason(event, now),
-                            stringify(event.statusUpdatedAt())
-                    )
-            ));
         }
 
-        List<LostItemResponseDto> lostItems = lostItemService.getAll(true);
-        for (LostItemResponseDto item : lostItems) {
-            int score = scoreLostItem(item, normalizedQuestion, terms);
-            if (score <= 0) {
-                continue;
+        if (wantsLostItems) {
+            List<LostItemResponseDto> lostItems = lostItemService.getAll(true);
+            for (LostItemResponseDto item : lostItems) {
+                int score = scoreLostItem(item, normalizedQuestion, terms);
+                if (score <= 0) {
+                    continue;
+                }
+                candidates.add(new EvidenceCandidate(
+                        score,
+                        new ChatEvidenceDto(
+                                "lost_item",
+                                item.id(),
+                                item.title(),
+                                lostItemReason(item),
+                                stringify(item.updatedAt() != null ? item.updatedAt() : item.createdAt())
+                        )
+                ));
             }
-            candidates.add(new EvidenceCandidate(
-                    score,
-                    new ChatEvidenceDto(
-                            "lost_item",
-                            item.id(),
-                            item.title(),
-                            lostItemReason(item),
-                            stringify(item.updatedAt() != null ? item.updatedAt() : item.createdAt())
-                    )
-            ));
         }
 
         List<ChatEvidenceDto> evidence = candidates.stream()
@@ -193,6 +203,22 @@ public class ChatService {
         }
 
         return new RetrievalResult(evidence, warnings);
+    }
+
+    private boolean wantsBooths(String question) {
+        return containsAny(question, "부스", "booth", "먹", "음식", "메뉴", "추천", "대기", "재고", "예약", "주점", "포토", "체험", "굿즈", "상품", "식사");
+    }
+
+    private boolean wantsEvents(String question) {
+        return containsAny(question, "공연", "이벤트", "일정", "무대", "시작", "라인업", "event");
+    }
+
+    private boolean wantsLostItems(String question) {
+        return containsAny(question, "분실", "잃어", "잃어버", "찾", "지갑", "가방", "핸드폰", "휴대폰", "lost", "물건");
+    }
+
+    private boolean wantsCongestion(String question) {
+        return containsAny(question, "혼잡", "붐비", "사람", "여유", "한산", "지금 추천", "지금 기준");
     }
 
     private Map<Long, CongestionResponseDto> safeCongestionByBoothId() {
@@ -327,8 +353,9 @@ public class ChatService {
                 Do not invent booth names, event times, stock, wait times, congestion levels, reservations, locations, or lost items.
                 If evidence is weak or missing, say what is unknown and suggest a safe next step.
                 Do not expose private contact details.
-                Use this answer structure when useful: 추천/답변, 근거, 주의, 다음 행동.
-                Keep the answer concise and practical.
+                Use short action-first answers.
+                Prefer this structure: 추천/답변, 이유, 다음 행동.
+                Keep the answer under 5 Korean lines when possible.
                 """;
     }
 

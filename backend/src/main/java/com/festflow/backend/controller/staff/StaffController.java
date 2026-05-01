@@ -1,11 +1,14 @@
 package com.festflow.backend.controller.staff;
 
+import com.festflow.backend.dto.AiAssistRequestDto;
+import com.festflow.backend.dto.AiAssistResponseDto;
 import com.festflow.backend.dto.StaffBootstrapDto;
 import com.festflow.backend.dto.StaffLoginRequestDto;
 import com.festflow.backend.dto.StaffLoginResponseDto;
 import com.festflow.backend.dto.StaffMemberResponseDto;
 import com.festflow.backend.dto.StaffStatusUpdateRequestDto;
 import com.festflow.backend.service.StaffService;
+import com.festflow.backend.service.OpsAiService;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class StaffController {
 
     private final StaffService staffService;
+    private final OpsAiService opsAiService;
 
-    public StaffController(StaffService staffService) {
+    public StaffController(StaffService staffService, OpsAiService opsAiService) {
         this.staffService = staffService;
+        this.opsAiService = opsAiService;
     }
 
     @PostMapping("/auth/login")
@@ -48,6 +53,29 @@ public class StaffController {
             @RequestBody StaffStatusUpdateRequestDto requestDto
     ) {
         return staffService.updateMyStatus(staffToken, requestDto);
+    }
+
+    @PostMapping("/ai/zone-summary")
+    public AiAssistResponseDto aiZoneSummary(
+            @RequestHeader(value = "X-Staff-Token", required = false) String staffToken
+    ) {
+        return opsAiService.staffZoneSummary(staffToken);
+    }
+
+    @PostMapping("/ai/lost-item-assist")
+    public AiAssistResponseDto aiLostItemAssist(
+            @RequestHeader(value = "X-Staff-Token", required = false) String staffToken,
+            @RequestBody AiAssistRequestDto requestDto
+    ) {
+        return opsAiService.staffLostItemAssist(staffToken, requestDto);
+    }
+
+    @PostMapping("/ai/reply-draft")
+    public AiAssistResponseDto aiReplyDraft(
+            @RequestHeader(value = "X-Staff-Token", required = false) String staffToken,
+            @RequestBody AiAssistRequestDto requestDto
+    ) {
+        return opsAiService.staffReplyDraft(staffToken, requestDto);
     }
 }
 

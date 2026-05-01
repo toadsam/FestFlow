@@ -7,6 +7,8 @@ import com.festflow.backend.dto.BoothReservationStateDto;
 import com.festflow.backend.dto.BoothReorderRequestDto;
 import com.festflow.backend.dto.BoothResponseDto;
 import com.festflow.backend.dto.BoothUpsertRequestDto;
+import com.festflow.backend.dto.AiAssistRequestDto;
+import com.festflow.backend.dto.AiAssistResponseDto;
 import com.festflow.backend.dto.EventResponseDto;
 import com.festflow.backend.dto.EventUpsertRequestDto;
 import com.festflow.backend.dto.NoticeResponseDto;
@@ -20,6 +22,7 @@ import com.festflow.backend.service.AuditLogService;
 import com.festflow.backend.service.BoothService;
 import com.festflow.backend.service.EventService;
 import com.festflow.backend.service.NoticeService;
+import com.festflow.backend.service.OpsAiService;
 import com.festflow.backend.service.ReservationService;
 import com.festflow.backend.service.UploadStorageService;
 import com.festflow.backend.service.stream.StreamService;
@@ -54,6 +57,7 @@ public class OpsController {
     private final StreamService streamService;
     private final ReservationService reservationService;
     private final UploadStorageService uploadStorageService;
+    private final OpsAiService opsAiService;
 
     public OpsController(
             BoothService boothService,
@@ -64,7 +68,8 @@ public class OpsController {
             AuditLogService auditLogService,
             StreamService streamService,
             ReservationService reservationService,
-            UploadStorageService uploadStorageService
+            UploadStorageService uploadStorageService,
+            OpsAiService opsAiService
     ) {
         this.boothService = boothService;
         this.eventService = eventService;
@@ -75,6 +80,7 @@ public class OpsController {
         this.streamService = streamService;
         this.reservationService = reservationService;
         this.uploadStorageService = uploadStorageService;
+        this.opsAiService = opsAiService;
     }
 
     @GetMapping("/master/bootstrap")
@@ -220,6 +226,16 @@ public class OpsController {
         auditLogService.log(authentication.getName(), "OPS_BOOTH_LIVE_STATUS", "BOOTH", id, "update own booth live status");
         streamService.publishBooths(boothService.getAllBooths());
         return updated;
+    }
+
+    @PostMapping("/master/ai/briefing")
+    public AiAssistResponseDto masterAiBriefing() {
+        return opsAiService.masterBriefing();
+    }
+
+    @PostMapping("/master/ai/notice-draft")
+    public AiAssistResponseDto masterAiNoticeDraft(@RequestBody AiAssistRequestDto requestDto) {
+        return opsAiService.masterNoticeDraft(requestDto);
     }
 
     @PostMapping(value = "/booth/{id}/menu-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

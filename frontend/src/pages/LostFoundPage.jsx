@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { claimLostItem, createLostItemStream, fetchLostItems } from "../api";
 import { IconBox, IconClock, IconSearch } from "../components/UxIcons";
 
@@ -25,11 +26,12 @@ function toTelHref(value) {
 }
 
 export default function LostFoundPage() {
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => new URLSearchParams(location.search).get("query") || "");
   const [claimOpenId, setClaimOpenId] = useState(null);
   const [claimDrafts, setClaimDrafts] = useState({});
   const [claimingId, setClaimingId] = useState(null);
@@ -50,6 +52,11 @@ export default function LostFoundPage() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    const nextQuery = new URLSearchParams(location.search).get("query") || "";
+    setQuery(nextQuery);
+  }, [location.search]);
 
   useEffect(() => {
     const stream = createLostItemStream();
