@@ -24,6 +24,11 @@ const WINDOW_OPTIONS = [
   { label: "최근 15분", value: 15 },
 ];
 
+function getStageRefreshInterval() {
+  const isMobile = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  return isMobile ? 10000 : 5000;
+}
+
 function normalizeLevel(level) {
   return level;
 }
@@ -61,7 +66,11 @@ export default function StageMapPage() {
   }, [minutesWindow]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => load(), 5000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        load();
+      }
+    }, getStageRefreshInterval());
     return () => window.clearInterval(timer);
   }, [minutesWindow]);
 

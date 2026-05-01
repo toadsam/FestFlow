@@ -662,6 +662,8 @@ export default function OpsBoothPage() {
               src={resolveBoothImageUrl(data.booth)}
               alt={`${data.booth.name} 이미지`}
               className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
           </div>
 
@@ -852,6 +854,8 @@ export default function OpsBoothPage() {
                     src={draft.menuImageUrl}
                     alt="음식 사진 미리보기"
                     className="h-32 w-full rounded object-cover"
+                    loading="lazy"
+                    decoding="async"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}

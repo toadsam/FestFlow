@@ -3123,3 +3123,182 @@ body::after {
   border-color: #334155 !important;
   box-shadow: none !important;
 }
+
+/* Mobile premium neon: keep the cyber look, but stop expensive continuous painting. */
+@media (hover: none), (pointer: coarse), (max-width: 768px) {
+  body {
+    background:
+      radial-gradient(150% 92% at 50% -18%, #1d65ff5c 0%, transparent 45%),
+      radial-gradient(110% 74% at 92% 18%, #ff38b84a 0%, transparent 38%),
+      radial-gradient(120% 76% at 2% 80%, #0be7ff35 0%, transparent 42%),
+      linear-gradient(180deg, #030815 0%, #071426 54%, #02050d 100%) !important;
+  }
+
+  body::before,
+  body::after {
+    display: none !important;
+    animation: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) {
+    background:
+      linear-gradient(180deg, #071b34f8 0%, #081428f8 54%, #040914fb 100%),
+      radial-gradient(90% 58% at 50% 0%, #17e9ff2d 0%, transparent 68%),
+      radial-gradient(70% 50% at 94% 22%, #ff35b72b 0%, transparent 64%) !important;
+    box-shadow:
+      0 0 0 1px #72eaff30,
+      0 18px 52px #010612d9,
+      inset 0 1px 0 #b8f8ff2b !important;
+    animation: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"])::before,
+  .app-shell:not([data-display-mode="outdoor"])::after {
+    opacity: 0.72;
+    filter: drop-shadow(0 0 10px #16e5ff5c);
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .hud-vignette {
+    background:
+      radial-gradient(circle at 50% 16%, transparent 0%, #01061245 68%, #010208c4 100%),
+      linear-gradient(180deg, transparent 0%, #07142654 100%) !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .hud-scan {
+    opacity: 0.22;
+    animation: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .hud-particles {
+    opacity: 0.16;
+    animation: none !important;
+    background-size: 160px 160px, 210px 210px, 260px 260px;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .neon-header-hud::before,
+  .app-shell:not([data-display-mode="outdoor"]) .neon-header-hud::after,
+  .app-shell:not([data-display-mode="outdoor"]) .neon-header-grid,
+  .app-shell:not([data-display-mode="outdoor"]) .cyber-page::after,
+  .app-shell:not([data-display-mode="outdoor"]) .cyber-main::before {
+    animation: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .neon-header-hud::before {
+    opacity: 0.24;
+    transform: translateX(0);
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .neon-header-grid {
+    opacity: 0.22;
+    transform: perspective(380px) rotateX(56deg) translateY(6px);
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .neon-title {
+    animation: none !important;
+    text-shadow:
+      0 0 10px #53efff9c,
+      0 0 20px #206cff70,
+      0 0 30px #ff38b838;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .glitch-title::before,
+  .app-shell:not([data-display-mode="outdoor"]) .glitch-title::after {
+    display: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .cyber-page,
+  .app-shell:not([data-display-mode="outdoor"]) article,
+  .app-shell:not([data-display-mode="outdoor"]) .rounded-xl,
+  .app-shell:not([data-display-mode="outdoor"]) .rounded-2xl,
+  .app-shell:not([data-display-mode="outdoor"]) .rounded-lg {
+    clip-path: none !important;
+    contain: paint;
+    box-shadow:
+      inset 0 0 0 1px #d7f4ff14,
+      0 8px 20px #01081482 !important;
+    animation: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) article::before,
+  .app-shell:not([data-display-mode="outdoor"]) .rounded-xl::before,
+  .app-shell:not([data-display-mode="outdoor"]) .rounded-2xl::before,
+  .app-shell:not([data-display-mode="outdoor"]) .rounded-lg::before {
+    display: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) button::before,
+  .app-shell:not([data-display-mode="outdoor"]) .event-alert::before,
+  .app-shell:not([data-display-mode="outdoor"]) .event-cta::after {
+    display: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) button,
+  .app-shell:not([data-display-mode="outdoor"]) a,
+  .app-shell:not([data-display-mode="outdoor"]) .event-card {
+    transition:
+      transform 90ms ease,
+      box-shadow 120ms ease,
+      border-color 120ms ease,
+      filter 120ms ease !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) button:active,
+  .app-shell:not([data-display-mode="outdoor"]) a:active,
+  .app-shell:not([data-display-mode="outdoor"]) .event-card:active {
+    transform: translateY(1px) scale(0.985) !important;
+    filter: brightness(1.08) saturate(1.14);
+    box-shadow:
+      inset 0 0 0 1px #f0fdff3d,
+      0 0 18px #19e6ff55,
+      0 5px 14px #0108148c !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .neon-bottom-nav {
+    backdrop-filter: none !important;
+    background:
+      linear-gradient(180deg, #0b213bf4, #071426fa),
+      radial-gradient(100% 150% at 50% 0%, #19e9ff24 0%, transparent 68%) !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .neon-nav-active {
+    animation: none !important;
+    box-shadow:
+      inset 0 0 0 1px #dcffff45,
+      0 0 16px #0fe4ff70 !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .radial-fab,
+  .app-shell:not([data-display-mode="outdoor"]) .radial-item,
+  .app-shell:not([data-display-mode="outdoor"]) .neon-radial-focus,
+  .app-shell:not([data-display-mode="outdoor"]) .neon-radial-open,
+  .app-shell:not([data-display-mode="outdoor"]) .neon-radial-close {
+    animation: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .neon-backdrop,
+  .app-shell:not([data-display-mode="outdoor"]) [class*="backdrop-blur"] {
+    backdrop-filter: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .event-grid-noise,
+  .app-shell:not([data-display-mode="outdoor"]) .event-cursor-glow {
+    display: none !important;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .fx-burst {
+    filter: drop-shadow(0 0 8px #1eefff66);
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .fx-spark:nth-of-type(n + 8) {
+    display: none;
+  }
+
+  .app-shell:not([data-display-mode="outdoor"]) .leaflet-container {
+    contain: paint;
+    transform: translateZ(0);
+  }
+
+  .stagger-list > * {
+    animation: none !important;
+  }
+}

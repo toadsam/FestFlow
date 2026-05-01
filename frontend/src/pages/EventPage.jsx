@@ -15,6 +15,10 @@ const statusClassName = {
 
 const statusFilters = ["전체", "예정", "대기중", "곧 시작", "지연", "진행중", "종료", "취소"];
 
+function isCoarsePointer() {
+  return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+}
+
 function notify(title, body) {
   if ("Notification" in window && Notification.permission === "granted") {
     new Notification(title, { body });
@@ -133,23 +137,27 @@ export default function EventPage() {
   function spawnBurst(nativeEvent, intensity = 1) {
     const arena = arenaRef.current;
     if (!arena) return;
+    const mobileTouch = isCoarsePointer();
     const rect = arena.getBoundingClientRect();
     const x =
       (nativeEvent?.clientX ?? rect.left + rect.width * 0.6) - rect.left;
     const y = (nativeEvent?.clientY ?? rect.top + 84) - rect.top;
     const id = `${Date.now()}-${Math.random()}`;
-    const sparks = Array.from({ length: 10 }, (_, idx) => ({
-      angle: idx * 36 + Math.round(Math.random() * 18),
-      distance: Math.round(28 + Math.random() * 34 * intensity),
+    const sparkCount = mobileTouch ? 5 : 10;
+    const sparks = Array.from({ length: sparkCount }, (_, idx) => ({
+      angle: idx * (360 / sparkCount) + Math.round(Math.random() * 18),
+      distance: Math.round((mobileTouch ? 18 : 28) + Math.random() * 28 * intensity),
       hue: Math.round(180 + Math.random() * 150),
-      delay: Math.round(Math.random() * 120),
+      delay: mobileTouch ? 0 : Math.round(Math.random() * 120),
     }));
     setBursts((prev) => [...prev.slice(-14), { id, x, y, sparks }]);
     window.setTimeout(
       () => setBursts((prev) => prev.filter((item) => item.id !== id)),
-      900,
+      mobileTouch ? 560 : 900,
     );
-    triggerShock();
+    if (!mobileTouch) {
+      triggerShock();
+    }
   }
 
   function handleArenaMouseMove(e) {

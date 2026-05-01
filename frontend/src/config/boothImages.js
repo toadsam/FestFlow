@@ -1,5 +1,5 @@
-const DEFAULT_BOOTH_IMAGE = "/images/booths/주점사진.jpg";
+const DEFAULT_BOOTH_IMAGE = "/images/booths/%EC%A3%BC%EC%A0%90%EC%82%AC%EC%A7%84.jpg";
 
 export function resolveBoothImageUrl(booth) {
-  return DEFAULT_BOOTH_IMAGE;
+  return booth?.imageUrl || DEFAULT_BOOTH_IMAGE;
 }

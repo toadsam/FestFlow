@@ -215,7 +215,13 @@ export default function LostFoundPage() {
 
                 {item.imageUrl && (
                   <div className="mt-2 overflow-hidden rounded border border-cyan-300/30">
-                    <img src={item.imageUrl} alt={`${item.title} 사진`} className="h-40 w-full object-cover" />
+                    <img
+                      src={item.imageUrl}
+                      alt={`${item.title} 사진`}
+                      className="h-40 w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </div>
                 )}
 

@@ -145,6 +145,43 @@ function notify(title, body) {
   }
 }
 
+function scheduleIdleTask(callback) {
+  if ("requestIdleCallback" in window) {
+    return { type: "idle", id: window.requestIdleCallback(callback, { timeout: 2500 }) };
+  }
+  return { type: "timeout", id: window.setTimeout(callback, 600) };
+}
+
+function cancelIdleTask(task) {
+  if (!task) return;
+  if (task.type === "idle") {
+    window.cancelIdleCallback(task.id);
+    return;
+  }
+  window.clearTimeout(task.id);
+}
+
+async function fetchCongestionMap(boothList) {
+  const pairs = [];
+  const batchSize = 4;
+
+  for (let i = 0; i < boothList.length; i += batchSize) {
+    const batch = boothList.slice(i, i + batchSize);
+    const results = await Promise.all(
+      batch.map(async (booth) => {
+        try {
+          return [booth.id, normalizeCongestion(await fetchCongestion(booth.id))];
+        } catch {
+          return null;
+        }
+      }),
+    );
+    pairs.push(...results.filter(Boolean));
+  }
+
+  return Object.fromEntries(pairs);
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [booths, setBooths] = useState([]);
@@ -198,6 +235,9 @@ export default function HomePage() {
   }
 
   useEffect(() => {
+    let mounted = true;
+    let idleTask = null;
+
     async function load() {
       try {
         const [boothData, noticeData, eventData] = await Promise.all([
@@ -205,27 +245,29 @@ export default function HomePage() {
           fetchActiveNotices(),
           fetchEvents(),
         ]);
+        if (!mounted) return;
         setBooths(boothData);
         setNotices(noticeData);
         setEvents(eventData);
 
-        const congestionData = await Promise.all(
-          boothData.map(async (booth) => [
-            booth.id,
-            normalizeCongestion(await fetchCongestion(booth.id)),
-          ]),
-        );
-        const nextMap = Object.fromEntries(congestionData);
-        previousCongestionRef.current = nextMap;
-        setCongestionMap(nextMap);
+        idleTask = scheduleIdleTask(async () => {
+          const nextMap = await fetchCongestionMap(boothData);
+          if (!mounted || Object.keys(nextMap).length === 0) return;
+          previousCongestionRef.current = nextMap;
+          setCongestionMap(nextMap);
+        });
       } catch (e) {
-        setError(e.message);
+        if (mounted) setError(e.message);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
 
     load();
+    return () => {
+      mounted = false;
+      cancelIdleTask(idleTask);
+    };
   }, []);
 
   useEffect(() => {
@@ -406,14 +448,7 @@ export default function HomePage() {
   }, [booths, congestionMap]);
 
   async function refreshAllCongestion() {
-    const updates = await Promise.all(
-      booths.map(async (booth) => [booth.id, await fetchCongestion(booth.id)]),
-    );
-    const normalized = updates.map(([id, item]) => [
-      id,
-      normalizeCongestion(item),
-    ]);
-    const nextMap = Object.fromEntries(normalized);
+    const nextMap = await fetchCongestionMap(booths);
     previousCongestionRef.current = nextMap;
     setCongestionMap(nextMap);
   }
@@ -773,6 +808,7 @@ export default function HomePage() {
                         alt={`${booth.name} 이미지`}
                         className="h-full w-full object-cover"
                         loading="lazy"
+                        decoding="async"
                       />
                     </div>
                     <div className="p-2">
@@ -1045,6 +1081,7 @@ export default function HomePage() {
                       alt={`${booth.name} 대표 이미지`}
                       className="h-full w-full object-cover"
                       loading="lazy"
+                      decoding="async"
                     />
                   </div>
                   <div className="p-3">

@@ -254,6 +254,7 @@ export default function LineupPage() {
                             alt=""
                             aria-hidden="true"
                             loading="lazy"
+                            decoding="async"
                           />
                           <img
                             className="lineup-portrait-image"
@@ -263,6 +264,7 @@ export default function LineupPage() {
                             }}
                             alt={`${item.title} 라인업 사진`}
                             loading="lazy"
+                            decoding="async"
                           />
                         </>
                       )}

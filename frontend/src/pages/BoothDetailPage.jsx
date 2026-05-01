@@ -502,6 +502,8 @@ export default function BoothDetailPage() {
             src={resolveBoothImageUrl(booth)}
             alt={`${booth.name} 대표 이미지`}
             className="h-full w-full object-cover"
+            decoding="async"
+            fetchPriority="high"
           />
         </div>
 
@@ -565,6 +567,8 @@ export default function BoothDetailPage() {
                         src={booth.menuImageUrl}
                         alt={`${booth.name} 음식 사진`}
                         className="h-40 w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   )}
@@ -755,6 +759,7 @@ export default function BoothDetailPage() {
                       src={checkInQrDataUrl}
                       alt="check-in qr"
                       className="h-40 w-40 object-contain"
+                      decoding="async"
                     />
                     <p className="text-[11px] font-semibold">QR 만료까지: {qrTimerText}</p>
                   </div>
