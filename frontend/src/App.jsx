@@ -1,6 +1,7 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
+import { useLanguage } from "./i18n";
 
 const allTabs = [
   { to: "/", label: "Home", icon: "H", end: true },
@@ -28,6 +29,7 @@ function mod(n, m) {
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { language, toggleLanguage } = useLanguage();
 
   const [noticeMessage, setNoticeMessage] = useState("");
   const [outdoorMode, setOutdoorMode] = useState(() => {
@@ -229,6 +231,15 @@ export default function App() {
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs neon-sub">Festival Control Interface</p>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="언어 변경"
+                aria-pressed={language === "en"}
+                onClick={toggleLanguage}
+                className="text-[11px] px-3 py-1.5 min-h-11 rounded-lg neon-btn-outline whitespace-nowrap"
+              >
+                {language === "en" ? "한국어" : "English"}
+              </button>
               <button
                 type="button"
                 aria-pressed={outdoorMode}

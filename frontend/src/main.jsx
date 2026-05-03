@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import App from "./App";
+import { LanguageProvider } from "./i18n";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 
@@ -46,24 +47,26 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App />}>
-          <Route index element={lazyElement(HomePage)} />
-          <Route path="events" element={lazyElement(EventPage)} />
-          <Route path="events/lineup" element={lazyElement(LineupPage)} />
-          <Route path="analytics" element={lazyElement(AnalyticsPage)} />
-          <Route path="stage-map" element={lazyElement(StageMapPage)} />
-          <Route path="chat" element={lazyElement(ChatPage)} />
-          <Route path="lost-found" element={lazyElement(LostFoundPage)} />
-          <Route path="admin" element={lazyElement(AdminPage)} />
-          <Route path="ops/master" element={lazyElement(OpsMasterPage)} />
-          <Route path="ops/booth/:id" element={lazyElement(OpsBoothPage)} />
-          <Route path="staff" element={lazyElement(StaffPage)} />
-          <Route path="booths/:id" element={lazyElement(BoothDetailPage)} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <LanguageProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<App />}>
+            <Route index element={lazyElement(HomePage)} />
+            <Route path="events" element={lazyElement(EventPage)} />
+            <Route path="events/lineup" element={lazyElement(LineupPage)} />
+            <Route path="analytics" element={lazyElement(AnalyticsPage)} />
+            <Route path="stage-map" element={lazyElement(StageMapPage)} />
+            <Route path="chat" element={lazyElement(ChatPage)} />
+            <Route path="lost-found" element={lazyElement(LostFoundPage)} />
+            <Route path="admin" element={lazyElement(AdminPage)} />
+            <Route path="ops/master" element={lazyElement(OpsMasterPage)} />
+            <Route path="ops/booth/:id" element={lazyElement(OpsBoothPage)} />
+            <Route path="staff" element={lazyElement(StaffPage)} />
+            <Route path="booths/:id" element={lazyElement(BoothDetailPage)} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </LanguageProvider>
   </React.StrictMode>,
 );
