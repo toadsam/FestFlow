@@ -20,6 +20,8 @@ import {
   saveReservationAuth,
 } from "../utils/reservationAuth";
 
+const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
+
 function SeatAvailabilityBar({ totalSeats, availableSeats }) {
   const total = Math.max(1, Number(totalSeats) || 1);
   const available = Math.max(0, Math.min(total, Number(availableSeats) || 0));
@@ -429,7 +431,8 @@ export default function BoothDetailPage() {
       setReservationError("운영 키를 입력해 주세요.");
       return;
     }
-    navigate(`/ops/booth/${id}?key=${encodeURIComponent(key)}`);
+    sessionStorage.setItem(BOOTH_KEY_STORAGE_KEY, key);
+    navigate(`/ops/booth/${id}`);
   }
 
   const myReservation = reservationState?.myReservation ?? null;

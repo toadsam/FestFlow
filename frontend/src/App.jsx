@@ -346,7 +346,7 @@ export default function App() {
       )}
 
       <nav
-        className="fixed bottom-0 left-1/2 z-[1200] -translate-x-1/2 w-full max-w-[430px] neon-bottom-nav grid grid-cols-3"
+        className="fixed bottom-0 left-1/2 z-[1200] -translate-x-1/2 w-full max-w-[1120px] neon-bottom-nav grid grid-cols-3"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 6px)" }}
       >
         {quickTabs.map((tab) => (

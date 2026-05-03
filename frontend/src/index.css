@@ -89,9 +89,24 @@ a:focus-visible {
 }
 
 .app-shell {
-  max-width: 430px;
+  width: min(100%, 1120px);
+  max-width: 1120px;
   min-height: 100vh;
   isolation: isolate;
+}
+
+@media (max-width: 640px) {
+  .app-shell {
+    max-width: 430px;
+  }
+}
+
+@media (min-width: 768px) {
+  .cyber-main {
+    max-width: 980px;
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 .neon-shell {
