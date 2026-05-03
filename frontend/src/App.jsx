@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "./i18n";
@@ -22,10 +22,6 @@ const quickTabs = [
 
 const DISPLAY_MODE_KEY = "festflow_display_mode";
 
-function mod(n, m) {
-  return ((n % m) + m) % m;
-}
-
 export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -37,11 +33,8 @@ export default function App() {
     return window.localStorage.getItem(DISPLAY_MODE_KEY) === "outdoor";
   });
 
-  const [radialOpen, setRadialOpen] = useState(false);
-  const [radialIndex, setRadialIndex] = useState(0);
+  const [quickMenuOpen, setQuickMenuOpen] = useState(false);
   const [globalBursts, setGlobalBursts] = useState([]);
-  const touchStartX = useRef(null);
-  const showRadialMenu = location.pathname !== "/chat";
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -51,13 +44,7 @@ export default function App() {
   }, [outdoorMode]);
 
   useEffect(() => {
-    setRadialOpen(false);
-    const active = allTabs.findIndex((tab) =>
-      tab.end
-        ? location.pathname === tab.to
-        : location.pathname.startsWith(tab.to),
-    );
-    if (active >= 0) setRadialIndex(active);
+    setQuickMenuOpen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -141,48 +128,14 @@ export default function App() {
     window.setTimeout(() => setNoticeMessage(""), 1500);
   }
 
-  const radialItems = useMemo(() => {
-    const len = allTabs.length;
-    const offsets = [-2, -1, 0, 1, 2];
-    return offsets.map((offset) => {
-      const index = mod(radialIndex + offset, len);
-      const tab = allTabs[index];
-
-      const angle = 180 + offset * 28;
-      const radius = offset === 0 ? 124 : 104;
-      const rad = (angle * Math.PI) / 180;
-      const x = Math.cos(rad) * radius;
-      const y = Math.sin(rad) * radius;
-
-      return { tab, index, x, y, focused: offset === 0 };
-    });
-  }, [radialIndex]);
-
-  function rotateRadial(delta) {
-    setRadialIndex((prev) => mod(prev + delta, allTabs.length));
+  function isActiveTab(tab) {
+    return tab.end
+      ? location.pathname === tab.to
+      : location.pathname.startsWith(tab.to);
   }
 
-  function handleTouchStart(e) {
-    touchStartX.current = e.touches[0]?.clientX ?? null;
-  }
-
-  function handleTouchMove(e) {
-    if (touchStartX.current == null) return;
-    const currentX = e.touches[0]?.clientX ?? touchStartX.current;
-    const diff = currentX - touchStartX.current;
-
-    if (Math.abs(diff) > 24) {
-      rotateRadial(diff > 0 ? -1 : 1);
-      touchStartX.current = currentX;
-    }
-  }
-
-  function handleTouchEnd() {
-    touchStartX.current = null;
-  }
-
-  function selectRadial(tab) {
-    setRadialOpen(false);
+  function selectQuickTab(tab) {
+    setQuickMenuOpen(false);
     navigate(tab.to);
   }
 
@@ -300,58 +253,60 @@ export default function App() {
             ))}
           </div>
 
-          {radialOpen && (
+          {quickMenuOpen && (
             <button
               type="button"
-              aria-label="Close radial menu"
+              aria-label="Close quick menu"
               className="fixed inset-0 z-[1280] neon-backdrop"
-              onClick={() => setRadialOpen(false)}
-              onTouchStart={handleTouchStart}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
+              onClick={() => setQuickMenuOpen(false)}
             />
           )}
 
-          {showRadialMenu && (
-          <div className="fixed right-4 bottom-24 z-[1300]">
-            {radialOpen && (
+          <div className={`quick-orbit-root ${quickMenuOpen ? "quick-orbit-root-open" : ""}`}>
+            {quickMenuOpen && (
               <div
-                className="relative"
-                onTouchStart={handleTouchStart}
-                onTouchMove={handleTouchMove}
-                onTouchEnd={handleTouchEnd}
+                id="quick-orbit-menu"
+                className="quick-orbit-menu"
+                aria-label="Quick navigation"
               >
-                {radialItems.map((item) => (
-                  <button
-                    key={`radial-${item.tab.to}-${item.index}`}
-                    type="button"
-                    onClick={() => selectRadial(item.tab)}
-                    className={`absolute top-0 left-0 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all duration-200 radial-item ${item.focused ? "h-16 w-16 neon-radial-focus scale-100" : "h-12 w-12 neon-radial-item scale-95"}`}
-                    style={{
-                      transform: `translate(${item.x}px, ${item.y}px)`,
-                      animationDelay: `${Math.abs(item.index - radialIndex) * 45}ms`,
-                    }}
-                  >
-                    <span className="block text-base font-bold" aria-hidden>
-                      {item.tab.icon}
-                    </span>
-                    <span className="block text-[10px] font-semibold leading-tight">
-                      {item.tab.label}
-                    </span>
-                  </button>
-                ))}
+                {allTabs.map((tab, index) => {
+                  const active = isActiveTab(tab);
+                  const angle = (index * 45 - 90) * (Math.PI / 180);
+                  const radius = 112;
+                  return (
+                    <button
+                      key={`quick-orbit-${tab.to}`}
+                      type="button"
+                      onClick={() => selectQuickTab(tab)}
+                      className={`quick-orbit-item border transition-all ${active ? "quick-orbit-item-active" : ""}`}
+                      style={{
+                        "--orbit-x": `${Math.cos(angle) * radius}px`,
+                        "--orbit-y": `${Math.sin(angle) * radius}px`,
+                        animationDelay: `${index * 28}ms`,
+                      }}
+                      aria-current={active ? "page" : undefined}
+                    >
+                      <span className="quick-orbit-icon" aria-hidden>
+                        {tab.icon}
+                      </span>
+                      <span className="quick-orbit-label">{tab.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
 
             <button
               type="button"
-              onClick={() => setRadialOpen((prev) => !prev)}
-              className={`h-14 w-14 rounded-full border font-bold text-lg radial-fab ${radialOpen ? "neon-radial-close" : "neon-radial-open"}`}
+              aria-expanded={quickMenuOpen}
+              aria-controls="quick-orbit-menu"
+              aria-label={quickMenuOpen ? "Close quick menu" : "Open quick menu"}
+              onClick={() => setQuickMenuOpen((prev) => !prev)}
+              className={`h-14 w-14 rounded-full border font-bold text-lg radial-fab ${quickMenuOpen ? "neon-radial-close" : "neon-radial-open"}`}
             >
-              {radialOpen ? "X" : "+"}
+              {quickMenuOpen ? "X" : "+"}
             </button>
           </div>
-          )}
         </>,
         document.body,
       )}
