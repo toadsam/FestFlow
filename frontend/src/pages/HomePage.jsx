@@ -1149,9 +1149,9 @@ export default function HomePage() {
                       </button>
                       <button
                         type="button"
-                        aria-label="즐겨찾기"
+                        aria-label={isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
                         onClick={() => handleFavorite(booth.id)}
-                        className="booth-card-action booth-card-action--favorite"
+                        className={`booth-card-action booth-card-action--favorite ${isFavorite ? "booth-card-action--favorite-on" : ""}`}
                       >
                         {isFavorite ? "⭐" : "☆"}
                       </button>
