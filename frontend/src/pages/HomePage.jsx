@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   MapContainer,
   Marker,
@@ -210,6 +210,7 @@ async function fetchCongestionMap(boothList) {
 
 export default function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [booths, setBooths] = useState([]);
   const [congestionMap, setCongestionMap] = useState({});
   const [mapZoom, setMapZoom] = useState(16);
@@ -236,6 +237,7 @@ export default function HomePage() {
   const mapRef = useRef(null);
   const mapSectionRef = useRef(null);
   const markerRefs = useRef({});
+  const handledFocusParamRef = useRef("");
   const previousCongestionRef = useRef({});
 
   function getPosition(options) {
@@ -482,6 +484,21 @@ export default function HomePage() {
 
     return () => window.clearTimeout(timer);
   }, [activeView, booths, focusedBoothId]);
+
+  useEffect(() => {
+    const focusParam = new URLSearchParams(location.search).get("focusBooth");
+    if (!focusParam || focusParam === handledFocusParamRef.current || booths.length === 0) {
+      return;
+    }
+
+    const boothId = Number(focusParam);
+    if (!Number.isFinite(boothId) || boothId <= 0) {
+      return;
+    }
+
+    handledFocusParamRef.current = focusParam;
+    focusBoothOnMap(boothId);
+  }, [booths, location.search]);
 
   async function refreshAllCongestion() {
     const nextMap = await fetchCongestionMap(booths);

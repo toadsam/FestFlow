@@ -74,6 +74,8 @@ const followUpQuestions = [
   "혼잡도 낮은 대안",
 ];
 
+const promptActions = [...quickActions, ...compactActions];
+
 export default function ChatPage() {
   const navigate = useNavigate();
   const [question, setQuestion] = useState("");
@@ -186,8 +188,11 @@ export default function ChatPage() {
                 FestFlow AI
               </p>
               <h2 className="mt-0.5 text-lg font-extrabold leading-tight text-role-ops">
-                현장 AI 도우미
+                지금 뭐 할까요?
               </h2>
+              <p className="mt-1 text-[11px] font-semibold text-cyan-100/70">
+                부스, 공연, 혼잡도, 분실물을 바로 행동으로 연결합니다.
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-1.5">
@@ -244,28 +249,27 @@ export default function ChatPage() {
         </div>
       </form>
 
-      <div className="grid grid-cols-2 gap-2">
-        {quickActions.map((action) => (
-          <QuickAction key={action.label} action={action} loading={loading} onPick={submitQuestion} />
-        ))}
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        {compactActions.map((action) => {
+      <div className="rounded-2xl border border-cyan-300/35 bg-slate-950/70 p-2">
+        <p className="px-1 pb-1 text-[11px] font-bold text-cyan-100/75">
+          빠른 선택
+        </p>
+        <div className="grid grid-cols-3 gap-1.5">
+          {promptActions.map((action) => {
           const Icon = action.icon;
           return (
             <button
               key={action.label}
               type="button"
-              className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/35 bg-slate-950/70 px-3 text-sm font-extrabold text-cyan-100 disabled:opacity-50"
+              className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-cyan-300/35 bg-cyan-950/45 px-2 text-[11px] font-extrabold text-cyan-100 disabled:opacity-50"
               onClick={() => submitQuestion(action.question)}
               disabled={loading}
             >
-              <Icon className="h-4 w-4" />
+              <Icon className="h-3.5 w-3.5" />
               {action.label}
             </button>
           );
-        })}
+          })}
+        </div>
       </div>
 
       <div className="rounded-2xl border border-cyan-300/35 bg-slate-950/70 p-2">
@@ -367,7 +371,7 @@ function MessageBubble({ message, isUser, isLatest, loading, onFollowUp, onNavig
         <p className="whitespace-pre-wrap text-left">{message.text}</p>
         {!isUser && (
           <>
-            <PrimaryEvidenceActions evidence={message.evidence} onNavigate={onNavigate} />
+            <RecommendationCards evidence={message.evidence} onNavigate={onNavigate} />
             <ChatTrustDetails
               confidence={message.confidence}
               evidence={message.evidence}
@@ -380,6 +384,118 @@ function MessageBubble({ message, isUser, isLatest, loading, onFollowUp, onNavig
       </div>
     </div>
   );
+}
+
+function RecommendationCards({ evidence = [], onNavigate }) {
+  const cards = evidence.slice(0, 3);
+  if (cards.length === 0) return null;
+
+  return (
+    <div className="mt-3 grid gap-2 border-t border-cyan-400/20 pt-2">
+      {cards.map((item, index) => {
+        const meta = getEvidenceMeta(item);
+        const Icon = meta.icon;
+        const reasonParts = splitReason(item.reason);
+
+        return (
+          <article
+            key={`${item.type}-${item.id}`}
+            className="w-full rounded-2xl border border-cyan-300/35 bg-cyan-950/35 p-3 text-left shadow-[0_0_16px_rgba(34,211,238,0.12)]"
+          >
+            <div className="flex items-start gap-2.5">
+              <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-cyan-300/40 bg-slate-950/60">
+                <Icon className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-black uppercase tracking-[0.14em] text-cyan-100/60">
+                  {index === 0 ? "추천" : meta.label}
+                </p>
+                <h3 className="mt-0.5 line-clamp-2 text-base font-extrabold leading-snug text-cyan-50">
+                  {item.label}
+                </h3>
+              </div>
+            </div>
+
+            {reasonParts.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {reasonParts.slice(0, 3).map((part) => (
+                  <span
+                    key={part}
+                    className="rounded-full border border-cyan-300/30 bg-slate-950/55 px-2 py-1 text-[10px] font-bold text-cyan-100/85"
+                  >
+                    {part}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {meta.actions(item).map((action) => {
+                const ActionIcon = action.icon;
+                return (
+                  <button
+                    key={action.label}
+                    type="button"
+                    onClick={() => onNavigate(action.to)}
+                    className="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-xl border border-cyan-300/40 bg-cyan-500/15 px-2 text-xs font-extrabold text-cyan-50"
+                  >
+                    <ActionIcon className="h-3.5 w-3.5" />
+                    {action.label}
+                  </button>
+                );
+              })}
+            </div>
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function getEvidenceMeta(item) {
+  if (item?.type === "booth") {
+    return {
+      label: "부스",
+      icon: IconMapPin,
+      actions: (evidence) => [
+        { label: "지도", to: `/?focusBooth=${evidence.id}`, icon: IconMapPin },
+        { label: "상세", to: `/booths/${evidence.id}`, icon: IconSearch },
+      ],
+    };
+  }
+
+  if (item?.type === "event") {
+    return {
+      label: "공연",
+      icon: IconCalendar,
+      actions: () => [
+        { label: "일정 보기", to: "/events", icon: IconCalendar },
+      ],
+    };
+  }
+
+  if (item?.type === "lost_item") {
+    return {
+      label: "분실물",
+      icon: IconSearch,
+      actions: (evidence) => [
+        { label: "찾기", to: `/lost-found?query=${encodeURIComponent(evidence.label || "")}`, icon: IconSearch },
+      ],
+    };
+  }
+
+  return {
+    label: "근거",
+    icon: IconShield,
+    actions: () => [],
+  };
+}
+
+function splitReason(reason = "") {
+  return reason
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 function PrimaryEvidenceActions({ evidence = [], onNavigate }) {
@@ -500,7 +616,8 @@ function getEvidenceActions(evidence) {
 
   if (evidence.type === "booth") {
     return [
-      { label: "부스 상세보기", to: `/booths/${evidence.id}`, icon: IconMapPin },
+      { label: "지도에서 보기", to: `/?focusBooth=${evidence.id}`, icon: IconMapPin },
+      { label: "부스 상세보기", to: `/booths/${evidence.id}`, icon: IconSearch },
       { label: "전체 부스 보기", to: "/", icon: IconBox },
     ];
   }
