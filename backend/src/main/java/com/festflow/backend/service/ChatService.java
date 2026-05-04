@@ -8,6 +8,7 @@ import com.festflow.backend.dto.ChatResponseDto;
 import com.festflow.backend.dto.CongestionResponseDto;
 import com.festflow.backend.dto.EventResponseDto;
 import com.festflow.backend.dto.LostItemResponseDto;
+import com.festflow.backend.dto.NoticeResponseDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
@@ -32,10 +33,18 @@ public class ChatService {
 
     private static final String OPENAI_RESPONSES_PATH = "/v1/responses";
     private static final int MAX_EVIDENCE = 5;
+    private static final List<KnowledgeChunk> STATIC_KNOWLEDGE = List.of(
+            new KnowledgeChunk(1L, "예약 안내", "예약 가능한 부스는 부스 상세 화면에서 예약 상태와 테이블 현황을 먼저 확인한 뒤 예약해야 합니다. 예약이 꺼진 부스는 현장 이용 방식입니다.", "faq", null),
+            new KnowledgeChunk(2L, "혼잡도 안내", "혼잡도는 주변 GPS 및 운영 데이터 기반 참고값입니다. 안전 이동이 필요하면 여유 또는 보통 단계의 부스를 우선 추천합니다.", "faq", null),
+            new KnowledgeChunk(3L, "분실물 안내", "분실물을 찾을 때는 물품 종류, 색상, 특징, 잃어버린 위치와 시간을 함께 알려주면 등록된 분실물과 더 잘 대조할 수 있습니다.", "faq", null),
+            new KnowledgeChunk(4L, "공연 안내", "공연 추천은 현재 시간, 공연 시작/종료 시간, 진행 상태를 기준으로 안내합니다. 지연 또는 취소 공지가 있으면 공지를 우선 확인해야 합니다.", "faq", null),
+            new KnowledgeChunk(5L, "응급 안내", "응급 상황이나 몸이 좋지 않은 경우 응급 부스 또는 종합 안내 데스크로 이동하고, 심각한 상황은 현장 스태프에게 즉시 알려야 합니다.", "safety", null)
+    );
 
     private final BoothService boothService;
     private final EventService eventService;
     private final LostItemService lostItemService;
+    private final NoticeService noticeService;
     private final ObjectMapper objectMapper;
     private final RestClient restClient;
     private final String apiKey;
@@ -45,6 +54,7 @@ public class ChatService {
             BoothService boothService,
             EventService eventService,
             LostItemService lostItemService,
+            NoticeService noticeService,
             ObjectMapper objectMapper,
             RestClient.Builder restClientBuilder,
             @Value("${app.openai.api-key:}") String apiKey,
@@ -53,6 +63,7 @@ public class ChatService {
         this.boothService = boothService;
         this.eventService = eventService;
         this.lostItemService = lostItemService;
+        this.noticeService = noticeService;
         this.objectMapper = objectMapper;
         this.restClient = restClientBuilder
                 .baseUrl("https://api.openai.com")
@@ -123,6 +134,7 @@ public class ChatService {
         boolean wantsEvents = wantsEvents(normalizedQuestion);
         boolean wantsBooths = wantsBooths(normalizedQuestion) || (!wantsLostItems && !wantsEvents);
         boolean wantsCongestion = wantsCongestion(normalizedQuestion);
+        boolean wantsKnowledge = wantsKnowledge(normalizedQuestion);
 
         if (wantsBooths) {
             List<BoothResponseDto> booths = boothService.getAllBooths();
@@ -191,6 +203,11 @@ public class ChatService {
             }
         }
 
+        if (wantsKnowledge || candidates.isEmpty()) {
+            addNoticeEvidence(candidates, normalizedQuestion, terms);
+            addStaticKnowledgeEvidence(candidates, normalizedQuestion, terms);
+        }
+
         List<ChatEvidenceDto> evidence = candidates.stream()
                 .sorted(Comparator.comparingInt(EvidenceCandidate::score).reversed())
                 .map(EvidenceCandidate::evidence)
@@ -219,6 +236,74 @@ public class ChatService {
 
     private boolean wantsCongestion(String question) {
         return containsAny(question, "혼잡", "붐비", "사람", "여유", "한산", "지금 추천", "지금 기준");
+    }
+
+    private boolean wantsKnowledge(String question) {
+        return containsAny(
+                question,
+                "공지", "안내", "방법", "어떻게", "규칙", "주의", "안전", "응급", "우천", "비", "예약", "분실", "도움", "faq"
+        );
+    }
+
+    private void addNoticeEvidence(List<EvidenceCandidate> candidates, String question, Set<String> terms) {
+        try {
+            for (NoticeResponseDto notice : noticeService.getActiveNotices()) {
+                int score = scoreText(terms, notice.title(), notice.content(), notice.category());
+                if (containsAny(question, "공지", "안내", "우천", "비", "긴급", "분실")) {
+                    score += 2;
+                }
+                if (score <= 0) {
+                    continue;
+                }
+
+                candidates.add(new EvidenceCandidate(
+                        score,
+                        new ChatEvidenceDto(
+                                "notice",
+                                notice.id(),
+                                notice.title(),
+                                noticeReason(notice),
+                                stringify(notice.updatedAt() != null ? notice.updatedAt() : notice.createdAt())
+                        )
+                ));
+            }
+        } catch (Exception ex) {
+            // 공지 검색 실패는 다른 근거 검색에 영향을 주지 않는다.
+        }
+    }
+
+    private void addStaticKnowledgeEvidence(List<EvidenceCandidate> candidates, String question, Set<String> terms) {
+        for (KnowledgeChunk chunk : STATIC_KNOWLEDGE) {
+            int score = scoreText(terms, chunk.title(), chunk.content(), chunk.category());
+            if (chunkMatchesIntent(question, chunk)) {
+                score += 3;
+            }
+            if (score <= 0) {
+                continue;
+            }
+
+            candidates.add(new EvidenceCandidate(
+                    score,
+                    new ChatEvidenceDto(
+                            "knowledge",
+                            chunk.id(),
+                            chunk.title(),
+                            chunk.content(),
+                            stringify(chunk.updatedAt())
+                    )
+            ));
+        }
+    }
+
+    private boolean chunkMatchesIntent(String question, KnowledgeChunk chunk) {
+        return switch (chunk.title()) {
+            case "예약 안내" -> containsAny(question, "예약", "테이블", "자리");
+            case "혼잡도 안내" -> containsAny(question, "혼잡", "붐비", "사람", "여유", "한산");
+            case "분실물 안내" -> containsAny(question, "분실", "잃어", "찾", "지갑", "가방", "핸드폰", "휴대폰");
+            case "공연 안내" -> containsAny(question, "공연", "무대", "라인업", "시작", "일정");
+            case "응급 안내" -> containsAny(question, "응급", "아파", "다쳤", "안전", "도움");
+            default -> false;
+        };
     }
 
     private Map<Long, CongestionResponseDto> safeCongestionByBoothId() {
@@ -318,6 +403,15 @@ public class ChatService {
         parts.add("상태 " + valueOrUnknown(item.statusLabel()));
         if (item.description() != null && !item.description().isBlank()) {
             parts.add("설명: " + item.description());
+        }
+        return String.join(", ", parts);
+    }
+
+    private String noticeReason(NoticeResponseDto notice) {
+        List<String> parts = new ArrayList<>();
+        parts.add("공지 분류 " + valueOrUnknown(notice.category()));
+        if (notice.content() != null && !notice.content().isBlank()) {
+            parts.add(notice.content());
         }
         return String.join(", ", parts);
     }
@@ -462,5 +556,8 @@ public class ChatService {
     }
 
     private record RetrievalResult(List<ChatEvidenceDto> evidence, List<String> warnings) {
+    }
+
+    private record KnowledgeChunk(Long id, String title, String content, String category, LocalDateTime updatedAt) {
     }
 }

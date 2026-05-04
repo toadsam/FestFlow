@@ -429,8 +429,9 @@ function RecommendationCards({ evidence = [], onNavigate }) {
               </div>
             )}
 
-            <div className="mt-3 grid grid-cols-2 gap-2">
-              {meta.actions(item).map((action) => {
+            {meta.actions(item).length > 0 && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                {meta.actions(item).map((action) => {
                 const ActionIcon = action.icon;
                 return (
                   <button
@@ -443,8 +444,9 @@ function RecommendationCards({ evidence = [], onNavigate }) {
                     {action.label}
                   </button>
                 );
-              })}
-            </div>
+                })}
+              </div>
+            )}
           </article>
         );
       })}
@@ -481,6 +483,22 @@ function getEvidenceMeta(item) {
       actions: (evidence) => [
         { label: "찾기", to: `/lost-found?query=${encodeURIComponent(evidence.label || "")}`, icon: IconSearch },
       ],
+    };
+  }
+
+  if (item?.type === "notice") {
+    return {
+      label: "공지",
+      icon: IconShield,
+      actions: () => [],
+    };
+  }
+
+  if (item?.type === "knowledge") {
+    return {
+      label: "운영 안내",
+      icon: IconShield,
+      actions: () => [],
     };
   }
 
