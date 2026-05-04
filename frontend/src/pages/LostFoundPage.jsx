@@ -319,7 +319,23 @@ export default function LostFoundPage() {
               </article>
             );
           })}
-          {filteredItems.length === 0 && <p className="text-sm text-cyan-200/80">조건에 맞는 분실물이 없습니다.</p>}
+          {filteredItems.length === 0 && (
+            <article className="overflow-hidden rounded-2xl border border-cyan-300/35 bg-slate-950/75">
+              <img
+                src="/images/lost-empty.png"
+                alt=""
+                className="h-44 w-full object-cover object-[70%_center]"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="p-3">
+                <p className="text-sm font-bold text-cyan-100">조건에 맞는 분실물이 없습니다.</p>
+                <p className="mt-1 text-xs text-cyan-200/75">
+                  물품 종류, 색상, 발견 위치처럼 다른 단어로 다시 검색해 보세요.
+                </p>
+              </div>
+            </article>
+          )}
         </div>
       )}
     </section>

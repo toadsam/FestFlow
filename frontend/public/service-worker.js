@@ -1,5 +1,15 @@
-const CACHE_NAME = "festflow-cache-v4";
-const APP_SHELL = ["/", "/index.html", "/manifest.json", "/offline.html"];
+const CACHE_NAME = "festflow-shell-v5";
+const APP_SHELL = [
+  "/",
+  "/index.html",
+  "/manifest.json",
+  "/offline.html",
+  "/favicon.svg",
+  "/pwa-192.png",
+  "/pwa-512.png",
+  "/apple-touch-icon.png",
+  "/images/offline-state.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
@@ -17,16 +27,22 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;
+  const url = new URL(request.url);
+  const isSameOrigin = url.origin === self.location.origin;
 
   if (request.method !== "GET") {
     return;
   }
 
-  const url = new URL(request.url);
-  const isSameOrigin = url.origin === self.location.origin;
   const acceptsHtml = request.headers.get("accept")?.includes("text/html");
+  const isApi = isSameOrigin && url.pathname.startsWith("/api/");
+  const isStream = isSameOrigin && url.pathname.startsWith("/stream/");
+  const isUpload = isSameOrigin && url.pathname.startsWith("/uploads/");
+  const isMapTile = url.hostname.endsWith("tile.openstreetmap.org");
+  const isBuildAsset = isSameOrigin && url.pathname.startsWith("/assets/");
+  const isAppShellAsset = isSameOrigin && APP_SHELL.includes(url.pathname);
 
-  if (!isSameOrigin || url.pathname.startsWith("/api/")) {
+  if (!isSameOrigin || isApi || isStream || isUpload || isMapTile) {
     return;
   }
 
@@ -45,6 +61,10 @@ self.addEventListener("fetch", (event) => {
           return cached || caches.match("/offline.html");
         }),
     );
+    return;
+  }
+
+  if (!isBuildAsset && !isAppShellAsset) {
     return;
   }
 

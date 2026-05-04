@@ -209,6 +209,15 @@ export default function ChatPage() {
             </button>
           </div>
         </div>
+        <div className="mt-3 overflow-hidden rounded-xl border border-cyan-300/30 bg-slate-900/70">
+          <img
+            src="/images/chat-assistant.png"
+            alt=""
+            className="h-28 w-full object-cover object-[68%_center]"
+            loading="eager"
+            decoding="async"
+          />
+        </div>
       </header>
 
       <form

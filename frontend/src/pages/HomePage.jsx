@@ -1081,7 +1081,23 @@ export default function HomePage() {
               부스와 혼잡도 데이터를 불러오는 중...
             </p>
           )}
-          {error && <p className="text-sm text-rose-600">{error}</p>}
+          {error && (
+            <article className="overflow-hidden rounded-2xl border border-amber-300/40 bg-slate-950/75">
+              <img
+                src="/images/location-error.png"
+                alt=""
+                className="h-32 w-full object-cover object-[70%_center]"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="p-3">
+                <p className="text-sm font-bold text-amber-100">{error}</p>
+                <p className="mt-1 text-xs text-cyan-100/70">
+                  지도와 혼잡도 추천은 위치 권한과 네트워크 상태에 따라 달라질 수 있습니다.
+                </p>
+              </div>
+            </article>
+          )}
 
           {!loading && filteredBooths.length === 0 && (
             <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-sm text-slate-600">

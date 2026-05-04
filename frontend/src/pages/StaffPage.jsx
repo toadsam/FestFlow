@@ -81,13 +81,6 @@ const LOW_CONFIDENCE_THRESHOLD = 0.72;
 const MAX_CONTEXT_TURNS = 3;
 const STATUS_BOARD_ORDER = ["URGENT", "ON_DUTY", "MOVING", "STANDBY"];
 const LOST_ITEM_MAX_FILE_SIZE = 10 * 1024 * 1024;
-const MARKER_COLORS = ["#06b6d4", "#3b82f6", "#8b5cf6", "#14b8a6", "#f97316", "#ec4899", "#84cc16", "#f59e0b"];
-
-function staffColorById(staffNo) {
-  const text = `${staffNo || ""}`;
-  const hash = text.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
-  return MARKER_COLORS[hash % MARKER_COLORS.length];
-}
 
 function staffInitial(name) {
   const safe = `${name || ""}`.trim();
@@ -138,14 +131,29 @@ function spreadOverlappingMarkers(staff) {
 
 function MapViewportController({ action, points, myPoint }) {
   const map = useMap();
+
   useEffect(() => {
-    if (action === "fit-all") {
-      if (!points.length) return;
+    const resizeTimer = window.setTimeout(() => {
+      map.invalidateSize();
+    }, 80);
+    return () => window.clearTimeout(resizeTimer);
+  }, [map]);
+
+  useEffect(() => {
+    const fitPoints = () => {
+      if (!points.length) {
+        map.setView([AJOU_CENTER.latitude, AJOU_CENTER.longitude], 17);
+        return;
+      }
       if (points.length === 1) {
         map.setView([points[0].latitude, points[0].longitude], 18);
         return;
       }
       map.fitBounds(points.map((p) => [p.latitude, p.longitude]), { padding: [28, 28] });
+    };
+
+    if (action === "fit-all" || action === "idle") {
+      fitPoints();
       return;
     }
     if (action === "focus-me" && myPoint) {
@@ -153,6 +161,14 @@ function MapViewportController({ action, points, myPoint }) {
     }
   }, [action, points, myPoint, map]);
   return null;
+}
+
+function getGeoErrorMessage(error) {
+  if (!error) return "브라우저 위치를 가져오지 못했습니다.";
+  if (error.code === 1) return "브라우저 위치 권한이 꺼져 있어 마지막 좌표로 표시합니다.";
+  if (error.code === 2) return "현재 위치 신호가 약해 마지막 좌표로 표시합니다.";
+  if (error.code === 3) return "위치 확인 시간이 초과되어 마지막 좌표로 표시합니다.";
+  return "브라우저 위치를 가져오지 못해 마지막 좌표로 표시합니다.";
 }
 
 const INTERPRETER_PRESETS = [
@@ -248,6 +264,8 @@ export default function StaffPage() {
   const [interpreterHistory, setInterpreterHistory] = useState([]);
   const [interpreterLane, setInterpreterLane] = useState("koToEn");
   const [mapAction, setMapAction] = useState("idle");
+  const [locationShareMessage, setLocationShareMessage] = useState("");
+  const [pendingStatus, setPendingStatus] = useState("");
   const [nowMs, setNowMs] = useState(Date.now());
   const [aiBusy, setAiBusy] = useState(false);
   const [aiPanel, setAiPanel] = useState(null);
@@ -366,7 +384,7 @@ export default function StaffPage() {
   const enrichedStaff = useMemo(() => {
     return (staffList || []).map((staff) => {
       const booth = staff.assignedBoothId ? boothMap.get(staff.assignedBoothId) : null;
-      const sharingOn = staff.locationSharingEnabled !== false;
+      const sharingOn = staff.locationSharingEnabled === true;
       const latitude = sharingOn ? staff.latitude ?? null : null;
       const longitude = sharingOn ? staff.longitude ?? null : null;
 
@@ -411,6 +429,9 @@ export default function StaffPage() {
     if (!me?.staffNo) return null;
     return visibleMapStaff.find((item) => item.staffNo === me.staffNo) || null;
   }, [visibleMapStaff, me?.staffNo]);
+
+  const myLocationSharingOn = me?.locationSharingEnabled === true;
+  const activeMyStatus = pendingStatus || me?.status;
 
   const teamOptions = useMemo(() => {
     return Array.from(new Set(enrichedStaff.map((item) => item.team).filter(Boolean)));
@@ -526,6 +547,7 @@ export default function StaffPage() {
       setShowInterpreter(false);
       setInterpreterBusy(false);
       setInterpreterMessage("");
+      setLocationShareMessage("");
       setKoSourceText("");
       setEnSourceText("");
       setKoToEnText("");
@@ -540,7 +562,7 @@ export default function StaffPage() {
 
   async function updateMyRuntime(
     nextStatus = me?.status,
-    nextLocationSharingEnabled = me?.locationSharingEnabled !== false,
+    nextLocationSharingEnabled = myLocationSharingOn,
     options = {},
   ) {
     if (!staffToken || !me) return;
@@ -549,10 +571,15 @@ export default function StaffPage() {
     if (!silent) {
       setSaving(true);
     }
-    let latitude = null;
-    let longitude = null;
+    let latitude = me.latitude ?? null;
+    let longitude = me.longitude ?? null;
+    let geoMessage = "";
 
-    if (nextLocationSharingEnabled && navigator.geolocation) {
+    if (!nextLocationSharingEnabled) {
+      latitude = null;
+      longitude = null;
+      geoMessage = "위치 공유 OFF: 지도에서 내 위치를 숨깁니다.";
+    } else if (navigator.geolocation) {
       try {
         const position = await new Promise((resolve, reject) => {
           navigator.geolocation.getCurrentPosition(resolve, reject, {
@@ -563,9 +590,12 @@ export default function StaffPage() {
         });
         latitude = position.coords.latitude;
         longitude = position.coords.longitude;
-      } catch {
-        // continue without location
+        geoMessage = "위치 공유 ON: 현재 위치를 지도에 반영했습니다.";
+      } catch (error) {
+        geoMessage = getGeoErrorMessage(error);
       }
+    } else {
+      geoMessage = "이 브라우저는 위치 기능을 지원하지 않아 마지막 좌표로 표시합니다.";
     }
 
     try {
@@ -582,10 +612,57 @@ export default function StaffPage() {
       setStaffList((prev) =>
         prev.map((item) => (item.staffNo === updatedMe.staffNo ? updatedMe : item)),
       );
+      if (!silent) {
+        setLocationShareMessage(
+          updatedMe.locationSharingEnabled && (updatedMe.latitude == null || updatedMe.longitude == null)
+            ? `${geoMessage} 아직 지도에 표시할 좌표가 없습니다.`
+            : geoMessage,
+        );
+      }
     } finally {
       if (!silent) {
         setSaving(false);
       }
+    }
+  }
+
+  async function handleMyStatusChange(status) {
+    if (!me) return;
+
+    const previousMe = me;
+    const updatedAt = new Date().toISOString();
+    const optimisticMe = {
+      ...me,
+      status,
+      statusLabel: STATUS_META[status]?.label || me.statusLabel,
+      lastUpdatedAt: updatedAt,
+    };
+
+    setPendingStatus(status);
+    setMe(optimisticMe);
+    setStaffList((prev) =>
+      prev.map((item) =>
+        item.staffNo === me.staffNo
+          ? {
+              ...item,
+              status,
+              statusLabel: STATUS_META[status]?.label || item.statusLabel,
+              lastUpdatedAt: updatedAt,
+            }
+          : item,
+      ),
+    );
+
+    try {
+      await updateMyRuntime(status);
+      setPendingStatus("");
+    } catch (error) {
+      setPendingStatus("");
+      setMe(previousMe);
+      setStaffList((prev) =>
+        prev.map((item) => (item.staffNo === previousMe.staffNo ? previousMe : item)),
+      );
+      setLocationShareMessage(error?.message || "상태 변경에 실패했습니다.");
     }
   }
 
@@ -645,7 +722,7 @@ export default function StaffPage() {
   }
 
   useEffect(() => {
-    if (!staffToken || !me || me.locationSharingEnabled === false) return undefined;
+    if (!staffToken || !me || !myLocationSharingOn) return undefined;
     const timer = window.setInterval(() => {
       updateMyRuntime(me.status, true, { silent: true });
     }, 15000);
@@ -1138,23 +1215,31 @@ export default function StaffPage() {
             <div className="mt-2 inline-flex items-center gap-2">
               <button
                 type="button"
+                aria-pressed={myLocationSharingOn}
                 onClick={() => {
-                  const nextSharing = !(me?.locationSharingEnabled !== false);
+                  const nextSharing = !myLocationSharingOn;
                   setMe((prev) => (prev ? { ...prev, locationSharingEnabled: nextSharing } : prev));
                   updateMyRuntime(me?.status, nextSharing);
                 }}
-                className={`rounded-md border px-2 py-1 text-[11px] font-semibold ${
-                  me?.locationSharingEnabled !== false
+                className={`rounded-md border px-3 py-1.5 text-[11px] font-extrabold ${
+                  myLocationSharingOn
                     ? "border-emerald-300 bg-emerald-500/20 text-emerald-100"
                     : "border-slate-400 bg-slate-700/50 text-slate-200"
                 }`}
               >
-                위치 공유 {me?.locationSharingEnabled !== false ? "ON" : "OFF"}
+                위치 공유 {myLocationSharingOn ? "ON" : "OFF"}
               </button>
               <span className="text-[11px] text-cyan-200/80">
-                {me?.locationSharingEnabled !== false ? "지도 실시간 표시 중" : "지도 표시 중지"}
+                {myLocationSharingOn
+                  ? me?.latitude != null && me?.longitude != null
+                    ? "지도 실시간 표시 중"
+                    : "좌표 대기 중"
+                  : "지도 표시 중지"}
               </span>
             </div>
+            {locationShareMessage && (
+              <p className="mt-1 text-[11px] text-cyan-100/75">{locationShareMessage}</p>
+            )}
           </div>
           <button
             type="button"
@@ -1238,24 +1323,43 @@ export default function StaffPage() {
       </article>
 
       <article className="rounded-xl border border-slate-200 bg-white p-3">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-extrabold text-slate-800">내 상태 변경</p>
+            <p className="mt-0.5 text-[11px] text-slate-500">
+              원하는 상태를 누르면 바로 반영됩니다.
+            </p>
+          </div>
+          <span className="shrink-0 rounded-full border border-cyan-200 bg-cyan-50 px-2.5 py-1 text-[11px] font-bold text-cyan-800">
+            현재 {STATUS_META[activeMyStatus]?.label || "확인 중"}
+          </span>
+        </div>
+        <div className="grid grid-cols-4 gap-1.5">
           {Object.keys(STATUS_META).map((status) => (
             <button
               key={status}
               type="button"
-              aria-pressed={me?.status === status}
-              onClick={() => {
-                if (me) setMe({ ...me, status });
-                updateMyRuntime(status);
-              }}
-              className={`rounded-lg border px-2 py-2 text-center ${
-                me?.status === status
-                  ? "border-cyan-500 bg-cyan-600 text-white"
+              aria-pressed={activeMyStatus === status}
+              onClick={() => handleMyStatusChange(status)}
+              className={`min-h-[78px] rounded-lg border px-2 py-2 text-center transition ${
+                activeMyStatus === status
+                  ? "border-cyan-200 bg-cyan-600 text-white shadow-[0_0_0_2px_rgba(125,211,252,0.55)]"
                   : "border-slate-300 bg-slate-50 text-slate-700"
               }`}
             >
-              <p className="text-[10px] font-semibold">{STATUS_META[status].label}</p>
-              <p className="text-sm font-extrabold">{statusSummary[status] || 0}</p>
+              <span
+                className="mx-auto mb-1 block h-2.5 w-2.5 rounded-full"
+                style={{ backgroundColor: STATUS_META[status].map }}
+              />
+              <p className="whitespace-nowrap text-sm font-extrabold leading-5">
+                {STATUS_META[status].label}
+              </p>
+              <p className="whitespace-nowrap text-[11px] font-bold leading-5 opacity-85">
+                {statusSummary[status] || 0}명
+              </p>
+              {activeMyStatus === status && (
+                <p className="mt-0.5 whitespace-nowrap text-[10px] font-bold leading-4">선택됨</p>
+              )}
             </button>
           ))}
         </div>
@@ -1264,10 +1368,8 @@ export default function StaffPage() {
       <article className="rounded-xl border border-rose-300/70 bg-rose-50 p-3">
         <button
           type="button"
-          onClick={() => {
-            if (me) setMe({ ...me, status: "URGENT" });
-            updateMyRuntime("URGENT");
-          }}
+          onClick={() => handleMyStatusChange("URGENT")}
+          disabled={saving}
           className="w-full rounded-xl bg-rose-600 py-4 text-base font-extrabold text-white"
         >
           <span className="inline-flex items-center gap-2">
@@ -1833,13 +1935,14 @@ export default function StaffPage() {
           </p>
           <div className="mt-1 flex items-center justify-between gap-2">
             <p className="text-[11px] text-slate-500">
-            위치 공유 ON + 좌표 전송된 스태프만 지도에 표시됩니다. (표시 {visibleMapStaff.length}명)
+              위치 공유 ON + 좌표 전송된 스태프만 지도에 표시됩니다. (표시 {visibleMapStaff.length}명)
             </p>
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setMapAction(`focus-me-${Date.now()}`)}
-                className="rounded border border-cyan-300 bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-700"
+                disabled={!myMapPoint}
+                className="rounded border border-cyan-300 bg-cyan-50 px-2 py-1 text-[11px] font-semibold text-cyan-700 disabled:border-slate-200 disabled:bg-slate-50 disabled:text-slate-400"
               >
                 내 위치
               </button>
@@ -1873,6 +1976,7 @@ export default function StaffPage() {
               <TileLayer attribution="&copy; OpenStreetMap 기여자" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               {mapMarkerStaff.map((item) => {
                 const freshness = getFreshness(item, nowMs);
+                const statusMeta = STATUS_META[item.status] || STATUS_META.STANDBY;
                 return (
                 <CircleMarker
                   key={`${item.staffNo}-${item.latitude.toFixed(6)}-${item.longitude.toFixed(6)}`}
@@ -1881,13 +1985,13 @@ export default function StaffPage() {
                   pathOptions={{
                     color: freshness.border,
                     weight: 2,
-                    fillColor: staffColorById(item.staffNo),
+                    fillColor: statusMeta.map,
                     fillOpacity: 0.9,
                   }}
                 >
                   <Tooltip direction="top" offset={[0, -10]} permanent>
                     <span className="text-[10px] font-bold">
-                      {staffInitial(item.name)} · {item.name} · {freshness.label}
+                      {staffInitial(item.name)} · {item.name} · {statusMeta.label}
                     </span>
                   </Tooltip>
                   <Popup>
@@ -1895,7 +1999,7 @@ export default function StaffPage() {
                       {item.name} ({item.staffNo})
                     </p>
                     <p className="text-xs mt-1">팀: {item.team}</p>
-                    <p className="text-xs mt-1">상태: {STATUS_META[item.status]?.label || item.status}</p>
+                    <p className="text-xs mt-1">상태: {statusMeta.label}</p>
                     <p className="text-xs mt-1">통신 상태: {freshness.label}</p>
                     {item.lastUpdatedAt && (
                       <p className="text-xs mt-1 text-slate-500">
@@ -1908,21 +2012,44 @@ export default function StaffPage() {
               })}
             </MapContainer>
           </div>
+          {visibleMapStaff.length === 0 && (
+            <div className="mt-2 flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 p-2">
+              <img
+                src="/images/location-error.png"
+                alt=""
+                className="h-12 w-12 shrink-0 rounded-lg object-cover"
+              />
+              <p className="text-[11px] leading-5 text-amber-900">
+                표시할 스태프 좌표가 없습니다. 위치 공유가 ON이어도 브라우저 위치 권한이 차단됐거나,
+                현재 필터에 좌표가 있는 스태프가 없으면 지도에 나오지 않습니다.
+              </p>
+            </div>
+          )}
           <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2">
-            <p className="text-[11px] font-bold text-slate-700">상태 범례</p>
+            <p className="text-[11px] font-bold text-slate-700">마커 색상</p>
+            <div className="mt-1 grid grid-cols-4 gap-2 text-[11px]">
+              {Object.entries(STATUS_META).map(([status, meta]) => (
+                <div key={`map-status-${status}`} className="inline-flex items-center gap-1.5 text-slate-700">
+                  <span
+                    className="h-2.5 w-2.5 rounded-full"
+                    style={{ backgroundColor: meta.map }}
+                  />
+                  {meta.label}
+                </div>
+              ))}
+            </div>
+            <p className="mt-2 text-[11px] font-bold text-slate-700">테두리 상태</p>
             <div className="mt-1 grid grid-cols-3 gap-2 text-[11px]">
-              <div className="inline-flex items-center gap-1.5 text-slate-700">
-                <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
-                실시간 (30초 이내)
-              </div>
-              <div className="inline-flex items-center gap-1.5 text-slate-700">
-                <span className="h-2.5 w-2.5 rounded-full bg-amber-500" />
-                지연 (2분 이내)
-              </div>
-              <div className="inline-flex items-center gap-1.5 text-slate-700">
-                <span className="h-2.5 w-2.5 rounded-full bg-slate-500" />
-                오프라인 (2분 초과)
-              </div>
+              {[
+                ["#10b981", "실시간"],
+                ["#f59e0b", "지연"],
+                ["#64748b", "오프라인"],
+              ].map(([color, label]) => (
+                <div key={`map-fresh-${label}`} className="inline-flex items-center gap-1.5 text-slate-700">
+                  <span className="h-2.5 w-2.5 rounded-full border-2 bg-white" style={{ borderColor: color }} />
+                  {label}
+                </div>
+              ))}
             </div>
           </div>
         </article>
