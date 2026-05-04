@@ -763,6 +763,47 @@ a:focus-visible {
   box-shadow: 0 0 22px #0ee0ff38;
 }
 
+.booth-category-marker-wrap {
+  background: transparent;
+  border: 0;
+}
+
+.booth-category-marker {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 2px solid #ffffff;
+  border-radius: 50% 50% 50% 8px;
+  background:
+    radial-gradient(circle at 35% 28%, #ffffffaa 0 14%, transparent 15%),
+    linear-gradient(145deg, #ffffff3d, transparent 42%),
+    var(--marker-color);
+  box-shadow:
+    inset 0 -4px 8px #0206172e,
+    0 2px 8px #02061766,
+    0 0 16px var(--marker-shadow);
+  color: #fff;
+  transform: rotate(-45deg);
+}
+
+.booth-category-marker__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--marker-color);
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1;
+  transform: rotate(45deg);
+}
+
 .neon-logo-strip {
   width: 100%;
   height: 40px;

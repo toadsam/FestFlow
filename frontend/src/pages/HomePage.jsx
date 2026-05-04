@@ -9,8 +9,6 @@ import {
   CircleMarker,
 } from "react-leaflet";
 import L from "leaflet";
-import markerIconUrl from "leaflet/dist/images/marker-icon.png";
-import markerShadowUrl from "leaflet/dist/images/marker-shadow.png";
 import {
   createCongestionStream,
   createNoticeStream,
@@ -37,22 +35,49 @@ import {
   toggleFavorite,
 } from "../utils/storage";
 
-const markerIcon = L.icon({
-  iconUrl: markerIconUrl,
-  shadowUrl: markerShadowUrl,
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-
 const levelToScore = { 여유: 1, 보통: 2, 혼잡: 3, 매우혼잡: 4 };
 const scoreToLevel = ["여유", "보통", "혼잡", "매우혼잡"];
 const BOOTH_CATEGORY_OPTIONS = ["전체", "주점", "음식", "체험", "이벤트", "굿즈", "안내", "응급", "포토존", "플리마켓", "기타"];
 const BOOTH_DAY_PART_OPTIONS = ["전체", "상시", "주간", "야간"];
+const categoryMarkerMeta = {
+  주점: { icon: "🍺", color: "#f59e0b", shadow: "#f59e0b66", label: "주점" },
+  음식: { icon: "🍜", color: "#ef4444", shadow: "#ef444466", label: "음식" },
+  푸드: { icon: "🍜", color: "#ef4444", shadow: "#ef444466", label: "음식" },
+  체험: { icon: "🎮", color: "#8b5cf6", shadow: "#8b5cf666", label: "체험" },
+  이벤트: { icon: "🎪", color: "#06b6d4", shadow: "#06b6d466", label: "이벤트" },
+  굿즈: { icon: "🎁", color: "#ec4899", shadow: "#ec489966", label: "굿즈" },
+  안내: { icon: "i", color: "#2563eb", shadow: "#2563eb66", label: "안내" },
+  응급: { icon: "✚", color: "#dc2626", shadow: "#dc262666", label: "응급" },
+  포토존: { icon: "📷", color: "#10b981", shadow: "#10b98166", label: "포토존" },
+  포토: { icon: "📷", color: "#10b981", shadow: "#10b98166", label: "포토존" },
+  플리마켓: { icon: "🛍️", color: "#14b8a6", shadow: "#14b8a666", label: "플리마켓" },
+  기타: { icon: "•", color: "#64748b", shadow: "#64748b66", label: "기타" },
+};
 const noticeColor = {
   긴급: "border-rose-300 bg-rose-50 text-rose-700",
   분실물: "border-amber-300 bg-amber-50 text-amber-700",
   우천: "border-sky-300 bg-sky-50 text-sky-700",
 };
+
+function getBoothCategoryMeta(category) {
+  return categoryMarkerMeta[category] || categoryMarkerMeta.기타;
+}
+
+function getBoothMarkerIcon(category) {
+  const meta = getBoothCategoryMeta(category || "주점");
+
+  return L.divIcon({
+    className: "booth-category-marker-wrap",
+    html: `
+      <div class="booth-category-marker" style="--marker-color: ${meta.color}; --marker-shadow: ${meta.shadow};" title="${meta.label}">
+        <span class="booth-category-marker__icon">${meta.icon}</span>
+      </div>
+    `,
+    iconSize: [36, 46],
+    iconAnchor: [18, 46],
+    popupAnchor: [0, -42],
+  });
+}
 
 function normalizeLevel(level) {
   return level;
@@ -691,7 +716,8 @@ export default function HomePage() {
                     <Marker
                       key={booth.id}
                       position={[booth.latitude, booth.longitude]}
-                      icon={markerIcon}
+                      icon={getBoothMarkerIcon(booth.category)}
+                      title={`${booth.category || "부스"} ${booth.name}`}
                     >
                       <Popup>
                         <div className="space-y-1">
