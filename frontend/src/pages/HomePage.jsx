@@ -31,7 +31,6 @@ import {
 import {
   addRecentBooth,
   getFavoriteIds,
-  getRecentBoothIds,
   toggleFavorite,
 } from "../utils/storage";
 
@@ -226,7 +225,6 @@ export default function HomePage() {
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favorites, setFavorites] = useState(getFavoriteIds());
-  const [recentIds, setRecentIds] = useState(getRecentBoothIds());
   const [notices, setNotices] = useState([]);
   const [events, setEvents] = useState([]);
   const [dismissedNoticeIds, setDismissedNoticeIds] = useState([]);
@@ -234,7 +232,10 @@ export default function HomePage() {
   const [gpsSending, setGpsSending] = useState(false);
   const [locatingMe, setLocatingMe] = useState(false);
   const [myLocation, setMyLocation] = useState(null);
+  const [focusedBoothId, setFocusedBoothId] = useState(null);
   const mapRef = useRef(null);
+  const mapSectionRef = useRef(null);
+  const markerRefs = useRef({});
   const previousCongestionRef = useRef({});
 
   function getPosition(options) {
@@ -410,24 +411,6 @@ export default function HomePage() {
     sortBy,
   ]);
 
-  const recentBooths = useMemo(() => {
-    const byId = new Map(booths.map((booth) => [booth.id, booth]));
-    return recentIds.map((id) => byId.get(id)).filter(Boolean);
-  }, [booths, recentIds]);
-
-  const chartData = useMemo(() => {
-    const levels = ["여유", "보통", "혼잡", "매우혼잡"];
-    return levels.map((level) => ({
-      label: level,
-      value: Object.values(congestionMap).filter((item) => item.level === level)
-        .length,
-    }));
-  }, [congestionMap]);
-  const chartMax = useMemo(
-    () => Math.max(1, ...chartData.map((item) => item.value)),
-    [chartData],
-  );
-
   const clusters = useMemo(
     () => buildClusters(filteredBooths, congestionMap),
     [filteredBooths, congestionMap],
@@ -473,6 +456,32 @@ export default function HomePage() {
       })
       .slice(0, 3);
   }, [booths, congestionMap]);
+
+  useEffect(() => {
+    if (activeView === "list" || !focusedBoothId) return undefined;
+
+    const booth = booths.find((item) => item.id === focusedBoothId);
+    if (!booth) return undefined;
+
+    const timer = window.setTimeout(() => {
+      mapSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+
+      if (!mapRef.current) return;
+
+      mapRef.current.flyTo([booth.latitude, booth.longitude], 18, {
+        duration: 0.6,
+      });
+
+      window.setTimeout(() => {
+        markerRefs.current[focusedBoothId]?.openPopup();
+      }, 450);
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [activeView, booths, focusedBoothId]);
 
   async function refreshAllCongestion() {
     const nextMap = await fetchCongestionMap(booths);
@@ -542,8 +551,17 @@ export default function HomePage() {
   }
 
   function openBoothDetail(boothId) {
-    setRecentIds(addRecentBooth(boothId));
+    addRecentBooth(boothId);
     navigate(`/booths/${boothId}`);
+  }
+
+  function focusBoothOnMap(boothId) {
+    const booth = booths.find((item) => item.id === boothId);
+    if (!booth) return;
+
+    setFocusedBoothId(boothId);
+    setMapZoom(18);
+    setActiveView("split");
   }
 
   function handleFavorite(boothId) {
@@ -687,7 +705,10 @@ export default function HomePage() {
 
       {activeView !== "list" && (
         <>
-          <div className="relative rounded-2xl overflow-hidden border border-slate-200">
+          <div
+            ref={mapSectionRef}
+            className="relative scroll-mt-3 rounded-2xl overflow-hidden border border-slate-200"
+          >
             <MapContainer
               center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]}
               zoom={17}
@@ -715,9 +736,17 @@ export default function HomePage() {
                   return (
                     <Marker
                       key={booth.id}
+                      ref={(marker) => {
+                        if (marker) {
+                          markerRefs.current[booth.id] = marker;
+                        } else {
+                          delete markerRefs.current[booth.id];
+                        }
+                      }}
                       position={[booth.latitude, booth.longitude]}
                       icon={getBoothMarkerIcon(booth.category)}
                       title={`${booth.category || "부스"} ${booth.name}`}
+                      zIndexOffset={focusedBoothId === booth.id ? 1000 : 0}
                     >
                       <Popup>
                         <div className="space-y-1">
@@ -1030,47 +1059,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-3">
-            <p className="text-sm font-semibold text-slate-700 text-role-ops mb-2">
-              <IconUsers className="mr-1.5 inline h-4 w-4 icon-role-ops" />혼잡도 요약
-            </p>
-            <div className="h-24 flex items-end gap-2 overflow-hidden">
-              {chartData.map((item) => (
-                <div key={item.label} className="flex-1 text-center">
-                  <div
-                    className="mx-auto w-full rounded-t bg-teal-500/80"
-                    style={{
-                      height: `${Math.max(8, Math.round((item.value / chartMax) * 88))}px`,
-                    }}
-                  />
-                  <p className="mt-1 text-[10px] text-slate-600">
-                    {item.label} ({item.value})
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {recentBooths.length > 0 && (
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-sm font-semibold text-slate-700 text-role-log mb-2">
-                <IconClock className="mr-1.5 inline h-4 w-4 icon-role-log" />최근 본 부스
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {recentBooths.map((booth) => (
-                  <button
-                    key={booth.id}
-                    type="button"
-                    onClick={() => openBoothDetail(booth.id)}
-                    className="rounded-full bg-slate-100 px-3 py-2 min-h-11 text-sm text-slate-700"
-                  >
-                    {booth.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {loading && (
             <p className="text-sm text-slate-600">
               부스와 혼잡도 데이터를 불러오는 중...
@@ -1088,7 +1076,7 @@ export default function HomePage() {
           <div
             className={
               isGridView
-                ? "grid grid-cols-2 gap-3 stagger-list"
+                ? "booth-card-grid stagger-list"
                 : "space-y-3 stagger-list"
             }
           >
@@ -1097,13 +1085,11 @@ export default function HomePage() {
               const isFavorite = favorites.includes(booth.id);
 
               return (
-                <button
+                <article
                   key={booth.id}
-                  type="button"
-                  onClick={() => openBoothDetail(booth.id)}
-                  className="w-full h-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden"
+                  className={isGridView ? "booth-list-card" : "w-full rounded-2xl border border-slate-200 bg-white overflow-hidden"}
                 >
-                  <div className="aspect-[16/9] bg-slate-100">
+                  <div className="booth-list-card__image bg-slate-100">
                     <img
                       src={resolveBoothImageUrl(booth)}
                       alt={`${booth.name} 대표 이미지`}
@@ -1112,11 +1098,11 @@ export default function HomePage() {
                       decoding="async"
                     />
                   </div>
-                  <div className="p-3">
-                    <h3 className="text-sm font-bold text-slate-800 leading-snug line-clamp-2 break-keep">
+                  <div className="booth-list-card__body">
+                    <h3 className="booth-list-card__title text-slate-800 break-keep">
                       {booth.name}
                     </h3>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
+                    <div className="booth-list-card__tags">
                       <span className="rounded-full border border-cyan-300/60 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-100">
                         {booth.category || "주점"}
                       </span>
@@ -1127,7 +1113,7 @@ export default function HomePage() {
                         {congestion?.level || "집계중"}
                       </span>
                     </div>
-                    <p className="mt-2 text-[11px] font-semibold text-cyan-700 line-clamp-1">
+                    <p className="booth-list-card__meta text-cyan-700">
                       대기 {booth.estimatedWaitMinutes ?? "-"}분
                       {" · "}
                       {booth.openTime || booth.closeTime
@@ -1136,32 +1122,42 @@ export default function HomePage() {
                       {" · "}
                       {isBoothOpenNow(booth) ? "운영중" : "운영전/종료"}
                     </p>
-                    {booth.reservationEnabled === false && (
-                      <p className="mt-1 text-[11px] font-semibold text-slate-600">
-                        예약 없이 현장 이용
-                      </p>
-                    )}
+                    <p className="booth-list-card__reservation text-slate-600">
+                      {booth.reservationEnabled === false ? "예약 없이 현장 이용" : "\u00A0"}
+                    </p>
                     <p className={`${isGridView ? "hidden" : "mt-1 line-clamp-1"} text-xs text-slate-600`}>
                       {booth.description}
                     </p>
-                    <div className="mt-3 flex items-center justify-between">
-                      <p className="text-xs text-teal-700 font-semibold">
-                        자세히 보기 →
-                      </p>
+                    <div className="booth-card-actions">
+                      <button
+                        type="button"
+                        aria-label={`${booth.name} 자세히 보기`}
+                        title="자세히 보기"
+                        onClick={() => openBoothDetail(booth.id)}
+                        className="booth-card-action"
+                      >
+                        🔍
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`${booth.name} 지도에서 보기`}
+                        title="지도에서 보기"
+                        onClick={() => focusBoothOnMap(booth.id)}
+                        className="booth-card-action booth-card-action--map"
+                      >
+                        <IconMapPin className="h-5 w-5 icon-role-map" />
+                      </button>
                       <button
                         type="button"
                         aria-label="즐겨찾기"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFavorite(booth.id);
-                        }}
-                        className="text-2xl leading-none min-h-11 min-w-11"
+                        onClick={() => handleFavorite(booth.id)}
+                        className="booth-card-action booth-card-action--favorite"
                       >
                         {isFavorite ? "⭐" : "☆"}
                       </button>
                     </div>
                   </div>
-                </button>
+                </article>
               );
             })}
           </div>
