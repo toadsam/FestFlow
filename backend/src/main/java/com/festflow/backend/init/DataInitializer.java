@@ -3,12 +3,14 @@ package com.festflow.backend.init;
 import com.festflow.backend.entity.AdminUser;
 import com.festflow.backend.entity.Booth;
 import com.festflow.backend.entity.FestivalEvent;
+import com.festflow.backend.entity.LostItem;
 import com.festflow.backend.entity.Notice;
 import com.festflow.backend.entity.StaffMember;
 import com.festflow.backend.entity.StaffStatus;
 import com.festflow.backend.repository.AdminUserRepository;
 import com.festflow.backend.repository.BoothRepository;
 import com.festflow.backend.repository.EventRepository;
+import com.festflow.backend.repository.LostItemRepository;
 import com.festflow.backend.repository.NoticeRepository;
 import com.festflow.backend.repository.StaffMemberRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -40,6 +42,7 @@ public class DataInitializer {
             EventRepository eventRepository,
             AdminUserRepository adminUserRepository,
             NoticeRepository noticeRepository,
+            LostItemRepository lostItemRepository,
             StaffMemberRepository staffMemberRepository,
             PasswordEncoder passwordEncoder
     ) {
@@ -62,6 +65,8 @@ public class DataInitializer {
                         true
                 ));
             }
+
+            seedDemoLostItems(lostItemRepository);
 
             if (adminUserRepository.count() == 0
                     && initialAdminUsername != null
@@ -127,6 +132,71 @@ public class DataInitializer {
                 new FestivalEvent("밴드 라이브", now.plusHours(2), now.plusHours(3), "예정", null, null, null),
                 new FestivalEvent("댄스팀 쇼케이스", now.plusHours(3).plusMinutes(30), now.plusHours(4).plusMinutes(20), "예정", null, null, null),
                 new FestivalEvent("DJ 피날레", now.plusHours(5), now.plusHours(6), "예정", null, null, null)
+        );
+    }
+
+    private void seedDemoLostItems(LostItemRepository lostItemRepository) {
+        List<String> existingTitles = lostItemRepository.findAll().stream()
+                .map(LostItem::getTitle)
+                .toList();
+
+        List<LostItem> demoItems = List.of(
+                lostItem(
+                        "검은색 가죽 지갑",
+                        "검은색 반지갑입니다. 내부에 카드 여러 장과 학생증으로 보이는 카드가 들어 있습니다.",
+                        "지갑",
+                        "종합 안내 데스크 앞 벤치",
+                        "https://images.pexels.com/photos/7085781/pexels-photo-7085781.jpeg?auto=compress&cs=tinysrgb&w=800"
+                ),
+                lostItem(
+                        "흰색 무선 이어폰 케이스",
+                        "흰색 무선 이어폰 케이스입니다. 케이스에 작은 스트랩이 달려 있습니다.",
+                        "전자기기",
+                        "푸드트럭 구역 테이블",
+                        "https://images.pexels.com/photos/26550470/pexels-photo-26550470.jpeg?auto=compress&cs=tinysrgb&w=800"
+                ),
+                lostItem(
+                        "초록색 접이식 우산",
+                        "초록색과 주황색이 섞인 접이식 우산입니다. 비닐 커버 없이 접힌 상태로 발견되었습니다.",
+                        "우산",
+                        "노천극장 입구 계단",
+                        "https://images.pexels.com/photos/26185842/pexels-photo-26185842.jpeg?auto=compress&cs=tinysrgb&w=800"
+                ),
+                lostItem(
+                        "실버 텀블러",
+                        "은색 스테인리스 텀블러입니다. 뚜껑 부분에 작은 흠집이 있습니다.",
+                        "생활용품",
+                        "공식 굿즈샵 옆 휴게 공간",
+                        "https://images.pexels.com/photos/8852778/pexels-photo-8852778.jpeg?auto=compress&cs=tinysrgb&w=800"
+                ),
+                lostItem(
+                        "베이지색 에코백",
+                        "베이지색 캔버스 에코백입니다. 안쪽에 작은 파우치와 선글라스 케이스가 들어 있습니다.",
+                        "가방",
+                        "스탬프 미션 센터 앞",
+                        "https://images.pexels.com/photos/26894083/pexels-photo-26894083.jpeg?auto=compress&cs=tinysrgb&w=800"
+                )
+        );
+
+        List<LostItem> missingItems = demoItems.stream()
+                .filter(item -> !existingTitles.contains(item.getTitle()))
+                .toList();
+        if (!missingItems.isEmpty()) {
+            lostItemRepository.saveAll(missingItems);
+        }
+    }
+
+    private LostItem lostItem(String title, String description, String category, String foundLocation, String imageUrl) {
+        return new LostItem(
+                title,
+                description,
+                category,
+                foundLocation,
+                "종합 안내 데스크",
+                imageUrl,
+                "REGISTERED",
+                "STAFF",
+                "seed"
         );
     }
 
