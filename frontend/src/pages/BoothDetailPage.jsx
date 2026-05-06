@@ -285,7 +285,12 @@ export default function BoothDetailPage() {
     try {
       setReservationError("");
       const response = await sendReservationAuthCode(phoneNumber);
-      setReservationMessage("인증번호를 발송했습니다.");
+      if (response.temporaryCode) {
+        setVerifyCode(response.temporaryCode);
+        setReservationMessage(`임시 인증번호: ${response.temporaryCode}`);
+      } else {
+        setReservationMessage("인증번호를 발송했습니다.");
+      }
       setSendCooldownSeconds(30);
     } catch (e) {
       setReservationError(e.message);
@@ -883,7 +888,7 @@ export default function BoothDetailPage() {
             <div className="grid grid-cols-[1fr_auto] gap-2">
               <input
                 className="border rounded px-2 py-2 text-sm"
-                placeholder="운영 키 입력"
+                placeholder="주점 운영 키 1111"
                 value={opsKeyInput}
                 onChange={(e) => setOpsKeyInput(e.target.value)}
               />

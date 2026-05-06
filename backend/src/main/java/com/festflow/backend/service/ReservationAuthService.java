@@ -76,7 +76,7 @@ public class ReservationAuthService {
         verificationCodeRepository.save(new ReservationVerificationCode(phoneNumber, hashedCode, expiresAt, now));
         smsSender.sendVerificationCode(phoneNumber, code);
 
-        return new ReservationAuthSendCodeResponseDto(phoneNumber, expiresAt);
+        return new ReservationAuthSendCodeResponseDto(phoneNumber, expiresAt, code);
     }
 
     @Transactional

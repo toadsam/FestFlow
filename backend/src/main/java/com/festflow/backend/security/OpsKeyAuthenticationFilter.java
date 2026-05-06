@@ -36,7 +36,7 @@ public class OpsKeyAuthenticationFilter extends OncePerRequestFilter {
 
         String key = request.getHeader("X-OPS-KEY");
 
-        Optional<OpsIdentity> authenticated = opsKeyService.authenticate(key);
+        Optional<OpsIdentity> authenticated = opsKeyService.authenticate(key, request.getRequestURI());
         if (authenticated.isEmpty()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);

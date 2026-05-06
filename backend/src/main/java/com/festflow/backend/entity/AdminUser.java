@@ -48,4 +48,8 @@ public class AdminUser {
     public String getRole() {
         return role;
     }
+
+    public void updatePassword(String password) {
+        this.password = password;
+    }
 }

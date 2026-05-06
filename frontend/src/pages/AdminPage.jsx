@@ -318,8 +318,8 @@ export default function AdminPage() {
           관리자 로그인
         </h2>
         <form className="space-y-2 rounded-xl border border-slate-200 bg-white p-3" onSubmit={handleLogin}>
-          <input className="w-full border rounded px-2 py-2 text-sm" placeholder="아이디" value={loginForm.username} onChange={(e) => setLoginForm((prev) => ({ ...prev, username: e.target.value }))} required />
-          <input type="password" className="w-full border rounded px-2 py-2 text-sm" placeholder="비밀번호" value={loginForm.password} onChange={(e) => setLoginForm((prev) => ({ ...prev, password: e.target.value }))} required />
+          <input className="w-full border rounded px-2 py-2 text-sm" placeholder="아이디 0000" value={loginForm.username} onChange={(e) => setLoginForm((prev) => ({ ...prev, username: e.target.value }))} required />
+          <input type="password" className="w-full border rounded px-2 py-2 text-sm" placeholder="비밀번호 0000" value={loginForm.password} onChange={(e) => setLoginForm((prev) => ({ ...prev, password: e.target.value }))} required />
           <button className="w-full rounded bg-teal-700 text-white py-2 text-sm font-semibold">로그인</button>
         </form>
         {message && <p className="text-sm text-rose-600">{message}</p>}

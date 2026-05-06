@@ -544,7 +544,7 @@ export default function OpsMasterPage() {
             className="border rounded px-2 py-2 text-sm"
             value={keyInput}
             onChange={(e) => setKeyInput(e.target.value)}
-            placeholder="0"
+            placeholder="0000"
           />
           <button
             type="submit"

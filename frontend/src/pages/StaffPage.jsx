@@ -1170,7 +1170,7 @@ export default function StaffPage() {
               <input
                 value={pinInput}
                 onChange={(e) => setPinInput(e.target.value)}
-                placeholder="4자리 PIN"
+                placeholder="스태프 번호와 동일"
                 type="password"
                 className="mt-1 w-full rounded-lg border border-cyan-300/50 bg-slate-900/70 px-3 py-2.5 text-sm outline-none focus:border-cyan-200"
               />

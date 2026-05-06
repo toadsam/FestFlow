@@ -632,7 +632,7 @@ export default function OpsBoothPage() {
             className="border rounded px-2 py-2 text-sm"
             value={keyInput}
             onChange={(e) => setKeyInput(e.target.value)}
-            placeholder="부스 번호"
+            placeholder="1111"
           />
           <button
             type="submit"
