@@ -6,22 +6,29 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 @Service
 public class OpsKeyService {
 
+    private static final Pattern BOOTH_URI_PATTERN = Pattern.compile("/api/ops/booth/(\\d+)(?:/.*)?");
+
     private final String masterKey;
+    private final String sharedBoothKey;
     private final Map<String, Long> boothKeyToBoothId;
 
     public OpsKeyService(
             @Value("${app.ops.master-key:}") String masterKey,
+            @Value("${app.ops.shared-booth-key:}") String sharedBoothKey,
             @Value("${app.ops.booth-keys:}") String boothKeyPairs
     ) {
         this.masterKey = masterKey != null ? masterKey.trim() : "";
+        this.sharedBoothKey = sharedBoothKey != null ? sharedBoothKey.trim() : "";
         this.boothKeyToBoothId = parseBoothKeys(boothKeyPairs);
     }
 
-    public Optional<OpsIdentity> authenticate(String key) {
+    public Optional<OpsIdentity> authenticate(String key, String requestUri) {
         if (key == null || key.isBlank()) {
             return Optional.empty();
         }
@@ -31,12 +38,34 @@ public class OpsKeyService {
             return Optional.of(new OpsIdentity("ops-master", "OPS_MASTER", null));
         }
 
+        if (!sharedBoothKey.isBlank() && sharedBoothKey.equals(trimmed)) {
+            return boothIdFromUri(requestUri)
+                    .map(boothId -> new OpsIdentity("ops-booth-" + boothId, "OPS_BOOTH", boothId));
+        }
+
         Long boothId = boothKeyToBoothId.get(trimmed);
         if (boothId != null) {
             return Optional.of(new OpsIdentity("ops-booth-" + boothId, "OPS_BOOTH", boothId));
         }
 
         return Optional.empty();
+    }
+
+    private Optional<Long> boothIdFromUri(String requestUri) {
+        if (requestUri == null || requestUri.isBlank()) {
+            return Optional.empty();
+        }
+
+        Matcher matcher = BOOTH_URI_PATTERN.matcher(requestUri);
+        if (!matcher.matches()) {
+            return Optional.empty();
+        }
+
+        try {
+            return Optional.of(Long.parseLong(matcher.group(1)));
+        } catch (NumberFormatException ignored) {
+            return Optional.empty();
+        }
     }
 
     private Map<String, Long> parseBoothKeys(String pairs) {
@@ -65,4 +94,3 @@ public class OpsKeyService {
         return map;
     }
 }
-
