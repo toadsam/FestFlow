@@ -235,13 +235,14 @@ public class StaffService {
     }
 
     private StaffMemberResponseDto toDto(StaffMember member) {
+        StaffStatus status = member.getStatus() != null ? member.getStatus() : StaffStatus.STANDBY;
         return new StaffMemberResponseDto(
                 member.getId(),
                 member.getStaffNo(),
-                member.getName(),
-                member.getTeam(),
-                member.getStatus().name(),
-                toStatusLabel(member.getStatus()),
+                member.getName() != null ? member.getName() : "스태프",
+                member.getTeam() != null ? member.getTeam() : "운영",
+                status.name(),
+                toStatusLabel(status),
                 member.getCurrentTask(),
                 member.getCurrentNote(),
                 member.getAssignedBoothId(),
