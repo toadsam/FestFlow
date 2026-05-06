@@ -28,6 +28,26 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 @Service
 public class StaffService {
 
+    private static final List<String> DEMO_STAFF_NAMES = List.of(
+            "강승완",
+            "고나연",
+            "고명범",
+            "곽유나",
+            "박종현",
+            "권도희",
+            "권태완",
+            "김규민",
+            "김나윤",
+            "김민서",
+            "김정연",
+            "김정우",
+            "김찬호",
+            "김하은",
+            "늑구",
+            "맹쥰성",
+            "정재훈"
+    );
+
     private final StaffMemberRepository staffMemberRepository;
     private final StaffSessionRepository staffSessionRepository;
     private final PasswordEncoder passwordEncoder;
@@ -54,10 +74,17 @@ public class StaffService {
     @Transactional
     public StaffLoginResponseDto login(StaffLoginRequestDto requestDto) {
         String normalizedNo = requestDto.staffNo().trim().toUpperCase();
+        String pin = requestDto.pin().trim();
+        DemoStaff demoStaff = resolveDemoStaffCredentials(normalizedNo, pin);
+        if (demoStaff != null) {
+            LocalDateTime expiresAt = LocalDateTime.now().plusHours(12);
+            return new StaffLoginResponseDto(createDemoStaffToken(demoStaff.number(), expiresAt), expiresAt, toDemoDto(demoStaff));
+        }
+
         StaffMember member = staffMemberRepository.findByStaffNoIgnoreCase(normalizedNo)
                 .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid staff credentials."));
 
-        if (!matchesStaffPin(requestDto.pin().trim(), member)) {
+        if (!matchesStaffPin(pin, member)) {
             throw new ResponseStatusException(UNAUTHORIZED, "Invalid staff credentials.");
         }
 
@@ -69,6 +96,16 @@ public class StaffService {
 
     @Transactional
     public StaffBootstrapDto bootstrap(String staffToken) {
+        DemoStaff demoStaff = resolveDemoStaffToken(staffToken);
+        if (demoStaff != null) {
+            return new StaffBootstrapDto(
+                    toDemoDto(demoStaff),
+                    getDemoStaffMembers(),
+                    noticeService.getActiveNotices(),
+                    boothService.getAllBooths()
+            );
+        }
+
         StaffMember me = requireStaffByToken(staffToken);
         return new StaffBootstrapDto(
                 toDto(me),
@@ -88,6 +125,12 @@ public class StaffService {
 
     @Transactional
     public StaffMemberResponseDto updateMyStatus(String staffToken, StaffStatusUpdateRequestDto requestDto) {
+        DemoStaff demoStaff = resolveDemoStaffToken(staffToken);
+        if (demoStaff != null) {
+            StaffStatus status = parseStatus(requestDto.status(), StaffStatus.ON_DUTY);
+            return toDemoDto(demoStaff, status, normalizeText(requestDto.currentTask(), 250, "입구 동선 안내"));
+        }
+
         StaffMember me = requireStaffByToken(staffToken);
         StaffStatus nextStatus = parseStatus(requestDto.status(), me.getStatus());
         String nextTask = normalizeText(requestDto.currentTask(), 250, me.getCurrentTask());
@@ -137,11 +180,18 @@ public class StaffService {
         if (staffToken == null || staffToken.isBlank()) {
             return;
         }
+        if (resolveDemoStaffToken(staffToken) != null) {
+            return;
+        }
         staffSessionRepository.findByToken(staffToken).ifPresent(staffSessionRepository::delete);
     }
 
     @Transactional
     public StaffMemberResponseDto authenticateByToken(String staffToken) {
+        DemoStaff demoStaff = resolveDemoStaffToken(staffToken);
+        if (demoStaff != null) {
+            return toDemoDto(demoStaff);
+        }
         return toDto(requireStaffByToken(staffToken));
     }
 
@@ -178,6 +228,81 @@ public class StaffService {
         } catch (IllegalArgumentException ignored) {
             return false;
         }
+    }
+
+    private DemoStaff resolveDemoStaffCredentials(String staffNo, String pin) {
+        if (staffNo == null || pin == null || !staffNo.equals(pin)) {
+            return null;
+        }
+        return parseDemoStaffNumber(staffNo);
+    }
+
+    private DemoStaff resolveDemoStaffToken(String token) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        String[] parts = token.split("-", 5);
+        if (parts.length != 5 || !"demo".equals(parts[0]) || !"staff".equals(parts[1])) {
+            return null;
+        }
+        try {
+            long expiresAtMillis = Long.parseLong(parts[3]);
+            if (System.currentTimeMillis() > expiresAtMillis) {
+                throw new ResponseStatusException(UNAUTHORIZED, "Staff session expired.");
+            }
+            return parseDemoStaffNumber(parts[2]);
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Invalid staff token.");
+        }
+    }
+
+    private DemoStaff parseDemoStaffNumber(String rawNumber) {
+        try {
+            int number = Integer.parseInt(rawNumber);
+            if (number < 1 || number > DEMO_STAFF_NAMES.size()) {
+                return null;
+            }
+            return new DemoStaff(number, DEMO_STAFF_NAMES.get(number - 1));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private String createDemoStaffToken(int staffNo, LocalDateTime expiresAt) {
+        long epochMillis = expiresAt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        return "demo-staff-" + staffNo + "-" + epochMillis + "-"
+                + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private List<StaffMemberResponseDto> getDemoStaffMembers() {
+        return java.util.stream.IntStream.rangeClosed(1, DEMO_STAFF_NAMES.size())
+                .mapToObj(number -> toDemoDto(new DemoStaff(number, DEMO_STAFF_NAMES.get(number - 1))))
+                .toList();
+    }
+
+    private StaffMemberResponseDto toDemoDto(DemoStaff staff) {
+        StaffStatus status = staff.number() % 5 == 1 ? StaffStatus.URGENT
+                : staff.number() % 3 == 1 ? StaffStatus.MOVING
+                : StaffStatus.ON_DUTY;
+        return toDemoDto(staff, status, staff.number() % 2 == 1 ? "입구 동선 안내" : "현장 순찰");
+    }
+
+    private StaffMemberResponseDto toDemoDto(DemoStaff staff, StaffStatus status, String task) {
+        return new StaffMemberResponseDto(
+                (long) staff.number(),
+                String.valueOf(staff.number()),
+                staff.name(),
+                staff.number() % 2 == 1 ? "운영" : "안전",
+                status.name(),
+                toStatusLabel(status),
+                task,
+                "",
+                null,
+                null,
+                null,
+                true,
+                LocalDateTime.now()
+        );
     }
 
     private String createStatelessStaffToken(StaffMember member, LocalDateTime expiresAt) {
@@ -260,5 +385,8 @@ public class StaffService {
             case ON_DUTY -> "업무중";
             case URGENT -> "긴급";
         };
+    }
+
+    private record DemoStaff(int number, String name) {
     }
 }
