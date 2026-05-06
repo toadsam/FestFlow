@@ -28,6 +28,26 @@ import java.util.Set;
 @Configuration
 public class DataInitializer {
 
+    private static final List<String> STAFF_NAMES = List.of(
+            "강승완",
+            "고나연",
+            "고명범",
+            "곽유나",
+            "박종현",
+            "권도희",
+            "권태완",
+            "김규민",
+            "김나윤",
+            "김민서",
+            "김정연",
+            "김정우",
+            "김찬호",
+            "김하은",
+            "늑구",
+            "맹쥰성",
+            "정재훈"
+    );
+
     @Value("${app.init.admin.username:}")
     private String initialAdminUsername;
 
@@ -298,7 +318,7 @@ public class DataInitializer {
     }
 
     private List<StaffMember> seedStaff(List<Booth> booths, PasswordEncoder passwordEncoder) {
-        return java.util.stream.IntStream.range(0, 12)
+        return java.util.stream.IntStream.range(0, STAFF_NAMES.size())
                 .mapToObj(i -> createStaff(i, booths, passwordEncoder))
                 .toList();
     }
@@ -310,7 +330,7 @@ public class DataInitializer {
         return new StaffMember(
                 number,
                 passwordEncoder.encode(number),
-                "스태프 " + number,
+                STAFF_NAMES.get(index),
                 index % 2 == 0 ? "운영" : "안전",
                 status,
                 index % 2 == 0 ? "입구 동선 안내" : "현장 순찰",
@@ -333,7 +353,7 @@ public class DataInitializer {
             String number = String.valueOf(i + 1);
             StaffMember member = staff.get(i);
             member.updateCredentials(number, passwordEncoder.encode(number));
-            member.setName("스태프 " + number);
+            member.setName(i < STAFF_NAMES.size() ? STAFF_NAMES.get(i) : "스태프 " + number);
             member.setTeam(i % 2 == 0 ? "운영" : "안전");
         }
         staffMemberRepository.saveAll(staff);
