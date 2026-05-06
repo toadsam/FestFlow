@@ -364,17 +364,15 @@ public class DataInitializer {
             List<Booth> booths,
             PasswordEncoder passwordEncoder
     ) {
-        simplifyStaffCredentials(staffMemberRepository, passwordEncoder);
-
-        long existingCount = staffMemberRepository.count();
-        if (existingCount >= STAFF_NAMES.size()) {
-            return;
+        for (int i = 0; i < STAFF_NAMES.size(); i++) {
+            String number = String.valueOf(i + 1);
+            int index = i;
+            StaffMember member = staffMemberRepository.findByStaffNoIgnoreCase(number)
+                    .orElseGet(() -> createStaff(index, booths, passwordEncoder));
+            member.updateCredentials(number, passwordEncoder.encode(number));
+            member.setName(STAFF_NAMES.get(i));
+            member.setTeam(i % 2 == 0 ? "운영" : "안전");
+            staffMemberRepository.save(member);
         }
-
-        List<StaffMember> missingStaff = java.util.stream.IntStream
-                .range((int) existingCount, STAFF_NAMES.size())
-                .mapToObj(i -> createStaff(i, booths, passwordEncoder))
-                .toList();
-        staffMemberRepository.saveAll(missingStaff);
     }
 }

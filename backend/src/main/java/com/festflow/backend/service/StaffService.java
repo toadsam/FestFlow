@@ -61,12 +61,8 @@ public class StaffService {
             throw new ResponseStatusException(UNAUTHORIZED, "Invalid staff credentials.");
         }
 
-        LocalDateTime now = LocalDateTime.now();
-        staffSessionRepository.deleteByExpiresAtBefore(now.minusMinutes(1));
-
-        String token = UUID.randomUUID().toString().replace("-", "") + UUID.randomUUID().toString().replace("-", "");
-        LocalDateTime expiresAt = now.plusHours(12);
-        staffSessionRepository.save(new StaffSession(member, token, now, expiresAt));
+        LocalDateTime expiresAt = LocalDateTime.now().plusHours(12);
+        String token = createStatelessStaffToken(member, expiresAt);
 
         return new StaffLoginResponseDto(token, expiresAt, toDto(member));
     }
@@ -154,10 +150,14 @@ public class StaffService {
             throw new ResponseStatusException(UNAUTHORIZED, "Staff token is required.");
         }
 
+        StaffMember statelessMember = resolveStatelessStaffToken(staffToken);
+        if (statelessMember != null) {
+            return statelessMember;
+        }
+
         LocalDateTime now = LocalDateTime.now();
         StaffSession session = staffSessionRepository.findByToken(staffToken)
                 .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid staff token."));
-
         if (session.getExpiresAt().isBefore(now)) {
             staffSessionRepository.delete(session);
             throw new ResponseStatusException(UNAUTHORIZED, "Staff session expired.");
@@ -166,6 +166,31 @@ public class StaffService {
         session.touch(now);
         staffSessionRepository.save(session);
         return session.getStaffMember();
+    }
+
+    private String createStatelessStaffToken(StaffMember member, LocalDateTime expiresAt) {
+        long epochMillis = expiresAt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        return "staff-" + member.getId() + "-" + epochMillis + "-"
+                + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private StaffMember resolveStatelessStaffToken(String token) {
+        String[] parts = token.split("-", 4);
+        if (parts.length != 4 || !"staff".equals(parts[0])) {
+            return null;
+        }
+
+        try {
+            Long staffId = Long.parseLong(parts[1]);
+            long expiresAtMillis = Long.parseLong(parts[2]);
+            if (System.currentTimeMillis() > expiresAtMillis) {
+                throw new ResponseStatusException(UNAUTHORIZED, "Staff session expired.");
+            }
+            return staffMemberRepository.findById(staffId)
+                    .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid staff token."));
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Invalid staff token.");
+        }
     }
 
     private StaffStatus parseStatus(String input, StaffStatus fallback) {
