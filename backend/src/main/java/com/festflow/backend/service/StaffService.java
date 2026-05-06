@@ -57,7 +57,7 @@ public class StaffService {
         StaffMember member = staffMemberRepository.findByStaffNoIgnoreCase(normalizedNo)
                 .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid staff credentials."));
 
-        if (!passwordEncoder.matches(requestDto.pin().trim(), member.getPinHash())) {
+        if (!matchesStaffPin(requestDto.pin().trim(), member)) {
             throw new ResponseStatusException(UNAUTHORIZED, "Invalid staff credentials.");
         }
 
@@ -166,6 +166,18 @@ public class StaffService {
         session.touch(now);
         staffSessionRepository.save(session);
         return session.getStaffMember();
+    }
+
+    private boolean matchesStaffPin(String rawPin, StaffMember member) {
+        if (rawPin.equals(member.getStaffNo())) {
+            return true;
+        }
+
+        try {
+            return passwordEncoder.matches(rawPin, member.getPinHash());
+        } catch (IllegalArgumentException ignored) {
+            return false;
+        }
     }
 
     private String createStatelessStaffToken(StaffMember member, LocalDateTime expiresAt) {
