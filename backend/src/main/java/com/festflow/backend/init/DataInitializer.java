@@ -100,7 +100,7 @@ public class DataInitializer {
             if (staffMemberRepository.count() == 0) {
                 staffMemberRepository.saveAll(seedStaff(booths, passwordEncoder));
             } else if (simpleDemoCredentials) {
-                simplifyStaffCredentials(staffMemberRepository, passwordEncoder);
+                syncDemoStaff(staffMemberRepository, booths, passwordEncoder);
             }
         };
     }
@@ -357,5 +357,24 @@ public class DataInitializer {
             member.setTeam(i % 2 == 0 ? "운영" : "안전");
         }
         staffMemberRepository.saveAll(staff);
+    }
+
+    private void syncDemoStaff(
+            StaffMemberRepository staffMemberRepository,
+            List<Booth> booths,
+            PasswordEncoder passwordEncoder
+    ) {
+        simplifyStaffCredentials(staffMemberRepository, passwordEncoder);
+
+        long existingCount = staffMemberRepository.count();
+        if (existingCount >= STAFF_NAMES.size()) {
+            return;
+        }
+
+        List<StaffMember> missingStaff = java.util.stream.IntStream
+                .range((int) existingCount, STAFF_NAMES.size())
+                .mapToObj(i -> createStaff(i, booths, passwordEncoder))
+                .toList();
+        staffMemberRepository.saveAll(missingStaff);
     }
 }
