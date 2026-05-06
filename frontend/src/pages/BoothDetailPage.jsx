@@ -20,6 +20,8 @@ import {
   saveReservationAuth,
 } from "../utils/reservationAuth";
 
+const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
+
 function SeatAvailabilityBar({ totalSeats, availableSeats }) {
   const total = Math.max(1, Number(totalSeats) || 1);
   const available = Math.max(0, Math.min(total, Number(availableSeats) || 0));
@@ -155,6 +157,14 @@ function parseMenuBoardJson(raw) {
   }
 }
 
+function boothMetaLabel(booth) {
+  const time =
+    booth?.openTime || booth?.closeTime
+      ? `${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
+      : "시간 미정";
+  return `${booth?.category || "주점"} · ${booth?.dayPart || "야간"} · ${time}`;
+}
+
 export default function BoothDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -169,7 +179,6 @@ export default function BoothDetailPage() {
 
   const [phoneNumber, setPhoneNumber] = useState(getReservationPhone());
   const [verifyCode, setVerifyCode] = useState("");
-  const [debugCode, setDebugCode] = useState("");
   const [sendCooldownSeconds, setSendCooldownSeconds] = useState(0);
 
   const [reservationToken, setReservationToken] = useState(getReservationToken());
@@ -276,7 +285,6 @@ export default function BoothDetailPage() {
     try {
       setReservationError("");
       const response = await sendReservationAuthCode(phoneNumber);
-      setDebugCode(response.debugCode || "");
       setReservationMessage("인증번호를 발송했습니다.");
       setSendCooldownSeconds(30);
     } catch (e) {
@@ -292,7 +300,6 @@ export default function BoothDetailPage() {
       setReservationToken(response.reservationToken);
       setPhoneNumber(response.phoneNumber);
       setVerifyCode("");
-      setDebugCode("");
       setReservationMessage("전화번호 인증이 완료되었습니다.");
     } catch (e) {
       setReservationError(e.message);
@@ -424,7 +431,8 @@ export default function BoothDetailPage() {
       setReservationError("운영 키를 입력해 주세요.");
       return;
     }
-    navigate(`/ops/booth/${id}?key=${encodeURIComponent(key)}`);
+    sessionStorage.setItem(BOOTH_KEY_STORAGE_KEY, key);
+    navigate(`/ops/booth/${id}`);
   }
 
   const myReservation = reservationState?.myReservation ?? null;
@@ -497,6 +505,8 @@ export default function BoothDetailPage() {
             src={resolveBoothImageUrl(booth)}
             alt={`${booth.name} 대표 이미지`}
             className="h-full w-full object-cover"
+            decoding="async"
+            fetchPriority="high"
           />
         </div>
 
@@ -505,22 +515,37 @@ export default function BoothDetailPage() {
             <h2 className="text-xl font-bold text-slate-800">{booth.name}</h2>
             <CongestionBadge level={congestion.level} />
           </div>
+          <div className="flex flex-wrap gap-1.5">
+            <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-1 text-xs font-semibold text-cyan-800">
+              {boothMetaLabel(booth)}
+            </span>
+            <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800">
+              {booth.reservationEnabled === false ? "예약 없음" : "예약/웨이팅 가능"}
+            </span>
+            {booth.tags && (
+              <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-semibold text-slate-700">
+                {booth.tags}
+              </span>
+            )}
+          </div>
 
           <p className="text-sm text-slate-600">{booth.description}</p>
 
-          <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 flex items-center justify-between gap-2">
-            <div className="text-xs text-emerald-900 space-y-0.5">
-              <p className="font-semibold">예약 우선 화면</p>
-              <p>인증 후 테이블 선택으로 바로 진행할 수 있어요.</p>
+          {booth.reservationEnabled !== false && (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 flex items-center justify-between gap-2">
+              <div className="text-xs text-emerald-900 space-y-0.5">
+                <p className="font-semibold">예약 우선 화면</p>
+                <p>인증 후 테이블 선택으로 바로 진행할 수 있어요.</p>
+              </div>
+              <button
+                type="button"
+                onClick={handleQuickReserveStart}
+                className="shrink-0 rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white"
+              >
+                예약 시작
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleQuickReserveStart}
-              className="shrink-0 rounded-md bg-emerald-700 px-3 py-2 text-xs font-semibold text-white"
-            >
-              예약 시작
-            </button>
-          </div>
+          )}
 
           {(booth.boothIntro || booth.menuImageUrl) && (
             <div className="rounded-lg border border-cyan-200 bg-cyan-50 overflow-hidden">
@@ -545,6 +570,8 @@ export default function BoothDetailPage() {
                         src={booth.menuImageUrl}
                         alt={`${booth.name} 음식 사진`}
                         className="h-40 w-full object-cover"
+                        loading="lazy"
+                        decoding="async"
                       />
                     </div>
                   )}
@@ -691,9 +718,6 @@ export default function BoothDetailPage() {
                     ? `인증번호 재요청 (${sendCooldownSeconds}s)`
                     : "인증번호 받기"}
                 </button>
-                {debugCode && (
-                  <p className="text-[11px] text-slate-600">개발용 인증번호: {debugCode}</p>
-                )}
               </div>
             )}
 
@@ -738,6 +762,7 @@ export default function BoothDetailPage() {
                       src={checkInQrDataUrl}
                       alt="check-in qr"
                       className="h-40 w-40 object-contain"
+                      decoding="async"
                     />
                     <p className="text-[11px] font-semibold">QR 만료까지: {qrTimerText}</p>
                   </div>

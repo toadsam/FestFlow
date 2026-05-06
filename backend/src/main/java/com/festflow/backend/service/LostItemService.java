@@ -26,8 +26,13 @@ public class LostItemService {
 
     @Transactional(readOnly = true)
     public List<LostItemResponseDto> getAll() {
+        return getAll(false);
+    }
+
+    @Transactional(readOnly = true)
+    public List<LostItemResponseDto> getAll(boolean maskContacts) {
         return lostItemRepository.findAllByOrderByCreatedAtDesc().stream()
-                .map(this::toDto)
+                .map(item -> toDto(item, maskContacts))
                 .toList();
     }
 
@@ -168,13 +173,17 @@ public class LostItemService {
     }
 
     private LostItemResponseDto toDto(LostItem item) {
+        return toDto(item, false);
+    }
+
+    private LostItemResponseDto toDto(LostItem item, boolean maskContacts) {
         return new LostItemResponseDto(
                 item.getId(),
                 item.getTitle(),
                 item.getDescription(),
                 item.getCategory(),
                 item.getFoundLocation(),
-                item.getFinderContact(),
+                maskContacts ? maskContact(item.getFinderContact()) : item.getFinderContact(),
                 item.getImageUrl(),
                 item.getStatus(),
                 statusLabel(item.getStatus()),
@@ -182,12 +191,27 @@ public class LostItemService {
                 item.getReporterRef(),
                 item.getResolveNote(),
                 item.getClaimantName(),
-                item.getClaimantContact(),
+                maskContacts ? maskContact(item.getClaimantContact()) : item.getClaimantContact(),
                 item.getClaimantNote(),
                 item.getClaimedAt(),
                 item.getCreatedAt(),
                 item.getUpdatedAt()
         );
+    }
+
+    private String maskContact(String contact) {
+        if (contact == null || contact.isBlank()) {
+            return contact;
+        }
+        String trimmed = contact.trim();
+        String digits = trimmed.replaceAll("[^0-9]", "");
+        if (digits.length() >= 7) {
+            return digits.substring(0, 3) + "-****-" + digits.substring(digits.length() - 4);
+        }
+        if (trimmed.length() <= 4) {
+            return "****";
+        }
+        return trimmed.substring(0, 2) + "****" + trimmed.substring(trimmed.length() - 2);
     }
 
     private String statusLabel(String status) {

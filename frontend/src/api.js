@@ -3,6 +3,16 @@
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api"
 ).replace(/\/$/, "");
+const NETWORK_ERROR_MESSAGE =
+  "서버에 연결할 수 없습니다. 네트워크 상태 또는 운영 서버 연결을 확인해 주세요.";
+
+async function fetch(...args) {
+  try {
+    return await globalThis.fetch(...args);
+  } catch (error) {
+    throw new Error(NETWORK_ERROR_MESSAGE, { cause: error });
+  }
+}
 
 function withAuth(headers = {}) {
   const token = getAccessToken();
@@ -34,29 +44,29 @@ export async function loginAdmin(username, password) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
   });
-  return parseJson(response, "?β돦裕??筌뤾쑬?????덉넮???곕????덈펲.");
+  return parseJson(response, "관리자 로그인에 실패했습니다.");
 }
 
 export async function fetchBooths() {
   const response = await fetch(`${API_BASE}/booths`);
-  return parseJson(response, "?遊붋??嶺뚮ㅄ維뽨빳???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??");
+  return parseJson(response, "부스 목록을 불러오지 못했습니다.");
 }
 
 export async function fetchBoothById(boothId) {
   const response = await fetch(`${API_BASE}/booths/${boothId}`);
-  return parseJson(response, "?遊붋???筌먲퐢沅???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??");
+  return parseJson(response, "부스 상세 정보를 불러오지 못했습니다.");
 }
 
 export async function fetchCongestion(boothId) {
   const response = await fetch(`${API_BASE}/booths/${boothId}/congestion`);
-  return parseJson(response, "??源놁궃???브퀗???????덉넮???곕????덈펲.");
+  return parseJson(response, "혼잡도 정보를 불러오지 못했습니다.");
 }
 
 export async function fetchEvents() {
   const response = await fetch(`${API_BASE}/events`);
   return parseJson(
     response,
-    "??ㅻ쾴??嶺뚮ㅄ維뽨빳???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??",
+    "공연 목록을 불러오지 못했습니다.",
   );
 }
 
@@ -66,7 +76,7 @@ export async function sendGps(latitude, longitude) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ latitude, longitude }),
   });
-  return parseJson(response, "GPS ?熬곣뫖苑?????덉넮???곕????덈펲.");
+  return parseJson(response, "GPS 위치 전송에 실패했습니다.");
 }
 
 export async function askChat(question) {
@@ -75,7 +85,7 @@ export async function askChat(question) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question }),
   });
-  return parseJson(response, "嶺????꺅 ??얜Ŧ堉?????덉넮???곕????덈펲.");
+  return parseJson(response, "챗봇 응답을 가져오지 못했습니다.");
 }
 
 export async function createBooth(payload) {
@@ -84,7 +94,7 @@ export async function createBooth(payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?遊붋????諛댁뎽?????덉넮???곕????덈펲.");
+  return parseJson(response, "부스 등록에 실패했습니다.");
 }
 
 export async function updateBooth(id, payload) {
@@ -93,7 +103,7 @@ export async function updateBooth(id, payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?遊붋????瑜곸젧?????덉넮???곕????덈펲.");
+  return parseJson(response, "부스 수정에 실패했습니다.");
 }
 
 export async function updateBoothLiveStatus(id, payload) {
@@ -104,7 +114,7 @@ export async function updateBoothLiveStatus(id, payload) {
   });
   return parseJson(
     response,
-    "?遊붋?????곕뻣???筌먲퐢沅????낆몥??袁⑤콦?????덉넮???곕????덈펲.",
+    "부스 실시간 운영 상태 저장에 실패했습니다.",
   );
 }
 
@@ -117,7 +127,7 @@ export async function uploadBoothImage(id, file) {
     headers: withAuth(),
     body: formData,
   });
-  return parseJson(response, "????嶺뚯솘? ???놁Ŧ??戮?뱺 ???덉넮???곕????덈펲.");
+  return parseJson(response, "부스 이미지 업로드에 실패했습니다.");
 }
 
 export async function reorderBooths(boothIds) {
@@ -128,7 +138,7 @@ export async function reorderBooths(boothIds) {
   });
 
   if (!response.ok) {
-    throw new Error("?遊붋????戮?맋 ????쒑굢????덉넮???곕????덈펲.");
+    throw new Error("부스 순서 저장에 실패했습니다.");
   }
 }
 
@@ -139,7 +149,7 @@ export async function deleteBooth(id) {
   });
 
   if (!response.ok) {
-    throw new Error("?遊붋??????????덉넮???곕????덈펲.");
+    throw new Error("부스 삭제에 실패했습니다.");
   }
 }
 
@@ -149,7 +159,7 @@ export async function createEvent(payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "??ㅻ쾴????諛댁뎽?????덉넮???곕????덈펲.");
+  return parseJson(response, "공연 등록에 실패했습니다.");
 }
 
 export async function updateEvent(id, payload) {
@@ -158,7 +168,7 @@ export async function updateEvent(id, payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "??ㅻ쾴????瑜곸젧?????덉넮???곕????덈펲.");
+  return parseJson(response, "공연 수정에 실패했습니다.");
 }
 
 export async function deleteEvent(id) {
@@ -168,7 +178,7 @@ export async function deleteEvent(id) {
   });
 
   if (!response.ok) {
-    throw new Error("??ㅻ쾴??????????덉넮???곕????덈펲.");
+    throw new Error("공연 삭제에 실패했습니다.");
   }
 }
 
@@ -181,7 +191,7 @@ export async function importBoothCsv(file) {
     headers: withAuth(),
     body: formData,
   });
-  return parseJson(response, "?遊붋??CSV ???놁Ŧ??戮?뱺 ???덉넮???곕????덈펲.");
+  return parseJson(response, "부스 CSV 업로드에 실패했습니다.");
 }
 
 export async function importEventCsv(file) {
@@ -193,12 +203,12 @@ export async function importEventCsv(file) {
     headers: withAuth(),
     body: formData,
   });
-  return parseJson(response, "??ㅻ쾴??CSV ???놁Ŧ??戮?뱺 ???덉넮???곕????덈펲.");
+  return parseJson(response, "공연 CSV 업로드에 실패했습니다.");
 }
 
 export async function fetchActiveNotices() {
   const response = await fetch(`${API_BASE}/notices/active`);
-  return parseJson(response, "??ㅻ쾴? 嶺뚮ㅄ維뽨빳???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??");
+  return parseJson(response, "활성 공지를 불러오지 못했습니다.");
 }
 
 export async function fetchAdminNotices() {
@@ -207,7 +217,7 @@ export async function fetchAdminNotices() {
   });
   return parseJson(
     response,
-    "??㉱?洹먮봿????ㅻ쾴? 嶺뚮ㅄ維뽨빳???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??",
+    "관리자 공지 목록을 불러오지 못했습니다.",
   );
 }
 
@@ -217,7 +227,7 @@ export async function createNotice(payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "??ㅻ쾴? ??諛댁뎽?????덉넮???곕????덈펲.");
+  return parseJson(response, "공지 등록에 실패했습니다.");
 }
 
 export async function updateNotice(id, payload) {
@@ -226,7 +236,7 @@ export async function updateNotice(id, payload) {
     headers: withAuth({ "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "??ㅻ쾴? ??瑜곸젧?????덉넮???곕????덈펲.");
+  return parseJson(response, "공지 수정에 실패했습니다.");
 }
 
 export async function deleteNotice(id) {
@@ -235,7 +245,7 @@ export async function deleteNotice(id) {
     headers: withAuth(),
   });
   if (!response.ok) {
-    throw new Error("??ㅻ쾴? ????????덉넮???곕????덈펲.");
+    throw new Error("공지 삭제에 실패했습니다.");
   }
 }
 
@@ -243,7 +253,7 @@ export async function fetchAdminDashboardKpis() {
   const response = await fetch(`${API_BASE}/admin/dashboard/kpis`, {
     headers: withAuth(),
   });
-  return parseJson(response, "????類ｊ텠??KPI???띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??");
+  return parseJson(response, "관리자 KPI를 불러오지 못했습니다.");
 }
 
 export async function fetchAuditLogs() {
@@ -252,7 +262,7 @@ export async function fetchAuditLogs() {
   });
   return parseJson(
     response,
-    "?띠룆흮亦??β돦裕??믩ご??띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??",
+    "관리자 작업 로그를 불러오지 못했습니다.",
   );
 }
 
@@ -266,7 +276,7 @@ export async function triggerCongestionReliefNotice() {
   );
   return parseJson(
     response,
-    "??源놁궃 ?熬곥굦????ㅻ쾴? ?꾩룇裕됵쭛?????덉넮???곕????덈펲.",
+    "혼잡 완화 공지 발행에 실패했습니다.",
   );
 }
 
@@ -280,7 +290,7 @@ export async function triggerEventStartNotice(eventId) {
   );
   return parseJson(
     response,
-    "??ㅻ쾴????戮곗굚 ??ㅻ쾴? ?꾩룇裕됵쭛?????덉넮???곕????덈펲.",
+    "공연 시작 공지 발행에 실패했습니다.",
   );
 }
 
@@ -288,18 +298,18 @@ export async function fetchTrafficHourly() {
   const response = await fetch(`${API_BASE}/analytics/traffic-hourly`);
   return parseJson(
     response,
-    "??蹂?뜟?????꾩렮維뽪룇???브퀗???????덉넮???곕????덈펲.",
+    "시간대별 방문 데이터를 불러오지 못했습니다.",
   );
 }
 
 export async function fetchPopularBooths() {
   const response = await fetch(`${API_BASE}/analytics/popular-booths`);
-  return parseJson(response, "?筌롫챶???遊붋????亦??브퀗???????덉넮???곕????덈펲.");
+  return parseJson(response, "인기 부스 데이터를 불러오지 못했습니다.");
 }
 
 export async function fetchHeatmap() {
   const response = await fetch(`${API_BASE}/analytics/congestion-heatmap`);
-  return parseJson(response, "??源놁궃 ???낅콦嶺??브퀗???????덉넮???곕????덈펲.");
+  return parseJson(response, "혼잡 히트맵 데이터를 불러오지 못했습니다.");
 }
 
 export function createCongestionStream() {
@@ -350,190 +360,235 @@ export function downloadEventCsv() {
   window.open(`${API_BASE}/export/events.csv`, "_blank", "noopener,noreferrer");
 }
 
-function withOpsKey(path, key) {
-  const url = new URL(`${API_BASE}${path}`);
-  if (key) {
-    url.searchParams.set("key", key);
-  }
-  return url.toString();
+function opsHeaders(key, headers = {}) {
+  return key ? { ...headers, "X-OPS-KEY": key } : headers;
+}
+
+function opsUrl(path) {
+  return `${API_BASE}${path}`;
 }
 
 export async function fetchOpsMasterBootstrap(key) {
-  const response = await fetch(withOpsKey("/ops/master/bootstrap", key));
+  const response = await fetch(opsUrl("/ops/master/bootstrap"), {
+    headers: opsHeaders(key),
+  });
   return parseJson(
     response,
-    "???? ??㉱?洹먮봿????⑥щ턄??? ?띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??",
+    "통합 운영 콘솔을 불러오지 못했습니다.",
   );
 }
 
 export async function updateOpsMasterBoothLiveStatus(boothId, payload, key) {
   const response = await fetch(
-    withOpsKey(`/ops/master/booths/${boothId}/live-status`, key),
+    opsUrl(`/ops/master/booths/${boothId}/live-status`),
     {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: opsHeaders(key, { "Content-Type": "application/json" }),
       body: JSON.stringify(payload),
     },
   );
-  return parseJson(
-    response,
-    "???? ??㉱?洹먮봿?????곕뻣???筌먲퐢沅?????쒑굢????덉넮???곕????덈펲.",
-  );
+  return parseJson(response, "통합 운영 부스 상태 저장에 실패했습니다.");
 }
 
 export async function fetchOpsBoothBootstrap(boothId, key) {
   const response = await fetch(
-    withOpsKey(`/ops/booth/${boothId}/bootstrap`, key),
+    opsUrl(`/ops/booth/${boothId}/bootstrap`),
+    { headers: opsHeaders(key) },
   );
-  return parseJson(
-    response,
-    "?遊붋????㉱?洹먮봿????⑥щ턄??? ?띠럾??筌뤾쑴沅롧춯?뼿 嶺뚮쪇沅?쭛???鍮??",
-  );
+  return parseJson(response, "부스 운영 대시보드를 불러오지 못했습니다.");
 }
 
 export async function updateOpsBoothLiveStatus(boothId, payload, key) {
   const response = await fetch(
-    withOpsKey(`/ops/booth/${boothId}/live-status`, key),
+    opsUrl(`/ops/booth/${boothId}/live-status`),
     {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: opsHeaders(key, { "Content-Type": "application/json" }),
       body: JSON.stringify(payload),
     },
   );
-  return parseJson(
-    response,
-    "?遊붋?????곕뻣???筌먲퐢沅?????쒑굢????덉넮???곕????덈펲.",
-  );
+  return parseJson(response, "부스 운영 상태 저장에 실패했습니다.");
 }
 
 export async function uploadOpsBoothMenuImage(boothId, file, key) {
   const formData = new FormData();
   formData.append("file", file);
   const response = await fetch(
-    withOpsKey(`/ops/booth/${boothId}/menu-image`, key),
+    opsUrl(`/ops/booth/${boothId}/menu-image`),
     {
       method: "POST",
+      headers: opsHeaders(key),
       body: formData,
     },
   );
   return parseJson(response, "메뉴 이미지 업로드에 실패했습니다.");
 }
 export async function createOpsMasterNotice(payload, key) {
-  const response = await fetch(withOpsKey("/ops/master/notices", key), {
+  const response = await fetch(opsUrl("/ops/master/notices"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "???? ??ㅻ쾴? ?繹먮굞夷?????덉넮???곕????덈펲.");
+  return parseJson(response, "통합 운영 공지 등록에 실패했습니다.");
 }
 
 export async function updateOpsMasterNotice(id, payload, key) {
-  const response = await fetch(withOpsKey(`/ops/master/notices/${id}`, key), {
+  const response = await fetch(opsUrl(`/ops/master/notices/${id}`), {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "???? ??ㅻ쾴? ??瑜곸젧?????덉넮???곕????덈펲.");
+  return parseJson(response, "통합 운영 공지 수정에 실패했습니다.");
 }
 
 export async function deleteOpsMasterNotice(id, key) {
-  const response = await fetch(withOpsKey(`/ops/master/notices/${id}`, key), {
+  const response = await fetch(opsUrl(`/ops/master/notices/${id}`), {
     method: "DELETE",
+    headers: opsHeaders(key),
   });
   if (!response.ok) {
-    throw new Error("???? ??ㅻ쾴? ????????덉넮???곕????덈펲.");
+    throw new Error("통합 운영 공지 삭제에 실패했습니다.");
   }
 }
 
 export async function createOpsMasterEvent(payload, key) {
-  const response = await fetch(withOpsKey("/ops/master/events", key), {
+  const response = await fetch(opsUrl("/ops/master/events"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "??ㅻ쾴???繹먮굞夷?????덉넮???곕????덈펲.");
+  return parseJson(response, "공연 등록에 실패했습니다.");
 }
 
 export async function updateOpsMasterEvent(id, payload, key) {
-  const response = await fetch(withOpsKey(`/ops/master/events/${id}`, key), {
+  const response = await fetch(opsUrl(`/ops/master/events/${id}`), {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "??ㅻ쾴????瑜곸젧?????덉넮???곕????덈펲.");
+  return parseJson(response, "공연 수정에 실패했습니다.");
 }
 
 export async function deleteOpsMasterEvent(id, key) {
-  const response = await fetch(withOpsKey(`/ops/master/events/${id}`, key), {
+  const response = await fetch(opsUrl(`/ops/master/events/${id}`), {
     method: "DELETE",
+    headers: opsHeaders(key),
   });
   if (!response.ok) {
-    throw new Error("??ㅻ쾴??????????덉넮???곕????덈펲.");
+    throw new Error("공연 삭제에 실패했습니다.");
   }
 }
 
 export async function createOpsMasterBooth(payload, key) {
-  const response = await fetch(withOpsKey("/ops/master/booths", key), {
+  const response = await fetch(opsUrl("/ops/master/booths"), {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?遊붋???繹먮굞夷?????덉넮???곕????덈펲.");
+  return parseJson(response, "부스 등록에 실패했습니다.");
 }
 
 export async function updateOpsMasterBooth(id, payload, key) {
-  const response = await fetch(withOpsKey(`/ops/master/booths/${id}`, key), {
+  const response = await fetch(opsUrl(`/ops/master/booths/${id}`), {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?遊붋????瑜곸젧?????덉넮???곕????덈펲.");
+  return parseJson(response, "부스 수정에 실패했습니다.");
 }
 
 export async function deleteOpsMasterBooth(id, key) {
-  const response = await fetch(withOpsKey(`/ops/master/booths/${id}`, key), {
+  const response = await fetch(opsUrl(`/ops/master/booths/${id}`), {
     method: "DELETE",
+    headers: opsHeaders(key),
   });
   if (!response.ok) {
-    throw new Error("?遊붋??????????덉넮???곕????덈펲.");
+    throw new Error("부스 삭제에 실패했습니다.");
   }
 }
 
 export async function reorderOpsMasterBooths(boothIds, key) {
-  const response = await fetch(withOpsKey("/ops/master/booths/reorder", key), {
+  const response = await fetch(opsUrl("/ops/master/booths/reorder"), {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
     body: JSON.stringify({ boothIds }),
   });
   if (!response.ok) {
-    throw new Error("?遊붋????戮?맋 ?곌떠??롪퍔?⑵굢????덉넮???곕????덈펲.");
+    throw new Error("부스 순서 저장에 실패했습니다.");
   }
 }
 
 export async function triggerOpsMasterCongestionReliefNotice(key) {
   const response = await fetch(
-    withOpsKey("/ops/master/actions/congestion-relief-notice", key),
+    opsUrl("/ops/master/actions/congestion-relief-notice"),
     {
       method: "POST",
+      headers: opsHeaders(key),
     },
   );
-  return parseJson(
-    response,
-    "??源놁궃 ?熬곥굦????ㅻ쾴? ?꾩룇裕됵쭛?????덉넮???곕????덈펲.",
-  );
+  return parseJson(response, "혼잡 완화 공지 발행에 실패했습니다.");
 }
 
 export async function triggerOpsMasterEventStartNotice(eventId, key) {
   const response = await fetch(
-    withOpsKey(`/ops/master/actions/events/${eventId}/start-notice`, key),
+    opsUrl(`/ops/master/actions/events/${eventId}/start-notice`),
     {
       method: "POST",
+      headers: opsHeaders(key),
     },
   );
-  return parseJson(
-    response,
-    "??ㅻ쾴????戮곗굚 ??ㅻ쾴? ?꾩룇裕됵쭛?????덉넮???곕????덈펲.",
-  );
+  return parseJson(response, "공연 시작 공지 발행에 실패했습니다.");
+}
+
+export async function fetchOpsMasterAiBriefing(key) {
+  const response = await fetch(opsUrl("/ops/master/ai/briefing"), {
+    method: "POST",
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ type: "briefing" }),
+  });
+  return parseJson(response, "AI 운영 브리핑을 생성하지 못했습니다.");
+}
+
+export async function createOpsMasterAiNoticeDraft(type, prompt, key) {
+  const response = await fetch(opsUrl("/ops/master/ai/notice-draft"), {
+    method: "POST",
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ type, prompt }),
+  });
+  return parseJson(response, "AI 공지 초안을 생성하지 못했습니다.");
+}
+
+export async function fetchStaffAiZoneSummary(staffToken) {
+  const response = await fetch(`${API_BASE}/staff/ai/zone-summary`, {
+    method: "POST",
+    headers: staffToken
+      ? { "Content-Type": "application/json", "X-Staff-Token": staffToken }
+      : { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "zone-summary" }),
+  });
+  return parseJson(response, "AI 구역 요약을 생성하지 못했습니다.");
+}
+
+export async function createStaffAiLostItemAssist(prompt, staffToken) {
+  const response = await fetch(`${API_BASE}/staff/ai/lost-item-assist`, {
+    method: "POST",
+    headers: staffToken
+      ? { "Content-Type": "application/json", "X-Staff-Token": staffToken }
+      : { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "lost-item", prompt }),
+  });
+  return parseJson(response, "분실물 AI 응대를 생성하지 못했습니다.");
+}
+
+export async function createStaffAiReplyDraft(prompt, staffToken) {
+  const response = await fetch(`${API_BASE}/staff/ai/reply-draft`, {
+    method: "POST",
+    headers: staffToken
+      ? { "Content-Type": "application/json", "X-Staff-Token": staffToken }
+      : { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "reply", prompt }),
+  });
+  return parseJson(response, "응대 문구를 생성하지 못했습니다.");
 }
 
 export async function fetchStageCrowd(minutes = 10) {
@@ -542,7 +597,7 @@ export async function fetchStageCrowd(minutes = 10) {
   );
   return parseJson(
     response,
-    "???? ??源놁궃???筌먲퐢沅???釉띾쐞???? 嶺뚮쪇沅?쭛???鍮??",
+    "무대 혼잡 데이터를 불러오지 못했습니다.",
   );
 }
 
@@ -552,7 +607,7 @@ export async function fetchBoothReservations(boothId, reservationToken) {
       ? { "X-Reservation-Token": reservationToken }
       : undefined,
   });
-  return parseJson(response, "?덉빟 ?꾪솴??遺덈윭?ㅼ? 紐삵뻽?듬땲??");
+  return parseJson(response, "예약 현황을 불러오지 못했습니다.");
 }
 
 export async function createBoothReservation(
@@ -570,7 +625,7 @@ export async function createBoothReservation(
       : { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  return parseJson(response, "?덉빟???ㅽ뙣?덉뒿?덈떎.");
+  return parseJson(response, "예약에 실패했습니다.");
 }
 
 export async function createBoothReservationCheckInToken(
@@ -587,51 +642,50 @@ export async function createBoothReservationCheckInToken(
         : undefined,
     },
   );
-  return parseJson(response, "QR ?좏겙 諛쒓툒???ㅽ뙣?덉뒿?덈떎.");
+  return parseJson(response, "QR 토큰 발급에 실패했습니다.");
 }
 
 export async function fetchOpsBoothReservations(boothId, key) {
   const response = await fetch(
-    withOpsKey(`/ops/booth/${boothId}/reservations`, key),
+    opsUrl(`/ops/booth/${boothId}/reservations`),
+    { headers: opsHeaders(key) },
   );
-  return parseJson(response, "?덉빟 ??쒕낫?쒕? 遺덈윭?ㅼ? 紐삵뻽?듬땲??");
+  return parseJson(response, "예약 대시보드를 불러오지 못했습니다.");
 }
 
 export async function updateOpsBoothReservationConfig(boothId, payload, key) {
   const response = await fetch(
-    withOpsKey(`/ops/booth/${boothId}/reservations/config`, key),
+    opsUrl(`/ops/booth/${boothId}/reservations/config`),
     {
       method: "PUT",
-      headers: { "Content-Type": "application/json" },
+      headers: opsHeaders(key, { "Content-Type": "application/json" }),
       body: JSON.stringify(payload),
     },
   );
-  return parseJson(response, "?덉빟 ?ㅼ젙 ??μ뿉 ?ㅽ뙣?덉뒿?덈떎.");
+  return parseJson(response, "예약 설정 저장에 실패했습니다.");
 }
 
 export async function checkInOpsBoothReservation(boothId, reservationId, key) {
   const response = await fetch(
-    withOpsKey(
-      `/ops/booth/${boothId}/reservations/${reservationId}/check-in`,
-      key,
-    ),
+    opsUrl(`/ops/booth/${boothId}/reservations/${reservationId}/check-in`),
     {
       method: "POST",
+      headers: opsHeaders(key),
     },
   );
-  return parseJson(response, "泥댄겕??泥섎━???ㅽ뙣?덉뒿?덈떎.");
+  return parseJson(response, "체크인 처리에 실패했습니다.");
 }
 
 export async function checkInOpsBoothReservationByToken(boothId, token, key) {
   const response = await fetch(
-    withOpsKey(`/ops/booth/${boothId}/reservations/check-in/by-token`, key),
+    opsUrl(`/ops/booth/${boothId}/reservations/check-in/by-token`),
     {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: opsHeaders(key, { "Content-Type": "application/json" }),
       body: JSON.stringify({ token }),
     },
   );
-  return parseJson(response, "QR 泥댄겕??泥섎━???ㅽ뙣?덉뒿?덈떎.");
+  return parseJson(response, "QR 체크인 처리에 실패했습니다.");
 }
 
 export async function sendReservationAuthCode(phoneNumber) {
@@ -640,7 +694,7 @@ export async function sendReservationAuthCode(phoneNumber) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phoneNumber }),
   });
-  return parseJson(response, "?몄쬆踰덊샇 諛쒖넚???ㅽ뙣?덉뒿?덈떎.");
+  return parseJson(response, "인증번호 발송에 실패했습니다.");
 }
 
 export async function verifyReservationAuthCode(phoneNumber, code) {
@@ -649,7 +703,7 @@ export async function verifyReservationAuthCode(phoneNumber, code) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ phoneNumber, code }),
   });
-  return parseJson(response, "?몄쬆踰덊샇 ?뺤씤???ㅽ뙣?덉뒿?덈떎.");
+  return parseJson(response, "인증번호 확인에 실패했습니다.");
 }
 
 export async function loginStaff(staffNo, pin) {
@@ -689,8 +743,18 @@ export async function updateMyStaffStatus(staffToken, payload) {
   return parseJson(response, "스태프 상태 업데이트에 실패했습니다.");
 }
 
-export async function fetchLostItems() {
-  const response = await fetch(`${API_BASE}/lost-items`);
+export async function fetchLostItems(staffToken) {
+  const headers = {};
+  const adminToken = getAccessToken();
+  if (adminToken) {
+    headers.Authorization = `Bearer ${adminToken}`;
+  }
+  if (staffToken) {
+    headers["X-Staff-Token"] = staffToken;
+  }
+  const response = await fetch(`${API_BASE}/lost-items`, {
+    headers: Object.keys(headers).length ? headers : undefined,
+  });
   return parseJson(response, "분실물 목록을 불러오지 못했습니다.");
 }
 

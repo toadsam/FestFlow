@@ -113,6 +113,11 @@ public class StaffMember {
         return pinHash;
     }
 
+    public void updateCredentials(String staffNo, String pinHash) {
+        this.staffNo = staffNo;
+        this.pinHash = pinHash;
+    }
+
     public String getName() {
         return name;
     }

@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   MapContainer,
   Marker,
@@ -31,37 +31,82 @@ import {
 import {
   addRecentBooth,
   getFavoriteIds,
-  getRecentBoothIds,
   toggleFavorite,
 } from "../utils/storage";
 
-const markerIcon = L.icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-});
-
 const levelToScore = { 여유: 1, 보통: 2, 혼잡: 3, 매우혼잡: 4 };
 const scoreToLevel = ["여유", "보통", "혼잡", "매우혼잡"];
+const BOOTH_CATEGORY_OPTIONS = ["전체", "주점", "음식", "체험", "이벤트", "굿즈", "안내", "응급", "포토존", "플리마켓", "기타"];
+const BOOTH_DAY_PART_OPTIONS = ["전체", "상시", "주간", "야간"];
+const categoryMarkerMeta = {
+  주점: { icon: "🍺", color: "#f59e0b", shadow: "#f59e0b66", label: "주점" },
+  음식: { icon: "🍜", color: "#ef4444", shadow: "#ef444466", label: "음식" },
+  푸드: { icon: "🍜", color: "#ef4444", shadow: "#ef444466", label: "음식" },
+  체험: { icon: "🎮", color: "#8b5cf6", shadow: "#8b5cf666", label: "체험" },
+  이벤트: { icon: "🎪", color: "#06b6d4", shadow: "#06b6d466", label: "이벤트" },
+  굿즈: { icon: "🎁", color: "#ec4899", shadow: "#ec489966", label: "굿즈" },
+  안내: { icon: "i", color: "#2563eb", shadow: "#2563eb66", label: "안내" },
+  응급: { icon: "✚", color: "#dc2626", shadow: "#dc262666", label: "응급" },
+  포토존: { icon: "📷", color: "#10b981", shadow: "#10b98166", label: "포토존" },
+  포토: { icon: "📷", color: "#10b981", shadow: "#10b98166", label: "포토존" },
+  플리마켓: { icon: "🛍️", color: "#14b8a6", shadow: "#14b8a666", label: "플리마켓" },
+  기타: { icon: "•", color: "#64748b", shadow: "#64748b66", label: "기타" },
+};
 const noticeColor = {
   긴급: "border-rose-300 bg-rose-50 text-rose-700",
   분실물: "border-amber-300 bg-amber-50 text-amber-700",
   우천: "border-sky-300 bg-sky-50 text-sky-700",
 };
 
+function getBoothCategoryMeta(category) {
+  return categoryMarkerMeta[category] || categoryMarkerMeta.기타;
+}
+
+function getBoothMarkerIcon(category) {
+  const meta = getBoothCategoryMeta(category || "주점");
+
+  return L.divIcon({
+    className: "booth-category-marker-wrap",
+    html: `
+      <div class="booth-category-marker" style="--marker-color: ${meta.color}; --marker-shadow: ${meta.shadow};" title="${meta.label}">
+        <span class="booth-category-marker__icon">${meta.icon}</span>
+      </div>
+    `,
+    iconSize: [36, 46],
+    iconAnchor: [18, 46],
+    popupAnchor: [0, -42],
+  });
+}
+
 function normalizeLevel(level) {
-  const mapping = {
-    "?ъ쑀": "여유",
-    蹂댄넻: "보통",
-    "?쇱옟": "혼잡",
-    "留ㅼ슦?쇱옟": "매우혼잡",
-  };
-  return mapping[level] || level;
+  return level;
 }
 
 function normalizeCongestion(item) {
   return item ? { ...item, level: normalizeLevel(item.level) } : item;
+}
+
+function isBoothOpenNow(booth, now = new Date()) {
+  if (!booth.openTime || !booth.closeTime) return true;
+  const [openHour, openMinute] = booth.openTime.split(":").map(Number);
+  const [closeHour, closeMinute] = booth.closeTime.split(":").map(Number);
+  if ([openHour, openMinute, closeHour, closeMinute].some(Number.isNaN)) {
+    return true;
+  }
+  const current = now.getHours() * 60 + now.getMinutes();
+  const open = openHour * 60 + openMinute;
+  const close = closeHour * 60 + closeMinute;
+  if (open === close) return true;
+  if (open < close) return current >= open && current <= close;
+  return current >= open || current <= close;
+}
+
+function boothMetaLabel(booth) {
+  const time =
+    booth.openTime || booth.closeTime
+      ? `${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
+      : "시간 미정";
+  return `${booth.category || "주점"} · ${booth.dayPart || "야간"} · ${time}`;
 }
 
 function ZoomWatcher({ onZoomChange, onMapReady }) {
@@ -126,8 +171,46 @@ function notify(title, body) {
   }
 }
 
+function scheduleIdleTask(callback) {
+  if ("requestIdleCallback" in window) {
+    return { type: "idle", id: window.requestIdleCallback(callback, { timeout: 2500 }) };
+  }
+  return { type: "timeout", id: window.setTimeout(callback, 600) };
+}
+
+function cancelIdleTask(task) {
+  if (!task) return;
+  if (task.type === "idle") {
+    window.cancelIdleCallback(task.id);
+    return;
+  }
+  window.clearTimeout(task.id);
+}
+
+async function fetchCongestionMap(boothList) {
+  const pairs = [];
+  const batchSize = 4;
+
+  for (let i = 0; i < boothList.length; i += batchSize) {
+    const batch = boothList.slice(i, i + batchSize);
+    const results = await Promise.all(
+      batch.map(async (booth) => {
+        try {
+          return [booth.id, normalizeCongestion(await fetchCongestion(booth.id))];
+        } catch {
+          return null;
+        }
+      }),
+    );
+    pairs.push(...results.filter(Boolean));
+  }
+
+  return Object.fromEntries(pairs);
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [booths, setBooths] = useState([]);
   const [congestionMap, setCongestionMap] = useState({});
   const [mapZoom, setMapZoom] = useState(16);
@@ -138,9 +221,11 @@ export default function HomePage() {
   const [query, setQuery] = useState("");
   const [sortBy, setSortBy] = useState("displayOrder");
   const [levelFilter, setLevelFilter] = useState("전체");
+  const [categoryFilter, setCategoryFilter] = useState("전체");
+  const [dayPartFilter, setDayPartFilter] = useState("전체");
+  const [openNowOnly, setOpenNowOnly] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favorites, setFavorites] = useState(getFavoriteIds());
-  const [recentIds, setRecentIds] = useState(getRecentBoothIds());
   const [notices, setNotices] = useState([]);
   const [events, setEvents] = useState([]);
   const [dismissedNoticeIds, setDismissedNoticeIds] = useState([]);
@@ -148,7 +233,11 @@ export default function HomePage() {
   const [gpsSending, setGpsSending] = useState(false);
   const [locatingMe, setLocatingMe] = useState(false);
   const [myLocation, setMyLocation] = useState(null);
+  const [focusedBoothId, setFocusedBoothId] = useState(null);
   const mapRef = useRef(null);
+  const mapSectionRef = useRef(null);
+  const markerRefs = useRef({});
+  const handledFocusParamRef = useRef("");
   const previousCongestionRef = useRef({});
 
   function getPosition(options) {
@@ -176,6 +265,9 @@ export default function HomePage() {
   }
 
   useEffect(() => {
+    let mounted = true;
+    let idleTask = null;
+
     async function load() {
       try {
         const [boothData, noticeData, eventData] = await Promise.all([
@@ -183,27 +275,29 @@ export default function HomePage() {
           fetchActiveNotices(),
           fetchEvents(),
         ]);
+        if (!mounted) return;
         setBooths(boothData);
         setNotices(noticeData);
         setEvents(eventData);
 
-        const congestionData = await Promise.all(
-          boothData.map(async (booth) => [
-            booth.id,
-            normalizeCongestion(await fetchCongestion(booth.id)),
-          ]),
-        );
-        const nextMap = Object.fromEntries(congestionData);
-        previousCongestionRef.current = nextMap;
-        setCongestionMap(nextMap);
+        idleTask = scheduleIdleTask(async () => {
+          const nextMap = await fetchCongestionMap(boothData);
+          if (!mounted || Object.keys(nextMap).length === 0) return;
+          previousCongestionRef.current = nextMap;
+          setCongestionMap(nextMap);
+        });
       } catch (e) {
-        setError(e.message);
+        if (mounted) setError(e.message);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     }
 
     load();
+    return () => {
+      mounted = false;
+      cancelIdleTask(idleTask);
+    };
   }, []);
 
   useEffect(() => {
@@ -278,6 +372,18 @@ export default function HomePage() {
       );
     }
 
+    if (categoryFilter !== "전체") {
+      list = list.filter((booth) => (booth.category || "주점") === categoryFilter);
+    }
+
+    if (dayPartFilter !== "전체") {
+      list = list.filter((booth) => (booth.dayPart || "야간") === dayPartFilter);
+    }
+
+    if (openNowOnly) {
+      list = list.filter((booth) => isBoothOpenNow(booth));
+    }
+
     if (favoritesOnly) {
       list = list.filter((booth) => favorites.includes(booth.id));
     }
@@ -299,35 +405,20 @@ export default function HomePage() {
     congestionMap,
     favorites,
     favoritesOnly,
+    categoryFilter,
+    dayPartFilter,
     levelFilter,
+    openNowOnly,
     query,
     sortBy,
   ]);
 
-  const recentBooths = useMemo(() => {
-    const byId = new Map(booths.map((booth) => [booth.id, booth]));
-    return recentIds.map((id) => byId.get(id)).filter(Boolean);
-  }, [booths, recentIds]);
-
-  const chartData = useMemo(() => {
-    const levels = ["여유", "보통", "혼잡", "매우혼잡"];
-    return levels.map((level) => ({
-      label: level,
-      value: Object.values(congestionMap).filter((item) => item.level === level)
-        .length,
-    }));
-  }, [congestionMap]);
-  const chartMax = useMemo(
-    () => Math.max(1, ...chartData.map((item) => item.value)),
-    [chartData],
-  );
-
   const clusters = useMemo(
-    () => buildClusters(booths, congestionMap),
-    [booths, congestionMap],
+    () => buildClusters(filteredBooths, congestionMap),
+    [filteredBooths, congestionMap],
   );
   const mapQuickBooths = useMemo(() => {
-    return [...booths]
+    return [...filteredBooths]
       .sort((a, b) => {
         const scoreDiff =
           (levelToScore[congestionMap[b.id]?.level] || 1) -
@@ -336,7 +427,7 @@ export default function HomePage() {
         return (a.displayOrder || 999) - (b.displayOrder || 999);
       })
       .slice(0, 12);
-  }, [booths, congestionMap]);
+  }, [filteredBooths, congestionMap]);
 
   const nextEvent = useMemo(() => {
     const now = new Date();
@@ -368,33 +459,51 @@ export default function HomePage() {
       .slice(0, 3);
   }, [booths, congestionMap]);
 
+  useEffect(() => {
+    if (activeView === "list" || !focusedBoothId) return undefined;
+
+    const booth = booths.find((item) => item.id === focusedBoothId);
+    if (!booth) return undefined;
+
+    const timer = window.setTimeout(() => {
+      mapSectionRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+
+      if (!mapRef.current) return;
+
+      mapRef.current.flyTo([booth.latitude, booth.longitude], 18, {
+        duration: 0.6,
+      });
+
+      window.setTimeout(() => {
+        markerRefs.current[focusedBoothId]?.openPopup();
+      }, 450);
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, [activeView, booths, focusedBoothId]);
+
+  useEffect(() => {
+    const focusParam = new URLSearchParams(location.search).get("focusBooth");
+    if (!focusParam || focusParam === handledFocusParamRef.current || booths.length === 0) {
+      return;
+    }
+
+    const boothId = Number(focusParam);
+    if (!Number.isFinite(boothId) || boothId <= 0) {
+      return;
+    }
+
+    handledFocusParamRef.current = focusParam;
+    focusBoothOnMap(boothId);
+  }, [booths, location.search]);
+
   async function refreshAllCongestion() {
-    const updates = await Promise.all(
-      booths.map(async (booth) => [booth.id, await fetchCongestion(booth.id)]),
-    );
-    const normalized = updates.map(([id, item]) => [
-      id,
-      normalizeCongestion(item),
-    ]);
-    const nextMap = Object.fromEntries(normalized);
+    const nextMap = await fetchCongestionMap(booths);
     previousCongestionRef.current = nextMap;
     setCongestionMap(nextMap);
-  }
-
-  async function handleMockGpsBatch() {
-    if (booths.length === 0) return;
-
-    const picks = Array.from(
-      { length: 10 },
-      () => booths[Math.floor(Math.random() * booths.length)],
-    );
-
-    await Promise.all(
-      picks.map((booth) => {
-        const jitter = () => (Math.random() - 0.5) * 0.00045;
-        return sendGps(booth.latitude + jitter(), booth.longitude + jitter());
-      }),
-    );
   }
 
   async function handleSendCurrentGps() {
@@ -459,8 +568,17 @@ export default function HomePage() {
   }
 
   function openBoothDetail(boothId) {
-    setRecentIds(addRecentBooth(boothId));
+    addRecentBooth(boothId);
     navigate(`/booths/${boothId}`);
+  }
+
+  function focusBoothOnMap(boothId) {
+    const booth = booths.find((item) => item.id === boothId);
+    if (!booth) return;
+
+    setFocusedBoothId(boothId);
+    setMapZoom(18);
+    setActiveView("split");
   }
 
   function handleFavorite(boothId) {
@@ -528,6 +646,9 @@ export default function HomePage() {
               </p>
               <p className="mt-1 text-[11px] text-slate-600">
                 대기 {booth.estimatedWaitMinutes ?? "-"}분
+              </p>
+              <p className="mt-1 text-[10px] font-semibold text-cyan-700 line-clamp-1">
+                {booth.category || "주점"} · {booth.dayPart || "야간"}
               </p>
               <div className="mt-1">
                 <CongestionBadge
@@ -601,7 +722,10 @@ export default function HomePage() {
 
       {activeView !== "list" && (
         <>
-          <div className="relative rounded-2xl overflow-hidden border border-slate-200">
+          <div
+            ref={mapSectionRef}
+            className="relative scroll-mt-3 rounded-2xl overflow-hidden border border-slate-200"
+          >
             <MapContainer
               center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]}
               zoom={17}
@@ -629,8 +753,17 @@ export default function HomePage() {
                   return (
                     <Marker
                       key={booth.id}
+                      ref={(marker) => {
+                        if (marker) {
+                          markerRefs.current[booth.id] = marker;
+                        } else {
+                          delete markerRefs.current[booth.id];
+                        }
+                      }}
                       position={[booth.latitude, booth.longitude]}
-                      icon={markerIcon}
+                      icon={getBoothMarkerIcon(booth.category)}
+                      title={`${booth.category || "부스"} ${booth.name}`}
+                      zIndexOffset={focusedBoothId === booth.id ? 1000 : 0}
                     >
                       <Popup>
                         <div className="space-y-1">
@@ -749,11 +882,15 @@ export default function HomePage() {
                         alt={`${booth.name} 이미지`}
                         className="h-full w-full object-cover"
                         loading="lazy"
+                        decoding="async"
                       />
                     </div>
                     <div className="p-2">
                       <p className="text-xs font-semibold text-slate-800 line-clamp-1">
                         {booth.name}
+                      </p>
+                      <p className="mt-1 text-[10px] font-semibold text-cyan-700 line-clamp-1">
+                        {booth.category || "주점"} · {booth.dayPart || "야간"}
                       </p>
                       <div className="mt-1">
                         {congestion ? (
@@ -808,6 +945,10 @@ export default function HomePage() {
                       <p className="mt-1 text-xs text-slate-600 line-clamp-1">
                         {booth.description}
                       </p>
+                      <p className="mt-1 text-[11px] font-semibold text-cyan-700 line-clamp-1">
+                        {boothMetaLabel(booth)}
+                        {isBoothOpenNow(booth) ? " · 운영중" : " · 운영전/종료"}
+                      </p>
                     </button>
                   );
                 })}
@@ -815,13 +956,7 @@ export default function HomePage() {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              onClick={handleMockGpsBatch}
-              className="rounded-xl bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50 min-h-11 py-2.5 font-semibold shadow-[0_0_22px_rgba(34,211,238,0.5)]"
-            >
-              GPS 샘플 생성
-            </button>
+          <div className="grid grid-cols-1 gap-2">
             <button
               type="button"
               onClick={handleSendCurrentGps}
@@ -867,6 +1002,9 @@ export default function HomePage() {
                 onClick={() => {
                   setFavoritesOnly(false);
                   setLevelFilter("전체");
+                  setCategoryFilter("전체");
+                  setDayPartFilter("전체");
+                  setOpenNowOnly(false);
                   setQuery("");
                 }}
                 className="rounded-lg border border-slate-300 min-h-11 py-2 text-sm font-semibold text-slate-700"
@@ -884,9 +1022,41 @@ export default function HomePage() {
 
             <div className="grid grid-cols-2 gap-2">
               <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
+              >
+                {BOOTH_CATEGORY_OPTIONS.map((category) => (
+                  <option key={category} value={category}>
+                    {category === "전체" ? "전체 유형" : category}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={dayPartFilter}
+                onChange={(e) => setDayPartFilter(e.target.value)}
+                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
+              >
+                {BOOTH_DAY_PART_OPTIONS.map((part) => (
+                  <option key={part} value={part}>
+                    {part === "전체" ? "전체 시간대" : part}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={() => setOpenNowOnly((prev) => !prev)}
+                className={`col-span-2 rounded-lg min-h-11 px-2 py-2 text-sm font-semibold ${openNowOnly ? "bg-emerald-600 text-white" : "border border-slate-300 text-slate-700"}`}
+              >
+                운영중
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <select
                 value={levelFilter}
                 onChange={(e) => setLevelFilter(e.target.value)}
-                className="rounded-lg border border-slate-300 px-2 py-2 min-h-11 text-sm"
+                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
               >
                 <option>전체</option>
                 <option>여유</option>
@@ -897,7 +1067,7 @@ export default function HomePage() {
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="rounded-lg border border-slate-300 px-2 py-2 min-h-11 text-sm"
+                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
               >
                 <option value="displayOrder">운영순</option>
                 <option value="name">이름순</option>
@@ -906,53 +1076,28 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-3">
-            <p className="text-sm font-semibold text-slate-700 text-role-ops mb-2">
-              <IconUsers className="mr-1.5 inline h-4 w-4 icon-role-ops" />혼잡도 요약
-            </p>
-            <div className="h-24 flex items-end gap-2 overflow-hidden">
-              {chartData.map((item) => (
-                <div key={item.label} className="flex-1 text-center">
-                  <div
-                    className="mx-auto w-full rounded-t bg-teal-500/80"
-                    style={{
-                      height: `${Math.max(8, Math.round((item.value / chartMax) * 88))}px`,
-                    }}
-                  />
-                  <p className="mt-1 text-[10px] text-slate-600">
-                    {item.label} ({item.value})
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {recentBooths.length > 0 && (
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <p className="text-sm font-semibold text-slate-700 text-role-log mb-2">
-                <IconClock className="mr-1.5 inline h-4 w-4 icon-role-log" />최근 본 부스
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {recentBooths.map((booth) => (
-                  <button
-                    key={booth.id}
-                    type="button"
-                    onClick={() => openBoothDetail(booth.id)}
-                    className="rounded-full bg-slate-100 px-3 py-2 min-h-11 text-sm text-slate-700"
-                  >
-                    {booth.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           {loading && (
             <p className="text-sm text-slate-600">
               부스와 혼잡도 데이터를 불러오는 중...
             </p>
           )}
-          {error && <p className="text-sm text-rose-600">{error}</p>}
+          {error && (
+            <article className="overflow-hidden rounded-2xl border border-amber-300/40 bg-slate-950/75">
+              <img
+                src="/images/location-error.png"
+                alt=""
+                className="h-32 w-full object-cover object-[70%_center]"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="p-3">
+                <p className="text-sm font-bold text-amber-100">{error}</p>
+                <p className="mt-1 text-xs text-cyan-100/70">
+                  지도와 혼잡도 추천은 위치 권한과 네트워크 상태에 따라 달라질 수 있습니다.
+                </p>
+              </div>
+            </article>
+          )}
 
           {!loading && filteredBooths.length === 0 && (
             <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-sm text-slate-600">
@@ -964,7 +1109,7 @@ export default function HomePage() {
           <div
             className={
               isGridView
-                ? "grid grid-cols-2 gap-3 stagger-list"
+                ? "booth-card-grid stagger-list"
                 : "space-y-3 stagger-list"
             }
           >
@@ -973,59 +1118,79 @@ export default function HomePage() {
               const isFavorite = favorites.includes(booth.id);
 
               return (
-                <button
+                <article
                   key={booth.id}
-                  type="button"
-                  onClick={() => openBoothDetail(booth.id)}
-                  className="w-full h-full text-left rounded-2xl border border-slate-200 bg-white overflow-hidden"
+                  className={isGridView ? "booth-list-card" : "w-full rounded-2xl border border-slate-200 bg-white overflow-hidden"}
                 >
-                  <div className="aspect-[16/9] bg-slate-100">
+                  <div className="booth-list-card__image bg-slate-100">
                     <img
                       src={resolveBoothImageUrl(booth)}
                       alt={`${booth.name} 대표 이미지`}
                       className="h-full w-full object-cover"
                       loading="lazy"
+                      decoding="async"
                     />
                   </div>
-                  <div className="p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="font-bold text-slate-800 leading-tight break-keep">
-                          {booth.name}
-                        </h3>
-                        <p className="text-xs text-slate-700 mt-1">
-                          혼잡도 {congestion?.level || "집계중"}
-                          {" · "}
-                          대기 {booth.estimatedWaitMinutes ?? "-"}분
-                        </p>
-                        <p className="text-xs text-slate-600 mt-1 line-clamp-1">
-                          {booth.description}
-                        </p>
-                      </div>
-                      <div className="shrink-0">
-                        {congestion ? (
-                          <CongestionBadge level={congestion.level} />
-                        ) : null}
-                      </div>
+                  <div className="booth-list-card__body">
+                    <h3 className="booth-list-card__title text-slate-800 break-keep">
+                      {booth.name}
+                    </h3>
+                    <div className="booth-list-card__tags">
+                      <span className="rounded-full border border-cyan-300/60 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-100">
+                        {booth.category || "주점"}
+                      </span>
+                      <span className="rounded-full border border-cyan-300/40 bg-slate-900/40 px-2 py-0.5 text-[10px] font-bold text-cyan-100">
+                        {booth.dayPart || "야간"}
+                      </span>
+                      <span className="rounded-full border border-slate-400/40 bg-slate-900/40 px-2 py-0.5 text-[10px] font-bold text-slate-100">
+                        {congestion?.level || "집계중"}
+                      </span>
                     </div>
-                    <div className="mt-2 flex items-center justify-between">
-                      <p className="text-xs text-teal-700 font-semibold">
-                        자세히 보기 →
-                      </p>
+                    <p className="booth-list-card__meta text-cyan-700">
+                      대기 {booth.estimatedWaitMinutes ?? "-"}분
+                      {" · "}
+                      {booth.openTime || booth.closeTime
+                        ? `${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
+                        : "시간 미정"}
+                      {" · "}
+                      {isBoothOpenNow(booth) ? "운영중" : "운영전/종료"}
+                    </p>
+                    <p className="booth-list-card__reservation text-slate-600">
+                      {booth.reservationEnabled === false ? "예약 없이 현장 이용" : "\u00A0"}
+                    </p>
+                    <p className={`${isGridView ? "hidden" : "mt-1 line-clamp-1"} text-xs text-slate-600`}>
+                      {booth.description}
+                    </p>
+                    <div className="booth-card-actions">
                       <button
                         type="button"
-                        aria-label="즐겨찾기"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleFavorite(booth.id);
-                        }}
-                        className="text-2xl leading-none min-h-11 min-w-11"
+                        aria-label={`${booth.name} 자세히 보기`}
+                        title="자세히 보기"
+                        onClick={() => openBoothDetail(booth.id)}
+                        className="booth-card-action"
+                      >
+                        🔍
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={`${booth.name} 지도에서 보기`}
+                        title="지도에서 보기"
+                        onClick={() => focusBoothOnMap(booth.id)}
+                        className="booth-card-action booth-card-action--map"
+                      >
+                        <IconMapPin className="h-5 w-5 icon-role-map" />
+                      </button>
+                      <button
+                        type="button"
+                        aria-label={isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
+                        onClick={() => handleFavorite(booth.id)}
+                        className={`booth-card-action booth-card-action--favorite ${isFavorite ? "booth-card-action--favorite-on" : ""}`}
                       >
                         {isFavorite ? "⭐" : "☆"}
                       </button>
                     </div>
                   </div>
-                </button>
+                </article>
               );
             })}
           </div>

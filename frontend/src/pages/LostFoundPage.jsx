@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { claimLostItem, createLostItemStream, fetchLostItems } from "../api";
 import { IconBox, IconClock, IconSearch } from "../components/UxIcons";
 
@@ -18,17 +19,19 @@ const STATUS_LABELS = {
 function toTelHref(value) {
   const raw = `${value || ""}`.trim();
   if (!raw) return "";
+  if (raw.includes("*")) return "";
   const digits = raw.replace(/[^0-9+]/g, "");
   if (!digits) return "";
   return `tel:${digits}`;
 }
 
 export default function LostFoundPage() {
+  const location = useLocation();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() => new URLSearchParams(location.search).get("query") || "");
   const [claimOpenId, setClaimOpenId] = useState(null);
   const [claimDrafts, setClaimDrafts] = useState({});
   const [claimingId, setClaimingId] = useState(null);
@@ -49,6 +52,11 @@ export default function LostFoundPage() {
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    const nextQuery = new URLSearchParams(location.search).get("query") || "";
+    setQuery(nextQuery);
+  }, [location.search]);
 
   useEffect(() => {
     const stream = createLostItemStream();
@@ -214,7 +222,13 @@ export default function LostFoundPage() {
 
                 {item.imageUrl && (
                   <div className="mt-2 overflow-hidden rounded border border-cyan-300/30">
-                    <img src={item.imageUrl} alt={`${item.title} 사진`} className="h-40 w-full object-cover" />
+                    <img
+                      src={item.imageUrl}
+                      alt={`${item.title} 사진`}
+                      className="h-40 w-full object-cover"
+                      loading="lazy"
+                      decoding="async"
+                    />
                   </div>
                 )}
 
@@ -305,7 +319,23 @@ export default function LostFoundPage() {
               </article>
             );
           })}
-          {filteredItems.length === 0 && <p className="text-sm text-cyan-200/80">조건에 맞는 분실물이 없습니다.</p>}
+          {filteredItems.length === 0 && (
+            <article className="overflow-hidden rounded-2xl border border-cyan-300/35 bg-slate-950/75">
+              <img
+                src="/images/lost-empty.png"
+                alt=""
+                className="h-44 w-full object-cover object-[70%_center]"
+                loading="lazy"
+                decoding="async"
+              />
+              <div className="p-3">
+                <p className="text-sm font-bold text-cyan-100">조건에 맞는 분실물이 없습니다.</p>
+                <p className="mt-1 text-xs text-cyan-200/75">
+                  물품 종류, 색상, 발견 위치처럼 다른 단어로 다시 검색해 보세요.
+                </p>
+              </div>
+            </article>
+          )}
         </div>
       )}
     </section>

@@ -21,7 +21,7 @@ React + Spring Boot + MySQL 기반의 축제 관리 앱입니다.
 
 ## DB 연결 정보
 
-기본값은 로컬 MySQL(`festival_db`, `root`, 비밀번호 없음) 기준이며, 환경변수로 오버라이드할 수 있습니다.
+기본값은 공통 설정 기준으로 로컬 MySQL(`festival_db`, `root`, 비밀번호 없음)을 바라봅니다. `bootRun`은 `local` 프로파일을 사용하므로 로컬 기본 비밀번호는 `application-local.properties`의 `6247`이며, 환경변수로 오버라이드할 수 있습니다.
 
 ```properties
 spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/festival_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true}
@@ -41,12 +41,14 @@ cd backend
 - 서버: `http://localhost:8080`
 - `bootRun`은 기본적으로 `local` 프로파일로 실행됩니다.
 - 로컬 DB 비밀번호가 다르면 환경변수로 오버라이드하세요.
-  - `SPRING_DATASOURCE_PASSWORD_LOCAL`
-  - `SPRING_DATASOURCE_USERNAME_LOCAL`
-  - `SPRING_DATASOURCE_URL_LOCAL`
+- `SPRING_DATASOURCE_PASSWORD_LOCAL`
+- `SPRING_DATASOURCE_USERNAME_LOCAL`
+- `SPRING_DATASOURCE_URL_LOCAL`
+- `APP_INIT_ADMIN_USERNAME_LOCAL`
+- `APP_INIT_ADMIN_PASSWORD_LOCAL`
 - 첫 실행 시 테이블 자동 생성
 - 더미 데이터 자동 삽입(CommandLineRunner)
-- 기본 관리자 계정 자동 생성
+- 로컬 기본 관리자 계정 자동 생성
   - ID: `admin`
   - PW: `admin1234`
 
@@ -167,6 +169,7 @@ npm run dev
 
 - `frontend/public/manifest.json`
 - `frontend/public/service-worker.js`
+- 설치 아이콘: `frontend/public/pwa-192.png`, `frontend/public/pwa-512.png`
 - 오프라인 페이지: `frontend/public/offline.html`
 
 ## 검증 커맨드
@@ -185,8 +188,12 @@ npm run dev
 - `SPRING_DATASOURCE_URL`
 - `SPRING_DATASOURCE_USERNAME`
 - `SPRING_DATASOURCE_PASSWORD`
+- `SPRING_PROFILES_ACTIVE=prod`
+- `SPRING_JPA_HIBERNATE_DDL_AUTO` (`prod` 기본값은 `validate`; 초기 DB 생성/마이그레이션 단계에서만 명시적으로 조정)
 - `APP_JWT_SECRET` (최소 32자 이상 권장)
 - `APP_CORS_ALLOWED_ORIGINS` (쉼표 구분, 예: `https://festflow.vercel.app,https://festflow-git-main-xxx.vercel.app`)
+- `APP_INIT_ADMIN_USERNAME`
+- `APP_INIT_ADMIN_PASSWORD`
 
 선택 환경변수:
 

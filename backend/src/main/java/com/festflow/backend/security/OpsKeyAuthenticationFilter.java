@@ -34,10 +34,7 @@ public class OpsKeyAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
 
-        String key = request.getParameter("key");
-        if (key == null || key.isBlank()) {
-            key = request.getHeader("X-OPS-KEY");
-        }
+        String key = request.getHeader("X-OPS-KEY");
 
         Optional<OpsIdentity> authenticated = opsKeyService.authenticate(key);
         if (authenticated.isEmpty()) {

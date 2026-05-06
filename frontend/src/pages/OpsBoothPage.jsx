@@ -1,5 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
   checkInOpsBoothReservation,
   checkInOpsBoothReservationByToken,
@@ -20,6 +20,8 @@ import {
 import { resolveBoothImageUrl } from "../config/boothImages";
 
 const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
+const BOOTH_CATEGORIES = ["주점", "음식", "체험", "이벤트", "굿즈", "안내", "응급", "포토존", "플리마켓", "기타"];
+const BOOTH_DAY_PARTS = ["상시", "주간", "야간"];
 
 function confirmAction(message) {
   return window.confirm(`실행할까요?\n\n${message}`);
@@ -146,11 +148,7 @@ function TableSeatLayout({ tableName, totalSeats, availableSeats, onSeatClick })
 
 export default function OpsBoothPage() {
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
-  const initialKey =
-    searchParams.get("key") ||
-    sessionStorage.getItem(BOOTH_KEY_STORAGE_KEY) ||
-    "";
+  const initialKey = sessionStorage.getItem(BOOTH_KEY_STORAGE_KEY) || "";
 
   const [keyInput, setKeyInput] = useState(initialKey);
   const [key, setKey] = useState(initialKey);
@@ -165,6 +163,13 @@ export default function OpsBoothPage() {
     liveStatusMessage: "",
     boothIntro: "",
     menuImageUrl: "",
+    category: "주점",
+    dayPart: "야간",
+    openTime: "",
+    closeTime: "",
+    tags: "",
+    contentJson: "",
+    reservationEnabled: true,
   });
   const [menuImageFile, setMenuImageFile] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
@@ -198,6 +203,13 @@ export default function OpsBoothPage() {
         liveStatusMessage: next.booth.liveStatusMessage ?? "",
         boothIntro: next.booth.boothIntro ?? "",
         menuImageUrl: next.booth.menuImageUrl ?? "",
+        category: next.booth.category ?? "주점",
+        dayPart: next.booth.dayPart ?? "야간",
+        openTime: next.booth.openTime ?? "",
+        closeTime: next.booth.closeTime ?? "",
+        tags: next.booth.tags ?? "",
+        contentJson: next.booth.contentJson ?? "",
+        reservationEnabled: next.booth.reservationEnabled ?? true,
       });
       setMenuItems(parseMenuBoardJson(next.booth.menuBoardJson));
       setReservationDraft({
@@ -255,6 +267,13 @@ export default function OpsBoothPage() {
           boothIntro: draft.boothIntro || null,
           menuImageUrl: draft.menuImageUrl || null,
           menuBoardJson: JSON.stringify(menuItems),
+          category: draft.category || null,
+          dayPart: draft.dayPart || null,
+          openTime: draft.openTime || null,
+          closeTime: draft.closeTime || null,
+          tags: draft.tags || null,
+          contentJson: draft.contentJson || null,
+          reservationEnabled: draft.reservationEnabled,
         },
         key,
       );
@@ -613,7 +632,7 @@ export default function OpsBoothPage() {
             className="border rounded px-2 py-2 text-sm"
             value={keyInput}
             onChange={(e) => setKeyInput(e.target.value)}
-            placeholder="부스 운영 키"
+            placeholder="부스 번호"
           />
           <button
             type="submit"
@@ -643,6 +662,8 @@ export default function OpsBoothPage() {
               src={resolveBoothImageUrl(data.booth)}
               alt={`${data.booth.name} 이미지`}
               className="h-full w-full object-cover"
+              loading="lazy"
+              decoding="async"
             />
           </div>
 
@@ -683,6 +704,84 @@ export default function OpsBoothPage() {
                   실시간 운영 상태
                 </p>
                 <span className="text-xs text-slate-500">빠른 수정</span>
+              </div>
+              <div className="rounded border border-cyan-100 bg-cyan-50/40 p-2 space-y-2">
+                <p className="text-xs font-semibold text-slate-700">부스 유형/운영시간</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <select
+                    className="border rounded px-2 py-2 text-sm bg-white"
+                    value={draft.category}
+                    onChange={(e) =>
+                      setDraft((prev) => ({ ...prev, category: e.target.value }))
+                    }
+                  >
+                    {BOOTH_CATEGORIES.map((category) => (
+                      <option key={category} value={category}>
+                        {category}
+                      </option>
+                    ))}
+                  </select>
+                  <select
+                    className="border rounded px-2 py-2 text-sm bg-white"
+                    value={draft.dayPart}
+                    onChange={(e) =>
+                      setDraft((prev) => ({ ...prev, dayPart: e.target.value }))
+                    }
+                  >
+                    {BOOTH_DAY_PARTS.map((part) => (
+                      <option key={part} value={part}>
+                        {part}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="time"
+                    className="border rounded px-2 py-2 text-sm bg-white"
+                    value={draft.openTime}
+                    onChange={(e) =>
+                      setDraft((prev) => ({ ...prev, openTime: e.target.value }))
+                    }
+                  />
+                  <input
+                    type="time"
+                    className="border rounded px-2 py-2 text-sm bg-white"
+                    value={draft.closeTime}
+                    onChange={(e) =>
+                      setDraft((prev) => ({ ...prev, closeTime: e.target.value }))
+                    }
+                  />
+                </div>
+                <input
+                  className="w-full border rounded px-2 py-2 text-sm bg-white"
+                  placeholder="태그 (예: 예약필요, 무료, 실내)"
+                  value={draft.tags}
+                  onChange={(e) =>
+                    setDraft((prev) => ({ ...prev, tags: e.target.value }))
+                  }
+                />
+                <textarea
+                  className="w-full border rounded px-2 py-2 text-sm bg-white min-h-16"
+                  placeholder="부스 유형별 추가 정보"
+                  value={draft.contentJson}
+                  onChange={(e) =>
+                    setDraft((prev) => ({ ...prev, contentJson: e.target.value }))
+                  }
+                />
+                <label className="flex items-center gap-2 rounded border bg-white px-2 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={draft.reservationEnabled}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        reservationEnabled: e.target.checked,
+                      }))
+                    }
+                  />
+                  예약/웨이팅 기능 사용
+                </label>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <input
@@ -755,6 +854,8 @@ export default function OpsBoothPage() {
                     src={draft.menuImageUrl}
                     alt="음식 사진 미리보기"
                     className="h-32 w-full rounded object-cover"
+                    loading="lazy"
+                    decoding="async"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}

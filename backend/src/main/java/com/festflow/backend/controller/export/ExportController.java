@@ -28,7 +28,7 @@ public class ExportController {
     @GetMapping(value = "/booths.csv", produces = "text/csv")
     public ResponseEntity<String> exportBooths() {
         List<BoothResponseDto> booths = boothService.getAllBooths();
-        StringBuilder sb = new StringBuilder("id,name,latitude,longitude,description,displayOrder,imageUrl\n");
+        StringBuilder sb = new StringBuilder("id,name,latitude,longitude,description,displayOrder,imageUrl,category,dayPart,openTime,closeTime,tags,reservationEnabled\n");
         booths.forEach(booth -> sb.append(csvLine(
                 String.valueOf(booth.id()),
                 booth.name(),
@@ -36,7 +36,13 @@ public class ExportController {
                 String.valueOf(booth.longitude()),
                 booth.description(),
                 String.valueOf(booth.displayOrder()),
-                booth.imageUrl()
+                booth.imageUrl(),
+                booth.category(),
+                booth.dayPart(),
+                booth.openTime() != null ? String.valueOf(booth.openTime()) : "",
+                booth.closeTime() != null ? String.valueOf(booth.closeTime()) : "",
+                booth.tags(),
+                String.valueOf(booth.reservationEnabled())
         )));
 
         return ResponseEntity.ok()
@@ -48,13 +54,20 @@ public class ExportController {
     @GetMapping(value = "/events.csv", produces = "text/csv")
     public ResponseEntity<String> exportEvents() {
         List<EventResponseDto> events = eventService.getAllEvents();
-        StringBuilder sb = new StringBuilder("id,title,startTime,endTime,status\n");
+        StringBuilder sb = new StringBuilder("id,title,startTime,endTime,status,imageUrl,imageCredit,imageFocus,statusOverride,liveMessage,delayMinutes,statusUpdatedAt\n");
         events.forEach(event -> sb.append(csvLine(
                 String.valueOf(event.id()),
                 event.title(),
                 String.valueOf(event.startTime()),
                 String.valueOf(event.endTime()),
-                event.status()
+                event.status(),
+                event.imageUrl(),
+                event.imageCredit(),
+                event.imageFocus(),
+                event.statusOverride(),
+                event.liveMessage(),
+                event.delayMinutes() != null ? String.valueOf(event.delayMinutes()) : "",
+                event.statusUpdatedAt() != null ? String.valueOf(event.statusUpdatedAt()) : ""
         )));
 
         return ResponseEntity.ok()

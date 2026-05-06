@@ -42,7 +42,7 @@ class BoothControllerTest {
     @Test
     void getBoothsReturnsList() throws Exception {
         Mockito.when(boothService.getAllBooths()).thenReturn(List.of(
-                new BoothResponseDto(1L, "Booth A", 37.1, 127.1, "desc", 1, "img", 5, 20, "running", null)
+                new BoothResponseDto(1L, "Booth A", 37.1, 127.1, "desc", 1, "img", 5, 20, "running", null, null, null, null, "주점", "야간", null, null, null, null, true)
         ));
 
         mockMvc.perform(get("/api/booths"))

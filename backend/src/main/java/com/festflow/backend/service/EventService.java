@@ -39,7 +39,27 @@ public class EventService {
     }
 
     public EventResponseDto createEvent(EventUpsertRequestDto requestDto) {
-        FestivalEvent event = new FestivalEvent(requestDto.title(), requestDto.startTime(), requestDto.endTime(), "\uC608\uC815");
+        FestivalEvent event = new FestivalEvent(
+                requestDto.title(),
+                requestDto.startTime(),
+                requestDto.endTime(),
+                "\uC608\uC815",
+                requestDto.imageUrl(),
+                requestDto.imageCredit(),
+                requestDto.imageFocus()
+        );
+        event.setStatusOverride(requestDto.statusOverride());
+        event.update(
+                requestDto.title(),
+                requestDto.startTime(),
+                requestDto.endTime(),
+                requestDto.imageUrl(),
+                requestDto.imageCredit(),
+                requestDto.imageFocus(),
+                requestDto.statusOverride(),
+                requestDto.liveMessage(),
+                requestDto.delayMinutes()
+        );
         FestivalEvent saved = eventRepository.save(event);
         return toDto(saved, resolveStatus(saved, LocalDateTime.now()));
     }
@@ -54,7 +74,17 @@ public class EventService {
         FestivalEvent event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "공연을 찾을 수 없습니다."));
 
-        event.update(requestDto.title(), requestDto.startTime(), requestDto.endTime());
+        event.update(
+                requestDto.title(),
+                requestDto.startTime(),
+                requestDto.endTime(),
+                requestDto.imageUrl(),
+                requestDto.imageCredit(),
+                requestDto.imageFocus(),
+                requestDto.statusOverride(),
+                requestDto.liveMessage(),
+                requestDto.delayMinutes()
+        );
         FestivalEvent saved = eventRepository.save(event);
         return toDto(saved, resolveStatus(saved, LocalDateTime.now()));
     }
@@ -77,11 +107,27 @@ public class EventService {
                 event.getTitle(),
                 event.getStartTime(),
                 event.getEndTime(),
-                status
+                status,
+                event.getImageUrl(),
+                event.getImageCredit(),
+                event.getImageFocus(),
+                event.getStatusOverride(),
+                event.getLiveMessage(),
+                event.getDelayMinutes(),
+                event.getStatusUpdatedAt()
         );
     }
 
     private String resolveStatus(FestivalEvent event, LocalDateTime now) {
+        if (event.getStatusOverride() != null && !event.getStatusOverride().isBlank()) {
+            String override = event.getStatusOverride();
+            if (!override.equals(event.getStatus())) {
+                event.setStatus(override);
+                eventRepository.save(event);
+            }
+            return override;
+        }
+
         String status;
         if (now.isBefore(event.getStartTime())) {
             status = "\uC608\uC815";

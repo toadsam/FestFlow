@@ -3,6 +3,8 @@ package com.festflow.backend.dto;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
+import java.time.LocalTime;
+
 public record BoothUpsertRequestDto(
         @NotBlank String name,
         @NotNull Double latitude,
@@ -15,6 +17,13 @@ public record BoothUpsertRequestDto(
         String liveStatusMessage,
         String boothIntro,
         String menuImageUrl,
-        String menuBoardJson
+        String menuBoardJson,
+        String category,
+        String dayPart,
+        LocalTime openTime,
+        LocalTime closeTime,
+        String tags,
+        String contentJson,
+        Boolean reservationEnabled
 ) {
 }

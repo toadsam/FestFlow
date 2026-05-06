@@ -191,3 +191,23 @@ export function IconClipboard(props) {
     </IconBase>
   );
 }
+
+export function IconMic(props) {
+  return (
+    <IconBase {...props}>
+      <rect x="9" y="3" width="6" height="11" rx="3" />
+      <path d="M5 11a7 7 0 0 0 14 0" />
+      <path d="M12 18v3" />
+      <path d="M9 21h6" />
+    </IconBase>
+  );
+}
+
+export function IconSend(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M21 3 10 14" />
+      <path d="m21 3-7 18-4-7-7-4 18-7Z" />
+    </IconBase>
+  );
+}

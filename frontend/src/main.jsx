@@ -1,21 +1,41 @@
-﻿import React from "react";
+import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import App from "./App";
-import HomePage from "./pages/HomePage";
-import EventPage from "./pages/EventPage";
-import LineupPage from "./pages/LineupPage";
-import AnalyticsPage from "./pages/AnalyticsPage";
-import StageMapPage from "./pages/StageMapPage";
-import ChatPage from "./pages/ChatPage";
-import BoothDetailPage from "./pages/BoothDetailPage";
-import AdminPage from "./pages/AdminPage";
-import OpsMasterPage from "./pages/OpsMasterPage";
-import OpsBoothPage from "./pages/OpsBoothPage";
-import StaffPage from "./pages/StaffPage";
-import LostFoundPage from "./pages/LostFoundPage";
+import { LanguageProvider } from "./i18n";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
+
+const HomePage = lazy(() => import("./pages/HomePage"));
+const EventPage = lazy(() => import("./pages/EventPage"));
+const LineupPage = lazy(() => import("./pages/LineupPage"));
+const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
+const StageMapPage = lazy(() => import("./pages/StageMapPage"));
+const ChatPage = lazy(() => import("./pages/ChatPage"));
+const BoothDetailPage = lazy(() => import("./pages/BoothDetailPage"));
+const AdminPage = lazy(() => import("./pages/AdminPage"));
+const OpsMasterPage = lazy(() => import("./pages/OpsMasterPage"));
+const OpsBoothPage = lazy(() => import("./pages/OpsBoothPage"));
+const StaffPage = lazy(() => import("./pages/StaffPage"));
+const LostFoundPage = lazy(() => import("./pages/LostFoundPage"));
+
+function PageFallback() {
+  return (
+    <div className="cyber-page min-h-[240px] flex items-center justify-center">
+      <p className="text-sm font-semibold text-cyan-100">
+        화면을 불러오는 중...
+      </p>
+    </div>
+  );
+}
+
+function lazyElement(Page) {
+  return (
+    <Suspense fallback={<PageFallback />}>
+      <Page />
+    </Suspense>
+  );
+}
 
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
@@ -27,24 +47,26 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<App />}>
-          <Route index element={<HomePage />} />
-          <Route path="events" element={<EventPage />} />
-          <Route path="events/lineup" element={<LineupPage />} />
-          <Route path="analytics" element={<AnalyticsPage />} />
-          <Route path="stage-map" element={<StageMapPage />} />
-          <Route path="chat" element={<ChatPage />} />
-          <Route path="lost-found" element={<LostFoundPage />} />
-          <Route path="admin" element={<AdminPage />} />
-          <Route path="ops/master" element={<OpsMasterPage />} />
-          <Route path="ops/booth/:id" element={<OpsBoothPage />} />
-          <Route path="staff" element={<StaffPage />} />
-          <Route path="booths/:id" element={<BoothDetailPage />} />
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Route>
-      </Routes>
-    </BrowserRouter>
+    <LanguageProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<App />}>
+            <Route index element={lazyElement(HomePage)} />
+            <Route path="events" element={lazyElement(EventPage)} />
+            <Route path="events/lineup" element={lazyElement(LineupPage)} />
+            <Route path="analytics" element={lazyElement(AnalyticsPage)} />
+            <Route path="stage-map" element={lazyElement(StageMapPage)} />
+            <Route path="chat" element={lazyElement(ChatPage)} />
+            <Route path="lost-found" element={lazyElement(LostFoundPage)} />
+            <Route path="admin" element={lazyElement(AdminPage)} />
+            <Route path="ops/master" element={lazyElement(OpsMasterPage)} />
+            <Route path="ops/booth/:id" element={lazyElement(OpsBoothPage)} />
+            <Route path="staff" element={lazyElement(StaffPage)} />
+            <Route path="booths/:id" element={lazyElement(BoothDetailPage)} />
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </LanguageProvider>
   </React.StrictMode>,
 );

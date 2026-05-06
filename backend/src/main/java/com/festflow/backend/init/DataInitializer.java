@@ -3,12 +3,14 @@ package com.festflow.backend.init;
 import com.festflow.backend.entity.AdminUser;
 import com.festflow.backend.entity.Booth;
 import com.festflow.backend.entity.FestivalEvent;
+import com.festflow.backend.entity.LostItem;
 import com.festflow.backend.entity.Notice;
 import com.festflow.backend.entity.StaffMember;
 import com.festflow.backend.entity.StaffStatus;
 import com.festflow.backend.repository.AdminUserRepository;
 import com.festflow.backend.repository.BoothRepository;
 import com.festflow.backend.repository.EventRepository;
+import com.festflow.backend.repository.LostItemRepository;
 import com.festflow.backend.repository.NoticeRepository;
 import com.festflow.backend.repository.StaffMemberRepository;
 import org.springframework.beans.factory.annotation.Value;
@@ -18,9 +20,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.ArrayList;
 
 @Configuration
 public class DataInitializer {
@@ -31,91 +33,40 @@ public class DataInitializer {
     @Value("${app.init.admin.password:}")
     private String initialAdminPassword;
 
+    @Value("${app.init.simple-demo-credentials:false}")
+    private boolean simpleDemoCredentials;
+
     @Bean
     public CommandLineRunner seedData(
             BoothRepository boothRepository,
             EventRepository eventRepository,
             AdminUserRepository adminUserRepository,
             NoticeRepository noticeRepository,
+            LostItemRepository lostItemRepository,
             StaffMemberRepository staffMemberRepository,
             PasswordEncoder passwordEncoder
     ) {
         return args -> {
-            List<Booth> departmentBooths = List.of(
-                    new Booth("디지털미디어학과 네온주점", 37.2832, 127.0451, "디지털미디어학과에서 운영하는 테마 주점", 1, "https://picsum.photos/seed/festflow-ajou-1/800/450", 7, 120, "시그니처 음료 판매 중", LocalDateTime.now()),
-                    new Booth("산업공학과 이음주점", 37.2824, 127.0439, "산업공학과 학생회가 운영하는 주점", 2, "https://picsum.photos/seed/festflow-ajou-2/800/450", 5, 60, "대기줄이 빠르게 줄고 있어요", LocalDateTime.now()),
-                    new Booth("기계공학과 톱니주점", 37.2817, 127.0447, "기계공학과 동아리 연합 주점", 3, "https://picsum.photos/seed/festflow-ajou-3/800/450", 3, 35, "인기 메뉴 재고 여유", LocalDateTime.now()),
-                    new Booth("첨단신소재공학과 합금주점", 37.2829, 127.0428, "첨단신소재공학과에서 준비한 축제 주점", 4, "https://picsum.photos/seed/festflow-ajou-4/800/450", 4, 80, "테이블 회전이 원활합니다", LocalDateTime.now()),
-                    new Booth("전자공학과 파동주점", 37.2830, 127.0441, "전자공학과의 시그니처 야식 주점", 5, "https://picsum.photos/seed/festflow-ajou-5/800/450", 6, 95, "핫도그 세트 인기", LocalDateTime.now()),
-                    new Booth("소프트웨어학과 버그제로주점", 37.2822, 127.0449, "소프트웨어학과 학생회 운영 주점", 6, "https://picsum.photos/seed/festflow-ajou-6/800/450", 8, 70, "주문 처리 원활", LocalDateTime.now()),
-                    new Booth("화학공학과 비커주점", 37.2819, 127.0436, "화학공학과 실험실 콘셉트 주점", 7, "https://picsum.photos/seed/festflow-ajou-7/800/450", 4, 88, "대표 음료 할인 중", LocalDateTime.now()),
-                    new Booth("건축학과 아치주점", 37.2827, 127.0454, "건축학과의 구조미 콘셉트 주점", 8, "https://picsum.photos/seed/festflow-ajou-8/800/450", 5, 65, "테이블 순환 빠름", LocalDateTime.now()),
-                    new Booth("경영학과 스프레드시트주점", 37.2834, 127.0443, "경영학과 연합 운영 주점", 9, "https://picsum.photos/seed/festflow-ajou-9/800/450", 9, 50, "베스트 메뉴 매진 임박", LocalDateTime.now()),
-                    new Booth("경제학과 균형주점", 37.2818, 127.0452, "경제학과 축제 운영위원회 주점", 10, "https://picsum.photos/seed/festflow-ajou-10/800/450", 3, 110, "좌석 여유 있음", LocalDateTime.now()),
-                    new Booth("국어국문학과 활자주점", 37.2825, 127.0431, "국어국문학과 감성 포차", 11, "https://picsum.photos/seed/festflow-ajou-11/800/450", 4, 72, "감성 포토존 운영", LocalDateTime.now()),
-                    new Booth("영어영문학과 리듬주점", 37.2831, 127.0429, "영어영문학과 뮤직 테마 주점", 12, "https://picsum.photos/seed/festflow-ajou-12/800/450", 6, 66, "음악 공연 예정", LocalDateTime.now()),
-                    new Booth("심리학과 마음주점", 37.2816, 127.0440, "심리학과 상담 부스 연계 주점", 13, "https://picsum.photos/seed/festflow-ajou-13/800/450", 2, 98, "편안한 좌석 구역 운영", LocalDateTime.now()),
-                    new Booth("사회학과 연결주점", 37.2820, 127.0427, "사회학과 커뮤니티 테마 주점", 14, "https://picsum.photos/seed/festflow-ajou-14/800/450", 5, 74, "단체석 일부 가능", LocalDateTime.now())
-            );
+            LocalDateTime now = LocalDateTime.now();
 
             if (boothRepository.count() == 0) {
-                boothRepository.saveAll(departmentBooths);
-            } else {
-                List<Booth> existing = boothRepository.findAll().stream()
-                        .sorted(Comparator.comparing(Booth::getDisplayOrder).thenComparing(Booth::getId))
-                        .toList();
-
-                if (shouldRefreshSeedBooths(existing)) {
-                    int limit = Math.min(existing.size(), departmentBooths.size());
-                    for (int i = 0; i < limit; i++) {
-                        Booth target = existing.get(i);
-                        Booth source = departmentBooths.get(i);
-                        target.update(
-                                source.getName(),
-                                source.getLatitude(),
-                                source.getLongitude(),
-                                source.getDescription(),
-                                i + 1,
-                                source.getImageUrl(),
-                                source.getEstimatedWaitMinutes(),
-                                source.getRemainingStock(),
-                                source.getLiveStatusMessage(),
-                                LocalDateTime.now()
-                        );
-                        boothRepository.save(target);
-                    }
-
-                    if (existing.size() < departmentBooths.size()) {
-                        boothRepository.saveAll(departmentBooths.subList(existing.size(), departmentBooths.size()));
-                    }
-                }
+                boothRepository.saveAll(seedBooths(now));
             }
 
             if (eventRepository.count() == 0) {
-                LocalDateTime now = LocalDateTime.now();
                 eventRepository.saveAll(seedEvents(now));
-            } else {
-                List<FestivalEvent> existingEvents = eventRepository.findAll().stream()
-                        .sorted(Comparator.comparing(FestivalEvent::getStartTime).thenComparing(FestivalEvent::getId))
-                        .toList();
-
-                if (shouldRefreshSeedEvents(existingEvents)) {
-                    List<FestivalEvent> targetEvents = seedEvents(LocalDateTime.now());
-                    int limit = Math.min(existingEvents.size(), targetEvents.size());
-
-                    for (int i = 0; i < limit; i++) {
-                        FestivalEvent target = existingEvents.get(i);
-                        FestivalEvent source = targetEvents.get(i);
-                        target.update(source.getTitle(), source.getStartTime(), source.getEndTime());
-                        target.setStatus("예정");
-                        eventRepository.save(target);
-                    }
-
-                    if (existingEvents.size() < targetEvents.size()) {
-                        eventRepository.saveAll(targetEvents.subList(existingEvents.size(), targetEvents.size()));
-                    }
-                }
             }
+
+            if (noticeRepository.count() == 0) {
+                noticeRepository.save(new Notice(
+                        "운영 안내",
+                        "축제 현장 상황에 따라 부스 운영 시간과 공연 시작 시간이 조정될 수 있습니다.",
+                        "안내",
+                        true
+                ));
+            }
+
+            seedDemoLostItems(lostItemRepository);
 
             if (adminUserRepository.count() == 0
                     && initialAdminUsername != null
@@ -129,95 +80,165 @@ public class DataInitializer {
                 ));
             }
 
-            if (noticeRepository.count() == 0) {
-                noticeRepository.save(new Notice(
-                        "우천 안내",
-                        "18시 이후 우천 시 야외 무대가 아주체육관 보조무대로 변경될 수 있습니다.",
-                        "우천",
-                        true
-                ));
-            }
-
+            List<Booth> booths = boothRepository.findAll().stream()
+                    .sorted(Comparator.comparing(Booth::getDisplayOrder))
+                    .toList();
             if (staffMemberRepository.count() == 0) {
-                List<Booth> orderedBooths = boothRepository.findAll().stream()
-                        .sorted(Comparator.comparing(Booth::getDisplayOrder).thenComparing(Booth::getId))
-                        .toList();
-                List<String> teams = List.of("운영", "안내", "안전", "무대", "부스지원", "미디어");
-                List<String> tasks = List.of(
-                        "입구 동선 안내",
-                        "노천극장 인원 확인",
-                        "부스 대기열 정리",
-                        "분실물 대응",
-                        "행사장 순찰",
-                        "긴급 호출 대기",
-                        "Q&A 응대",
-                        "장비 점검"
-                );
-
-                List<StaffMember> seeds = new ArrayList<>();
-                for (int i = 0; i < 55; i++) {
-                    String staffNo = "S" + String.format("%03d", i + 1);
-                    String pin = String.valueOf(7001 + i);
-                    Booth booth = orderedBooths.isEmpty() ? null : orderedBooths.get(i % orderedBooths.size());
-                    StaffStatus status = switch (i % 10) {
-                        case 0 -> StaffStatus.URGENT;
-                        case 1, 2, 3 -> StaffStatus.MOVING;
-                        case 4, 5, 6, 7 -> StaffStatus.ON_DUTY;
-                        default -> StaffStatus.STANDBY;
-                    };
-
-                    seeds.add(new StaffMember(
-                            staffNo,
-                            passwordEncoder.encode(pin),
-                            "스태프 " + String.format("%02d", i + 1),
-                            teams.get(i % teams.size()),
-                            status,
-                            tasks.get(i % tasks.size()),
-                            "",
-                            booth != null ? booth.getId() : null,
-                            booth != null ? booth.getLatitude() : null,
-                            booth != null ? booth.getLongitude() : null,
-                            LocalDateTime.now().minusMinutes(i)
-                    ));
-                }
-                staffMemberRepository.saveAll(seeds);
+                staffMemberRepository.saveAll(seedStaff(booths, passwordEncoder));
+            } else if (simpleDemoCredentials) {
+                simplifyStaffCredentials(staffMemberRepository, passwordEncoder);
             }
         };
     }
 
-    private boolean shouldRefreshSeedBooths(List<Booth> booths) {
-        if (booths.isEmpty()) {
-            return false;
-        }
-        String firstName = booths.get(0).getName();
-        return firstName.contains("Ajou")
-                || firstName.startsWith("아주 ")
-                || firstName.startsWith("디지털미디어학과 ");
+    private List<Booth> seedBooths(LocalDateTime now) {
+        return List.of(
+                booth("공과대학 주점", 37.2832, 127.0451, "공과대학 학생회가 운영하는 야간 주점입니다.", 1, 7, 120, "대표 메뉴 판매 중", now, "주점", "야간", "18:00", "01:00", "주류, 안주, 야간", true),
+                booth("소프트웨어학과 주점", 37.2822, 127.0455, "게임 콘셉트로 꾸민 주점입니다.", 2, 8, 70, "주문 처리 원활", now, "주점", "야간", "18:00", "01:00", "주류, 게임", true),
+                booth("닭강정 푸드트럭", 37.2817, 127.0447, "닭강정과 감자튀김을 판매하는 먹거리 부스입니다.", 3, 4, 90, "바로 주문 가능", now, "푸드", "상시", "11:00", "23:30", "간식, 포장", false),
+                booth("타코야키 스테이션", 37.2829, 127.0428, "따뜻한 타코야키와 음료를 제공합니다.", 4, 8, 55, "10분 단위 조리 중", now, "푸드", "야간", "17:00", "00:30", "일식, 인기", false),
+                booth("VR 리듬 챌린지", 37.2830, 127.0441, "VR 리듬 게임을 체험하고 랭킹에 도전하는 부스입니다.", 5, 6, 30, "2인 체험 가능", now, "체험", "주간", "12:00", "20:00", "VR, 랭킹", false),
+                booth("AI 캐리커처", 37.2822, 127.0449, "현장 사진으로 AI 캐리커처 이미지를 만드는 체험 부스입니다.", 6, 9, 40, "출력 대기 있음", now, "체험", "상시", "13:00", "22:00", "AI, 포토", false),
+                booth("스탬프 미션 센터", 37.2819, 127.0436, "축제 구역을 돌며 스탬프를 모으는 이벤트 접수처입니다.", 7, 2, 200, "기념품 여유", now, "이벤트", "주간", "10:00", "19:00", "미션, 경품", false),
+                booth("공식 굿즈샵", 37.2834, 127.0443, "티셔츠, 스티커, 응원봉 등 축제 공식 굿즈를 판매합니다.", 8, 3, 45, "인기 상품 재입고", now, "굿즈", "상시", "11:00", "22:00", "굿즈, 기념품", false),
+                booth("종합 안내 데스크", 37.2816, 127.0440, "행사 위치, 분실물, 시간 변경을 안내하는 중앙 데스크입니다.", 9, 1, 999, "상시 안내 가능", now, "안내", "상시", "10:00", "01:00", "안내, 분실물", false),
+                booth("응급 케어 스팟", 37.2820, 127.0427, "간단한 응급 처치와 휴식 공간을 제공하는 안전 부스입니다.", 10, 0, 999, "생수 및 휴식 가능", now, "응급", "상시", "10:00", "01:00", "응급, 휴식", false)
+        );
     }
 
-    private boolean shouldRefreshSeedEvents(List<FestivalEvent> events) {
-        if (events.isEmpty()) {
-            return false;
-        }
-        if (events.size() <= 4) {
-            return true;
-        }
-
-        String firstTitle = events.get(0).getTitle();
-        return firstTitle.contains("Ajou")
-                || firstTitle.contains("\uB9C8\uC2A4\uD130\uD53C\uC2A4")
-                || firstTitle.equals("아주 축제 오프닝 퍼레이드")
-                || firstTitle.equals("율곡관 밴드 라이브")
-                || firstTitle.equals("중앙광장 DJ 나이트");
+    private Booth booth(String name, double latitude, double longitude, String description, Integer displayOrder,
+                        Integer estimatedWaitMinutes, Integer remainingStock, String liveStatusMessage,
+                        LocalDateTime liveStatusUpdatedAt, String category, String dayPart, String openTime,
+                        String closeTime, String tags, Boolean reservationEnabled) {
+        Booth booth = new Booth(
+                name,
+                latitude,
+                longitude,
+                description,
+                displayOrder,
+                "https://picsum.photos/seed/festflow-" + displayOrder + "/800/450",
+                estimatedWaitMinutes,
+                remainingStock,
+                liveStatusMessage,
+                liveStatusUpdatedAt
+        );
+        booth.updateContentInfo(category, dayPart, LocalTime.parse(openTime), LocalTime.parse(closeTime), tags, null, reservationEnabled);
+        return booth;
     }
 
     private List<FestivalEvent> seedEvents(LocalDateTime now) {
         return List.of(
-                new FestivalEvent("\uB4DD\uADFC\uB4DD\uADFC \uD3EC\uC9D5 \uACF5\uC5F0", now.minusMinutes(25), now.plusMinutes(20), "\uC608\uC815"),
-                new FestivalEvent("\uD558\uCE20\uD22C\uD558\uD2B8", now.plusMinutes(50), now.plusHours(1).plusMinutes(40), "\uC608\uC815"),
-                new FestivalEvent("\uD558\uC774\uD0A4", now.plusHours(2), now.plusHours(3), "\uC608\uC815"),
-                new FestivalEvent("\uBCA0\uC774\uBE44\uBAAC\uC2A4\uD130", now.plusHours(3).plusMinutes(30), now.plusHours(4).plusMinutes(30), "\uC608\uC815"),
-                new FestivalEvent("\uD0A4\uD0A4", now.plusHours(5), now.plusHours(6), "\uC608\uC815")
+                new FestivalEvent("오프닝 공연", now.plusMinutes(30), now.plusMinutes(70), "예정", null, null, null),
+                new FestivalEvent("밴드 라이브", now.plusHours(2), now.plusHours(3), "예정", null, null, null),
+                new FestivalEvent("댄스팀 쇼케이스", now.plusHours(3).plusMinutes(30), now.plusHours(4).plusMinutes(20), "예정", null, null, null),
+                new FestivalEvent("DJ 피날레", now.plusHours(5), now.plusHours(6), "예정", null, null, null)
         );
+    }
+
+    private void seedDemoLostItems(LostItemRepository lostItemRepository) {
+        List<String> existingTitles = lostItemRepository.findAll().stream()
+                .map(LostItem::getTitle)
+                .toList();
+
+        List<LostItem> demoItems = List.of(
+                lostItem(
+                        "검은색 가죽 지갑",
+                        "검은색 반지갑입니다. 내부에 카드 여러 장과 학생증으로 보이는 카드가 들어 있습니다.",
+                        "지갑",
+                        "종합 안내 데스크 앞 벤치",
+                        "https://images.pexels.com/photos/7085781/pexels-photo-7085781.jpeg?auto=compress&cs=tinysrgb&w=800"
+                ),
+                lostItem(
+                        "흰색 무선 이어폰 케이스",
+                        "흰색 무선 이어폰 케이스입니다. 케이스에 작은 스트랩이 달려 있습니다.",
+                        "전자기기",
+                        "푸드트럭 구역 테이블",
+                        "https://images.pexels.com/photos/26550470/pexels-photo-26550470.jpeg?auto=compress&cs=tinysrgb&w=800"
+                ),
+                lostItem(
+                        "초록색 접이식 우산",
+                        "초록색과 주황색이 섞인 접이식 우산입니다. 비닐 커버 없이 접힌 상태로 발견되었습니다.",
+                        "우산",
+                        "노천극장 입구 계단",
+                        "https://images.pexels.com/photos/26185842/pexels-photo-26185842.jpeg?auto=compress&cs=tinysrgb&w=800"
+                ),
+                lostItem(
+                        "실버 텀블러",
+                        "은색 스테인리스 텀블러입니다. 뚜껑 부분에 작은 흠집이 있습니다.",
+                        "생활용품",
+                        "공식 굿즈샵 옆 휴게 공간",
+                        "https://images.pexels.com/photos/8852778/pexels-photo-8852778.jpeg?auto=compress&cs=tinysrgb&w=800"
+                ),
+                lostItem(
+                        "베이지색 에코백",
+                        "베이지색 캔버스 에코백입니다. 안쪽에 작은 파우치와 선글라스 케이스가 들어 있습니다.",
+                        "가방",
+                        "스탬프 미션 센터 앞",
+                        "https://images.pexels.com/photos/26894083/pexels-photo-26894083.jpeg?auto=compress&cs=tinysrgb&w=800"
+                )
+        );
+
+        List<LostItem> missingItems = demoItems.stream()
+                .filter(item -> !existingTitles.contains(item.getTitle()))
+                .toList();
+        if (!missingItems.isEmpty()) {
+            lostItemRepository.saveAll(missingItems);
+        }
+    }
+
+    private LostItem lostItem(String title, String description, String category, String foundLocation, String imageUrl) {
+        return new LostItem(
+                title,
+                description,
+                category,
+                foundLocation,
+                "종합 안내 데스크",
+                imageUrl,
+                "REGISTERED",
+                "STAFF",
+                "seed"
+        );
+    }
+
+    private List<StaffMember> seedStaff(List<Booth> booths, PasswordEncoder passwordEncoder) {
+        return java.util.stream.IntStream.range(0, 12)
+                .mapToObj(i -> createStaff(i, booths, passwordEncoder))
+                .toList();
+    }
+
+    private StaffMember createStaff(int index, List<Booth> booths, PasswordEncoder passwordEncoder) {
+        Booth booth = booths.isEmpty() ? null : booths.get(index % booths.size());
+        StaffStatus status = index % 5 == 0 ? StaffStatus.URGENT : index % 3 == 0 ? StaffStatus.MOVING : StaffStatus.ON_DUTY;
+        String number = String.valueOf(index + 1);
+        return new StaffMember(
+                number,
+                passwordEncoder.encode(number),
+                "스태프 " + number,
+                index % 2 == 0 ? "운영" : "안전",
+                status,
+                index % 2 == 0 ? "입구 동선 안내" : "현장 순찰",
+                "",
+                booth != null ? booth.getId() : null,
+                booth != null ? booth.getLatitude() : null,
+                booth != null ? booth.getLongitude() : null,
+                LocalDateTime.now().minusMinutes(index)
+        );
+    }
+
+    private void simplifyStaffCredentials(
+            StaffMemberRepository staffMemberRepository,
+            PasswordEncoder passwordEncoder
+    ) {
+        List<StaffMember> staff = staffMemberRepository.findAll().stream()
+                .sorted(Comparator.comparing(StaffMember::getId))
+                .toList();
+        for (int i = 0; i < staff.size(); i++) {
+            String number = String.valueOf(i + 1);
+            StaffMember member = staff.get(i);
+            member.updateCredentials(number, passwordEncoder.encode(number));
+            member.setName("스태프 " + number);
+            member.setTeam(i % 2 == 0 ? "운영" : "안전");
+        }
+        staffMemberRepository.saveAll(staff);
     }
 }

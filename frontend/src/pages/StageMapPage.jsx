@@ -24,14 +24,13 @@ const WINDOW_OPTIONS = [
   { label: "최근 15분", value: 15 },
 ];
 
+function getStageRefreshInterval() {
+  const isMobile = typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
+  return isMobile ? 10000 : 5000;
+}
+
 function normalizeLevel(level) {
-  const mapping = {
-    "?ъ쑀": "여유",
-    蹂댄넻: "보통",
-    "?쇱옟": "혼잡",
-    "留ㅼ슦?쇱옟": "매우혼잡",
-  };
-  return mapping[level] || level;
+  return level;
 }
 
 function getLevelStyle(level) {
@@ -67,7 +66,11 @@ export default function StageMapPage() {
   }, [minutesWindow]);
 
   useEffect(() => {
-    const timer = window.setInterval(() => load(), 5000);
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        load();
+      }
+    }, getStageRefreshInterval());
     return () => window.clearInterval(timer);
   }, [minutesWindow]);
 

@@ -1,40 +1,70 @@
-﻿const CACHE_NAME = 'festflow-cache-v3';
-const APP_SHELL = ['/', '/index.html', '/manifest.json', '/offline.html'];
+const CACHE_NAME = "festflow-shell-v5";
+const APP_SHELL = [
+  "/",
+  "/index.html",
+  "/manifest.json",
+  "/offline.html",
+  "/favicon.svg",
+  "/pwa-192.png",
+  "/pwa-512.png",
+  "/apple-touch-icon.png",
+  "/images/offline-state.png",
+];
 
-self.addEventListener('install', (event) => {
+self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));
   self.skipWaiting();
 });
 
-self.addEventListener('activate', (event) => {
+self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches.keys().then((keys) =>
-      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key)))
-    )
+      Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))),
+    ),
   );
   self.clients.claim();
 });
 
-self.addEventListener('fetch', (event) => {
+self.addEventListener("fetch", (event) => {
   const request = event.request;
+  const url = new URL(request.url);
+  const isSameOrigin = url.origin === self.location.origin;
 
-  if (request.method !== 'GET') {
+  if (request.method !== "GET") {
     return;
   }
 
-  if (request.headers.get('accept')?.includes('text/html')) {
+  const acceptsHtml = request.headers.get("accept")?.includes("text/html");
+  const isApi = isSameOrigin && url.pathname.startsWith("/api/");
+  const isStream = isSameOrigin && url.pathname.startsWith("/stream/");
+  const isUpload = isSameOrigin && url.pathname.startsWith("/uploads/");
+  const isMapTile = url.hostname.endsWith("tile.openstreetmap.org");
+  const isBuildAsset = isSameOrigin && url.pathname.startsWith("/assets/");
+  const isAppShellAsset = isSameOrigin && APP_SHELL.includes(url.pathname);
+
+  if (!isSameOrigin || isApi || isStream || isUpload || isMapTile) {
+    return;
+  }
+
+  if (acceptsHtml) {
     event.respondWith(
       fetch(request)
         .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
           return response;
         })
         .catch(async () => {
           const cached = await caches.match(request);
-          return cached || caches.match('/offline.html');
-        })
+          return cached || caches.match("/offline.html");
+        }),
     );
+    return;
+  }
+
+  if (!isBuildAsset && !isAppShellAsset) {
     return;
   }
 
@@ -45,14 +75,13 @@ self.addEventListener('fetch', (event) => {
       }
       return fetch(request)
         .then((networkResponse) => {
-          if (request.url.startsWith(self.location.origin)) {
+          if (networkResponse.ok) {
             const responseClone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, responseClone));
           }
           return networkResponse;
         })
-        .catch(() => caches.match('/offline.html'));
-    })
+        .catch(() => Response.error());
+    }),
   );
 });
-
