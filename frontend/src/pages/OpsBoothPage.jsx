@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import {
   checkInOpsBoothReservation,
   checkInOpsBoothReservationByToken,
+  createReservationStream,
   fetchOpsBoothBootstrap,
   uploadOpsBoothMenuImage,
   updateOpsBoothLiveStatus,
@@ -157,6 +158,7 @@ export default function OpsBoothPage() {
   const [message, setMessage] = useState("");
 
   const [data, setData] = useState(null);
+  const [reservationAlert, setReservationAlert] = useState("");
   const [draft, setDraft] = useState({
     estimatedWaitMinutes: "",
     remainingStock: "",
@@ -237,6 +239,43 @@ export default function OpsBoothPage() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, key]);
+
+  useEffect(() => {
+    if (!id || !key) return undefined;
+
+    const stream = createReservationStream();
+    let alertTimer = null;
+
+    stream.addEventListener("reservations", (event) => {
+      try {
+        const reservation = JSON.parse(event.data);
+        if (String(reservation.boothId) !== String(id)) return;
+
+        if (reservation.status === "RESERVED") {
+          setReservationAlert(
+            `새 예약: ${reservation.tableName} · ${reservation.seatCount}명`,
+          );
+          setMessage("새 예약이 접수되었습니다.");
+          if (alertTimer) {
+            window.clearTimeout(alertTimer);
+          }
+          alertTimer = window.setTimeout(() => setReservationAlert(""), 5000);
+        }
+
+        load();
+      } catch {
+        // ignore stream parse errors
+      }
+    });
+
+    return () => {
+      if (alertTimer) {
+        window.clearTimeout(alertTimer);
+      }
+      stream.close();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, key]);
 
@@ -670,6 +709,11 @@ export default function OpsBoothPage() {
 
       {data && (
         <article className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+          {reservationAlert && (
+            <div className="border-b border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
+              {reservationAlert}
+            </div>
+          )}
           <div className="aspect-[16/8] bg-slate-100">
             <img
               src={resolveBoothImageUrl(data.booth)}

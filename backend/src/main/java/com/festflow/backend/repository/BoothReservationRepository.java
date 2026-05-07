@@ -15,6 +15,8 @@ public interface BoothReservationRepository extends JpaRepository<BoothReservati
 
     Optional<BoothReservation> findFirstByUserKeyAndStatusOrderByReservedAtDesc(String userKey, ReservationStatus status);
 
+    boolean existsByTableIdAndStatus(Long tableId, ReservationStatus status);
+
     List<BoothReservation> findByStatusAndExpiresAtBefore(ReservationStatus status, LocalDateTime expiresAt);
 }
 

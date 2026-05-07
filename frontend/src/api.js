@@ -352,6 +352,10 @@ export function createLostItemStream() {
   return new EventSource(`${API_BASE}/stream/lost-items`);
 }
 
+export function createReservationStream() {
+  return new EventSource(`${API_BASE}/stream/reservations`);
+}
+
 export function downloadBoothCsv() {
   window.open(`${API_BASE}/export/booths.csv`, "_blank", "noopener,noreferrer");
 }

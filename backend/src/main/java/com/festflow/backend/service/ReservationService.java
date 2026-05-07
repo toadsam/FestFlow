@@ -19,6 +19,7 @@ import com.festflow.backend.repository.BoothReservationRepository;
 import com.festflow.backend.repository.BoothReservationTableRepository;
 import com.festflow.backend.repository.ReservationCheckInTokenRepository;
 import com.festflow.backend.repository.ReservationUserStateRepository;
+import com.festflow.backend.service.stream.StreamService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
@@ -44,6 +45,7 @@ public class ReservationService {
     private final ReservationUserStateRepository reservationUserStateRepository;
     private final ReservationCheckInTokenRepository checkInTokenRepository;
     private final ReservationAuthService reservationAuthService;
+    private final StreamService streamService;
 
     public ReservationService(
             BoothRepository boothRepository,
@@ -51,7 +53,8 @@ public class ReservationService {
             BoothReservationRepository boothReservationRepository,
             ReservationUserStateRepository reservationUserStateRepository,
             ReservationCheckInTokenRepository checkInTokenRepository,
-            ReservationAuthService reservationAuthService
+            ReservationAuthService reservationAuthService,
+            StreamService streamService
     ) {
         this.boothRepository = boothRepository;
         this.boothReservationTableRepository = boothReservationTableRepository;
@@ -59,6 +62,7 @@ public class ReservationService {
         this.reservationUserStateRepository = reservationUserStateRepository;
         this.checkInTokenRepository = checkInTokenRepository;
         this.reservationAuthService = reservationAuthService;
+        this.streamService = streamService;
     }
 
     @Transactional
@@ -67,13 +71,17 @@ public class ReservationService {
         LocalDateTime now = LocalDateTime.now();
         expireStaleReservations(now);
 
-        List<ReservationTableDto> tableDtos = boothReservationTableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(boothId).stream()
-                .map(this::toTableDto)
+        List<BoothReservation> activeReservationEntities = boothReservationRepository
+                .findByBoothIdAndStatusOrderByExpiresAtAsc(boothId, ReservationStatus.RESERVED);
+        List<Long> reservedTableIds = activeReservationEntities.stream()
+                .map(reservation -> reservation.getTable().getId())
                 .toList();
 
-        List<BoothReservationDto> activeReservations = boothReservationRepository
-                .findByBoothIdAndStatusOrderByExpiresAtAsc(boothId, ReservationStatus.RESERVED)
-                .stream()
+        List<ReservationTableDto> tableDtos = boothReservationTableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(boothId).stream()
+                .map(table -> toTableDto(table, reservedTableIds.contains(table.getId())))
+                .toList();
+
+        List<BoothReservationDto> activeReservations = activeReservationEntities.stream()
                 .map(this::toReservationDto)
                 .toList();
 
@@ -170,6 +178,9 @@ public class ReservationService {
         if (!table.getBooth().getId().equals(boothId)) {
             throw new ResponseStatusException(CONFLICT, "Selected table does not belong to this booth.");
         }
+        if (boothReservationRepository.existsByTableIdAndStatus(table.getId(), ReservationStatus.RESERVED)) {
+            throw new ResponseStatusException(CONFLICT, "Selected table is already reserved.");
+        }
 
         int seatCount = requestDto.seatCount() == null ? 1 : Math.max(1, requestDto.seatCount());
         if (table.getAvailableSeats() < seatCount) {
@@ -189,7 +200,9 @@ public class ReservationService {
                 now.plusMinutes(sanitizeReservationMinutes(booth.getMaxReservationMinutes()))
         ));
 
-        return toReservationDto(created);
+        BoothReservationDto dto = toReservationDto(created);
+        streamService.publishReservations(dto);
+        return dto;
     }
 
     @Transactional
@@ -248,7 +261,9 @@ public class ReservationService {
 
         reservation.markCheckedIn(now);
         boothReservationRepository.save(reservation);
-        return toReservationDto(reservation);
+        BoothReservationDto dto = toReservationDto(reservation);
+        streamService.publishReservations(dto);
+        return dto;
     }
 
     @Transactional
@@ -291,6 +306,7 @@ public class ReservationService {
 
         reservation.markExpired(now);
         boothReservationRepository.save(reservation);
+        streamService.publishReservations(toReservationDto(reservation));
 
         BoothReservationTable table = reservation.getTable();
         int restoredSeats = Math.min(table.getTotalSeats(), table.getAvailableSeats() + reservation.getSeatCount());
@@ -309,11 +325,15 @@ public class ReservationService {
     }
 
     private ReservationTableDto toTableDto(BoothReservationTable table) {
+        return toTableDto(table, false);
+    }
+
+    private ReservationTableDto toTableDto(BoothReservationTable table, boolean hasActiveReservation) {
         return new ReservationTableDto(
                 table.getId(),
                 table.getTableName(),
                 table.getTotalSeats(),
-                table.getAvailableSeats(),
+                hasActiveReservation ? 0 : table.getAvailableSeats(),
                 table.getDisplayOrder()
         );
     }

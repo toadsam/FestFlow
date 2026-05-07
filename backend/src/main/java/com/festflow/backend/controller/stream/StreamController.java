@@ -46,4 +46,9 @@ public class StreamController {
     public SseEmitter lostItems() {
         return streamService.subscribeLostItems();
     }
+
+    @GetMapping(value = "/reservations", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter reservations() {
+        return streamService.subscribeReservations();
+    }
 }
