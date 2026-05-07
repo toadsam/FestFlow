@@ -165,6 +165,14 @@ function boothMetaLabel(booth) {
   return `${booth?.category || "주점"} · ${booth?.dayPart || "야간"} · ${time}`;
 }
 
+function parseReservationTimeMs(value) {
+  if (!value) return 0;
+  const text = String(value);
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
+  const parsed = Date.parse(hasTimezone ? text : `${text}Z`);
+  return Number.isNaN(parsed) ? 0 : parsed;
+}
+
 export default function BoothDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -446,11 +454,11 @@ export default function BoothDetailPage() {
   const isReserveStepActive = isAuthComplete && !myReservation && !penalty?.blocked;
 
   const remainingSeconds = myReservation
-    ? Math.max(0, Math.floor((new Date(myReservation.expiresAt).getTime() - nowTick) / 1000))
+    ? Math.max(0, Math.floor((parseReservationTimeMs(myReservation.expiresAt) - nowTick) / 1000))
     : 0;
 
   const qrRemainingSeconds = checkInQrExpiresAt
-    ? Math.max(0, Math.floor((new Date(checkInQrExpiresAt).getTime() - nowTick) / 1000))
+    ? Math.max(0, Math.floor((parseReservationTimeMs(checkInQrExpiresAt) - nowTick) / 1000))
     : 0;
 
   const selectedTable =
