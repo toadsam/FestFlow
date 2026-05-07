@@ -22,7 +22,7 @@ import {
   sendGps,
 } from "../api";
 import CongestionBadge from "../components/CongestionBadge";
-import { IconCalendar, IconClock, IconMapPin, IconMusic, IconTrophy, IconUsers } from "../components/UxIcons";
+import { IconCalendar, IconClock, IconMapPin, IconMusic, IconUsers } from "../components/UxIcons";
 import {
   AJOU_ADDRESS,
   AJOU_CENTER,
@@ -536,20 +536,6 @@ export default function HomePage() {
     [filteredBooths],
   );
 
-  const recommendedBooths = useMemo(() => {
-    return [...booths]
-      .sort((a, b) => {
-        const scoreDiff =
-          (levelToScore[congestionMap[a.id]?.level] || 1) -
-          (levelToScore[congestionMap[b.id]?.level] || 1);
-        if (scoreDiff !== 0) return scoreDiff;
-        return (
-          (a.estimatedWaitMinutes ?? 999) - (b.estimatedWaitMinutes ?? 999)
-        );
-      })
-      .slice(0, 3);
-  }, [booths, congestionMap]);
-
   useEffect(() => {
     if (activeView === "list" || !focusedBoothId) return undefined;
 
@@ -708,49 +694,6 @@ export default function HomePage() {
             <IconCalendar className="h-4 w-4 icon-role-schedule" />
             공연 일정 보기
           </button>
-        </div>
-      </article>
-
-      <article className="rounded-xl border border-slate-200 bg-white p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-800 text-role-ops">
-            <IconTrophy className="mr-1.5 inline h-4 w-4 icon-role-ops" />지금 덜 붐비는 추천 부스
-          </p>
-          <button
-            type="button"
-            onClick={() => setActiveView("list")}
-            className="text-xs text-teal-700 font-semibold"
-          >
-            전체 보기
-          </button>
-        </div>
-        <div className="mt-2 grid grid-cols-3 gap-2 stagger-list">
-          {recommendedBooths.map((booth) => (
-            <button
-              key={`recommended-${booth.id}`}
-              type="button"
-              onClick={() => openBoothDetail(booth.id)}
-              className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-left"
-            >
-              <p className="text-xs font-semibold text-slate-800 line-clamp-1">
-                {booth.name}
-              </p>
-              <p className="mt-1 text-[11px] text-slate-600">
-                대기 {booth.estimatedWaitMinutes ?? "-"}분
-              </p>
-              <p className="mt-1 text-[11px] font-bold text-emerald-200 line-clamp-1">
-                {boothReservationText(booth)}
-              </p>
-              <p className="mt-1 text-[10px] font-semibold text-cyan-700 line-clamp-1">
-                {booth.category || "주점"} · {booth.dayPart || "야간"}
-              </p>
-              <div className="mt-1">
-                <CongestionBadge
-                  level={congestionMap[booth.id]?.level || "여유"}
-                />
-              </div>
-            </button>
-          ))}
         </div>
       </article>
 
