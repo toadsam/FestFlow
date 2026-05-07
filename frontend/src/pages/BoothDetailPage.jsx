@@ -198,6 +198,7 @@ export default function BoothDetailPage() {
   const [isReserving, setIsReserving] = useState(false);
 
   const [checkInQrDataUrl, setCheckInQrDataUrl] = useState("");
+  const [checkInQrToken, setCheckInQrToken] = useState("");
   const [checkInQrExpiresAt, setCheckInQrExpiresAt] = useState("");
 
   const [opsKeyInput, setOpsKeyInput] = useState("");
@@ -323,6 +324,7 @@ export default function BoothDetailPage() {
     clearReservationAuth();
     setReservationToken("");
     setCheckInQrDataUrl("");
+    setCheckInQrToken("");
     setCheckInQrExpiresAt("");
   }
 
@@ -431,6 +433,7 @@ export default function BoothDetailPage() {
         margin: 1,
       });
       setCheckInQrDataUrl(qrData);
+      setCheckInQrToken(tokenPayload.token);
       setCheckInQrExpiresAt(tokenPayload.expiresAt);
       setReservationMessage("체크인 QR이 생성되었습니다. 60초 이내 관리자에게 보여주세요.");
     } catch (e) {
@@ -778,6 +781,15 @@ export default function BoothDetailPage() {
                       decoding="async"
                     />
                     <p className="text-[11px] font-semibold">QR 만료까지: {qrTimerText}</p>
+                    {checkInQrToken && (
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard?.writeText(checkInQrToken)}
+                        className="max-w-full break-all rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-700"
+                      >
+                        {checkInQrToken}
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

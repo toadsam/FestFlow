@@ -181,6 +181,7 @@ export default function OpsBoothPage() {
 
   const [qrTokenInput, setQrTokenInput] = useState("");
   const [cameraError, setCameraError] = useState("");
+  const [scannerMessage, setScannerMessage] = useState("");
   const [scannerActive, setScannerActive] = useState(false);
   const [scannerSupported, setScannerSupported] = useState(false);
   const videoRef = useRef(null);
@@ -419,16 +420,29 @@ export default function OpsBoothPage() {
     }
 
     setScannerActive(false);
+    setScannerMessage("");
   }
 
   async function startScanner() {
+    setScannerActive(true);
+    setScannerMessage("카메라를 여는 중입니다...");
+    setCameraError("");
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError("이 브라우저는 카메라 접근을 지원하지 않습니다. QR 토큰을 직접 입력해 주세요.");
+      setScannerActive(false);
+      setScannerMessage("");
+      return;
+    }
+
     if (!scannerSupported) {
-      setCameraError("이 브라우저는 카메라 QR 스캔을 지원하지 않습니다.");
+      setCameraError("이 브라우저는 QR 자동 스캔을 지원하지 않습니다. QR 화면 아래 토큰을 직접 입력해 주세요.");
+      setScannerActive(false);
+      setScannerMessage("");
       return;
     }
 
     try {
-      setCameraError("");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" } },
         audio: false,
@@ -441,6 +455,7 @@ export default function OpsBoothPage() {
       }
 
       const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+      setScannerMessage("QR을 카메라 중앙에 맞춰 주세요.");
       scanTimerRef.current = window.setInterval(async () => {
         if (!videoRef.current) return;
 
@@ -460,8 +475,6 @@ export default function OpsBoothPage() {
           // ignore intermittent detector errors
         }
       }, 700);
-
-      setScannerActive(true);
     } catch {
       setCameraError("카메라를 사용할 수 없습니다. 권한을 확인해 주세요.");
       stopScanner();
@@ -1124,7 +1137,6 @@ export default function OpsBoothPage() {
                     type="button"
                     onClick={startScanner}
                     className="rounded border border-cyan-500 px-3 py-1.5 text-xs font-semibold"
-                    disabled={!scannerSupported}
                   >
                     카메라 스캔 시작
                   </button>
@@ -1140,12 +1152,17 @@ export default function OpsBoothPage() {
               </div>
 
               {scannerActive && (
-                <video
-                  ref={videoRef}
-                  className="w-full rounded border border-cyan-300 bg-black"
-                  muted
-                  playsInline
-                />
+                <div className="space-y-1">
+                  <video
+                    ref={videoRef}
+                    className="aspect-[4/3] w-full rounded border border-cyan-300 bg-black object-cover"
+                    muted
+                    playsInline
+                  />
+                  {scannerMessage && (
+                    <p className="text-xs text-cyan-800">{scannerMessage}</p>
+                  )}
+                </div>
               )}
 
               {cameraError && (
@@ -1157,7 +1174,7 @@ export default function OpsBoothPage() {
                   className="border rounded px-2 py-2 text-sm"
                   value={qrTokenInput}
                   onChange={(e) => setQrTokenInput(e.target.value)}
-                  placeholder="QR 토큰 직접 입력"
+                  placeholder="QR 안의 긴 토큰 직접 입력"
                 />
                 <button
                   type="button"
