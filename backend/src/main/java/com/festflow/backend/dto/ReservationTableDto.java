@@ -5,7 +5,11 @@ public record ReservationTableDto(
         String tableName,
         Integer totalSeats,
         Integer availableSeats,
-        Integer displayOrder
+        Integer displayOrder,
+        Integer reservableSeats,
+        String occupancyStatus,
+        String occupancyLabel,
+        Long activeReservationId
 ) {
 }
 

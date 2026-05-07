@@ -680,6 +680,28 @@ export async function checkInOpsBoothReservation(boothId, reservationId, key) {
   return parseJson(response, "체크인 처리에 실패했습니다.");
 }
 
+export async function completeOpsBoothReservation(boothId, reservationId, key) {
+  const response = await fetch(
+    opsUrl(`/ops/booth/${boothId}/reservations/${reservationId}/complete`),
+    {
+      method: "POST",
+      headers: opsHeaders(key),
+    },
+  );
+  return parseJson(response, "테이블 비우기에 실패했습니다.");
+}
+
+export async function releaseOpsBoothReservationTable(boothId, tableId, key) {
+  const response = await fetch(
+    opsUrl(`/ops/booth/${boothId}/reservations/tables/${tableId}/release`),
+    {
+      method: "POST",
+      headers: opsHeaders(key),
+    },
+  );
+  return parseJson(response, "테이블 가용 처리에 실패했습니다.");
+}
+
 export async function checkInOpsBoothReservationByToken(boothId, token, key) {
   const response = await fetch(
     opsUrl(`/ops/booth/${boothId}/reservations/check-in/by-token`),

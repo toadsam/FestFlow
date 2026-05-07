@@ -3,8 +3,10 @@ import { useParams } from "react-router-dom";
 import {
   checkInOpsBoothReservation,
   checkInOpsBoothReservationByToken,
+  completeOpsBoothReservation,
   createReservationStream,
   fetchOpsBoothBootstrap,
+  releaseOpsBoothReservationTable,
   uploadOpsBoothMenuImage,
   updateOpsBoothLiveStatus,
   updateOpsBoothReservationConfig,
@@ -37,6 +39,58 @@ function clampNumber(value, min, fallback = min) {
 function formatTime(value) {
   if (!value) return "-";
   return value.replace("T", " ").slice(5, 16);
+}
+
+function reservationStatusLabel(status) {
+  switch (status) {
+    case "CHECKED_IN":
+      return "이용중";
+    case "EXPIRED":
+      return "만료";
+    case "COMPLETED":
+      return "완료";
+    case "CANCELLED":
+      return "취소";
+    default:
+      return "예약중";
+  }
+}
+
+function tableOccupancyStatus(table) {
+  if (table?.occupancyStatus) return table.occupancyStatus;
+  return Number(table?.availableSeats) > 0 ? "AVAILABLE" : "FULL";
+}
+
+function tableOccupancyLabel(table) {
+  if (table?.occupancyLabel) return table.occupancyLabel;
+  switch (tableOccupancyStatus(table)) {
+    case "IN_USE":
+      return "이용중";
+    case "RESERVED":
+      return "예약중";
+    case "FULL":
+      return "마감";
+    default:
+      return "예약 가능";
+  }
+}
+
+function statusBadgeClass(status) {
+  switch (status) {
+    case "IN_USE":
+    case "CHECKED_IN":
+      return "border-violet-200 bg-violet-100 text-violet-800";
+    case "RESERVED":
+      return "border-amber-200 bg-amber-100 text-amber-800";
+    case "FULL":
+    case "EXPIRED":
+      return "border-rose-200 bg-rose-100 text-rose-700";
+    case "COMPLETED":
+    case "CANCELLED":
+      return "border-slate-200 bg-slate-100 text-slate-700";
+    default:
+      return "border-emerald-200 bg-emerald-100 text-emerald-700";
+  }
 }
 
 function parseMenuBoardJson(raw) {
@@ -222,6 +276,10 @@ export default function OpsBoothPage() {
           tableName: table.tableName,
           totalSeats: table.totalSeats,
           availableSeats: table.availableSeats,
+          reservableSeats: table.reservableSeats,
+          occupancyStatus: table.occupancyStatus,
+          occupancyLabel: table.occupancyLabel,
+          activeReservationId: table.activeReservationId,
         })),
       });
       setError("");
@@ -421,6 +479,39 @@ export default function OpsBoothPage() {
       setError(
         e.message === "Failed to fetch"
           ? "체크인 요청이 실패했습니다."
+          : e.message,
+      );
+    }
+  }
+
+  async function handleCompleteReservation(reservationId) {
+    if (!confirmAction(`예약 #${reservationId} 이용을 완료하고 테이블을 비울까요?`)) return;
+
+    try {
+      await completeOpsBoothReservation(id, reservationId, key);
+      setMessage(`예약 #${reservationId} 테이블을 비웠습니다.`);
+      await load();
+    } catch (e) {
+      setError(
+        e.message === "Failed to fetch"
+          ? "테이블 비우기 요청이 실패했습니다."
+          : e.message,
+      );
+    }
+  }
+
+  async function handleReleaseTable(table) {
+    if (!table?.id) return;
+    if (!confirmAction(`${table.tableName}을(를) 예약 가능 상태로 전환할까요?`)) return;
+
+    try {
+      await releaseOpsBoothReservationTable(id, table.id, key);
+      setMessage(`${table.tableName} 테이블을 예약 가능 상태로 전환했습니다.`);
+      await load();
+    } catch (e) {
+      setError(
+        e.message === "Failed to fetch"
+          ? "테이블 가용 처리 요청이 실패했습니다."
           : e.message,
       );
     }
@@ -655,12 +746,20 @@ export default function OpsBoothPage() {
       (acc, table) => acc + (Number(table.availableSeats) || 0),
       0,
     );
+    const reservedTables = tables.filter(
+      (table) => tableOccupancyStatus(table) === "RESERVED",
+    ).length;
+    const inUseTables = tables.filter(
+      (table) => tableOccupancyStatus(table) === "IN_USE",
+    ).length;
 
     return {
       totalTables,
       totalSeats,
       availableSeats,
       occupiedSeats: Math.max(0, totalSeats - availableSeats),
+      reservedTables,
+      inUseTables,
     };
   }, [reservationDraft.tables]);
 
@@ -1041,6 +1140,14 @@ export default function OpsBoothPage() {
                     {tableSummary.availableSeats}/{tableSummary.totalSeats}
                   </p>
                 </div>
+                <div>
+                  <p className="text-[11px] text-slate-600">예약중</p>
+                  <p className="font-bold text-amber-800">{tableSummary.reservedTables}개</p>
+                </div>
+                <div>
+                  <p className="text-[11px] text-slate-600">이용중</p>
+                  <p className="font-bold text-violet-800">{tableSummary.inUseTables}개</p>
+                </div>
               </div>
 
               <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
@@ -1060,11 +1167,18 @@ export default function OpsBoothPage() {
               </div>
 
               <div className="space-y-2">
-                {reservationDraft.tables.map((table, index) => (
-                  <div
-                    key={`${table.id ?? "new"}-${index}`}
-                    className="rounded border border-emerald-200 bg-white p-2 space-y-2"
-                  >
+                {reservationDraft.tables.map((table, index) => {
+                  const occupancyStatus = tableOccupancyStatus(table);
+                  const isBlocked =
+                    occupancyStatus === "RESERVED" || occupancyStatus === "IN_USE";
+
+                  return (
+                    <div
+                      key={`${table.id ?? "new"}-${index}`}
+                      className={`rounded border bg-white p-2 space-y-2 ${
+                        isBlocked ? "border-amber-300" : "border-emerald-200"
+                      }`}
+                    >
                     <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
                       <input
                         className="border rounded px-2 py-1.5 text-sm"
@@ -1077,10 +1191,35 @@ export default function OpsBoothPage() {
                       <button
                         type="button"
                         onClick={() => removeTableDraft(index)}
-                        className="rounded border px-2 text-xs"
+                        disabled={isBlocked}
+                        className="rounded border px-2 text-xs disabled:opacity-50"
                       >
-                        삭제
+                        {isBlocked ? "삭제 불가" : "삭제"}
                       </button>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-2 rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadgeClass(occupancyStatus)}`}
+                      >
+                        {tableOccupancyLabel(table)}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {table.activeReservationId && (
+                          <span className="text-[11px] text-slate-500">
+                            예약 #{table.activeReservationId}
+                          </span>
+                        )}
+                        {isBlocked && (
+                          <button
+                            type="button"
+                            onClick={() => handleReleaseTable(table)}
+                            className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800"
+                          >
+                            가용 처리
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
@@ -1153,7 +1292,8 @@ export default function OpsBoothPage() {
                       }
                     />
                   </div>
-                ))}
+                  );
+                })}
 
                 {!reservationDraft.tables.length && (
                   <p className="text-xs text-slate-600">설정된 테이블이 없습니다. +2/+4/+6석 버튼으로 빠르게 추가해 주세요.</p>
@@ -1234,26 +1374,66 @@ export default function OpsBoothPage() {
               <p className="text-sm font-semibold text-amber-900">활성 예약 목록</p>
 
               {activeReservations.length ? (
-                activeReservations.map((reservation) => (
-                  <div
-                    key={reservation.id}
-                    className="rounded border border-amber-300 bg-white p-2 flex items-center justify-between gap-2"
-                  >
-                    <div className="text-xs text-slate-700">
-                      <p className="font-semibold">#{reservation.id} · {reservation.tableName}</p>
-                      <p>예약자: {reservation.userKey}</p>
-                      <p>좌석: {reservation.seatCount}</p>
-                      <p>만료: {formatTime(reservation.expiresAt)}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => handleCheckIn(reservation.id)}
-                      className="rounded bg-amber-600 text-white px-3 py-2 text-xs font-semibold"
+                activeReservations.map((reservation) => {
+                  const statusLabel = reservationStatusLabel(reservation.status);
+                  const checkedIn = reservation.status === "CHECKED_IN";
+
+                  return (
+                    <div
+                      key={reservation.id}
+                      className="rounded border border-amber-300 bg-white p-2 flex items-center justify-between gap-2"
                     >
-                      수동 체크인
-                    </button>
-                  </div>
-                ))
+                      <div className="text-xs text-slate-700">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="font-semibold">#{reservation.id} · {reservation.tableName}</p>
+                          <span
+                            className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadgeClass(reservation.status)}`}
+                          >
+                            {statusLabel}
+                          </span>
+                        </div>
+                        <p>예약자: {reservation.userKey}</p>
+                        <p>좌석: {reservation.seatCount}</p>
+                        {checkedIn ? (
+                          <p>체크인: {formatTime(reservation.checkedInAt)}</p>
+                        ) : (
+                          <p>만료: {formatTime(reservation.expiresAt)}</p>
+                        )}
+                      </div>
+                      {checkedIn ? (
+                        <button
+                          type="button"
+                          onClick={() => handleCompleteReservation(reservation.id)}
+                          className="rounded bg-violet-700 text-white px-3 py-2 text-xs font-semibold"
+                        >
+                          테이블 비우기
+                        </button>
+                      ) : (
+                        <div className="grid gap-1">
+                          <button
+                            type="button"
+                            onClick={() => handleCheckIn(reservation.id)}
+                            className="rounded bg-amber-600 text-white px-3 py-2 text-xs font-semibold"
+                          >
+                            수동 체크인
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleReleaseTable({
+                                id: reservation.tableId,
+                                tableName: reservation.tableName,
+                              })
+                            }
+                            className="rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800"
+                          >
+                            예약 취소
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
               ) : (
                 <p className="text-xs text-slate-600">현재 활성 예약이 없습니다.</p>
               )}

@@ -11,11 +11,23 @@ import java.util.Optional;
 public interface BoothReservationRepository extends JpaRepository<BoothReservation, Long> {
     List<BoothReservation> findByBoothIdAndStatusOrderByExpiresAtAsc(Long boothId, ReservationStatus status);
 
+    List<BoothReservation> findByBoothIdAndStatusInOrderByExpiresAtAsc(Long boothId, List<ReservationStatus> statuses);
+
     Optional<BoothReservation> findByIdAndBoothId(Long id, Long boothId);
+
+    Optional<BoothReservation> findFirstByBoothIdAndTableIdAndStatusInOrderByReservedAtDesc(
+            Long boothId,
+            Long tableId,
+            List<ReservationStatus> statuses
+    );
 
     Optional<BoothReservation> findFirstByUserKeyAndStatusOrderByReservedAtDesc(String userKey, ReservationStatus status);
 
+    Optional<BoothReservation> findFirstByUserKeyAndStatusInOrderByReservedAtDesc(String userKey, List<ReservationStatus> statuses);
+
     boolean existsByTableIdAndStatus(Long tableId, ReservationStatus status);
+
+    boolean existsByTableIdAndStatusIn(Long tableId, List<ReservationStatus> statuses);
 
     List<BoothReservation> findByStatusAndExpiresAtBefore(ReservationStatus status, LocalDateTime expiresAt);
 }

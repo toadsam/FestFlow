@@ -38,6 +38,10 @@ import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 
 @Service
 public class ReservationService {
+    private static final List<ReservationStatus> BLOCKING_STATUSES = List.of(
+            ReservationStatus.RESERVED,
+            ReservationStatus.CHECKED_IN
+    );
 
     private final BoothRepository boothRepository;
     private final BoothReservationTableRepository boothReservationTableRepository;
@@ -72,13 +76,11 @@ public class ReservationService {
         expireStaleReservations(now);
 
         List<BoothReservation> activeReservationEntities = boothReservationRepository
-                .findByBoothIdAndStatusOrderByExpiresAtAsc(boothId, ReservationStatus.RESERVED);
-        List<Long> reservedTableIds = activeReservationEntities.stream()
-                .map(reservation -> reservation.getTable().getId())
-                .toList();
+                .findByBoothIdAndStatusInOrderByExpiresAtAsc(boothId, BLOCKING_STATUSES);
+        Map<Long, BoothReservation> blockingReservationByTableId = toBlockingReservationMap(activeReservationEntities);
 
         List<ReservationTableDto> tableDtos = boothReservationTableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(boothId).stream()
-                .map(table -> toTableDto(table, reservedTableIds.contains(table.getId())))
+                .map(table -> toTableDto(table, blockingReservationByTableId.get(table.getId())))
                 .toList();
 
         List<BoothReservationDto> activeReservations = activeReservationEntities.stream()
@@ -91,7 +93,7 @@ public class ReservationService {
         String userKey = reservationAuthService.resolveUserKeyOrNull(authToken);
         if (userKey != null) {
             myReservation = boothReservationRepository
-                    .findFirstByUserKeyAndStatusOrderByReservedAtDesc(userKey, ReservationStatus.RESERVED)
+                    .findFirstByUserKeyAndStatusInOrderByReservedAtDesc(userKey, BLOCKING_STATUSES)
                     .map(this::toReservationDto)
                     .orElse(null);
 
@@ -143,12 +145,17 @@ public class ReservationService {
 
         for (BoothReservationTable table : existingTables) {
             if (!keepIds.contains(table.getId())) {
+                if (boothReservationRepository.existsByTableIdAndStatusIn(table.getId(), BLOCKING_STATUSES)) {
+                    throw new ResponseStatusException(CONFLICT, "Cannot remove a table that is reserved or in use.");
+                }
                 boothReservationTableRepository.delete(table);
             }
         }
 
         boothReservationTableRepository.saveAll(toSave);
-        return getBoothReservationState(boothId, null);
+        BoothReservationStateDto state = getBoothReservationState(boothId, null);
+        streamService.publishReservations(Map.of("boothId", boothId, "status", "CONFIG_UPDATED"));
+        return state;
     }
 
     @Transactional
@@ -166,7 +173,7 @@ public class ReservationService {
         }
 
         Optional<BoothReservation> activeReservation = boothReservationRepository
-                .findFirstByUserKeyAndStatusOrderByReservedAtDesc(userKey, ReservationStatus.RESERVED);
+                .findFirstByUserKeyAndStatusInOrderByReservedAtDesc(userKey, BLOCKING_STATUSES);
         if (activeReservation.isPresent()) {
             throw new ResponseStatusException(CONFLICT, "Only one active reservation is allowed per user.");
         }
@@ -178,8 +185,8 @@ public class ReservationService {
         if (!table.getBooth().getId().equals(boothId)) {
             throw new ResponseStatusException(CONFLICT, "Selected table does not belong to this booth.");
         }
-        if (boothReservationRepository.existsByTableIdAndStatus(table.getId(), ReservationStatus.RESERVED)) {
-            throw new ResponseStatusException(CONFLICT, "Selected table is already reserved.");
+        if (boothReservationRepository.existsByTableIdAndStatusIn(table.getId(), BLOCKING_STATUSES)) {
+            throw new ResponseStatusException(CONFLICT, "Selected table is already reserved or in use.");
         }
 
         int seatCount = requestDto.seatCount() == null ? 1 : Math.max(1, requestDto.seatCount());
@@ -201,6 +208,47 @@ public class ReservationService {
         ));
 
         BoothReservationDto dto = toReservationDto(created);
+        streamService.publishReservations(dto);
+        return dto;
+    }
+
+    @Transactional
+    public BoothReservationDto complete(Long boothId, Long reservationId) {
+        BoothReservation reservation = boothReservationRepository.findByIdAndBoothId(reservationId, boothId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Reservation not found."));
+
+        if (reservation.getStatus() != ReservationStatus.CHECKED_IN) {
+            throw new ResponseStatusException(CONFLICT, "Only checked-in reservations can be completed.");
+        }
+
+        reservation.markCompleted();
+        boothReservationRepository.save(reservation);
+        restoreReservationSeats(reservation);
+
+        BoothReservationDto dto = toReservationDto(reservation);
+        streamService.publishReservations(dto);
+        return dto;
+    }
+
+    @Transactional
+    public BoothReservationDto releaseTable(Long boothId, Long tableId) {
+        LocalDateTime now = LocalDateTime.now();
+        expireStaleReservations(now);
+
+        BoothReservation reservation = boothReservationRepository
+                .findFirstByBoothIdAndTableIdAndStatusInOrderByReservedAtDesc(boothId, tableId, BLOCKING_STATUSES)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Active table reservation not found."));
+
+        if (reservation.getStatus() == ReservationStatus.CHECKED_IN) {
+            reservation.markCompleted();
+        } else {
+            reservation.markCancelled(now);
+        }
+
+        boothReservationRepository.save(reservation);
+        restoreReservationSeats(reservation);
+
+        BoothReservationDto dto = toReservationDto(reservation);
         streamService.publishReservations(dto);
         return dto;
     }
@@ -306,13 +354,19 @@ public class ReservationService {
 
         reservation.markExpired(now);
         boothReservationRepository.save(reservation);
+        restoreReservationSeats(reservation);
+        registerNoShow(reservation, now);
         streamService.publishReservations(toReservationDto(reservation));
+    }
 
+    private void restoreReservationSeats(BoothReservation reservation) {
         BoothReservationTable table = reservation.getTable();
         int restoredSeats = Math.min(table.getTotalSeats(), table.getAvailableSeats() + reservation.getSeatCount());
         table.setAvailableSeats(restoredSeats);
         boothReservationTableRepository.save(table);
+    }
 
+    private void registerNoShow(BoothReservation reservation, LocalDateTime now) {
         ReservationUserState userState = reservationUserStateRepository.findByUserKey(reservation.getUserKey())
                 .orElseGet(() -> new ReservationUserState(reservation.getUserKey()));
         userState.registerNoShow(now);
@@ -325,17 +379,59 @@ public class ReservationService {
     }
 
     private ReservationTableDto toTableDto(BoothReservationTable table) {
-        return toTableDto(table, false);
+        return toTableDto(table, null);
     }
 
-    private ReservationTableDto toTableDto(BoothReservationTable table, boolean hasActiveReservation) {
+    private ReservationTableDto toTableDto(BoothReservationTable table, BoothReservation blockingReservation) {
+        String occupancyStatus = resolveOccupancyStatus(table, blockingReservation);
+        String occupancyLabel = resolveOccupancyLabel(occupancyStatus);
+        int reservableSeats = blockingReservation == null ? table.getAvailableSeats() : 0;
+
         return new ReservationTableDto(
                 table.getId(),
                 table.getTableName(),
                 table.getTotalSeats(),
-                hasActiveReservation ? 0 : table.getAvailableSeats(),
-                table.getDisplayOrder()
+                table.getAvailableSeats(),
+                table.getDisplayOrder(),
+                reservableSeats,
+                occupancyStatus,
+                occupancyLabel,
+                blockingReservation == null ? null : blockingReservation.getId()
         );
+    }
+
+    private Map<Long, BoothReservation> toBlockingReservationMap(List<BoothReservation> reservations) {
+        Map<Long, BoothReservation> byTableId = new HashMap<>();
+        for (BoothReservation reservation : reservations) {
+            Long tableId = reservation.getTable().getId();
+            BoothReservation existing = byTableId.get(tableId);
+            if (existing == null || reservation.getStatus() == ReservationStatus.CHECKED_IN) {
+                byTableId.put(tableId, reservation);
+            }
+        }
+        return byTableId;
+    }
+
+    private String resolveOccupancyStatus(BoothReservationTable table, BoothReservation blockingReservation) {
+        if (blockingReservation != null && blockingReservation.getStatus() == ReservationStatus.CHECKED_IN) {
+            return "IN_USE";
+        }
+        if (blockingReservation != null) {
+            return "RESERVED";
+        }
+        if (table.getAvailableSeats() <= 0) {
+            return "FULL";
+        }
+        return "AVAILABLE";
+    }
+
+    private String resolveOccupancyLabel(String occupancyStatus) {
+        return switch (occupancyStatus) {
+            case "IN_USE" -> "\uC774\uC6A9\uC911";
+            case "RESERVED" -> "\uC608\uC57D\uC911";
+            case "FULL" -> "\uB9C8\uAC10";
+            default -> "\uC608\uC57D \uAC00\uB2A5";
+        };
     }
 
     private BoothReservationDto toReservationDto(BoothReservation reservation) {

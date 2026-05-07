@@ -5,6 +5,7 @@ import {
   createBoothReservation,
   createBoothReservationCheckInToken,
   createBoothStream,
+  createReservationStream,
   fetchBoothById,
   fetchBoothReservations,
   fetchCongestion,
@@ -168,9 +169,51 @@ function boothMetaLabel(booth) {
 function parseReservationTimeMs(value) {
   if (!value) return 0;
   const text = String(value);
-  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(text);
-  const parsed = Date.parse(hasTimezone ? text : `${text}Z`);
+  const parsed = Date.parse(text);
   return Number.isNaN(parsed) ? 0 : parsed;
+}
+
+function getTableReservableSeats(table) {
+  return Math.max(
+    0,
+    Number(table?.reservableSeats ?? table?.availableSeats) || 0,
+  );
+}
+
+function getTableOccupancyStatus(table) {
+  if (table?.occupancyStatus) return table.occupancyStatus;
+  return getTableReservableSeats(table) <= 0 ? "FULL" : "AVAILABLE";
+}
+
+function isTableReservable(table) {
+  return getTableOccupancyStatus(table) === "AVAILABLE" && getTableReservableSeats(table) > 0;
+}
+
+function tableStatusLabel(table) {
+  if (table?.occupancyLabel) return table.occupancyLabel;
+  switch (getTableOccupancyStatus(table)) {
+    case "IN_USE":
+      return "이용중";
+    case "RESERVED":
+      return "예약중";
+    case "FULL":
+      return "마감";
+    default:
+      return "예약 가능";
+  }
+}
+
+function tableStatusClasses(status) {
+  switch (status) {
+    case "IN_USE":
+      return "bg-violet-100 text-violet-800 border-violet-200";
+    case "RESERVED":
+      return "bg-amber-100 text-amber-800 border-amber-200";
+    case "FULL":
+      return "bg-rose-100 text-rose-700 border-rose-200";
+    default:
+      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+  }
 }
 
 export default function BoothDetailPage() {
@@ -222,7 +265,10 @@ export default function BoothDetailPage() {
       setReservationState(reservationData);
 
       if (!selectedTableId && reservationData.tables.length > 0) {
-        setSelectedTableId(reservationData.tables[0].id);
+        const firstReservableTable =
+          reservationData.tables.find((table) => isTableReservable(table)) ||
+          reservationData.tables[0];
+        setSelectedTableId(firstReservableTable.id);
       }
       setError("");
     } catch (e) {
@@ -250,6 +296,22 @@ export default function BoothDetailPage() {
     });
     return () => stream.close();
   }, [id]);
+
+  useEffect(() => {
+    const stream = createReservationStream();
+    stream.addEventListener("reservations", (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (String(payload.boothId) === String(id)) {
+          refreshReservations().catch((e) => setReservationError(e.message));
+        }
+      } catch {
+        // ignore stream parse error
+      }
+    });
+    return () => stream.close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, reservationToken]);
 
   useEffect(() => {
     const timer = window.setInterval(() => setNowTick(Date.now()), 1000);
@@ -286,7 +348,10 @@ export default function BoothDetailPage() {
     const updated = await fetchBoothReservations(id, reservationToken);
     setReservationState(updated);
     if (!selectedTableId && updated.tables.length > 0) {
-      setSelectedTableId(updated.tables[0].id);
+      const firstReservableTable =
+        updated.tables.find((table) => isTableReservable(table)) ||
+        updated.tables[0];
+      setSelectedTableId(firstReservableTable.id);
     }
   }
 
@@ -375,7 +440,7 @@ export default function BoothDetailPage() {
   }
 
   async function handleReserveByTable(table) {
-    if (!table || table.availableSeats <= 0) return;
+    if (!table || !isTableReservable(table)) return;
 
     setSelectedTableId(table.id);
 
@@ -390,7 +455,7 @@ export default function BoothDetailPage() {
     }
 
     const requestedSeatCount = Math.max(1, Number(seatCount) || 1);
-    if (table.availableSeats < requestedSeatCount) {
+    if (getTableReservableSeats(table) < requestedSeatCount) {
       setReservationError("요청 좌석 수가 남은 좌석보다 많습니다.");
       setReservationMessage("");
       return;
@@ -468,7 +533,8 @@ export default function BoothDetailPage() {
     reservationState?.tables?.find((table) => table.id === selectedTableId) || null;
   const menuItems = useMemo(() => parseMenuBoardJson(booth?.menuBoardJson), [booth?.menuBoardJson]);
   const requestedSeatCount = Math.max(1, Number(seatCount) || 1);
-  const noSeat = selectedTable ? selectedTable.availableSeats < requestedSeatCount : true;
+  const selectedReservableSeats = selectedTable ? getTableReservableSeats(selectedTable) : 0;
+  const noSeat = selectedTable ? selectedReservableSeats < requestedSeatCount : true;
 
   const canReserve = Boolean(
     reservationToken &&
@@ -476,7 +542,7 @@ export default function BoothDetailPage() {
       !myReservation &&
       !penalty?.blocked &&
       selectedTable &&
-      selectedTable.availableSeats > 0 &&
+      isTableReservable(selectedTable) &&
       !noSeat,
   );
 
@@ -761,36 +827,53 @@ export default function BoothDetailPage() {
 
             {myReservation ? (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-2 text-xs text-amber-900 space-y-1">
-                <p className="font-semibold">현재 활성 예약</p>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="font-semibold">현재 활성 예약</p>
+                  <span
+                    className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${
+                      myReservation.status === "CHECKED_IN"
+                        ? "border-violet-200 bg-violet-100 text-violet-800"
+                        : "border-amber-200 bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {myReservation.status === "CHECKED_IN" ? "이용중" : "예약중"}
+                  </span>
+                </div>
                 <p>테이블: {myReservation.tableName}</p>
                 <p>좌석: {myReservation.seatCount}</p>
-                <p className="font-bold">남은 시간: {reservationTimerText}</p>
-                <button
-                  type="button"
-                  onClick={handleGenerateCheckInQr}
-                  className="mt-1 w-full rounded bg-amber-600 text-white py-2 text-xs font-semibold"
-                >
-                  체크인 QR 생성
-                </button>
-                {checkInQrDataUrl && qrRemainingSeconds > 0 && (
-                  <div className="mt-2 rounded border border-amber-300 bg-white p-2 flex flex-col items-center gap-1">
-                    <img
-                      src={checkInQrDataUrl}
-                      alt="check-in qr"
-                      className="h-40 w-40 object-contain"
-                      decoding="async"
-                    />
-                    <p className="text-[11px] font-semibold">QR 만료까지: {qrTimerText}</p>
-                    {checkInQrToken && (
-                      <button
-                        type="button"
-                        onClick={() => navigator.clipboard?.writeText(checkInQrToken)}
-                        className="max-w-full break-all rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-700"
-                      >
-                        {checkInQrToken}
-                      </button>
+                {myReservation.status === "CHECKED_IN" ? (
+                  <p className="font-bold text-violet-800">체크인 완료: 현재 이용 중입니다.</p>
+                ) : (
+                  <>
+                    <p className="font-bold">남은 시간: {reservationTimerText}</p>
+                    <button
+                      type="button"
+                      onClick={handleGenerateCheckInQr}
+                      className="mt-1 w-full rounded bg-amber-600 text-white py-2 text-xs font-semibold"
+                    >
+                      체크인 QR 생성
+                    </button>
+                    {checkInQrDataUrl && qrRemainingSeconds > 0 && (
+                      <div className="mt-2 rounded border border-amber-300 bg-white p-2 flex flex-col items-center gap-1">
+                        <img
+                          src={checkInQrDataUrl}
+                          alt="check-in qr"
+                          className="h-40 w-40 object-contain"
+                          decoding="async"
+                        />
+                        <p className="text-[11px] font-semibold">QR 만료까지: {qrTimerText}</p>
+                        {checkInQrToken && (
+                          <button
+                            type="button"
+                            onClick={() => navigator.clipboard?.writeText(checkInQrToken)}
+                            className="max-w-full break-all rounded border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] text-slate-700"
+                          >
+                            {checkInQrToken}
+                          </button>
+                        )}
+                      </div>
                     )}
-                  </div>
+                  </>
                 )}
               </div>
             ) : (
@@ -798,14 +881,28 @@ export default function BoothDetailPage() {
                 <div className="space-y-2">
                   {reservationState.tables.length ? (
                     reservationState.tables.map((table) => {
-                      const tableSoldOut = table.availableSeats <= 0;
+                      const occupancyStatus = getTableOccupancyStatus(table);
+                      const reservableSeats = getTableReservableSeats(table);
+                      const tableBlocked = !isTableReservable(table);
                       const isSelected = selectedTableId === table.id;
+                      const badgeLabel =
+                        tableBlocked
+                          ? tableStatusLabel(table)
+                          : !reservationToken
+                            ? "인증 필요"
+                            : "예약 가능";
+                      const badgeClass =
+                        tableBlocked
+                          ? tableStatusClasses(occupancyStatus)
+                          : !reservationToken
+                            ? "bg-amber-100 text-amber-700 border-amber-200"
+                            : tableStatusClasses("AVAILABLE");
                       return (
                         <article
                           key={table.id}
                           className={`rounded-md border p-2 ${
-                            tableSoldOut
-                              ? "border-slate-200 bg-slate-100 text-slate-400"
+                            tableBlocked
+                              ? "border-slate-200 bg-slate-100 text-slate-500"
                               : !reservationToken
                                 ? "border-amber-200 bg-amber-50/80"
                               : isSelected
@@ -816,35 +913,38 @@ export default function BoothDetailPage() {
                           <button
                             type="button"
                             onClick={() => handleReserveByTable(table)}
-                            disabled={tableSoldOut}
+                            disabled={tableBlocked}
                             className="w-full text-left"
                           >
                             <div className="flex items-center justify-between gap-2">
                               <p className="font-semibold text-sm">{table.tableName}</p>
                               <span
-                                className={`text-[11px] px-2 py-0.5 rounded-full ${
-                                  tableSoldOut
-                                    ? "bg-rose-100 text-rose-700"
-                                    : !reservationToken
-                                      ? "bg-amber-100 text-amber-700"
-                                    : "bg-emerald-100 text-emerald-700"
-                                }`}
+                                className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${badgeClass}`}
                               >
-                                {tableSoldOut ? "예약불가" : !reservationToken ? "인증 필요" : "예약가능"}
+                                {badgeLabel}
                               </span>
                             </div>
+                            {tableBlocked && (
+                              <p className="mt-1 text-[11px] text-slate-500">
+                                {occupancyStatus === "IN_USE"
+                                  ? "현재 이용 중이라 선택할 수 없습니다."
+                                  : occupancyStatus === "RESERVED"
+                                    ? "예약 유지 시간 동안 선택할 수 없습니다."
+                                    : "현재 남은 좌석이 없습니다."}
+                              </p>
+                            )}
                             <div className="mt-2">
                               <TableMiniLayout
                                 totalSeats={table.totalSeats}
-                                availableSeats={table.availableSeats}
+                                availableSeats={reservableSeats}
                               />
                               <SeatAvailabilityBar
                                 totalSeats={table.totalSeats}
-                                availableSeats={table.availableSeats}
+                                availableSeats={reservableSeats}
                               />
                               <SeatDots
                                 totalSeats={table.totalSeats}
-                                availableSeats={table.availableSeats}
+                                availableSeats={reservableSeats}
                               />
                             </div>
                           </button>
@@ -879,7 +979,7 @@ export default function BoothDetailPage() {
                   </p>
                 )}
 
-                {selectedTable && noSeat && selectedTable.availableSeats > 0 && (
+                {selectedTable && noSeat && selectedReservableSeats > 0 && (
                   <p className="text-xs text-rose-700">요청 좌석 수가 남은 좌석보다 많습니다.</p>
                 )}
               </>
@@ -964,7 +1064,7 @@ export default function BoothDetailPage() {
                 예약 좌석: <span className="font-semibold text-white">{Math.max(1, Number(seatCount) || 1)}석</span>
               </p>
               <p>
-                남은 좌석: <span className="font-semibold text-emerald-300">{confirmTargetTable.availableSeats}석</span>
+                남은 좌석: <span className="font-semibold text-emerald-300">{getTableReservableSeats(confirmTargetTable)}석</span>
               </p>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2">

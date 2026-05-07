@@ -282,6 +282,30 @@ public class OpsController {
         return checkedIn;
     }
 
+    @PostMapping("/booth/{id}/reservations/{reservationId}/complete")
+    public BoothReservationDto completeBoothReservation(
+            @PathVariable Long id,
+            @PathVariable Long reservationId,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        BoothReservationDto completed = reservationService.complete(id, reservationId);
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_COMPLETE", "BOOTH", id, "reservation " + reservationId);
+        return completed;
+    }
+
+    @PostMapping("/booth/{id}/reservations/tables/{tableId}/release")
+    public BoothReservationDto releaseBoothReservationTable(
+            @PathVariable Long id,
+            @PathVariable Long tableId,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        BoothReservationDto released = reservationService.releaseTable(id, tableId);
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_TABLE_RELEASE", "BOOTH", id, "table " + tableId);
+        return released;
+    }
+
     @PostMapping("/booth/{id}/reservations/check-in/by-token")
     public BoothReservationDto checkInBoothReservationByToken(
             @PathVariable Long id,

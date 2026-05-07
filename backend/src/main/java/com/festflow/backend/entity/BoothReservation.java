@@ -74,6 +74,15 @@ public class BoothReservation {
         this.expiredAt = expiredAt;
     }
 
+    public void markCompleted() {
+        this.status = ReservationStatus.COMPLETED;
+    }
+
+    public void markCancelled(LocalDateTime cancelledAt) {
+        this.status = ReservationStatus.CANCELLED;
+        this.expiredAt = cancelledAt;
+    }
+
     public Long getId() {
         return id;
     }
