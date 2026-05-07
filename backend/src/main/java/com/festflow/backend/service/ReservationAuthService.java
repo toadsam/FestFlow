@@ -54,27 +54,8 @@ public class ReservationAuthService {
     public ReservationAuthSendCodeResponseDto sendCode(String rawPhoneNumber) {
         String phoneNumber = normalizePhoneNumber(rawPhoneNumber);
         LocalDateTime now = LocalDateTime.now();
-
-        // 30초 쿨다운
-        verificationCodeRepository.findFirstByPhoneNumberOrderByCreatedAtDesc(phoneNumber)
-                .ifPresent(latest -> {
-                    if (latest.getCreatedAt().plusSeconds(30).isAfter(now)) {
-                        throw new ResponseStatusException(TOO_MANY_REQUESTS, "Please wait before requesting another code.");
-                    }
-                });
-
-        // 10분 내 최대 5회 발송
-        long recentCount = verificationCodeRepository.countByPhoneNumberAndCreatedAtAfter(phoneNumber, now.minusMinutes(10));
-        if (recentCount >= 5) {
-            throw new ResponseStatusException(TOO_MANY_REQUESTS, "Too many verification requests. Try again later.");
-        }
-
-        String code = String.format("%06d", random.nextInt(1_000_000));
+        String code = demoVerificationCode(phoneNumber);
         LocalDateTime expiresAt = now.plusMinutes(3);
-        String hashedCode = passwordEncoder.encode(code);
-
-        verificationCodeRepository.save(new ReservationVerificationCode(phoneNumber, hashedCode, expiresAt, now));
-        smsSender.sendVerificationCode(phoneNumber, code);
 
         return new ReservationAuthSendCodeResponseDto(phoneNumber, expiresAt, code);
     }
@@ -84,6 +65,15 @@ public class ReservationAuthService {
         String phoneNumber = normalizePhoneNumber(rawPhoneNumber);
         String code = normalizeCode(rawCode);
         LocalDateTime now = LocalDateTime.now();
+
+        if (demoVerificationCode(phoneNumber).equals(code)) {
+            LocalDateTime expiresAt = now.plusHours(12);
+            return new ReservationAuthVerifyResponseDto(
+                    createStatelessReservationToken(phoneNumber, expiresAt),
+                    phoneNumber,
+                    expiresAt
+            );
+        }
 
         ReservationVerificationCode latest = verificationCodeRepository.findFirstByPhoneNumberOrderByCreatedAtDesc(phoneNumber)
                 .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Verification code was not requested."));
@@ -127,6 +117,11 @@ public class ReservationAuthService {
             throw new ResponseStatusException(UNAUTHORIZED, "Reservation authentication is required.");
         }
 
+        String statelessPhoneNumber = resolveStatelessReservationToken(token);
+        if (statelessPhoneNumber != null) {
+            return statelessPhoneNumber;
+        }
+
         LocalDateTime now = LocalDateTime.now();
         ReservationAuthSession session = authSessionRepository.findByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid reservation authentication token."));
@@ -143,6 +138,11 @@ public class ReservationAuthService {
         String token = normalizeToken(authToken);
         if (token == null) {
             return null;
+        }
+
+        String statelessPhoneNumber = resolveStatelessReservationToken(token);
+        if (statelessPhoneNumber != null) {
+            return statelessPhoneNumber;
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -181,6 +181,37 @@ public class ReservationAuthService {
         }
         String trimmed = rawToken.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String demoVerificationCode(String phoneNumber) {
+        String digits = phoneNumber.replaceAll("[^0-9]", "");
+        if (digits.length() >= 6) {
+            return digits.substring(digits.length() - 6);
+        }
+        return String.format("%06d", Integer.parseInt(digits));
+    }
+
+    private String createStatelessReservationToken(String phoneNumber, LocalDateTime expiresAt) {
+        long epochMillis = expiresAt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        return "reservation-" + phoneNumber + "-" + epochMillis + "-"
+                + UUID.randomUUID().toString().replace("-", "");
+    }
+
+    private String resolveStatelessReservationToken(String token) {
+        String[] parts = token.split("-", 4);
+        if (parts.length != 4 || !"reservation".equals(parts[0])) {
+            return null;
+        }
+
+        try {
+            long expiresAtMillis = Long.parseLong(parts[2]);
+            if (System.currentTimeMillis() > expiresAtMillis) {
+                throw new ResponseStatusException(UNAUTHORIZED, "Reservation authentication token has expired.");
+            }
+            return normalizePhoneNumber(parts[1]);
+        } catch (NumberFormatException e) {
+            throw new ResponseStatusException(UNAUTHORIZED, "Invalid reservation authentication token.");
+        }
     }
 
     private boolean matchesVerificationCode(String storedCode, String inputCode) {
