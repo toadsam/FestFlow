@@ -13,6 +13,7 @@ import {
   createCongestionStream,
   createNoticeStream,
   createBoothStream,
+  createReservationStream,
   downloadBoothCsv,
   fetchActiveNotices,
   fetchBooths,
@@ -22,7 +23,6 @@ import {
 } from "../api";
 import CongestionBadge from "../components/CongestionBadge";
 import { IconCalendar, IconClock, IconMapPin, IconMusic, IconTrophy, IconUsers } from "../components/UxIcons";
-import { resolveBoothImageUrl } from "../config/boothImages";
 import {
   AJOU_ADDRESS,
   AJOU_CENTER,
@@ -107,6 +107,45 @@ function boothMetaLabel(booth) {
       ? `${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
       : "시간 미정";
   return `${booth.category || "주점"} · ${booth.dayPart || "야간"} · ${time}`;
+}
+
+function reservationAvailableSeats(booth) {
+  return Math.max(0, Number(booth.reservationAvailableSeats) || 0);
+}
+
+function reservationTableCount(booth) {
+  return Math.max(0, Number(booth.reservationTableCount) || 0);
+}
+
+function boothReservationText(booth) {
+  if (booth.reservationEnabled === false) {
+    return "현장 이용";
+  }
+  if (reservationTableCount(booth) === 0) {
+    return "테이블 미설정";
+  }
+  return `예약 가능 ${reservationAvailableSeats(booth)}명`;
+}
+
+function boothReservationTone(booth) {
+  if (booth.reservationEnabled === false || reservationTableCount(booth) === 0) {
+    return "neutral";
+  }
+  if (reservationAvailableSeats(booth) <= 0) {
+    return "full";
+  }
+  return "available";
+}
+
+function boothReservationBadgeClass(booth) {
+  switch (boothReservationTone(booth)) {
+    case "available":
+      return "border-emerald-300/70 bg-emerald-400/15 text-emerald-100";
+    case "full":
+      return "border-rose-300/70 bg-rose-400/15 text-rose-100";
+    default:
+      return "border-slate-400/50 bg-slate-800/40 text-slate-100";
+  }
 }
 
 function ZoomWatcher({ onZoomChange, onMapReady }) {
@@ -214,8 +253,7 @@ export default function HomePage() {
   const [booths, setBooths] = useState([]);
   const [congestionMap, setCongestionMap] = useState({});
   const [mapZoom, setMapZoom] = useState(16);
-  const [isGridView, setIsGridView] = useState(true);
-  const [activeView, setActiveView] = useState("split");
+  const [activeView, setActiveView] = useState("list");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -226,6 +264,7 @@ export default function HomePage() {
   const [openNowOnly, setOpenNowOnly] = useState(false);
   const [favoritesOnly, setFavoritesOnly] = useState(false);
   const [favorites, setFavorites] = useState(getFavoriteIds());
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [notices, setNotices] = useState([]);
   const [events, setEvents] = useState([]);
   const [dismissedNoticeIds, setDismissedNoticeIds] = useState([]);
@@ -270,15 +309,10 @@ export default function HomePage() {
 
     async function load() {
       try {
-        const [boothData, noticeData, eventData] = await Promise.all([
-          fetchBooths(),
-          fetchActiveNotices(),
-          fetchEvents(),
-        ]);
+        const boothData = await fetchBooths();
         if (!mounted) return;
         setBooths(boothData);
-        setNotices(noticeData);
-        setEvents(eventData);
+        setLoading(false);
 
         idleTask = scheduleIdleTask(async () => {
           const nextMap = await fetchCongestionMap(boothData);
@@ -286,6 +320,18 @@ export default function HomePage() {
           previousCongestionRef.current = nextMap;
           setCongestionMap(nextMap);
         });
+
+        const [noticeResult, eventResult] = await Promise.allSettled([
+          fetchActiveNotices(),
+          fetchEvents(),
+        ]);
+        if (!mounted) return;
+        if (noticeResult.status === "fulfilled") {
+          setNotices(noticeResult.value);
+        }
+        if (eventResult.status === "fulfilled") {
+          setEvents(eventResult.value);
+        }
       } catch (e) {
         if (mounted) setError(e.message);
       } finally {
@@ -301,6 +347,8 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (loading) return undefined;
+
     const boothStream = createBoothStream();
     boothStream.addEventListener("booths", (event) => {
       try {
@@ -310,9 +358,38 @@ export default function HomePage() {
       }
     });
     return () => boothStream.close();
-  }, []);
+  }, [loading]);
 
   useEffect(() => {
+    if (loading) return undefined;
+
+    const reservationStream = createReservationStream();
+    let refreshTimer = null;
+
+    reservationStream.addEventListener("reservations", () => {
+      if (refreshTimer) {
+        window.clearTimeout(refreshTimer);
+      }
+      refreshTimer = window.setTimeout(async () => {
+        try {
+          setBooths(await fetchBooths());
+        } catch {
+          // 목록 요약 갱신 실패는 다음 폴링/이벤트에서 다시 복구한다.
+        }
+      }, 120);
+    });
+
+    return () => {
+      if (refreshTimer) {
+        window.clearTimeout(refreshTimer);
+      }
+      reservationStream.close();
+    };
+  }, [loading]);
+
+  useEffect(() => {
+    if (loading) return undefined;
+
     const stream = createCongestionStream();
 
     stream.addEventListener("congestion", (event) => {
@@ -344,9 +421,11 @@ export default function HomePage() {
     });
 
     return () => stream.close();
-  }, []);
+  }, [loading]);
 
   useEffect(() => {
+    if (loading) return undefined;
+
     const noticeStream = createNoticeStream();
 
     noticeStream.addEventListener("notices", (event) => {
@@ -359,7 +438,7 @@ export default function HomePage() {
     });
 
     return () => noticeStream.close();
-  }, []);
+  }, [loading]);
 
   const filteredBooths = useMemo(() => {
     let list = booths.filter((booth) =>
@@ -397,6 +476,9 @@ export default function HomePage() {
       }
       if (sortBy === "name") {
         return a.name.localeCompare(b.name, "ko");
+      }
+      if (sortBy === "reservation") {
+        return reservationAvailableSeats(b) - reservationAvailableSeats(a);
       }
       return (a.displayOrder || 999) - (b.displayOrder || 999);
     });
@@ -444,6 +526,15 @@ export default function HomePage() {
       (notice) => !dismissedNoticeIds.includes(notice.id),
     );
   }, [notices, dismissedNoticeIds]);
+
+  const visibleReservationSeats = useMemo(
+    () =>
+      filteredBooths.reduce(
+        (total, booth) => total + reservationAvailableSeats(booth),
+        0,
+      ),
+    [filteredBooths],
+  );
 
   const recommendedBooths = useMemo(() => {
     return [...booths]
@@ -646,6 +737,9 @@ export default function HomePage() {
               </p>
               <p className="mt-1 text-[11px] text-slate-600">
                 대기 {booth.estimatedWaitMinutes ?? "-"}분
+              </p>
+              <p className="mt-1 text-[11px] font-bold text-emerald-200 line-clamp-1">
+                {boothReservationText(booth)}
               </p>
               <p className="mt-1 text-[10px] font-semibold text-cyan-700 line-clamp-1">
                 {booth.category || "주점"} · {booth.dayPart || "야간"}
@@ -874,33 +968,25 @@ export default function HomePage() {
                     key={`quick-${booth.id}`}
                     type="button"
                     onClick={() => openBoothDetail(booth.id)}
-                    className="shrink-0 w-36 rounded-lg border border-slate-200 overflow-hidden text-left bg-slate-50"
+                    className="shrink-0 w-44 rounded-lg border border-slate-200 px-3 py-2 text-left bg-slate-50"
                   >
-                    <div className="h-20 bg-slate-200">
-                      <img
-                        src={resolveBoothImageUrl(booth)}
-                        alt={`${booth.name} 이미지`}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </div>
-                    <div className="p-2">
-                      <p className="text-xs font-semibold text-slate-800 line-clamp-1">
-                        {booth.name}
-                      </p>
-                      <p className="mt-1 text-[10px] font-semibold text-cyan-700 line-clamp-1">
-                        {booth.category || "주점"} · {booth.dayPart || "야간"}
-                      </p>
-                      <div className="mt-1">
-                        {congestion ? (
-                          <CongestionBadge level={congestion.level} />
-                        ) : (
-                          <span className="text-[11px] text-slate-600">
-                            집계중
-                          </span>
-                        )}
-                      </div>
+                    <p className="text-xs font-semibold text-slate-800 line-clamp-1">
+                      {booth.name}
+                    </p>
+                    <p className="mt-1 text-[10px] font-semibold text-cyan-700 line-clamp-1">
+                      {booth.category || "주점"} · {booth.dayPart || "야간"}
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold text-emerald-200 line-clamp-1">
+                      {boothReservationText(booth)}
+                    </p>
+                    <div className="mt-1">
+                      {congestion ? (
+                        <CongestionBadge level={congestion.level} />
+                      ) : (
+                        <span className="text-[11px] text-slate-600">
+                          집계중
+                        </span>
+                      )}
                     </div>
                   </button>
                 );
@@ -949,6 +1035,9 @@ export default function HomePage() {
                         {boothMetaLabel(booth)}
                         {isBoothOpenNow(booth) ? " · 운영중" : " · 운영전/종료"}
                       </p>
+                      <p className="mt-1 text-[11px] font-bold text-emerald-200 line-clamp-1">
+                        {boothReservationText(booth)}
+                      </p>
                     </button>
                   );
                 })}
@@ -971,109 +1060,111 @@ export default function HomePage() {
 
       {activeView === "list" && (
         <>
-          <div className="sticky top-2 z-30 rounded-xl border border-slate-200 bg-white/95 backdrop-blur p-3 space-y-2 shadow-sm">
-            <div className="grid grid-cols-2 gap-2">
+          <div className="booth-list-toolbar">
+            <div className="booth-list-toolbar__top">
+              <p className="booth-list-toolbar__summary">
+                {filteredBooths.length}개 · 예약 {visibleReservationSeats}명
+              </p>
               <button
                 type="button"
-                onClick={() => setIsGridView((prev) => !prev)}
-                className="rounded-lg border border-teal-700 text-teal-700 min-h-11 py-2 text-sm font-semibold"
+                onClick={() => setFiltersOpen((prev) => !prev)}
+                className={`booth-list-toolbar__button ${filtersOpen ? "booth-list-toolbar__button--active" : ""}`}
               >
-                {isGridView ? "세로 카드 보기" : "가로 카드 보기"}
+                필터
               </button>
               <button
                 type="button"
                 onClick={downloadBoothCsv}
-                className="rounded-lg border border-slate-300 min-h-11 py-2 text-sm font-semibold text-slate-700"
+                className="booth-list-toolbar__button"
               >
-                부스 CSV
+                CSV
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setFavoritesOnly((prev) => !prev)}
-                className={`rounded-lg min-h-11 py-2 text-sm font-semibold ${favoritesOnly ? "bg-gradient-to-r from-teal-700 via-cyan-600 to-emerald-600 text-white" : "border border-slate-300 text-slate-700"}`}
-              >
-                {favoritesOnly ? "좋아요만 보는 중" : "좋아요만 보기"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFavoritesOnly(false);
-                  setLevelFilter("전체");
-                  setCategoryFilter("전체");
-                  setDayPartFilter("전체");
-                  setOpenNowOnly(false);
-                  setQuery("");
-                }}
-                className="rounded-lg border border-slate-300 min-h-11 py-2 text-sm font-semibold text-slate-700"
-              >
-                필터 초기화
-              </button>
-            </div>
-
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="부스 이름 검색"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 min-h-11 text-sm"
-            />
-
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
-              >
-                {BOOTH_CATEGORY_OPTIONS.map((category) => (
-                  <option key={category} value={category}>
-                    {category === "전체" ? "전체 유형" : category}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={dayPartFilter}
-                onChange={(e) => setDayPartFilter(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
-              >
-                {BOOTH_DAY_PART_OPTIONS.map((part) => (
-                  <option key={part} value={part}>
-                    {part === "전체" ? "전체 시간대" : part}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => setOpenNowOnly((prev) => !prev)}
-                className={`col-span-2 rounded-lg min-h-11 px-2 py-2 text-sm font-semibold ${openNowOnly ? "bg-emerald-600 text-white" : "border border-slate-300 text-slate-700"}`}
-              >
-                운영중
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={levelFilter}
-                onChange={(e) => setLevelFilter(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
-              >
-                <option>전체</option>
-                <option>여유</option>
-                <option>보통</option>
-                <option>혼잡</option>
-                <option>매우혼잡</option>
-              </select>
+            <div className="booth-list-toolbar__quick">
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="부스 검색"
+                className="booth-list-toolbar__search"
+              />
               <select
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
+                className="booth-list-toolbar__sort"
               >
                 <option value="displayOrder">운영순</option>
                 <option value="name">이름순</option>
                 <option value="congestion">혼잡도순</option>
+                <option value="reservation">예약순</option>
               </select>
             </div>
+
+            {filtersOpen && (
+              <div className="booth-list-toolbar__filters">
+              <select
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                  className="booth-list-toolbar__control"
+                >
+                  {BOOTH_CATEGORY_OPTIONS.map((category) => (
+                    <option key={category} value={category}>
+                      {category === "전체" ? "전체 유형" : category}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={dayPartFilter}
+                  onChange={(e) => setDayPartFilter(e.target.value)}
+                  className="booth-list-toolbar__control"
+                >
+                  {BOOTH_DAY_PART_OPTIONS.map((part) => (
+                    <option key={part} value={part}>
+                      {part === "전체" ? "전체 시간대" : part}
+                    </option>
+                  ))}
+                </select>
+                <select
+                  value={levelFilter}
+                  onChange={(e) => setLevelFilter(e.target.value)}
+                  className="booth-list-toolbar__control"
+                >
+                  <option>전체</option>
+                  <option>여유</option>
+                  <option>보통</option>
+                  <option>혼잡</option>
+                  <option>매우혼잡</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() => setOpenNowOnly((prev) => !prev)}
+                  className={`booth-list-toolbar__control ${openNowOnly ? "booth-list-toolbar__button--active" : ""}`}
+                >
+                  운영중
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFavoritesOnly((prev) => !prev)}
+                  className={`booth-list-toolbar__control ${favoritesOnly ? "booth-list-toolbar__button--active" : ""}`}
+                >
+                  좋아요
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFavoritesOnly(false);
+                    setLevelFilter("전체");
+                    setCategoryFilter("전체");
+                    setDayPartFilter("전체");
+                    setOpenNowOnly(false);
+                    setQuery("");
+                  }}
+                  className="booth-list-toolbar__control"
+                >
+                  초기화
+                </button>
+              </div>
+            )}
           </div>
 
           {loading && (
@@ -1106,89 +1197,69 @@ export default function HomePage() {
             </div>
           )}
 
-          <div
-            className={
-              isGridView
-                ? "booth-card-grid stagger-list"
-                : "space-y-3 stagger-list"
-            }
-          >
+          <div className="booth-list-stack stagger-list">
             {filteredBooths.map((booth) => {
               const congestion = congestionMap[booth.id];
               const isFavorite = favorites.includes(booth.id);
+              const reservedTables = Number(booth.reservationReservedTables) || 0;
+              const inUseTables = Number(booth.reservationInUseTables) || 0;
+              const isOpen = isBoothOpenNow(booth);
 
               return (
                 <article
                   key={booth.id}
-                  className={isGridView ? "booth-list-card" : "w-full rounded-2xl border border-slate-200 bg-white overflow-hidden"}
+                  className="booth-list-row"
                 >
-                  <div className="booth-list-card__image bg-slate-100">
-                    <img
-                      src={resolveBoothImageUrl(booth)}
-                      alt={`${booth.name} 대표 이미지`}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                  <div className="booth-list-card__body">
-                    <h3 className="booth-list-card__title text-slate-800 break-keep">
-                      {booth.name}
-                    </h3>
-                    <div className="booth-list-card__tags">
-                      <span className="rounded-full border border-cyan-300/60 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-100">
-                        {booth.category || "주점"}
-                      </span>
-                      <span className="rounded-full border border-cyan-300/40 bg-slate-900/40 px-2 py-0.5 text-[10px] font-bold text-cyan-100">
-                        {booth.dayPart || "야간"}
-                      </span>
-                      <span className="rounded-full border border-slate-400/40 bg-slate-900/40 px-2 py-0.5 text-[10px] font-bold text-slate-100">
-                        {congestion?.level || "집계중"}
-                      </span>
+                  <button
+                    type="button"
+                    onClick={() => openBoothDetail(booth.id)}
+                    className="booth-list-row__main"
+                  >
+                    <div className="min-w-0">
+                      <div className="booth-list-row__head">
+                        <h3 className="booth-list-row__title text-slate-800 break-keep">
+                          {booth.name}
+                        </h3>
+                        <span
+                          className={`booth-reservation-badge ${boothReservationBadgeClass(booth)}`}
+                        >
+                          {boothReservationText(booth)}
+                        </span>
+                      </div>
+                      <p className="booth-list-row__meta">
+                        <span>{booth.category || "주점"}</span>
+                        <span>{booth.dayPart || "야간"}</span>
+                        <span>{congestion?.level || "집계중"}</span>
+                        <span>{isOpen ? "운영중" : "종료"}</span>
+                        <span>대기 {booth.estimatedWaitMinutes ?? "-"}분</span>
+                      </p>
+                      <p className="booth-list-row__reservation">
+                        테이블 {reservationTableCount(booth)}개
+                        {" · 예약중 "}
+                        {reservedTables}개
+                        {" · 이용중 "}
+                        {inUseTables}개
+                      </p>
                     </div>
-                    <p className="booth-list-card__meta text-cyan-700">
-                      대기 {booth.estimatedWaitMinutes ?? "-"}분
-                      {" · "}
-                      {booth.openTime || booth.closeTime
-                        ? `${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
-                        : "시간 미정"}
-                      {" · "}
-                      {isBoothOpenNow(booth) ? "운영중" : "운영전/종료"}
-                    </p>
-                    <p className="booth-list-card__reservation text-slate-600">
-                      {booth.reservationEnabled === false ? "예약 없이 현장 이용" : "\u00A0"}
-                    </p>
-                    <p className={`${isGridView ? "hidden" : "mt-1 line-clamp-1"} text-xs text-slate-600`}>
-                      {booth.description}
-                    </p>
-                    <div className="booth-card-actions">
-                      <button
-                        type="button"
-                        aria-label={`${booth.name} 자세히 보기`}
-                        title="자세히 보기"
-                        onClick={() => openBoothDetail(booth.id)}
-                        className="booth-card-action"
-                      >
-                        🔍
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`${booth.name} 지도에서 보기`}
-                        title="지도에서 보기"
-                        onClick={() => focusBoothOnMap(booth.id)}
-                        className="booth-card-action booth-card-action--map"
-                      >
-                        <IconMapPin className="h-5 w-5 icon-role-map" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
-                        onClick={() => handleFavorite(booth.id)}
-                        className={`booth-card-action booth-card-action--favorite ${isFavorite ? "booth-card-action--favorite-on" : ""}`}
-                      >
-                        {isFavorite ? "⭐" : "☆"}
-                      </button>
-                    </div>
+                  </button>
+                  <div className="booth-list-row__actions">
+                    <button
+                      type="button"
+                      aria-label={`${booth.name} 지도에서 보기`}
+                      title="지도에서 보기"
+                      onClick={() => focusBoothOnMap(booth.id)}
+                      className="booth-card-action booth-card-action--map"
+                    >
+                      <IconMapPin className="h-5 w-5 icon-role-map" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
+                      onClick={() => handleFavorite(booth.id)}
+                      className={`booth-card-action booth-card-action--favorite ${isFavorite ? "booth-card-action--favorite-on" : ""}`}
+                    >
+                      {isFavorite ? "⭐" : "☆"}
+                    </button>
                   </div>
                 </article>
               );
