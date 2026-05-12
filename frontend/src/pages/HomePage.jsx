@@ -22,7 +22,7 @@ import {
   sendGps,
 } from "../api";
 import CongestionBadge from "../components/CongestionBadge";
-import { IconCalendar, IconClock, IconMapPin, IconMusic, IconUsers } from "../components/UxIcons";
+import { IconCalendar, IconClock, IconMapPin, IconSearch } from "../components/UxIcons";
 import {
   AJOU_ADDRESS,
   AJOU_CENTER,
@@ -536,6 +536,28 @@ export default function HomePage() {
     [filteredBooths],
   );
 
+  const openBoothCount = useMemo(
+    () => booths.filter((booth) => isBoothOpenNow(booth)).length,
+    [booths],
+  );
+
+  const recommendedBooths = useMemo(() => {
+    return [...filteredBooths]
+      .filter((booth) => isBoothOpenNow(booth))
+      .sort((a, b) => {
+        const scoreA = levelToScore[congestionMap[a.id]?.level] || 1;
+        const scoreB = levelToScore[congestionMap[b.id]?.level] || 1;
+        if (scoreA !== scoreB) return scoreA - scoreB;
+
+        const waitA = Number(a.estimatedWaitMinutes) || 0;
+        const waitB = Number(b.estimatedWaitMinutes) || 0;
+        if (waitA !== waitB) return waitA - waitB;
+
+        return reservationAvailableSeats(b) - reservationAvailableSeats(a);
+      })
+      .slice(0, 3);
+  }, [filteredBooths, congestionMap]);
+
   useEffect(() => {
     if (activeView === "list" || !focusedBoothId) return undefined;
 
@@ -663,99 +685,160 @@ export default function HomePage() {
   }
 
   return (
-    <section className="cyber-page space-y-4 pt-4 scan-enter">
-      <article className="rounded-2xl border border-cyan-300/60 bg-gradient-to-br from-[#05305b] via-[#0a6ea8] to-[#19c6e8] px-4 py-4 text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.42)]">
-        <p className="text-xs tracking-[0.03em] text-cyan-200/95 drop-shadow-[0_0_8px_rgba(34,211,238,0.45)]">
-          아주대학교 축제 메인
+    <section className="cyber-page festival-home space-y-4 pt-4 scan-enter">
+      <article className="festival-hero">
+        <p className="festival-eyebrow">오늘의 아주대 축제</p>
+        <h2 className="festival-hero__title">지금 뭐 할지 바로 고르세요</h2>
+        <p className="festival-hero__copy">
+          공연 일정, 부스 위치, 혼잡도를 한 화면에서 확인하세요.
         </p>
-        <h2 className="mt-1 text-xl font-extrabold text-cyan-100 text-role-ops drop-shadow-[0_0_12px_rgba(125,249,255,0.65)] inline-flex items-center gap-2">
-          <IconMusic className="h-5 w-5 icon-role-ops" />
-          지금 축제를 바로 즐겨보세요
-        </h2>
-        <p className="mt-1 text-xs text-cyan-200/95 drop-shadow-[0_0_7px_rgba(34,211,238,0.4)]">
-          {nextEvent
-            ? `다음 공연: ${nextEvent.title} (${nextEvent.startTime?.replace("T", " ").slice(11, 16)})`
-            : "곧 시작하는 공연 정보를 확인해보세요."}
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/stage-map")}
-            className="rounded-xl border border-cyan-300/60 bg-sky-500/20 px-3 py-2.5 min-h-11 text-sm font-semibold text-cyan-50 shadow-[0_0_22px_rgba(34,211,238,0.45)] inline-flex items-center justify-center gap-1.5"
-          >
-            <IconUsers className="h-4 w-4 icon-role-ops" />
-            노천극장 인원 보기
+
+        <div className="festival-status-grid">
+          <div className="festival-status-card festival-status-card--primary">
+            <span>다음 공연</span>
+            <strong>{nextEvent ? nextEvent.title : "일정 확인"}</strong>
+            <small>
+              {nextEvent
+                ? `${nextEvent.startTime?.replace("T", " ").slice(11, 16)} 시작`
+                : "공연 일정에서 전체 라인업을 볼 수 있어요"}
+            </small>
+          </div>
+          <div className="festival-status-card">
+            <span>운영 부스</span>
+            <strong>{openBoothCount}곳</strong>
+            <small>예약 가능 {visibleReservationSeats}명</small>
+          </div>
+        </div>
+
+        <div className="festival-quick-actions">
+          <button type="button" onClick={() => navigate("/events")}>
+            <IconCalendar className="h-4 w-4" />
+            공연 일정
           </button>
-          <button
-            type="button"
-            onClick={() => navigate("/events")}
-            className="rounded-xl border border-cyan-200/70 bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 px-3 py-2.5 min-h-11 text-sm font-bold text-cyan-50 shadow-[0_0_24px_rgba(56,189,248,0.55)] inline-flex items-center justify-center gap-1.5"
-          >
-            <IconCalendar className="h-4 w-4 icon-role-schedule" />
-            공연 일정 보기
+          <button type="button" onClick={() => setActiveView("list")}>
+            <IconSearch className="h-4 w-4" />
+            부스 찾기
+          </button>
+          <button type="button" onClick={() => setActiveView("split")}>
+            <IconMapPin className="h-4 w-4" />
+            지도 보기
           </button>
         </div>
       </article>
 
-      <article className="rounded-xl border border-teal-100 bg-teal-50/70 p-3">
-        <p className="text-sm font-semibold text-teal-900 text-role-log inline-flex items-center gap-1.5"><IconClock className="h-4 w-4 icon-role-log" />실시간 운영 안내</p>
-        <p className="text-xs text-teal-800 mt-1">기준 위치: {AJOU_ADDRESS}</p>
-        {locationText && (
-          <p className="text-xs text-teal-700 mt-1">내 위치: {locationText}</p>
-        )}
-      </article>
-
-      <div className="space-y-2 stagger-list">
-        {visibleNotices.length === 0 && (
-          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-            현재 등록된 운영 공지가 없습니다.
+      <section className="festival-section">
+        <div className="festival-section__head">
+          <div>
+            <p className="festival-eyebrow">어디로 갈까?</p>
+            <h3>지금 가볼 만한 곳</h3>
           </div>
-        )}
-        {visibleNotices.slice(0, 2).map((notice) => (
-          <article
-            key={notice.id}
-            className={`rounded-lg border px-3 py-2 ${noticeColor[notice.category] || "border-slate-300 bg-slate-50 text-slate-700"}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold">{notice.category}</span>
-                <span className="text-[10px] opacity-70">
-                  {notice.updatedAt?.replace("T", " ").slice(5, 16)}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setDismissedNoticeIds((prev) => [...prev, notice.id])
-                }
-                className="rounded-full px-2 py-1 text-[11px] font-bold opacity-70 hover:opacity-100"
-                aria-label="공지 닫기"
-              >
-                ✕
-              </button>
+          <button type="button" onClick={() => setActiveView("list")}>
+            전체 보기
+          </button>
+        </div>
+        <div className="festival-recommend-list stagger-list">
+          {recommendedBooths.length === 0 && (
+            <div className="festival-empty">
+              운영 중인 추천 부스를 집계하고 있습니다.
             </div>
-            <p className="text-sm font-semibold mt-1">{notice.title}</p>
-            <p className="text-xs mt-1">{notice.content}</p>
-          </article>
-        ))}
-      </div>
+          )}
+          {recommendedBooths.map((booth) => {
+            const congestion = congestionMap[booth.id];
+            return (
+              <button
+                key={`recommend-${booth.id}`}
+                type="button"
+                onClick={() => openBoothDetail(booth.id)}
+                className="festival-recommend-card"
+              >
+                <span>{booth.category || "부스"}</span>
+                <strong>{booth.name}</strong>
+                <small>
+                  {congestion?.level || "집계중"} · 대기{" "}
+                  {booth.estimatedWaitMinutes ?? "-"}분 ·{" "}
+                  {boothReservationText(booth)}
+                </small>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
-      <div className="home-view-toggle z-40 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-900/90 backdrop-blur p-1 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setActiveView("split")}
-          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === "split" ? "bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50" : "text-slate-300"}`}
-        >
-          동시 보기
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveView("list")}
-          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === "list" ? "bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50" : "text-slate-300"}`}
-        >
-          부스 목록
-        </button>
-      </div>
+      <section className="festival-section">
+        <div className="festival-section__head">
+          <div>
+            <p className="festival-eyebrow">놓치면 안 되는 것</p>
+            <h3>실시간 공지</h3>
+          </div>
+          <p className="festival-section__meta">
+            <IconClock className="h-4 w-4" />
+            {AJOU_ADDRESS}
+          </p>
+        </div>
+        {locationText && (
+          <p className="festival-location">내 위치: {locationText}</p>
+        )}
+        <div className="space-y-2 stagger-list">
+          {visibleNotices.length === 0 && (
+            <div className="festival-empty">현재 중요한 공지가 없습니다.</div>
+          )}
+          {visibleNotices.slice(0, 2).map((notice) => (
+            <article
+              key={notice.id}
+              className={`festival-notice rounded-lg border px-3 py-2 ${noticeColor[notice.category] || "border-slate-300 bg-slate-50 text-slate-700"}`}
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-bold">{notice.category}</span>
+                  <span className="text-[10px] opacity-70">
+                    {notice.updatedAt?.replace("T", " ").slice(5, 16)}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDismissedNoticeIds((prev) => [...prev, notice.id])
+                  }
+                  className="rounded-full px-2 py-1 text-[11px] font-bold opacity-70 hover:opacity-100"
+                  aria-label="공지 닫기"
+                >
+                  ✕
+                </button>
+              </div>
+              <p className="text-sm font-semibold mt-1">{notice.title}</p>
+              <p className="text-xs mt-1">{notice.content}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="festival-section festival-booth-finder">
+        <div className="festival-section__head">
+          <div>
+            <p className="festival-eyebrow">부스 찾기</p>
+            <h3>목록과 지도로 확인하기</h3>
+          </div>
+          <p className="festival-section__meta">
+            {filteredBooths.length}개 · 예약 {visibleReservationSeats}명
+          </p>
+        </div>
+        <div className="home-view-toggle z-40 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-900/90 backdrop-blur p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActiveView("split")}
+            className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === "split" ? "bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50" : "text-slate-300"}`}
+          >
+            지도와 함께 보기
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveView("list")}
+            className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === "list" ? "bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50" : "text-slate-300"}`}
+          >
+            부스 목록
+          </button>
+        </div>
+      </section>
 
       {activeView !== "list" && (
         <>

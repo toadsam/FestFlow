@@ -7,25 +7,25 @@ const THEMES = [
   {
     id: "violet",
     frame: "lineup-card-violet",
-    role: "HEAD VOCAL",
+    role: "헤드 보컬",
     accent: "VX-01",
   },
   {
     id: "green",
     frame: "lineup-card-green",
-    role: "MAIN DANCER",
+    role: "메인 댄서",
     accent: "GX-07",
   },
   {
     id: "silver",
     frame: "lineup-card-silver",
-    role: "PERFORMANCE",
+    role: "퍼포먼스",
     accent: "SX-22",
   },
   {
     id: "cyan",
     frame: "lineup-card-cyan",
-    role: "STAGE UNIT",
+    role: "스테이지 유닛",
     accent: "CX-13",
   },
 ];
@@ -58,6 +58,23 @@ function buildProfile(item) {
     stage: toMetric(`${source}-stage`, 70, 98),
     pulse: toMetric(`${source}-pulse`, 66, 95),
   };
+}
+
+function formatScheduleDateTime(value, includeDate = true) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return `${value || ""}`.replace("T", " ").slice(0, includeDate ? 16 : 5);
+  }
+
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return includeDate ? `${month}.${day} ${hour}:${minute}` : `${hour}:${minute}`;
+}
+
+function formatScheduleRange(item) {
+  return `${formatScheduleDateTime(item.startTime)} - ${formatScheduleDateTime(item.endTime, false)}`;
 }
 
 export default function LineupPage() {
@@ -179,19 +196,16 @@ export default function LineupPage() {
   return (
     <section className="cyber-page pt-4 space-y-3 lineup-page">
       <div className="flex items-center justify-between gap-2">
-        <h2
-          className="text-lg font-bold glitch-title text-role-ops inline-flex items-center gap-2"
-          data-text="FESTIVAL LINEUP"
-        >
+        <h2 className="text-lg font-bold text-role-ops inline-flex items-center gap-2">
           <IconMusic className="h-5 w-5 icon-role-ops" />
-          FESTIVAL LINEUP
+          아티스트 라인업
         </h2>
         <Link
           to="/events"
           className="lineup-back text-role-log px-3 py-2 text-xs font-semibold rounded-lg inline-flex items-center gap-1.5"
         >
           <IconArrowLeft className="h-3.5 w-3.5 icon-role-log" />
-          BACK
+          공연 일정
         </Link>
       </div>
 
@@ -274,15 +288,15 @@ export default function LineupPage() {
 
                     <div className="lineup-hud-grid">
                       <div className="lineup-hud-item">
-                        <p>RHYTHM</p>
+                        <p>리듬감</p>
                         <span style={{ width: `${profile.rhythm}%` }} />
                       </div>
                       <div className="lineup-hud-item">
-                        <p>STAGE</p>
+                        <p>무대 장악</p>
                         <span style={{ width: `${profile.stage}%` }} />
                       </div>
                       <div className="lineup-hud-item">
-                        <p>PULSE</p>
+                        <p>현장 반응</p>
                         <span style={{ width: `${profile.pulse}%` }} />
                       </div>
                     </div>
@@ -291,19 +305,17 @@ export default function LineupPage() {
                       <p className="lineup-role">{item.theme.role}</p>
                       <p className="lineup-title">{item.title}</p>
                       <p className="lineup-time">
-                        {item.startTime?.replace("T", " ").slice(5, 16)} -{" "}
-                        {item.endTime?.replace("T", " ").slice(11, 16)}
+                        {formatScheduleRange(item)}
                       </p>
                     </div>
                   </div>
 
                   <div className="lineup-face lineup-face-back">
-                    <p className="lineup-back-label">ARTIST PROFILE</p>
+                    <p className="lineup-back-label">아티스트 정보</p>
                     <p className="lineup-back-name">{item.artist}</p>
                     <p className="lineup-back-title">{item.title}</p>
                     <p className="lineup-back-time">
-                      {item.startTime?.replace("T", " ")} ~{" "}
-                      {item.endTime?.replace("T", " ")}
+                      {formatScheduleRange(item)}
                     </p>
                     {item.imageCredit && (
                       <p className="lineup-back-time">{item.imageCredit}</p>
@@ -314,10 +326,10 @@ export default function LineupPage() {
                       </span>
                       <span className="lineup-back-chip">{item.status}</span>
                       <span className="lineup-back-chip">
-                        AURA {profile.aura}%
+                        무대감 {profile.aura}%
                       </span>
                     </div>
-                    <p className="lineup-back-tip">CLICK AGAIN TO FLIP BACK</p>
+                    <p className="lineup-back-tip">카드를 다시 누르면 앞면으로 돌아갑니다</p>
                   </div>
                 </div>
               </button>
@@ -343,7 +355,7 @@ export default function LineupPage() {
           <div className="flex items-center justify-between gap-2">
             <h3 className="text-sm font-bold text-role-ops inline-flex items-center gap-1.5">
               <IconTrophy className="h-4 w-4 icon-role-ops" />
-              NOW SELECTED
+              선택한 공연
             </h3>
             <span className="text-xs px-2 py-1 rounded-full border border-cyan-300/60">
               {selected.status}
@@ -354,8 +366,7 @@ export default function LineupPage() {
             {selected.title}
           </p>
           <p className="text-xs mt-1 text-cyan-200">
-            {selected.startTime?.replace("T", " ")} ~{" "}
-            {selected.endTime?.replace("T", " ")}
+            {formatScheduleRange(selected)}
           </p>
         </article>
       )}

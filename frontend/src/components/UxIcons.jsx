@@ -23,6 +23,16 @@ export function IconChat(props) {
   );
 }
 
+export function IconHome(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M4 10.5 12 4l8 6.5" />
+      <path d="M6.5 9.5V20h11V9.5" />
+      <path d="M10 20v-5h4v5" />
+    </IconBase>
+  );
+}
+
 export function IconRefresh(props) {
   return (
     <IconBase {...props}>

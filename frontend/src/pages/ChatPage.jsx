@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { askChat } from "../api";
 import {
@@ -7,7 +7,6 @@ import {
   IconChat,
   IconClock,
   IconMapPin,
-  IconMic,
   IconRefresh,
   IconSearch,
   IconSend,
@@ -80,7 +79,6 @@ export default function ChatPage() {
   const navigate = useNavigate();
   const [question, setQuestion] = useState("");
   const [loading, setLoading] = useState(false);
-  const [listening, setListening] = useState(false);
   const [messages, setMessages] = useState([
     {
       role: "bot",
@@ -90,13 +88,6 @@ export default function ChatPage() {
       warnings: [],
     },
   ]);
-
-  const speechSupported = useMemo(
-    () =>
-      typeof window !== "undefined" &&
-      Boolean(window.SpeechRecognition || window.webkitSpeechRecognition),
-    [],
-  );
 
   async function submitQuestion(text) {
     const trimmed = text.trim();
@@ -151,27 +142,6 @@ export default function ChatPage() {
     submitQuestion(question);
   }
 
-  function startVoiceInput() {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition || listening) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = "ko-KR";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-    recognition.onstart = () => setListening(true);
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
-    recognition.onresult = (event) => {
-      const transcript = event.results?.[0]?.[0]?.transcript || "";
-      setQuestion(transcript);
-      if (transcript.trim()) {
-        submitQuestion(transcript);
-      }
-    };
-    recognition.start();
-  }
-
   const visibleMessages = messages.slice(-12);
   const lastVisibleIndex = visibleMessages.length - 1;
 
@@ -185,7 +155,7 @@ export default function ChatPage() {
             </span>
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-                FestFlow AI
+                AI 축제 도우미
               </p>
               <h2 className="mt-0.5 text-lg font-extrabold leading-tight text-role-ops">
                 지금 뭐 할까요?
@@ -202,21 +172,13 @@ export default function ChatPage() {
             <button
               type="button"
               onClick={resetMessages}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-cyan-200/50 bg-cyan-500/10 text-cyan-100"
+              className="inline-flex min-h-9 items-center justify-center gap-1 rounded-xl border border-cyan-200/50 bg-cyan-500/10 px-3 text-xs font-bold text-cyan-100"
               aria-label="대화 초기화"
             >
               <IconRefresh className="h-4 w-4 icon-role-log" />
+              초기화
             </button>
           </div>
-        </div>
-        <div className="mt-3 overflow-hidden rounded-xl border border-cyan-300/30 bg-slate-900/70">
-          <img
-            src="/images/chat-assistant.png"
-            alt=""
-            className="h-28 w-full object-cover object-[68%_center]"
-            loading="eager"
-            decoding="async"
-          />
         </div>
       </header>
 
@@ -232,21 +194,6 @@ export default function ChatPage() {
             placeholder="예: 지금 빨리 먹을 수 있는 곳"
             aria-label="질문 입력"
           />
-          {speechSupported && (
-            <button
-              type="button"
-              onClick={startVoiceInput}
-              className={`inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border text-cyan-100 ${
-                listening
-                  ? "border-amber-200/80 bg-amber-500/25"
-                  : "border-cyan-300/45 bg-slate-900/90"
-              }`}
-              aria-label="음성 입력"
-              disabled={loading}
-            >
-              <IconMic className="h-5 w-5" />
-            </button>
-          )}
           <button
             className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-cyan-200/75 bg-cyan-500/25 text-cyan-50 disabled:opacity-50"
             type="submit"

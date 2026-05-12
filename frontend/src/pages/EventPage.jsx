@@ -25,6 +25,23 @@ function notify(title, body) {
   }
 }
 
+function formatScheduleDateTime(value, includeDate = true) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return `${value || ""}`.replace("T", " ").slice(0, includeDate ? 16 : 5);
+  }
+
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hour = String(date.getHours()).padStart(2, "0");
+  const minute = String(date.getMinutes()).padStart(2, "0");
+  return includeDate ? `${month}.${day} ${hour}:${minute}` : `${hour}:${minute}`;
+}
+
+function formatScheduleRange(event) {
+  return `${formatScheduleDateTime(event.startTime)} - ${formatScheduleDateTime(event.endTime, false)}`;
+}
+
 export default function EventPage() {
   const [events, setEvents] = useState([]);
   const [error, setError] = useState("");
@@ -212,11 +229,11 @@ export default function EventPage() {
       <div className="event-grid-noise" aria-hidden />
       <div ref={cursorGlowRef} className="event-cursor-glow" aria-hidden />
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold glitch-title text-role-ops inline-flex items-center gap-2" data-text="LIVE LINEUP">
+        <h2 className="text-lg font-bold text-role-ops inline-flex items-center gap-2">
           <span className="visual-icon-badge visual-icon-badge--ops">
             <IconMusic className="h-5 w-5 icon-role-ops" />
           </span>
-          LIVE LINEUP
+          공연 일정
         </h2>
         <div className="flex items-center gap-1.5">
           <Link
@@ -240,7 +257,7 @@ export default function EventPage() {
             <span className="mr-1 inline-flex visual-icon-badge-sm">
               <IconDownload className="h-3.5 w-3.5 icon-role-log" />
             </span>
-            CSV
+            내보내기
           </button>
         </div>
       </div>
@@ -265,14 +282,14 @@ export default function EventPage() {
             <span className="visual-icon-badge-sm">
               <IconCalendar className="h-3.5 w-3.5 icon-role-schedule" />
             </span>
-            Next On Stage
+            다음 공연
           </p>
           <p className="mt-1 font-semibold">{upcoming.title}</p>
           {upcoming.liveMessage && (
             <p className="mt-1 text-xs text-amber-100">{upcoming.liveMessage}</p>
           )}
           <p className="text-xs mt-1">
-            {upcoming.startTime.replace("T", " ")} · {countdownLabel(upcoming)}
+            {formatScheduleRange(upcoming)} · {countdownLabel(upcoming)}
             {upcoming.delayMinutes ? ` · ${upcoming.delayMinutes}분 지연` : ""}
           </p>
         </div>
@@ -312,8 +329,7 @@ export default function EventPage() {
             </span>
           </div>
           <p className="mt-1 text-xs text-cyan-200">
-            {selectedEvent.startTime.replace("T", " ")} ~{" "}
-            {selectedEvent.endTime.replace("T", " ")}
+            {formatScheduleRange(selectedEvent)}
             {selectedEvent.delayMinutes ? ` · ${selectedEvent.delayMinutes}분 지연` : ""}
           </p>
           {selectedEvent.liveMessage && (
@@ -355,8 +371,7 @@ export default function EventPage() {
                   </span>
                 </div>
                 <p className="text-sm text-slate-600 mt-1">
-                  {event.startTime.replace("T", " ")} ~{" "}
-                  {event.endTime.replace("T", " ")}
+                  {formatScheduleRange(event)}
                   {event.delayMinutes ? ` · ${event.delayMinutes}분 지연` : ""}
                 </p>
                 {event.liveMessage && (

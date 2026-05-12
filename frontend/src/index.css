@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;800&family=Rajdhani:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800;900&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -13,7 +13,7 @@
   --brand-cyan: #10ebff;
   --brand-pink: #ff2fb8;
   --brand-violet: #7a63ff;
-  font-family: "Rajdhani", "Noto Sans KR", sans-serif;
+  font-family: "Noto Sans KR", sans-serif;
   color: var(--txt-main);
   background:
     radial-gradient(130% 140% at 88% -12%, #1a2f6f 0%, transparent 42%),
@@ -237,7 +237,7 @@ a:focus-visible {
 }
 
 .neon-title {
-  font-family: "Orbitron", "Rajdhani", sans-serif;
+  font-family: "Noto Sans KR", sans-serif;
   letter-spacing: 0.02em;
   background: linear-gradient(
     180deg,
@@ -643,7 +643,7 @@ a:focus-visible {
 .app-shell h1,
 .app-shell h2,
 .app-shell h3 {
-  font-family: "Orbitron", "Rajdhani", sans-serif;
+  font-family: "Noto Sans KR", sans-serif;
   letter-spacing: 0.06em;
   color: #d8fdff !important;
   text-shadow: 0 0 10px #1deeff52;
@@ -1470,7 +1470,7 @@ a:focus-visible {
   margin-top: 6px;
   font-size: 21px;
   font-weight: 800;
-  font-family: "Orbitron", "Rajdhani", sans-serif;
+  font-family: "Noto Sans KR", sans-serif;
   color: #e2ffff;
   text-shadow: 0 0 18px #24efff7d;
 }
@@ -1659,7 +1659,7 @@ a:focus-visible {
 .lineup-artist-name {
   position: relative;
   z-index: 2;
-  font-family: "Orbitron", "Rajdhani", sans-serif;
+  font-family: "Noto Sans KR", sans-serif;
   font-weight: 800;
   letter-spacing: 0.1em;
   font-size: 28px;
@@ -3726,5 +3726,1837 @@ body::after {
 
   .stagger-list > * {
     animation: none !important;
+  }
+}
+
+/* FestFlow visitor app design system */
+:root {
+  --festival-bg: #f5f7fb;
+  --festival-surface: #ffffff;
+  --festival-surface-soft: #f8fafc;
+  --festival-text: #111827;
+  --festival-muted: #64748b;
+  --festival-line: #dbe4ef;
+  --festival-brand: #2563eb;
+  --festival-brand-strong: #1d4ed8;
+  --festival-accent: #ff6b5a;
+  --festival-mint: #10b981;
+  --festival-warning: #f59e0b;
+  --festival-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--festival-text);
+  background: var(--festival-bg);
+}
+
+body {
+  background: var(--festival-bg) !important;
+  color: var(--festival-text) !important;
+  font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+body::before,
+body::after,
+.app-shell::before,
+.app-shell::after,
+.neon-shell::before,
+.neon-shell::after,
+.hud-vignette,
+.hud-scan,
+.hud-particles,
+.neon-header-grid,
+.global-fx,
+.fx-burst {
+  display: none !important;
+}
+
+.app-shell,
+.festival-shell,
+.neon-shell {
+  width: min(100%, 1120px);
+  max-width: 1120px;
+  min-height: 100vh;
+  background: var(--festival-bg) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  color: var(--festival-text) !important;
+  overflow: visible !important;
+  animation: none !important;
+}
+
+.festival-app-header {
+  position: sticky;
+  top: 0;
+  z-index: 900;
+  overflow: hidden;
+  border-bottom: 1px solid var(--festival-line);
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.festival-app-header__main {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.25rem 0.85rem;
+}
+
+.festival-app-kicker {
+  margin: 0;
+  color: var(--festival-brand) !important;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0 !important;
+}
+
+.festival-app-title {
+  margin: 0.2rem 0 0;
+  color: var(--festival-text) !important;
+  font-family: inherit !important;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+  font-weight: 900;
+  line-height: 1.15;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  text-shadow: none !important;
+  -webkit-text-fill-color: currentColor !important;
+  animation: none !important;
+}
+
+.festival-app-subtitle {
+  margin: 0.25rem 0 0;
+  color: var(--festival-muted) !important;
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.festival-app-meta {
+  display: grid;
+  gap: 0.2rem;
+  color: var(--festival-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-align: right;
+}
+
+.festival-app-toolbar {
+  padding: 0.65rem 1.25rem 0.85rem;
+  background: #ffffff;
+}
+
+.festival-app-toolbar__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.festival-app-toolbar__row p {
+  margin: 0;
+  color: var(--festival-muted) !important;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.festival-app-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.festival-control-button,
+.app-shell .festival-control-button {
+  min-height: 2.15rem !important;
+  padding: 0.35rem 0.65rem !important;
+  border: 1px solid var(--festival-line) !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: var(--festival-text) !important;
+  box-shadow: none !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  white-space: nowrap;
+}
+
+.festival-control-button[aria-pressed="true"] {
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+  color: var(--festival-brand-strong) !important;
+}
+
+.festival-app-toast {
+  display: inline-block;
+  margin: 0.55rem 0 0;
+  padding: 0.45rem 0.65rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: var(--festival-brand-strong) !important;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.festival-main,
+.cyber-main {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 1rem 1rem 6.5rem !important;
+}
+
+.app-shell main,
+.app-shell section {
+  color: var(--festival-text) !important;
+}
+
+.app-shell .cyber-page,
+.app-shell article,
+.app-shell .rounded-xl,
+.app-shell .rounded-2xl,
+.app-shell .rounded-lg,
+.app-shell .event-card,
+.app-shell .lineup-card,
+.app-shell .lineup-face,
+.app-shell .festival-hero,
+.app-shell .festival-section {
+  clip-path: none !important;
+  border: 1px solid var(--festival-line) !important;
+  border-radius: 8px !important;
+  background: var(--festival-surface) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  color: var(--festival-text) !important;
+  text-shadow: none !important;
+  animation: none !important;
+}
+
+.app-shell .cyber-page {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.app-shell article::before,
+.app-shell article::after,
+.app-shell .rounded-xl::before,
+.app-shell .rounded-xl::after,
+.app-shell .rounded-2xl::before,
+.app-shell .rounded-2xl::after,
+.app-shell .rounded-lg::before,
+.app-shell .rounded-lg::after,
+.app-shell .cyber-page::before,
+.app-shell .cyber-page::after,
+.event-grid-noise,
+.event-cursor-glow,
+.lineup-card-noise,
+.lineup-card-guides,
+.lineup-portrait-glow,
+.lineup-hud-grid {
+  display: none !important;
+}
+
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.app-shell p,
+.app-shell span,
+.app-shell label,
+.app-shell li,
+.app-shell small {
+  font-family: inherit !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.app-shell h1,
+.app-shell h2,
+.app-shell h3 {
+  color: var(--festival-text) !important;
+  -webkit-text-fill-color: currentColor !important;
+  animation: none !important;
+}
+
+.app-shell p,
+.app-shell span,
+.app-shell label,
+.app-shell li,
+.app-shell small,
+.app-shell .text-slate-500,
+.app-shell .text-slate-600,
+.app-shell .text-slate-700,
+.app-shell .text-slate-800,
+.app-shell .text-cyan-100,
+.app-shell .text-cyan-200,
+.app-shell .text-cyan-300,
+.app-shell .text-teal-700,
+.app-shell .text-teal-800,
+.app-shell .text-teal-900 {
+  color: var(--festival-muted) !important;
+}
+
+.app-shell strong,
+.app-shell b,
+.app-shell .font-bold,
+.app-shell .font-extrabold,
+.app-shell .font-semibold {
+  color: var(--festival-text) !important;
+}
+
+.app-shell button,
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
+  border-radius: 8px !important;
+  font-family: inherit !important;
+}
+
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
+  border: 1px solid var(--festival-line) !important;
+  background: #ffffff !important;
+  color: var(--festival-text) !important;
+  box-shadow: none !important;
+}
+
+.app-shell input::placeholder,
+.app-shell textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1;
+}
+
+.app-shell button {
+  border-color: var(--festival-line) !important;
+  background: #ffffff !important;
+  color: var(--festival-text) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+  animation: none !important;
+}
+
+.app-shell button::before {
+  display: none !important;
+}
+
+.app-shell button:hover {
+  border-color: #bfdbfe !important;
+  background: #f8fbff !important;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.08) !important;
+  transform: none !important;
+}
+
+.app-shell button:active {
+  transform: translateY(1px) !important;
+  filter: none !important;
+}
+
+.app-shell [class*="from-blue"],
+.app-shell [class*="from-teal"],
+.app-shell .bg-teal-700,
+.app-shell [class*="bg-teal-600"] {
+  border-color: var(--festival-brand) !important;
+  background: var(--festival-brand) !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.app-shell [class*="from-blue"] *,
+.app-shell [class*="from-teal"] *,
+.app-shell .bg-teal-700 *,
+.app-shell [class*="bg-teal-600"] * {
+  color: #ffffff !important;
+}
+
+.app-shell a {
+  color: var(--festival-brand) !important;
+  text-decoration-color: #bfdbfe !important;
+}
+
+.app-shell .bg-white,
+.app-shell .bg-white\/95,
+.app-shell .bg-slate-50,
+.app-shell .bg-slate-100,
+.app-shell .bg-amber-50,
+.app-shell .bg-indigo-50,
+.app-shell .bg-emerald-50,
+.app-shell .bg-rose-50,
+.app-shell .bg-slate-900\/80,
+.app-shell .bg-slate-900\/90 {
+  background: var(--festival-surface) !important;
+  box-shadow: none !important;
+}
+
+.app-shell .border-cyan-300\/60,
+.app-shell .border-cyan-300\/70,
+.app-shell .border-slate-200,
+.app-shell .border-teal-100 {
+  border-color: var(--festival-line) !important;
+}
+
+.festival-home {
+  display: grid;
+  gap: 0.85rem !important;
+}
+
+.app-shell .festival-hero {
+  padding: 1.1rem !important;
+  border-color: #c7dbff !important;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f2f7ff 62%, #fff4f1 100%) !important;
+}
+
+.app-shell .festival-eyebrow {
+  color: var(--festival-brand) !important;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.app-shell .festival-hero__title {
+  margin-top: 0.25rem;
+  color: var(--festival-text) !important;
+  font-size: clamp(1.45rem, 4vw, 2rem);
+  font-weight: 900;
+  line-height: 1.18;
+}
+
+.app-shell .festival-hero__copy {
+  color: var(--festival-muted) !important;
+}
+
+.app-shell .festival-status-card,
+.app-shell .festival-recommend-card {
+  border: 1px solid var(--festival-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.app-shell .festival-status-card--primary {
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+}
+
+.app-shell .festival-status-card span,
+.app-shell .festival-recommend-card span {
+  color: var(--festival-muted) !important;
+}
+
+.app-shell .festival-status-card strong,
+.app-shell .festival-recommend-card strong {
+  color: var(--festival-text) !important;
+}
+
+.app-shell .festival-status-card small,
+.app-shell .festival-recommend-card small {
+  color: var(--festival-muted) !important;
+}
+
+.app-shell .festival-quick-actions button:first-child,
+.app-shell .festival-quick-actions button,
+.app-shell .event-cta,
+.app-shell .booth-list-toolbar__button--active {
+  border-color: var(--festival-brand) !important;
+}
+
+.app-shell .festival-quick-actions button:first-child {
+  background: var(--festival-brand) !important;
+  color: #ffffff !important;
+}
+
+.app-shell .festival-quick-actions button:first-child * {
+  color: #ffffff !important;
+}
+
+.app-shell .festival-section__head h3 {
+  color: var(--festival-text) !important;
+}
+
+.app-shell .festival-section__meta,
+.app-shell .festival-location,
+.app-shell .festival-empty {
+  color: var(--festival-muted) !important;
+}
+
+.app-shell .festival-empty {
+  border-color: #cbd5e1 !important;
+  background: var(--festival-surface-soft) !important;
+}
+
+.booth-list-toolbar {
+  position: sticky;
+  top: 6.2rem;
+  border: 1px solid var(--festival-line) !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.06) !important;
+}
+
+.booth-list-toolbar__summary {
+  color: var(--festival-text) !important;
+}
+
+.booth-list-toolbar__button,
+.booth-list-toolbar__control,
+.booth-list-toolbar__search,
+.booth-list-toolbar__sort {
+  border-color: var(--festival-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--festival-text) !important;
+}
+
+.booth-list-toolbar__button--active {
+  background: #eff6ff !important;
+  color: var(--festival-brand-strong) !important;
+}
+
+.booth-list-stack {
+  gap: 0.5rem !important;
+}
+
+.booth-list-row {
+  border: 1px solid var(--festival-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
+}
+
+.booth-list-row__main {
+  background: transparent !important;
+}
+
+.booth-list-row__title {
+  color: var(--festival-text) !important;
+}
+
+.booth-list-row__meta,
+.booth-list-row__reservation {
+  color: var(--festival-muted) !important;
+}
+
+.booth-list-row__meta span {
+  color: var(--festival-muted) !important;
+}
+
+.booth-list-row__meta span + span::before {
+  color: #cbd5e1 !important;
+}
+
+.booth-card-action {
+  border-color: var(--festival-line) !important;
+  background: var(--festival-surface-soft) !important;
+}
+
+.booth-card-action--favorite-on {
+  border-color: #fde68a !important;
+  background: #fffbeb !important;
+}
+
+.booth-reservation-badge {
+  border-color: #bbf7d0 !important;
+  background: #ecfdf5 !important;
+  color: #047857 !important;
+}
+
+.home-view-toggle {
+  border-color: var(--festival-line) !important;
+  background: var(--festival-surface-soft) !important;
+  box-shadow: none !important;
+}
+
+.home-view-toggle button {
+  color: var(--festival-muted) !important;
+}
+
+.home-view-toggle button[class*="from-blue"] {
+  background: var(--festival-brand) !important;
+  color: #ffffff !important;
+}
+
+.leaflet-container {
+  border-radius: 8px;
+  filter: none !important;
+}
+
+.app-shell .leaflet-popup-content-wrapper,
+.app-shell .leaflet-popup-tip {
+  border: 1px solid var(--festival-line) !important;
+  background: #ffffff !important;
+  color: var(--festival-text) !important;
+  box-shadow: var(--festival-shadow) !important;
+}
+
+.event-card,
+.lineup-card,
+.lineup-face {
+  color: var(--festival-text) !important;
+}
+
+.event-card-active,
+.lineup-card-active,
+.cyber-selected {
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.lineup-page,
+.lineup-carousel,
+.lineup-track,
+.lineup-portrait {
+  background: transparent !important;
+}
+
+.lineup-chip,
+.lineup-back-chip,
+.visual-icon-badge,
+.visual-icon-badge-sm {
+  border-color: var(--festival-line) !important;
+  background: var(--festival-surface-soft) !important;
+  box-shadow: none !important;
+  color: var(--festival-text) !important;
+}
+
+.icon-role-alert {
+  color: #e11d48 !important;
+}
+
+.icon-role-ops,
+.icon-role-log,
+.icon-role-map,
+.icon-role-schedule {
+  color: var(--festival-brand) !important;
+}
+
+.text-role-alert {
+  color: #e11d48 !important;
+}
+
+.text-role-ops,
+.text-role-log,
+.text-role-map,
+.text-role-schedule {
+  color: var(--festival-text) !important;
+}
+
+.festival-bottom-nav {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 1200;
+  display: grid;
+  width: min(100%, 1120px);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  transform: translateX(-50%);
+  border-top: 1px solid var(--festival-line);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.festival-bottom-nav__item {
+  display: flex;
+  min-height: 3.4rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  color: var(--festival-muted) !important;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.festival-bottom-nav__item span {
+  color: inherit !important;
+}
+
+.festival-bottom-nav__item--active {
+  color: var(--festival-brand) !important;
+  background: #eff6ff;
+}
+
+.festival-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1280;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: rgba(15, 23, 42, 0.22) !important;
+  box-shadow: none !important;
+}
+
+.quick-orbit-root {
+  right: 1rem !important;
+  bottom: 5.2rem !important;
+  z-index: 1300;
+  width: 3.25rem !important;
+  height: 3.25rem !important;
+}
+
+.quick-orbit-root-open {
+  right: 1rem !important;
+  bottom: 5.2rem !important;
+}
+
+.quick-orbit-menu {
+  position: absolute !important;
+  right: 0;
+  bottom: 4rem;
+  inset: auto 0 4rem auto !important;
+  display: grid;
+  width: min(18rem, calc(100vw - 2rem));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.45rem;
+  padding: 0.6rem;
+  border: 1px solid var(--festival-line);
+  border-radius: 12px;
+  background: #ffffff;
+  box-shadow: var(--festival-shadow);
+}
+
+.quick-orbit-menu::before {
+  display: none !important;
+}
+
+.quick-orbit-item {
+  position: static !important;
+  display: flex;
+  width: auto !important;
+  height: auto !important;
+  min-height: 3rem !important;
+  transform: none !important;
+  flex-direction: row !important;
+  justify-content: flex-start !important;
+  gap: 0.4rem;
+  border: 1px solid var(--festival-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--festival-text) !important;
+  box-shadow: none !important;
+  animation: none !important;
+}
+
+.quick-orbit-item-active {
+  border-color: #bfdbfe !important;
+  background: #eff6ff !important;
+  color: var(--festival-brand) !important;
+}
+
+.quick-orbit-icon,
+.quick-orbit-label {
+  color: inherit !important;
+}
+
+.quick-orbit-label {
+  max-width: none !important;
+  font-size: 0.78rem !important;
+}
+
+.festival-fab {
+  display: flex;
+  width: 3.25rem;
+  height: 3.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--festival-brand) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.28) !important;
+  font-size: 1.25rem;
+  font-weight: 900;
+}
+
+.festival-fab--open {
+  background: var(--festival-text) !important;
+}
+
+@media (max-width: 640px) {
+  .app-shell,
+  .festival-shell {
+    max-width: none !important;
+  }
+
+  .festival-app-header__main,
+  .festival-app-toolbar__row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .festival-app-meta {
+    text-align: left;
+  }
+
+  .festival-app-actions {
+    justify-content: flex-start;
+  }
+
+  .festival-main,
+  .cyber-main {
+    padding: 0.85rem 0.85rem 6.25rem !important;
+  }
+
+  .booth-list-toolbar {
+    top: 8.8rem;
+  }
+}
+
+.app-shell .festival-app-kicker {
+  color: var(--festival-brand) !important;
+}
+
+.app-shell .festival-app-title {
+  color: var(--festival-text) !important;
+}
+
+.app-shell .festival-app-subtitle,
+.app-shell .festival-app-toolbar__row p,
+.app-shell .festival-app-meta,
+.app-shell .festival-app-meta span {
+  color: var(--festival-muted) !important;
+}
+
+.app-shell .festival-control-button {
+  min-height: 2.15rem !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: var(--festival-text) !important;
+}
+
+.app-shell .festival-control-button[aria-pressed="true"] {
+  background: #eff6ff !important;
+  color: var(--festival-brand-strong) !important;
+}
+
+.glitch-title::before,
+.glitch-title::after,
+.event-alert::before,
+.event-cta::after {
+  display: none !important;
+}
+
+.app-shell .text-emerald-100,
+.app-shell .text-emerald-200,
+.app-shell .text-emerald-300 {
+  color: #047857 !important;
+}
+
+.app-shell .text-rose-100,
+.app-shell .text-rose-200,
+.app-shell .text-rose-300 {
+  color: #be123c !important;
+}
+
+.app-shell .text-amber-100,
+.app-shell .text-amber-200,
+.app-shell .text-amber-300 {
+  color: #b45309 !important;
+}
+
+/* Restore the original radial quick menu interaction. */
+.quick-orbit-root {
+  position: fixed !important;
+  right: 1rem !important;
+  bottom: 6rem !important;
+  z-index: 1300;
+  width: 3.5rem !important;
+  height: 3.5rem !important;
+  transition:
+    right 220ms ease,
+    bottom 220ms ease;
+}
+
+.quick-orbit-root-open {
+  right: clamp(11rem, 34vw, 13rem) !important;
+  bottom: clamp(12rem, 32vh, 14rem) !important;
+}
+
+.quick-orbit-menu {
+  position: absolute !important;
+  inset: 50% auto auto 50% !important;
+  display: block !important;
+  width: auto !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.quick-orbit-menu::before {
+  content: "" !important;
+  position: absolute !important;
+  display: block !important;
+  width: 14rem !important;
+  height: 14rem !important;
+  border: 1px solid #2deeff34 !important;
+  border-radius: 999px !important;
+  transform: translate(-50%, -50%) !important;
+  background:
+    radial-gradient(circle at 50% 50%, #10e7ff17 0%, transparent 58%),
+    radial-gradient(circle at 50% 50%, transparent 58%, #1cefff0f 59%, transparent 61%) !important;
+  box-shadow:
+    inset 0 0 24px #2beaff1c,
+    0 0 32px #00eaff1f !important;
+  pointer-events: none;
+}
+
+.quick-orbit-item {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  display: flex !important;
+  width: 3.6rem !important;
+  height: 3.6rem !important;
+  min-height: 0 !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1px !important;
+  border-color: #1ddfff80 !important;
+  border-radius: 999px !important;
+  background:
+    linear-gradient(145deg, #08192ff2, #0a223af2),
+    radial-gradient(circle at 30% 18%, #ffffff24 0%, transparent 42%) !important;
+  color: #bdf5ff !important;
+  box-shadow:
+    0 9px 24px #010711c7,
+    inset 0 0 0 1px #95efff17 !important;
+  transform: translate(-50%, -50%) translate(var(--orbit-x), var(--orbit-y)) !important;
+  animation: orbit-pop 360ms cubic-bezier(0.22, 1.35, 0.28, 1) both !important;
+}
+
+.quick-orbit-item:hover,
+.quick-orbit-item:focus-visible {
+  border-color: #58f7ff !important;
+  color: #ffffff !important;
+  filter: brightness(1.08);
+  box-shadow:
+    0 0 20px #20dfff68,
+    0 9px 24px #041327d9 !important;
+}
+
+.quick-orbit-item-active {
+  border-color: #32f2ff !important;
+  background: linear-gradient(145deg, #1c75ff, #11d7ff) !important;
+  color: #eaffff !important;
+  text-shadow: 0 0 8px #dffeff9c;
+}
+
+.quick-orbit-icon {
+  color: inherit !important;
+  font-size: 17px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+}
+
+.quick-orbit-label {
+  max-width: 3.1rem !important;
+  overflow: hidden !important;
+  color: inherit !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+}
+
+.radial-fab.neon-radial-open,
+.radial-fab.neon-radial-close {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 999px !important;
+  box-shadow:
+    0 0 20px #19e6ff66,
+    0 8px 22px #020c18cc !important;
+}
+
+/* Production visual pass: keep visitor-facing screens coherent and leave the radial quick menu as the stylized exception. */
+:root {
+  --ff-page: #f6f8fc;
+  --ff-surface: #ffffff;
+  --ff-soft: #f8fafc;
+  --ff-text: #111827;
+  --ff-muted: #64748b;
+  --ff-line: #d7e0ec;
+  --ff-primary: #2458d3;
+  --ff-primary-soft: #edf4ff;
+  --ff-coral: #f9735b;
+  --ff-green: #059669;
+  --ff-yellow: #d97706;
+  --ff-shadow: 0 8px 22px rgba(15, 23, 42, 0.07);
+}
+
+html,
+body,
+#root {
+  background: var(--ff-page) !important;
+}
+
+body,
+.app-shell {
+  color: var(--ff-text) !important;
+  font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+}
+
+body::before,
+body::after,
+.app-shell::before,
+.app-shell::after,
+.cyber-main::before,
+.cyber-page::before,
+.cyber-page::after,
+.events-arena::before,
+.events-arena::after,
+.event-grid-noise,
+.event-cursor-glow,
+.lineup-page::before,
+.lineup-card-noise,
+.lineup-card-guides,
+.lineup-portrait-glow,
+.lineup-hud-grid,
+.hud-vignette,
+.hud-scan,
+.hud-particles,
+.global-fx,
+.fx-burst {
+  display: none !important;
+}
+
+.festival-shell,
+.app-shell {
+  background: var(--ff-page) !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+.festival-app-header {
+  border-bottom: 1px solid var(--ff-line) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05) !important;
+}
+
+.festival-app-kicker,
+.festival-eyebrow {
+  color: var(--ff-primary) !important;
+  font-weight: 900 !important;
+}
+
+.festival-app-title,
+.festival-hero__title,
+.festival-section__head h3,
+.booth-list-row__title,
+.lineup-artist-name,
+.lineup-title,
+.lineup-back-name {
+  color: var(--ff-text) !important;
+  -webkit-text-fill-color: currentColor !important;
+  text-shadow: none !important;
+}
+
+.festival-app-subtitle,
+.festival-app-toolbar__row p,
+.festival-app-meta,
+.festival-app-meta span,
+.festival-hero__copy,
+.festival-section__meta,
+.festival-location,
+.booth-list-row__meta,
+.booth-list-row__reservation,
+.lineup-role,
+.lineup-time,
+.lineup-back-title,
+.lineup-back-time,
+.lineup-back-tip {
+  color: var(--ff-muted) !important;
+}
+
+.festival-main,
+.cyber-main {
+  padding-top: 1rem !important;
+}
+
+.cyber-page {
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  clip-path: none !important;
+  animation: none !important;
+}
+
+.app-shell article:not(.booth-list-row),
+.app-shell .festival-hero,
+.app-shell .festival-section,
+.app-shell .event-highlight,
+.app-shell .event-card,
+.app-shell .event-alert,
+.app-shell .lineup-focus,
+.app-shell .lineup-card,
+.app-shell .lineup-face,
+.app-shell .rounded,
+.app-shell .rounded-sm,
+.app-shell .rounded-md,
+.app-shell .rounded-xl,
+.app-shell .rounded-2xl,
+.app-shell .rounded-lg {
+  border: 1px solid var(--ff-line) !important;
+  border-radius: 8px !important;
+  background: var(--ff-surface) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  clip-path: none !important;
+  color: var(--ff-text) !important;
+  animation: none !important;
+}
+
+.app-shell article::before,
+.app-shell article::after,
+.app-shell .rounded::before,
+.app-shell .rounded::after,
+.app-shell .rounded-sm::before,
+.app-shell .rounded-sm::after,
+.app-shell .rounded-md::before,
+.app-shell .rounded-md::after,
+.app-shell .rounded-xl::before,
+.app-shell .rounded-xl::after,
+.app-shell .rounded-2xl::before,
+.app-shell .rounded-2xl::after,
+.app-shell .rounded-lg::before,
+.app-shell .rounded-lg::after {
+  display: none !important;
+}
+
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.app-shell p,
+.app-shell span,
+.app-shell small,
+.app-shell label,
+.app-shell li {
+  font-family: inherit !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+}
+
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.app-shell .font-bold,
+.app-shell .font-extrabold,
+.app-shell .font-semibold,
+.app-shell strong {
+  color: var(--ff-text) !important;
+}
+
+.app-shell p,
+.app-shell span,
+.app-shell small,
+.app-shell label,
+.app-shell li,
+.app-shell .text-slate-300,
+.app-shell .text-slate-400,
+.app-shell .text-slate-500,
+.app-shell .text-slate-600,
+.app-shell .text-slate-700,
+.app-shell .text-slate-800,
+.app-shell .text-white,
+.app-shell .text-cyan-50,
+.app-shell .text-cyan-100,
+.app-shell .text-cyan-200,
+.app-shell .text-cyan-300,
+.app-shell .text-cyan-400,
+.app-shell .text-cyan-700,
+.app-shell .text-cyan-800,
+.app-shell .text-cyan-900,
+.app-shell .text-cyan-950,
+.app-shell .text-sky-100,
+.app-shell .text-sky-200,
+.app-shell .text-teal-700,
+.app-shell .text-teal-800,
+.app-shell .text-teal-900 {
+  color: var(--ff-muted) !important;
+}
+
+.app-shell button:not(.quick-orbit-item):not(.radial-fab),
+.app-shell input,
+.app-shell select,
+.app-shell textarea {
+  border: 1px solid var(--ff-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--ff-text) !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.app-shell input::placeholder,
+.app-shell textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.app-shell button:not(.quick-orbit-item):not(.radial-fab)::before,
+.app-shell button:not(.quick-orbit-item):not(.radial-fab)::after {
+  display: none !important;
+}
+
+.app-shell button:not(.quick-orbit-item):not(.radial-fab):hover {
+  border-color: #b8cdf9 !important;
+  background: #f8fbff !important;
+  transform: none !important;
+  box-shadow: 0 1px 4px rgba(36, 88, 211, 0.08) !important;
+}
+
+.app-shell button:not(.quick-orbit-item):not(.radial-fab)[aria-pressed="true"],
+.app-shell .booth-list-toolbar__button--active,
+.app-shell .event-card-active,
+.app-shell .lineup-card-active,
+.app-shell .cyber-selected {
+  border-color: #b8cdf9 !important;
+  background: var(--ff-primary-soft) !important;
+  color: var(--ff-primary) !important;
+  box-shadow: none !important;
+}
+
+.app-shell button:not(.quick-orbit-item):not(.radial-fab)[aria-pressed="true"] *,
+.app-shell .event-card-active *,
+.app-shell .lineup-card-active * {
+  color: inherit !important;
+}
+
+.app-shell [class*="bg-gradient-to-r"],
+.app-shell [class*="from-blue"],
+.app-shell [class*="from-teal"],
+.app-shell .bg-teal-700 {
+  border-color: var(--ff-primary) !important;
+  background: var(--ff-primary) !important;
+  color: #ffffff !important;
+}
+
+.app-shell [class*="border-cyan"],
+.app-shell [class*="border-sky"],
+.app-shell [class*="border-teal"],
+.app-shell [class*="border-blue"] {
+  border-color: var(--ff-line) !important;
+}
+
+.app-shell [class*="bg-slate-9"],
+.app-shell [class*="bg-slate-8"],
+.app-shell [class*="bg-cyan-9"],
+.app-shell [class*="bg-cyan-5/"],
+.app-shell [class*="bg-sky-5/"],
+.app-shell [class*="bg-gradient-to-br"],
+.app-shell [class*="from-[#"],
+.app-shell [class*="via-[#"],
+.app-shell [class*="to-[#"],
+.app-shell [class*="from-cyan"],
+.app-shell [class*="via-cyan"],
+.app-shell [class*="to-sky"] {
+  background: var(--ff-surface) !important;
+  color: var(--ff-text) !important;
+  box-shadow: none !important;
+}
+
+.app-shell [class*="shadow-[0_0"],
+.app-shell [class*="shadow-[inset"],
+.app-shell [class*="drop-shadow"] {
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+.app-shell [class*="bg-slate-9"] *,
+.app-shell [class*="bg-slate-8"] *,
+.app-shell [class*="bg-cyan-9"] *,
+.app-shell [class*="bg-gradient-to-br"] * {
+  text-shadow: none !important;
+}
+
+.app-shell button[class*="bg-gradient-to-r"],
+.app-shell button[class*="from-blue"],
+.app-shell button[class*="from-cyan"],
+.app-shell button[class*="to-sky"],
+.app-shell button[class*="bg-cyan"],
+.app-shell button[class*="bg-sky"],
+.app-shell button[class*="bg-teal"],
+.app-shell button[class*="bg-violet"],
+.app-shell button[class*="bg-slate-8"],
+.app-shell button[class*="bg-slate-9"] {
+  border-color: var(--ff-primary) !important;
+  background: var(--ff-primary) !important;
+  color: #ffffff !important;
+}
+
+.app-shell button[class*="bg-gradient-to-r"] *,
+.app-shell button[class*="from-blue"] *,
+.app-shell button[class*="from-cyan"] *,
+.app-shell button[class*="to-sky"] *,
+.app-shell button[class*="bg-cyan"] *,
+.app-shell button[class*="bg-sky"] *,
+.app-shell button[class*="bg-teal"] *,
+.app-shell button[class*="bg-violet"] *,
+.app-shell button[class*="bg-slate-8"] *,
+.app-shell button[class*="bg-slate-9"] * {
+  color: #ffffff !important;
+}
+
+.app-shell button[class*="bg-emerald"] {
+  border-color: var(--ff-green) !important;
+  background: var(--ff-green) !important;
+  color: #ffffff !important;
+}
+
+.app-shell button[class*="bg-rose"] {
+  border-color: #e11d48 !important;
+  background: #e11d48 !important;
+  color: #ffffff !important;
+}
+
+.app-shell button[class*="bg-amber"] {
+  border-color: var(--ff-yellow) !important;
+  background: var(--ff-yellow) !important;
+  color: #ffffff !important;
+}
+
+.app-shell button[class*="bg-emerald"] *,
+.app-shell button[class*="bg-rose"] *,
+.app-shell button[class*="bg-amber"] * {
+  color: #ffffff !important;
+}
+
+.app-shell [class*="bg-gradient-to-r"] *,
+.app-shell [class*="from-blue"] *,
+.app-shell [class*="from-teal"] *,
+.app-shell .bg-teal-700 * {
+  color: #ffffff !important;
+}
+
+.app-shell .festival-hero {
+  border-color: #c7d8ff !important;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f1f6ff 66%, #fff5f2 100%) !important;
+  box-shadow: var(--ff-shadow) !important;
+}
+
+.festival-status-grid,
+.festival-recommend-list {
+  gap: 0.65rem !important;
+}
+
+.festival-status-card,
+.festival-recommend-card,
+.event-metric,
+.lineup-chip,
+.lineup-back-chip,
+.visual-icon-badge,
+.visual-icon-badge-sm {
+  border: 1px solid var(--ff-line) !important;
+  border-radius: 8px !important;
+  background: var(--ff-soft) !important;
+  box-shadow: none !important;
+}
+
+.festival-status-card--primary,
+.event-highlight {
+  border-color: #c7d8ff !important;
+  background: var(--ff-primary-soft) !important;
+}
+
+.festival-status-card strong,
+.festival-recommend-card strong,
+.event-metric strong,
+.event-highlight h3 {
+  color: var(--ff-text) !important;
+}
+
+.festival-status-card span,
+.festival-status-card small,
+.festival-recommend-card span,
+.festival-recommend-card small,
+.event-metric span,
+.event-metric p {
+  color: var(--ff-muted) !important;
+}
+
+.festival-quick-actions button:first-child,
+.event-cta,
+.lineup-back {
+  border-color: var(--ff-primary) !important;
+  background: var(--ff-primary) !important;
+  color: #ffffff !important;
+}
+
+.festival-quick-actions button:first-child *,
+.event-cta *,
+.lineup-back * {
+  color: #ffffff !important;
+}
+
+.booth-list-toolbar,
+.home-view-toggle {
+  border: 1px solid var(--ff-line) !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.97) !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06) !important;
+}
+
+.booth-list-toolbar__summary {
+  color: var(--ff-text) !important;
+}
+
+.booth-list-row {
+  border: 1px solid var(--ff-line) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+  clip-path: none !important;
+}
+
+.booth-list-row__main,
+.booth-list-row__actions button {
+  background: transparent !important;
+}
+
+.booth-list-row__meta span,
+.booth-list-row__reservation {
+  color: var(--ff-muted) !important;
+}
+
+.booth-reservation-badge,
+.app-shell .text-emerald-100,
+.app-shell .text-emerald-200,
+.app-shell .text-emerald-300 {
+  border-color: #bbf7d0 !important;
+  background: #ecfdf5 !important;
+  color: var(--ff-green) !important;
+}
+
+.app-shell .text-rose-100,
+.app-shell .text-rose-200,
+.app-shell .text-rose-300 {
+  color: #be123c !important;
+}
+
+.app-shell .text-amber-100,
+.app-shell .text-amber-200,
+.app-shell .text-amber-300 {
+  color: var(--ff-yellow) !important;
+}
+
+.event-progress {
+  background: linear-gradient(90deg, var(--ff-primary), var(--ff-coral)) !important;
+  box-shadow: none !important;
+}
+
+.events-arena-shock,
+.event-card:hover,
+.lineup-card:hover {
+  transform: none !important;
+}
+
+.lineup-page,
+.lineup-carousel,
+.lineup-track {
+  background: transparent !important;
+}
+
+.lineup-card {
+  min-height: 25rem !important;
+  perspective: none !important;
+}
+
+.lineup-card-inner {
+  transform-style: flat !important;
+}
+
+.lineup-face {
+  background: #ffffff !important;
+}
+
+.lineup-face-back {
+  background: var(--ff-soft) !important;
+}
+
+.lineup-code,
+.lineup-vertical-role,
+.lineup-back-label {
+  color: var(--ff-primary) !important;
+}
+
+.lineup-portrait {
+  border: 1px solid var(--ff-line) !important;
+  background: var(--ff-soft) !important;
+  box-shadow: none !important;
+}
+
+.lineup-portrait-title,
+.lineup-ring-meter,
+.lineup-ring-meter span {
+  color: var(--ff-muted) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.festival-bottom-nav {
+  border-top-color: var(--ff-line) !important;
+  background: rgba(255, 255, 255, 0.97) !important;
+}
+
+.festival-bottom-nav__item {
+  color: var(--ff-muted) !important;
+}
+
+.festival-bottom-nav__item--active {
+  background: var(--ff-primary-soft) !important;
+  color: var(--ff-primary) !important;
+}
+
+.festival-bottom-nav__item span {
+  color: inherit !important;
+}
+
+.app-shell .leaflet-container,
+.app-shell .leaflet-popup-content-wrapper,
+.app-shell .leaflet-popup-tip {
+  background: #ffffff !important;
+  color: var(--ff-text) !important;
+  border-color: var(--ff-line) !important;
+  box-shadow: var(--ff-shadow) !important;
+  filter: none !important;
+}
+
+.icon-role-alert {
+  color: #e11d48 !important;
+}
+
+.icon-role-ops,
+.icon-role-log,
+.icon-role-map,
+.icon-role-schedule,
+.text-role-ops,
+.text-role-log,
+.text-role-map,
+.text-role-schedule {
+  color: var(--ff-primary) !important;
+}
+
+/* Keep radial quick menu intentionally cyber-styled. */
+.quick-orbit-root,
+.quick-orbit-menu,
+.quick-orbit-item,
+.radial-fab,
+.neon-backdrop {
+  font-family: "Noto Sans KR", system-ui, sans-serif !important;
+}
+
+/* Deploy QA polish: final visual authority for public app screens. */
+.app-shell.festival-shell,
+.app-shell.festival-shell:not([data-display-mode="outdoor"]) {
+  background: var(--ff-page) !important;
+  box-shadow: none !important;
+}
+
+.app-shell .festival-main {
+  width: min(100%, 980px) !important;
+  margin: 0 auto !important;
+  padding: 0.9rem 1rem 6.4rem !important;
+  background: var(--ff-page) !important;
+}
+
+.app-shell .festival-app-header {
+  overflow: visible !important;
+}
+
+.app-shell .festival-app-header__main {
+  align-items: flex-end !important;
+  padding: 0.9rem 1rem 0.65rem !important;
+}
+
+.app-shell .festival-app-title {
+  font-size: clamp(1.55rem, 4.2vw, 2rem) !important;
+}
+
+.app-shell .festival-app-toolbar {
+  padding: 0.55rem 1rem 0.7rem !important;
+}
+
+.app-shell .festival-home {
+  display: grid !important;
+  gap: 0.85rem !important;
+  padding: 0 !important;
+}
+
+.app-shell .festival-hero,
+.app-shell .festival-section {
+  padding: 1rem !important;
+}
+
+.app-shell .festival-status-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 0.55rem !important;
+  margin-top: 0.85rem !important;
+}
+
+.app-shell .festival-status-card {
+  min-width: 0 !important;
+  padding: 0.75rem !important;
+}
+
+.app-shell .festival-status-card span,
+.app-shell .festival-status-card strong,
+.app-shell .festival-status-card small,
+.app-shell .festival-recommend-card span,
+.app-shell .festival-recommend-card strong,
+.app-shell .festival-recommend-card small {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.app-shell .festival-status-card span,
+.app-shell .festival-recommend-card span {
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+}
+
+.app-shell .festival-status-card strong,
+.app-shell .festival-recommend-card strong {
+  margin-top: 0.2rem !important;
+  color: var(--ff-text) !important;
+  font-size: 1rem !important;
+  font-weight: 900 !important;
+  line-height: 1.25 !important;
+  white-space: nowrap !important;
+}
+
+.app-shell .festival-status-card small,
+.app-shell .festival-recommend-card small {
+  margin-top: 0.25rem !important;
+  color: var(--ff-muted) !important;
+  font-size: 0.75rem !important;
+  line-height: 1.35 !important;
+  white-space: nowrap !important;
+}
+
+.app-shell .festival-quick-actions {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 0.5rem !important;
+  margin-top: 0.85rem !important;
+}
+
+.app-shell .festival-quick-actions button,
+.app-shell .festival-section__head button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.35rem !important;
+  min-width: 0 !important;
+  min-height: 2.65rem !important;
+  padding: 0.55rem 0.45rem !important;
+  border-radius: 8px !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+}
+
+.app-shell .festival-quick-actions button svg,
+.app-shell .festival-section__head button svg,
+.app-shell .festival-bottom-nav__item svg,
+.app-shell button svg,
+.app-shell a svg {
+  color: currentColor !important;
+  display: block !important;
+  opacity: 1 !important;
+  stroke: currentColor !important;
+}
+
+.app-shell button[aria-label="대화 초기화"]:not(.quick-orbit-item):not(.radial-fab),
+.app-shell button[aria-label="음성 입력"]:not(.quick-orbit-item):not(.radial-fab) {
+  border-color: var(--ff-line) !important;
+  background: #ffffff !important;
+  color: var(--ff-primary) !important;
+}
+
+.app-shell button[aria-label="대화 초기화"]:not(.quick-orbit-item):not(.radial-fab) svg,
+.app-shell button[aria-label="음성 입력"]:not(.quick-orbit-item):not(.radial-fab) svg {
+  color: var(--ff-primary) !important;
+}
+
+.app-shell button[aria-label="전송"]:not(.quick-orbit-item):not(.radial-fab) {
+  border-color: var(--ff-primary) !important;
+  background: var(--ff-primary) !important;
+  color: #ffffff !important;
+}
+
+.app-shell button[aria-label="전송"]:not(.quick-orbit-item):not(.radial-fab) svg {
+  color: #ffffff !important;
+}
+
+.app-shell .festival-section__head {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 0.75rem !important;
+  margin-bottom: 0.75rem !important;
+}
+
+.app-shell .festival-section__head h3 {
+  margin: 0.15rem 0 0 !important;
+  font-size: 1rem !important;
+  line-height: 1.25 !important;
+}
+
+.app-shell .festival-section__meta {
+  flex-shrink: 0 !important;
+  max-width: 48% !important;
+  text-align: right !important;
+}
+
+.app-shell .festival-recommend-list {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 0.55rem !important;
+}
+
+.app-shell .festival-recommend-card {
+  display: block !important;
+  min-width: 0 !important;
+  padding: 0.75rem !important;
+  text-align: left !important;
+}
+
+.app-shell .event-card,
+.app-shell .event-highlight,
+.app-shell .event-alert,
+.app-shell .lineup-focus,
+.app-shell .lineup-card,
+.app-shell .booth-list-row {
+  background: #ffffff !important;
+}
+
+.app-shell .event-card p,
+.app-shell .event-highlight p,
+.app-shell .lineup-focus p {
+  overflow-wrap: anywhere !important;
+}
+
+.app-shell .festival-bottom-nav {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  box-shadow: 0 -8px 22px rgba(15, 23, 42, 0.06) !important;
+}
+
+.app-shell .festival-bottom-nav__item {
+  min-height: 4rem !important;
+  gap: 0.2rem !important;
+  font-size: 0.78rem !important;
+}
+
+@media (max-width: 640px) {
+  .app-shell .festival-app-header__main {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.45rem !important;
+    padding: 0.8rem 1rem 0.55rem !important;
+  }
+
+  .app-shell .festival-app-title {
+    font-size: 1.55rem !important;
+  }
+
+  .app-shell .festival-app-subtitle {
+    font-size: 0.82rem !important;
+  }
+
+  .app-shell .festival-app-meta {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.35rem 0.6rem !important;
+    text-align: left !important;
+  }
+
+  .app-shell .festival-app-toolbar__row {
+    align-items: stretch !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+
+  .app-shell .festival-app-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.45rem !important;
+    width: 100% !important;
+  }
+
+  .app-shell .festival-control-button {
+    width: 100% !important;
+    min-height: 2.35rem !important;
+  }
+
+  .app-shell .festival-main {
+    padding: 0.85rem 0.85rem 6.25rem !important;
+  }
+
+  .app-shell .festival-hero,
+  .app-shell .festival-section {
+    padding: 0.9rem !important;
+  }
+
+  .app-shell .festival-hero__title {
+    font-size: 1.45rem !important;
+  }
+
+  .app-shell .festival-hero__copy {
+    font-size: 0.9rem !important;
+  }
+
+  .app-shell .festival-status-card strong {
+    font-size: 0.95rem !important;
+  }
+
+  .app-shell .festival-status-card small {
+    font-size: 0.7rem !important;
+  }
+
+  .app-shell .festival-recommend-list {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell .festival-section__meta {
+    max-width: 46% !important;
+  }
+
+  .app-shell .cyber-page > article:first-child > .flex.items-center.justify-between,
+  .app-shell .cyber-page > article:first-child > .flex.items-start.justify-between,
+  .app-shell .events-arena > .flex.items-center.justify-between {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .app-shell .cyber-page > article:first-child > .flex.items-center.justify-between > button,
+  .app-shell .cyber-page > article:first-child > .flex.items-start.justify-between > button,
+  .app-shell .events-arena > .flex.items-center.justify-between > .flex {
+    width: 100% !important;
+  }
+
+  .app-shell .events-arena > .flex.items-center.justify-between > .flex {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+  }
+
+  .app-shell .events-arena > .flex.items-center.justify-between a,
+  .app-shell .events-arena > .flex.items-center.justify-between button {
+    justify-content: center !important;
   }
 }

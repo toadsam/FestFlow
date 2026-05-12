@@ -2,22 +2,32 @@
 import { createPortal } from "react-dom";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { useLanguage } from "./i18n";
+import {
+  IconBox,
+  IconCalendar,
+  IconChart,
+  IconChat,
+  IconHome,
+  IconMapPin,
+  IconShield,
+  IconUsers,
+} from "./components/UxIcons";
 
 const allTabs = [
-  { to: "/", label: "Home", icon: "H", end: true },
-  { to: "/events", label: "Events", icon: "E" },
-  { to: "/stage-map", label: "Stage", icon: "S" },
-  { to: "/analytics", label: "Data", icon: "D" },
-  { to: "/lost-found", label: "Lost", icon: "L" },
-  { to: "/staff", label: "Staff", icon: "T" },
-  { to: "/chat", label: "Chat", icon: "C" },
-  { to: "/ops/master", label: "Ops", icon: "O" },
+  { to: "/", label: "홈", icon: IconHome, end: true },
+  { to: "/events", label: "공연", icon: IconCalendar },
+  { to: "/stage-map", label: "지도", icon: IconMapPin },
+  { to: "/analytics", label: "혼잡도", icon: IconChart },
+  { to: "/lost-found", label: "분실물", icon: IconBox },
+  { to: "/staff", label: "스태프", icon: IconUsers },
+  { to: "/chat", label: "챗봇", icon: IconChat },
+  { to: "/ops/master", label: "운영", icon: IconShield },
 ];
 
 const quickTabs = [
-  { to: "/", label: "Home", icon: "H", end: true },
-  { to: "/stage-map", label: "Stage", icon: "S" },
-  { to: "/events", label: "Events", icon: "E" },
+  { to: "/", label: "홈", icon: IconHome, end: true },
+  { to: "/stage-map", label: "지도", icon: IconMapPin },
+  { to: "/events", label: "공연", icon: IconCalendar },
 ];
 
 const DISPLAY_MODE_KEY = "festflow_display_mode";
@@ -34,12 +44,11 @@ export default function App() {
   });
 
   const [quickMenuOpen, setQuickMenuOpen] = useState(false);
-  const [globalBursts, setGlobalBursts] = useState([]);
 
   useEffect(() => {
     window.localStorage.setItem(
       DISPLAY_MODE_KEY,
-      outdoorMode ? "outdoor" : "neon",
+      outdoorMode ? "outdoor" : "default",
     );
   }, [outdoorMode]);
 
@@ -47,81 +56,18 @@ export default function App() {
     setQuickMenuOpen(false);
   }, [location.pathname]);
 
-  useEffect(() => {
-    if (window.matchMedia("(pointer: coarse)").matches) {
-      return;
-    }
-
-    function makeSparks(intensity = 1) {
-      return Array.from({ length: 9 }, (_, idx) => ({
-        angle: idx * 40 + Math.round(Math.random() * 16),
-        distance: Math.round(20 + Math.random() * 26 * intensity),
-        hue: Math.round(180 + Math.random() * 140),
-        delay: Math.round(Math.random() * 120),
-      }));
-    }
-
-    function onPointerDown(event) {
-      const shell = document.querySelector(".app-shell");
-      if (!shell || !shell.contains(event.target)) return;
-      if (shell.dataset.displayMode === "outdoor") return;
-      if (event.target.closest('[data-burst-scope="local"]')) return;
-      const interactive = event.target.closest(
-        "button, a, article, .rounded-xl, .rounded-2xl, .rounded-lg",
-      );
-      if (!interactive) return;
-
-      const burstId = `${Date.now()}-${Math.random()}`;
-      const waveId = `wave-${burstId}`;
-      const x = event.clientX;
-      const y = event.clientY;
-
-      setGlobalBursts((prev) => [
-        ...prev.slice(-18),
-        {
-          id: burstId,
-          x,
-          y,
-          sparks: makeSparks(1),
-          wave: { id: waveId, size: 180 },
-        },
-      ]);
-      window.setTimeout(
-        () =>
-          setGlobalBursts((prev) => prev.filter((item) => item.id !== burstId)),
-        760,
-      );
-
-      const card = event.target.closest(
-        "article, .event-card, .cyber-selectable",
-      );
-      if (card) {
-        const parent = card.parentElement;
-        if (parent) {
-          parent
-            .querySelectorAll(".cyber-selected")
-            .forEach((node) => node.classList.remove("cyber-selected"));
-        }
-        card.classList.add("cyber-selected");
-      }
-    }
-
-    document.addEventListener("pointerdown", onPointerDown, { passive: true });
-    return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, []);
-
   async function requestNotificationPermission() {
     if (!("Notification" in window)) {
-      setNoticeMessage("This browser does not support notifications.");
+      setNoticeMessage("이 브라우저는 알림을 지원하지 않습니다.");
       return;
     }
 
     const permission = await Notification.requestPermission();
     if (permission === "granted") {
-      setNoticeMessage("Browser notifications are enabled.");
+      setNoticeMessage("브라우저 알림이 켜졌습니다.");
     } else {
       setNoticeMessage(
-        "Notification permission denied. In-app indicators only.",
+        "알림 권한이 꺼져 있어 앱 안의 표시만 보여드립니다.",
       );
     }
 
@@ -141,22 +87,17 @@ export default function App() {
 
   return (
     <div
-      className="mx-auto app-shell neon-shell relative"
-      data-display-mode={outdoorMode ? "outdoor" : "neon"}
+      className="mx-auto app-shell festival-shell relative"
+      data-display-mode={outdoorMode ? "outdoor" : "default"}
     >
-      <div className="hud-vignette" aria-hidden />
-      <div className="hud-scan" aria-hidden />
-      <div className="hud-particles" aria-hidden />
-      <header className="neon-header">
-        <div className="neon-header-hud">
-          <div className="neon-header-grid" aria-hidden />
-          <div className="neon-header-core">
-            <p className="text-xs tracking-[0.22em] uppercase neon-kicker">
-              2026 Ajou Culture Festival
+      <header className="festival-app-header">
+        <div className="festival-app-header__main">
+          <div>
+            <p className="festival-app-kicker">
+              2026 아주대학교 축제
             </p>
             <h1
-              className="mt-1 text-2xl font-extrabold neon-title glitch-title cursor-pointer select-none"
-              data-text="ACENTIA FESTFLOW"
+              className="festival-app-title cursor-pointer select-none"
               role="link"
               tabIndex={0}
               aria-label="홈으로 이동"
@@ -168,28 +109,28 @@ export default function App() {
                 }
               }}
             >
-              ACENTIA FESTFLOW
+              아주대 축제 가이드
             </h1>
-            <p className="text-xs neon-sub mt-1">
-              Live Crowd Intel · Stage Signal · Ops Command
+            <p className="festival-app-subtitle">
+              공연, 부스, 혼잡도를 한눈에 확인하세요
             </p>
           </div>
-          <div className="neon-header-meta">
+          <div className="festival-app-meta">
             <span>2026.05.20 - 2026.05.21</span>
             <span>AU:SUM</span>
           </div>
         </div>
 
-        <div className="px-5 py-3 neon-divider">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs neon-sub">Festival Control Interface</p>
-            <div className="flex items-center gap-2">
+        <div className="festival-app-toolbar">
+          <div className="festival-app-toolbar__row">
+            <p>실시간 축제 안내</p>
+            <div className="festival-app-actions">
               <button
                 type="button"
                 aria-label="언어 변경"
                 aria-pressed={language === "en"}
                 onClick={toggleLanguage}
-                className="text-[11px] px-3 py-1.5 min-h-11 rounded-lg neon-btn-outline whitespace-nowrap"
+                className="festival-control-button"
               >
                 {language === "en" ? "한국어" : "English"}
               </button>
@@ -197,62 +138,33 @@ export default function App() {
                 type="button"
                 aria-pressed={outdoorMode}
                 onClick={() => setOutdoorMode((current) => !current)}
-                className="text-[11px] px-3 py-1.5 min-h-11 rounded-lg neon-btn-outline whitespace-nowrap"
+                className="festival-control-button"
               >
-                {outdoorMode ? "기본 모드" : "야외 모드"}
+                {outdoorMode ? "기본" : "고대비"}
               </button>
               <button
                 type="button"
                 onClick={requestNotificationPermission}
-                className="text-[11px] px-3 py-1.5 min-h-11 rounded-lg neon-btn-outline whitespace-nowrap"
+                className="festival-control-button"
               >
-                Alerts
+                알림
               </button>
             </div>
           </div>
           {noticeMessage && (
-            <p className="text-xs mt-2 neon-chip rounded px-2 py-1 inline-block">
+            <p className="festival-app-toast">
               {noticeMessage}
             </p>
           )}
         </div>
       </header>
 
-      <main className="px-4 pb-28 pt-1 cyber-main">
+      <main className="festival-main">
         <Outlet />
       </main>
 
       {createPortal(
         <>
-          <div className="pointer-events-none fixed inset-0 z-[1400] overflow-hidden">
-            {globalBursts.map((burst) => (
-              <span
-                key={burst.id}
-                className="fx-burst global-fx"
-                style={{ left: `${burst.x}px`, top: `${burst.y}px` }}
-              >
-                <span className="fx-ring" />
-                <span className="fx-core" />
-                <span
-                  className="fx-wave-lite"
-                  style={{ "--wave-size": `${burst.wave.size}px` }}
-                />
-                {burst.sparks.map((spark, idx) => (
-                  <span
-                    key={`${burst.id}-${idx}`}
-                    className="fx-spark"
-                    style={{
-                      "--a": `${spark.angle}deg`,
-                      "--d": `${spark.distance}px`,
-                      "--h": spark.hue,
-                      animationDelay: `${spark.delay}ms`,
-                    }}
-                  />
-                ))}
-              </span>
-            ))}
-          </div>
-
           {quickMenuOpen && (
             <button
               type="button"
@@ -271,6 +183,7 @@ export default function App() {
               >
                 {allTabs.map((tab, index) => {
                   const active = isActiveTab(tab);
+                  const Icon = tab.icon;
                   const angle = (index * 45 - 90) * (Math.PI / 180);
                   const radius = 112;
                   return (
@@ -287,7 +200,7 @@ export default function App() {
                       aria-current={active ? "page" : undefined}
                     >
                       <span className="quick-orbit-icon" aria-hidden>
-                        {tab.icon}
+                        <Icon className="h-4 w-4" />
                       </span>
                       <span className="quick-orbit-label">{tab.label}</span>
                     </button>
@@ -312,22 +225,25 @@ export default function App() {
       )}
 
       <nav
-        className="fixed bottom-0 left-1/2 z-[1200] -translate-x-1/2 w-full max-w-[1120px] neon-bottom-nav grid grid-cols-3"
+        className="festival-bottom-nav"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 6px)" }}
       >
-        {quickTabs.map((tab) => (
-          <NavLink
-            key={tab.to}
-            to={tab.to}
-            end={tab.end}
-            className={({ isActive }) =>
-              `py-2 min-h-11 text-[11px] text-center font-semibold flex flex-col items-center justify-center gap-0.5 ${isActive ? "neon-nav-active" : "neon-nav-idle"}`
-            }
-          >
-            <span aria-hidden>{tab.icon}</span>
-            <span>{tab.label}</span>
-          </NavLink>
-        ))}
+        {quickTabs.map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <NavLink
+              key={tab.to}
+              to={tab.to}
+              end={tab.end}
+              className={({ isActive }) =>
+                `festival-bottom-nav__item ${isActive ? "festival-bottom-nav__item--active" : ""}`
+              }
+            >
+              <Icon className="h-5 w-5" />
+              <span>{tab.label}</span>
+            </NavLink>
+          );
+        })}
       </nav>
 
     </div>

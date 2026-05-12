@@ -58,7 +58,7 @@ export default function AnalyticsPage() {
               <IconChart className="h-5 w-5 icon-role-ops" />
             </span>
             <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">Festival Insight</p>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">축제 데이터</p>
               <h2 className="mt-1 text-xl font-extrabold text-role-ops">데이터 분석 대시보드</h2>
               <p className="mt-1 text-xs text-cyan-100/90">방문량 흐름, 인기 부스, 혼잡 포인트를 한 화면에서 확인합니다.</p>
             </div>

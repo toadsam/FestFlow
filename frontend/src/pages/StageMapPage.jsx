@@ -96,7 +96,7 @@ export default function StageMapPage() {
               <IconMapPin className="h-5 w-5 icon-role-map" />
             </span>
             <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">Stage Monitor</p>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">실시간 지도</p>
               <h2 className="mt-1 text-xl font-extrabold text-role-map">노천극장 실시간 인원</h2>
               <p className="mt-1 text-xs text-cyan-100/90">최근 {minutesWindow}분 기준 군중 밀집도를 시각화합니다.</p>
             </div>

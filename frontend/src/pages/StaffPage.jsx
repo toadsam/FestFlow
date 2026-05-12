@@ -1144,7 +1144,7 @@ export default function StaffPage() {
     return (
       <section className="cyber-page pt-4 pb-12">
         <article className="mx-auto max-w-md rounded-2xl border border-cyan-300/60 bg-slate-950/80 p-5 text-cyan-50 shadow-[0_0_32px_rgba(34,211,238,0.28)]">
-          <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">Staff Secure Access</p>
+          <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">스태프 로그인</p>
           <h2 className="mt-2 text-xl font-extrabold text-role-ops inline-flex items-center gap-1.5">
             <span className="visual-icon-badge visual-icon-badge--ops">
               <IconShield className="h-5 w-5 icon-role-ops" />
@@ -1202,7 +1202,7 @@ export default function StaffPage() {
       <article className="rounded-2xl border border-cyan-300/60 bg-slate-950/80 p-4 text-cyan-50">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">Field Console</p>
+            <p className="text-xs tracking-[0.16em] uppercase text-cyan-300/90">현장 스태프 도구</p>
             <h2 className="mt-1 text-lg font-extrabold text-role-ops inline-flex items-center gap-1.5">
               <span className="visual-icon-badge visual-icon-badge--ops">
                 <IconUsers className="h-5 w-5 icon-role-ops" />
