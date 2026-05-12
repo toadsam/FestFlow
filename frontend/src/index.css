@@ -6884,3 +6884,904 @@ body,
       linear-gradient(90deg, rgba(6, 43, 85, 0.78) 0%, rgba(6, 43, 85, 0.28) 100%) !important;
   }
 }
+
+/* Festival energy pass: brighter cards, clearer AU:SUM accents, less grey-box feeling. */
+:root {
+  --ff-page: #f8fdff;
+  --ff-soft: #f1fbff;
+  --ff-line: #bfd7ee;
+  --ff-primary-soft: #e7f5ff;
+  --ff-coral: #ff765f;
+  --ff-green: #13b9a6;
+  --ausum-mint: #13b9a6;
+  --ausum-coral: #ff765f;
+  --ausum-sky: #35a9e8;
+  --festival-card-border: rgba(6, 59, 117, 0.16);
+  --festival-card-shadow:
+    0 18px 38px rgba(6, 43, 85, 0.08),
+    0 4px 12px rgba(19, 185, 166, 0.08);
+}
+
+html,
+body,
+#root,
+.app-shell.festival-shell,
+.app-shell.festival-shell:not([data-display-mode="outdoor"]) {
+  background:
+    linear-gradient(180deg, #fffdfb 0%, #f7fcff 42%, #f0fbf6 100%) !important;
+}
+
+.app-shell .festival-app-header {
+  border-bottom-color: rgba(19, 185, 166, 0.2) !important;
+  background: rgba(255, 255, 255, 0.96) !important;
+  box-shadow: 0 12px 30px rgba(6, 43, 85, 0.08) !important;
+}
+
+.app-shell .festival-page-kicker,
+.app-shell .festival-eyebrow,
+.app-shell .app-empty-state__eyebrow {
+  color: var(--ausum-mint) !important;
+}
+
+.app-shell .festival-hero-media::after {
+  background:
+    linear-gradient(90deg, rgba(4, 17, 39, 0.86) 0%, rgba(6, 43, 85, 0.62) 48%, rgba(19, 185, 166, 0.14) 100%),
+    linear-gradient(180deg, rgba(4, 17, 39, 0.04) 0%, rgba(4, 17, 39, 0.78) 100%) !important;
+}
+
+.app-shell .festival-hero-premium .festival-eyebrow,
+.app-shell .festival-live-strip span {
+  color: #9ff7ea !important;
+}
+
+.app-shell .festival-live-strip {
+  border-color: rgba(19, 185, 166, 0.66) !important;
+  background: rgba(6, 43, 85, 0.68) !important;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 16px 34px rgba(19, 185, 166, 0.2) !important;
+}
+
+.app-shell .festival-hero-premium .festival-status-card {
+  border-color: rgba(255, 255, 255, 0.24) !important;
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: inset 0 3px 0 rgba(159, 247, 234, 0.75) !important;
+}
+
+.app-shell .festival-hero-premium .festival-status-card:nth-child(2) {
+  box-shadow: inset 0 3px 0 rgba(255, 118, 95, 0.82) !important;
+}
+
+.app-shell .festival-hero-premium .festival-status-card:nth-child(3) {
+  box-shadow: inset 0 3px 0 rgba(53, 169, 232, 0.82) !important;
+}
+
+.app-shell button.festival-hero-pick,
+.app-shell button.festival-hero-pick:not(.quick-orbit-item):not(.radial-fab),
+.app-shell button.festival-situation-card--primary,
+.app-shell button.festival-situation-card--primary:not(.quick-orbit-item):not(.radial-fab),
+.app-shell .app-primary-cta,
+.app-shell button.app-primary-cta:not(.quick-orbit-item):not(.radial-fab),
+.app-shell a.app-primary-cta {
+  border-color: rgba(6, 43, 85, 0.9) !important;
+  background:
+    linear-gradient(135deg, var(--ajou-navy) 0%, #07579b 52%, var(--ausum-mint) 125%) !important;
+  box-shadow:
+    0 18px 38px rgba(6, 43, 85, 0.24),
+    0 8px 18px rgba(19, 185, 166, 0.18) !important;
+}
+
+.app-shell .app-secondary-cta,
+.app-shell button.app-secondary-cta:not(.quick-orbit-item):not(.radial-fab),
+.app-shell a.app-secondary-cta {
+  border-color: rgba(19, 185, 166, 0.3) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f0fbff 100%) !important;
+  color: var(--ajou-blue) !important;
+  box-shadow: 0 8px 18px rgba(6, 43, 85, 0.07) !important;
+}
+
+.app-shell .festival-now-board,
+.app-shell .festival-section,
+.app-shell .festival-recommend-card,
+.app-shell .booth-list-toolbar,
+.app-shell .booth-list-row,
+.app-shell .app-empty-state,
+.app-shell[data-route-scope="public"] .cyber-page > article:not(:first-child),
+.app-shell[data-route-scope="public"] .event-card,
+.app-shell[data-route-scope="public"] .event-highlight,
+.app-shell[data-route-scope="public"] .event-alert,
+.app-shell[data-route-scope="public"] .lineup-empty,
+.app-shell[data-route-scope="public"] .lineup-focus,
+.app-shell[data-route-scope="public"] form,
+.app-shell[data-route-scope="public"] .cyber-page > .rounded-2xl,
+.app-shell[data-route-scope="public"] .cyber-page > .rounded-xl {
+  --card-accent: var(--ausum-mint);
+  border-color: var(--festival-card-border) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfeff 54%, #f1fdf9 100%) !important;
+  box-shadow:
+    inset 0 3px 0 var(--card-accent),
+    var(--festival-card-shadow) !important;
+}
+
+.app-shell .festival-section:nth-of-type(3n + 1),
+.app-shell .festival-recommend-card:nth-child(3n + 1),
+.app-shell .booth-list-row:nth-child(3n + 1),
+.app-shell[data-route-scope="public"] .cyber-page > article:nth-of-type(3n + 1) {
+  --card-accent: var(--ausum-mint);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfffd 55%, #eefdf8 100%) !important;
+}
+
+.app-shell .festival-section:nth-of-type(3n + 2),
+.app-shell .festival-recommend-card:nth-child(3n + 2),
+.app-shell .booth-list-row:nth-child(3n + 2),
+.app-shell[data-route-scope="public"] .cyber-page > article:nth-of-type(3n + 2) {
+  --card-accent: var(--ausum-coral);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fffdfb 52%, #fff4f0 100%) !important;
+}
+
+.app-shell .festival-section:nth-of-type(3n),
+.app-shell .festival-recommend-card:nth-child(3n),
+.app-shell .booth-list-row:nth-child(3n),
+.app-shell[data-route-scope="public"] .cyber-page > article:nth-of-type(3n) {
+  --card-accent: var(--ausum-sky);
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfeff 52%, #eef9ff 100%) !important;
+}
+
+.app-shell .festival-section__head,
+.app-shell[data-route-scope="public"] .cyber-page > header:first-child,
+.app-shell[data-route-scope="public"] .cyber-page > article:first-child,
+.app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type,
+.app-shell[data-route-scope="public"] .lineup-page > .flex.items-center.justify-between:first-child {
+  border-color: rgba(19, 185, 166, 0.22) !important;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #eff9ff 48%, #effdf8 100%) !important;
+  box-shadow:
+    inset 0 3px 0 var(--ausum-mint),
+    0 16px 34px rgba(6, 43, 85, 0.08) !important;
+}
+
+.app-shell button.festival-situation-card,
+.app-shell button.festival-situation-card:not(.quick-orbit-item):not(.radial-fab) {
+  --card-accent: var(--ausum-sky);
+  border-color: rgba(53, 169, 232, 0.22) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f7fcff 52%, #eef9ff 100%) !important;
+  box-shadow:
+    inset 0 3px 0 var(--card-accent),
+    0 14px 30px rgba(6, 43, 85, 0.08) !important;
+}
+
+.app-shell button.festival-situation-card:nth-child(2),
+.app-shell button.festival-situation-card:nth-child(2):not(.quick-orbit-item):not(.radial-fab) {
+  --card-accent: var(--ausum-coral);
+  border-color: rgba(255, 118, 95, 0.28) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fffdfb 50%, #fff2ed 100%) !important;
+}
+
+.app-shell button.festival-situation-card:nth-child(3),
+.app-shell button.festival-situation-card:nth-child(3):not(.quick-orbit-item):not(.radial-fab) {
+  --card-accent: var(--ausum-mint);
+  border-color: rgba(19, 185, 166, 0.28) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfffd 50%, #ecfdf8 100%) !important;
+}
+
+.app-shell button.festival-situation-card--primary,
+.app-shell button.festival-situation-card--primary:not(.quick-orbit-item):not(.radial-fab) {
+  border-color: rgba(6, 43, 85, 0.9) !important;
+  background:
+    linear-gradient(135deg, var(--ajou-navy) 0%, var(--ajou-blue-2) 62%, var(--ausum-mint) 130%) !important;
+  box-shadow:
+    0 18px 42px rgba(6, 43, 85, 0.24),
+    0 8px 18px rgba(19, 185, 166, 0.18) !important;
+}
+
+.app-shell .festival-situation-card span,
+.app-shell .festival-recommend-card span,
+.app-shell .booth-list-toolbar__summary {
+  color: var(--ajou-blue) !important;
+}
+
+.app-shell .festival-situation-card:nth-child(2) span,
+.app-shell .festival-situation-card:nth-child(2) small,
+.app-shell .festival-recommend-card:nth-child(3n + 2) span,
+.app-shell .festival-recommend-card:nth-child(3n + 2) small {
+  color: #b94834 !important;
+}
+
+.app-shell .festival-situation-card:nth-child(3) span,
+.app-shell .festival-situation-card:nth-child(3) small,
+.app-shell .festival-recommend-card:nth-child(3n + 1) span,
+.app-shell .festival-recommend-card:nth-child(3n + 1) small {
+  color: #087c70 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > .grid > article,
+.app-shell[data-route-scope="public"] .cyber-page > .grid > div,
+.app-shell[data-route-scope="public"] .event-metric {
+  --card-accent: var(--ausum-sky);
+  border-color: rgba(53, 169, 232, 0.22) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f8fdff 54%, #eef9ff 100%) !important;
+  box-shadow:
+    inset 0 3px 0 var(--card-accent),
+    0 13px 28px rgba(6, 43, 85, 0.075) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > .grid > article:nth-child(2),
+.app-shell[data-route-scope="public"] .cyber-page > .grid > div:nth-child(2),
+.app-shell[data-route-scope="public"] .event-metric:nth-child(2) {
+  --card-accent: var(--ausum-coral);
+  border-color: rgba(255, 118, 95, 0.26) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fffdfb 52%, #fff3ef 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > .grid > article:nth-child(3),
+.app-shell[data-route-scope="public"] .cyber-page > .grid > div:nth-child(3),
+.app-shell[data-route-scope="public"] .event-metric:nth-child(3) {
+  --card-accent: var(--ausum-mint);
+  border-color: rgba(19, 185, 166, 0.26) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfffd 52%, #ecfdf8 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .event-alert {
+  --card-accent: var(--ausum-coral);
+  border-color: rgba(255, 118, 95, 0.32) !important;
+  background:
+    linear-gradient(135deg, #fff7f2 0%, #ffffff 48%, #effdf8 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .event-highlight {
+  --card-accent: var(--ausum-mint);
+  border-color: rgba(19, 185, 166, 0.3) !important;
+  background:
+    linear-gradient(135deg, #effdf8 0%, #ffffff 52%, #f0f8ff 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .event-card-active,
+.app-shell[data-route-scope="public"] .lineup-card-active {
+  --card-accent: var(--ausum-coral);
+  border-color: rgba(255, 118, 95, 0.52) !important;
+  box-shadow:
+    inset 0 3px 0 var(--card-accent),
+    0 22px 48px rgba(255, 118, 95, 0.16),
+    0 10px 24px rgba(6, 43, 85, 0.1) !important;
+}
+
+.app-shell[data-route-scope="public"] .lineup-card,
+.app-shell[data-route-scope="public"] .lineup-face {
+  border-color: rgba(19, 185, 166, 0.2) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfeff 52%, #eefcf8 100%) !important;
+}
+
+.app-shell .visual-icon-badge,
+.app-shell .visual-icon-badge-sm {
+  border-color: rgba(19, 185, 166, 0.28) !important;
+  background:
+    linear-gradient(135deg, #eef8ff 0%, #ecfff9 100%) !important;
+  color: var(--ajou-blue) !important;
+}
+
+.app-shell .visual-icon-badge--alert,
+.app-shell .visual-icon-badge--alert svg,
+.app-shell svg.icon-role-alert {
+  border-color: rgba(255, 118, 95, 0.34) !important;
+  background:
+    linear-gradient(135deg, #fff3ef 0%, #ffffff 100%) !important;
+  color: #d84f38 !important;
+}
+
+.app-shell .visual-icon-badge--map,
+.app-shell .visual-icon-badge--map svg,
+.app-shell svg.icon-role-map {
+  color: #087c70 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page button:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]),
+.app-shell[data-route-scope="public"] .cyber-page a:not(.app-primary-cta):not(.festival-bottom-nav__item) {
+  border-color: rgba(19, 185, 166, 0.24) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f3fbff 100%) !important;
+  color: var(--ajou-blue) !important;
+  box-shadow: 0 8px 18px rgba(6, 43, 85, 0.06) !important;
+}
+
+.app-shell button.app-filter-chip[aria-pressed="true"],
+.app-shell button.app-filter-chip[aria-pressed="true"]:not(.quick-orbit-item):not(.radial-fab),
+.app-shell .booth-list-toolbar__button--active {
+  border-color: rgba(19, 185, 166, 0.52) !important;
+  background:
+    linear-gradient(135deg, #e9f8ff 0%, #e9fff8 100%) !important;
+  color: var(--ajou-blue) !important;
+  box-shadow:
+    inset 0 -2px 0 rgba(19, 185, 166, 0.38),
+    0 8px 18px rgba(19, 185, 166, 0.1) !important;
+}
+
+.app-shell[data-route-scope="public"] input,
+.app-shell[data-route-scope="public"] select,
+.app-shell[data-route-scope="public"] textarea {
+  border-color: rgba(6, 59, 117, 0.18) !important;
+  background: #fbfeff !important;
+  box-shadow: inset 0 1px 0 rgba(19, 185, 166, 0.08) !important;
+}
+
+.app-shell .app-empty-state {
+  border-style: solid !important;
+}
+
+.app-shell .app-empty-state--compact {
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fbfffd 100%) !important;
+  box-shadow: inset 0 3px 0 var(--ausum-mint) !important;
+}
+
+.app-shell .app-empty-chart {
+  border-color: rgba(19, 185, 166, 0.22) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f1fbff 100%) !important;
+}
+
+.app-shell .app-empty-chart span,
+.app-shell .event-progress {
+  background: linear-gradient(90deg, var(--ajou-blue), var(--ausum-mint)) !important;
+}
+
+.app-shell .app-heat-placeholder span {
+  border-color: rgba(53, 169, 232, 0.22) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #eff9ff 100%) !important;
+  color: var(--ajou-blue) !important;
+}
+
+.app-shell .app-heat-placeholder span:nth-child(3),
+.app-shell .app-heat-placeholder span:nth-child(4) {
+  border-color: rgba(255, 118, 95, 0.32) !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #fff2ed 100%) !important;
+  color: #b94834 !important;
+}
+
+.app-shell .festival-bottom-nav {
+  border-color: rgba(19, 185, 166, 0.2) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: 0 -14px 30px rgba(6, 43, 85, 0.08) !important;
+}
+
+.app-shell .festival-bottom-nav__item--active {
+  background:
+    linear-gradient(135deg, #eff8ff 0%, #e9fff8 100%) !important;
+  box-shadow: inset 0 2px 0 var(--ausum-mint) !important;
+}
+
+.app-shell .quick-orbit-root .radial-fab {
+  background:
+    linear-gradient(135deg, var(--ajou-blue) 0%, #0a74b8 58%, var(--ausum-mint) 120%) !important;
+  box-shadow:
+    0 18px 40px rgba(6, 43, 85, 0.28),
+    0 8px 22px rgba(19, 185, 166, 0.2) !important;
+}
+
+@media (max-width: 640px) {
+  .app-shell .festival-hero-media::after {
+    background:
+      linear-gradient(180deg, rgba(4, 17, 39, 0.44) 0%, rgba(4, 17, 39, 0.84) 58%, rgba(4, 17, 39, 0.94) 100%),
+      linear-gradient(90deg, rgba(6, 43, 85, 0.72) 0%, rgba(19, 185, 166, 0.2) 100%) !important;
+  }
+
+  .app-shell .festival-now-board,
+  .app-shell .festival-section,
+  .app-shell .festival-recommend-card,
+  .app-shell .booth-list-row,
+  .app-shell[data-route-scope="public"] .cyber-page > article:not(:first-child),
+  .app-shell[data-route-scope="public"] .event-card,
+  .app-shell[data-route-scope="public"] .event-highlight,
+  .app-shell[data-route-scope="public"] .event-alert {
+    box-shadow:
+      inset 0 3px 0 var(--card-accent),
+      0 12px 26px rgba(6, 43, 85, 0.075) !important;
+  }
+}
+
+/* Real app structure pass: each public page now has a distinct product surface. */
+.app-shell[data-route-scope="public"] .festival-stage-page,
+.app-shell[data-route-scope="public"] .festival-live-dashboard,
+.app-shell[data-route-scope="public"] .festival-map-page,
+.app-shell[data-route-scope="public"] .festival-lost-page,
+.app-shell[data-route-scope="public"] .festival-chat-page,
+.app-shell[data-route-scope="public"] .festival-lineup-page {
+  isolation: isolate;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page > .flex:first-of-type,
+.app-shell[data-route-scope="public"] .festival-live-dashboard > article:first-child,
+.app-shell[data-route-scope="public"] .festival-map-page > article:first-child,
+.app-shell[data-route-scope="public"] .festival-lost-page > article:first-child,
+.app-shell[data-route-scope="public"] .festival-chat-page > header:first-child,
+.app-shell[data-route-scope="public"] .festival-lineup-page > .flex:first-child {
+  border: 0 !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(135deg, #062b55 0%, #0a5796 58%, #13b9a6 132%) !important;
+  box-shadow:
+    0 22px 48px rgba(6, 43, 85, 0.18),
+    0 8px 22px rgba(19, 185, 166, 0.16) !important;
+  color: #ffffff !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page > .flex:first-of-type,
+.app-shell[data-route-scope="public"] .festival-lineup-page > .flex:first-child {
+  padding: 1rem !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page > .flex:first-of-type h2,
+.app-shell[data-route-scope="public"] .festival-stage-page > .flex:first-of-type p,
+.app-shell[data-route-scope="public"] .festival-live-dashboard > article:first-child h2,
+.app-shell[data-route-scope="public"] .festival-live-dashboard > article:first-child p,
+.app-shell[data-route-scope="public"] .festival-map-page > article:first-child h2,
+.app-shell[data-route-scope="public"] .festival-map-page > article:first-child p,
+.app-shell[data-route-scope="public"] .festival-lost-page > article:first-child h2,
+.app-shell[data-route-scope="public"] .festival-lost-page > article:first-child p,
+.app-shell[data-route-scope="public"] .festival-chat-page > header:first-child h2,
+.app-shell[data-route-scope="public"] .festival-chat-page > header:first-child p,
+.app-shell[data-route-scope="public"] .festival-lineup-page > .flex:first-child h2 {
+  color: #ffffff !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page > .flex:first-of-type .festival-page-kicker,
+.app-shell[data-route-scope="public"] .festival-live-dashboard > article:first-child .festival-page-kicker,
+.app-shell[data-route-scope="public"] .festival-map-page > article:first-child p:first-of-type,
+.app-shell[data-route-scope="public"] .festival-lost-page > article:first-child p:first-of-type,
+.app-shell[data-route-scope="public"] .festival-chat-page > header:first-child p:first-of-type {
+  color: #9ff7ea !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .visual-icon-badge,
+.app-shell[data-route-scope="public"] .festival-live-dashboard > article:first-child .visual-icon-badge,
+.app-shell[data-route-scope="public"] .festival-map-page > article:first-child span:first-child,
+.app-shell[data-route-scope="public"] .festival-lost-page > article:first-child span:first-child,
+.app-shell[data-route-scope="public"] .festival-chat-page > header:first-child span:first-child {
+  border-color: rgba(255, 255, 255, 0.3) !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-home .festival-section__head {
+  align-items: end !important;
+  border-bottom: 1px solid rgba(19, 185, 166, 0.12) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-home .festival-section__head button,
+.app-shell[data-route-scope="public"] .festival-home .festival-section__meta {
+  align-self: center;
+}
+
+.app-shell[data-route-scope="public"] .festival-home .festival-booth-finder {
+  background:
+    linear-gradient(135deg, #ffffff 0%, #eef9ff 48%, #ecfff9 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .grid.grid-cols-4:first-of-type {
+  gap: 0.55rem !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .event-metric {
+  min-height: 5rem !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .event-metric p:last-child {
+  font-size: 1.35rem !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .stagger-list {
+  position: relative;
+  display: grid;
+  gap: 0.8rem !important;
+  padding-left: 0.35rem;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .event-card {
+  position: relative;
+  cursor: pointer;
+  padding: 1rem 1rem 1rem 3.8rem !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .event-card::before {
+  content: "";
+  position: absolute;
+  left: 1.5rem;
+  top: 1.25rem;
+  z-index: 1;
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 3px solid #ffffff;
+  border-radius: 999px;
+  background: var(--card-accent, var(--ausum-mint));
+  box-shadow: 0 0 0 5px rgba(19, 185, 166, 0.16);
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .event-card::after {
+  content: "";
+  position: absolute;
+  left: 1.9rem;
+  top: 2.35rem;
+  bottom: -0.9rem;
+  width: 2px;
+  background: linear-gradient(180deg, rgba(19, 185, 166, 0.55), rgba(53, 169, 232, 0));
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .event-card:last-child::after {
+  display: none;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .event-card .w-6 {
+  position: absolute;
+  left: 0.85rem;
+  top: 2.75rem;
+  width: 2.1rem !important;
+  color: var(--ajou-blue) !important;
+  font-weight: 950 !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-stage-page .event-card .w-1.h-12 {
+  display: none !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-timetable-preview {
+  gap: 0.9rem !important;
+}
+
+.app-shell .festival-timetable-preview__list {
+  display: grid;
+  gap: 0.55rem;
+  margin-top: 0.2rem;
+}
+
+.app-shell .festival-timetable-preview__row {
+  display: grid;
+  grid-template-columns: 4rem 1fr;
+  gap: 0.15rem 0.75rem;
+  align-items: center;
+  min-height: 3.5rem;
+  padding: 0.75rem;
+  border: 1px solid rgba(6, 59, 117, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  box-shadow: inset 3px 0 0 var(--ausum-mint);
+}
+
+.app-shell .festival-timetable-preview__row--coral {
+  box-shadow: inset 3px 0 0 var(--ausum-coral);
+}
+
+.app-shell .festival-timetable-preview__row--sky {
+  box-shadow: inset 3px 0 0 var(--ausum-sky);
+}
+
+.app-shell .festival-timetable-preview__row span {
+  grid-row: span 2;
+  color: var(--ajou-blue) !important;
+  font-weight: 950 !important;
+}
+
+.app-shell .festival-timetable-preview__row strong {
+  color: var(--ff-text) !important;
+}
+
+.app-shell .festival-timetable-preview__row small {
+  color: var(--ff-muted) !important;
+  font-weight: 750 !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-live-dashboard .festival-crowd-chart {
+  position: relative;
+  align-items: end !important;
+  min-height: 9rem;
+  padding: 2.25rem 0.75rem 0.8rem;
+  border: 1px solid rgba(19, 185, 166, 0.16);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.82), rgba(239, 249, 255, 0.8)) !important;
+}
+
+.app-shell .festival-data-note {
+  position: absolute;
+  left: 0.85rem;
+  top: 0.7rem;
+  margin: 0 !important;
+  color: #087c70 !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-live-dashboard .festival-crowd-chart > div {
+  display: grid;
+  align-items: end;
+  min-width: 2.3rem;
+}
+
+.app-shell[data-route-scope="public"] .festival-live-dashboard .festival-crowd-chart > div > div {
+  width: 1.45rem !important;
+  border-radius: 999px 999px 4px 4px !important;
+  background:
+    linear-gradient(180deg, var(--ausum-sky) 0%, var(--ausum-mint) 100%) !important;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.62),
+    0 10px 22px rgba(19, 185, 166, 0.2) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-map-page > .rounded-2xl.overflow-hidden {
+  border-color: rgba(6, 43, 85, 0.14) !important;
+  box-shadow:
+    0 22px 48px rgba(6, 43, 85, 0.14),
+    0 8px 22px rgba(19, 185, 166, 0.12) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-map-page .leaflet-container {
+  min-height: 32rem;
+}
+
+.app-shell[data-route-scope="public"] .festival-map-page > article:nth-of-type(2) {
+  position: relative;
+  z-index: 2;
+}
+
+.app-shell[data-route-scope="public"] .festival-map-page > article:nth-of-type(2) .grid:first-child > div,
+.app-shell[data-route-scope="public"] .festival-lost-page > article:nth-of-type(2) .grid > div {
+  border-radius: 8px !important;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f1fbff 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-lost-page > article:nth-of-type(2) {
+  background:
+    linear-gradient(135deg, #ffffff 0%, #eff9ff 48%, #fff5f1 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-lost-page input {
+  min-height: 3.2rem;
+  border-radius: 8px !important;
+  box-shadow:
+    0 12px 28px rgba(6, 43, 85, 0.08),
+    inset 0 0 0 1px rgba(19, 185, 166, 0.08) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-lost-page > article:nth-of-type(3) {
+  background:
+    linear-gradient(135deg, #f0fbff 0%, #ffffff 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-chat-page > form {
+  position: relative;
+  z-index: 2;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #eff9ff 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-chat-page > form input {
+  min-height: 3.4rem;
+  background: #ffffff !important;
+  box-shadow: inset 0 0 0 1px rgba(19, 185, 166, 0.08) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-chat-page > div:nth-of-type(1),
+.app-shell[data-route-scope="public"] .festival-chat-page > div:nth-of-type(2) {
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f1fbff 100%) !important;
+  box-shadow:
+    inset 0 3px 0 var(--ausum-mint),
+    0 14px 30px rgba(6, 43, 85, 0.075) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-chat-page > article:last-of-type {
+  min-height: 24rem;
+  background:
+    linear-gradient(180deg, #ffffff 0%, #f9fdff 52%, #effdf8 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-chat-page > article:last-of-type > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell[data-route-scope="public"] .festival-chat-page .text-right > div {
+  background: linear-gradient(135deg, var(--ajou-blue), var(--ausum-mint)) !important;
+  color: #ffffff !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-chat-page .text-left > div {
+  border-color: rgba(19, 185, 166, 0.22) !important;
+  background: #ffffff !important;
+  color: var(--ff-text) !important;
+  box-shadow: 0 12px 26px rgba(6, 43, 85, 0.07) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-chat-page .text-left > div p,
+.app-shell[data-route-scope="public"] .festival-chat-page .text-left > div span,
+.app-shell[data-route-scope="public"] .festival-chat-page .text-left > div summary {
+  color: var(--ff-text) !important;
+}
+
+.app-shell[data-route-scope="public"] .festival-lineup-page .lineup-carousel {
+  border: 1px solid rgba(19, 185, 166, 0.18);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, #eff9ff 0%, #ffffff 46%, #effdf8 100%);
+  box-shadow: 0 18px 38px rgba(6, 43, 85, 0.08);
+}
+
+.app-shell[data-route-scope="public"] .festival-lineup-page .lineup-empty {
+  min-height: 15rem;
+}
+
+@media (min-width: 900px) {
+  .app-shell[data-route-scope="public"] .festival-live-dashboard,
+  .app-shell[data-route-scope="public"] .festival-map-page,
+  .app-shell[data-route-scope="public"] .festival-lost-page,
+  .app-shell[data-route-scope="public"] .festival-chat-page {
+    display: grid !important;
+    gap: 1rem !important;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-live-dashboard > :not([hidden]) ~ :not([hidden]),
+  .app-shell[data-route-scope="public"] .festival-map-page > :not([hidden]) ~ :not([hidden]),
+  .app-shell[data-route-scope="public"] .festival-lost-page > :not([hidden]) ~ :not([hidden]),
+  .app-shell[data-route-scope="public"] .festival-chat-page > :not([hidden]) ~ :not([hidden]) {
+    margin-top: 0 !important;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-live-dashboard {
+    grid-template-columns: minmax(0, 1.22fr) minmax(18rem, 0.78fr);
+  }
+
+  .app-shell[data-route-scope="public"] .festival-live-dashboard > article:first-child,
+  .app-shell[data-route-scope="public"] .festival-live-dashboard > .grid.grid-cols-3 {
+    grid-column: 1 / -1;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-live-dashboard > article:nth-of-type(2) {
+    grid-column: 1;
+    grid-row: 3 / span 2;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-live-dashboard > article:nth-of-type(3),
+  .app-shell[data-route-scope="public"] .festival-live-dashboard > article:nth-of-type(4) {
+    grid-column: 2;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-live-dashboard > article:nth-of-type(2) .festival-crowd-chart {
+    min-height: 16rem;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-map-page {
+    grid-template-columns: 21rem minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-map-page > article:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-map-page > article:nth-of-type(2),
+  .app-shell[data-route-scope="public"] .festival-map-page > article:nth-of-type(3) {
+    grid-column: 1;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-map-page > .rounded-2xl.overflow-hidden {
+    grid-column: 2;
+    grid-row: 2 / span 3;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-map-page .leaflet-container {
+    height: min(68vh, 42rem) !important;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-lost-page {
+    grid-template-columns: minmax(20rem, 0.8fr) minmax(0, 1.2fr);
+    align-items: start;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-lost-page > article:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-lost-page > article:nth-of-type(2),
+  .app-shell[data-route-scope="public"] .festival-lost-page > article:nth-of-type(3),
+  .app-shell[data-route-scope="public"] .festival-lost-page > p {
+    grid-column: 1;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-lost-page > .space-y-2 {
+    grid-column: 2;
+    grid-row: 2 / span 5;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-chat-page {
+    grid-template-columns: minmax(17rem, 0.76fr) minmax(0, 1.24fr);
+    align-items: start;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-chat-page > header:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-chat-page > form,
+  .app-shell[data-route-scope="public"] .festival-chat-page > div:nth-of-type(1),
+  .app-shell[data-route-scope="public"] .festival-chat-page > div:nth-of-type(2) {
+    grid-column: 1;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-chat-page > article:last-of-type {
+    grid-column: 2;
+    grid-row: 2 / span 4;
+    min-height: min(62vh, 42rem);
+  }
+
+  .app-shell[data-route-scope="public"] .festival-stage-page .stagger-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-shell[data-route-scope="public"] .festival-stage-page .event-card::after {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell[data-route-scope="public"] .festival-stage-page > .flex:first-of-type,
+  .app-shell[data-route-scope="public"] .festival-live-dashboard > article:first-child,
+  .app-shell[data-route-scope="public"] .festival-map-page > article:first-child,
+  .app-shell[data-route-scope="public"] .festival-lost-page > article:first-child,
+  .app-shell[data-route-scope="public"] .festival-chat-page > header:first-child {
+    padding: 0.95rem !important;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-stage-page > .flex:first-of-type,
+  .app-shell[data-route-scope="public"] .festival-live-dashboard > article:first-child > div,
+  .app-shell[data-route-scope="public"] .festival-map-page > article:first-child > div,
+  .app-shell[data-route-scope="public"] .festival-chat-page > header:first-child > div {
+    align-items: flex-start !important;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-stage-page .event-card {
+    padding-left: 3.35rem !important;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-stage-page .event-card::before {
+    left: 1.22rem;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-stage-page .event-card::after {
+    left: 1.62rem;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-stage-page .event-card .w-6 {
+    left: 0.55rem;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-map-page .leaflet-container {
+    min-height: 26rem;
+  }
+
+  .app-shell .festival-quick-actions button,
+  .app-shell .festival-hero-premium .festival-quick-actions button {
+    min-width: 0 !important;
+    white-space: normal !important;
+    line-height: 1.25 !important;
+    font-size: 0.76rem !important;
+    gap: 0.28rem !important;
+  }
+
+  .app-shell .festival-quick-actions button svg {
+    width: 0.95rem !important;
+    height: 0.95rem !important;
+  }
+}

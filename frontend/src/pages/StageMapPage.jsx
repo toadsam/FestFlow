@@ -10,6 +10,16 @@ import { fetchStageCrowd } from "../api";
 import { IconClock, IconMapPin, IconRefresh, IconUsers } from "../components/UxIcons";
 
 const OPEN_AIR_THEATER = { latitude: 37.281785, longitude: 127.045501 };
+const STAGE_PREVIEW_ZONE = {
+  zoneName: "노천극장",
+  latitude: OPEN_AIR_THEATER.latitude,
+  longitude: OPEN_AIR_THEATER.longitude,
+  radiusMeters: 70,
+  capacityHint: 1200,
+  crowdCount: 0,
+  level: "여유",
+  isPreview: true,
+};
 
 const LEVEL_STYLE = {
   여유: { stroke: "#0f766e", fill: "#14b8a6" },
@@ -76,19 +86,20 @@ export default function StageMapPage() {
 
   const theater = useMemo(() => {
     const raw = (stageData?.zones || [])[0] || null;
-    return raw ? { ...raw, level: normalizeLevel(raw.level) } : null;
+    return raw ? { ...raw, level: normalizeLevel(raw.level) } : STAGE_PREVIEW_ZONE;
   }, [stageData]);
+  const hasLiveStageData = !theater?.isPreview;
   const style = getLevelStyle(theater?.level);
-  const ratio = theater?.capacityHint
+  const ratio = theater?.capacityHint && hasLiveStageData
     ? Math.min(1.2, theater.crowdCount / theater.capacityHint)
     : 0;
   const pulseRadius = Math.max(10, Math.round(12 + ratio * 14));
-  const occupancyPercent = theater?.capacityHint
+  const occupancyPercent = theater?.capacityHint && hasLiveStageData
     ? Math.min(100, Math.round((theater.crowdCount / theater.capacityHint) * 100))
     : 0;
 
   return (
-    <section className="cyber-page pt-4 space-y-3 scan-enter">
+    <section className="cyber-page festival-map-page pt-4 space-y-3 scan-enter">
       <article className="rounded-2xl border border-cyan-300/65 bg-gradient-to-br from-[#05345f] via-[#0c5f93] to-[#18b8da] p-4 text-cyan-50 shadow-[0_0_26px_rgba(34,211,238,0.28)]">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-start gap-2.5">
@@ -116,15 +127,21 @@ export default function StageMapPage() {
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
             <p className="text-[10px] text-cyan-200/80 text-role-ops inline-flex items-center gap-1"><IconUsers className="h-3.5 w-3.5 icon-role-ops" />현재 추정 인원</p>
-            <p className="text-lg font-bold text-cyan-100">{theater?.crowdCount ?? 0}명</p>
+            <p className="text-lg font-bold text-cyan-100">
+              {hasLiveStageData ? `${theater?.crowdCount ?? 0}명` : "수집 전"}
+            </p>
           </div>
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
             <p className="text-[10px] text-cyan-200/80 text-role-map inline-flex items-center gap-1"><IconMapPin className="h-3.5 w-3.5 icon-role-map" />혼잡도</p>
-            <p className="text-sm font-bold text-cyan-100">{theater?.level || "-"}</p>
+            <p className="text-sm font-bold text-cyan-100">
+              {hasLiveStageData ? theater?.level || "-" : "대기 중"}
+            </p>
           </div>
           <div className="rounded border border-cyan-400/35 bg-slate-900/70 p-2">
             <p className="text-[10px] text-cyan-200/80 text-role-log inline-flex items-center gap-1"><IconClock className="h-3.5 w-3.5 icon-role-log" />업데이트</p>
-            <p className="text-xs font-bold text-cyan-100">{formatUpdatedAt(stageData?.updatedAt)}</p>
+            <p className="text-xs font-bold text-cyan-100">
+              {hasLiveStageData ? formatUpdatedAt(stageData?.updatedAt) : "연결 대기"}
+            </p>
           </div>
         </div>
 
@@ -192,8 +209,8 @@ export default function StageMapPage() {
                 <Popup>
                   <div className="space-y-1">
                     <p className="font-bold">{theater.zoneName}</p>
-                    <p className="text-xs">혼잡도: {theater.level}</p>
-                    <p className="text-xs">현재 추정 인원: {theater.crowdCount}명</p>
+                    <p className="text-xs">혼잡도: {hasLiveStageData ? theater.level : "집계 대기"}</p>
+                    <p className="text-xs">현재 추정 인원: {hasLiveStageData ? `${theater.crowdCount}명` : "수집 전"}</p>
                     <p className="text-xs text-slate-600">반경: {theater.radiusMeters}m</p>
                   </div>
                 </Popup>
@@ -208,7 +225,11 @@ export default function StageMapPage() {
           <IconUsers className="h-4 w-4 icon-role-ops" />
           노천극장 혼잡 게이지
         </p>
-        <p className="mt-1 text-xs text-cyan-200/80">기준 수용치 {theater?.capacityHint ?? 0}명 대비 {occupancyPercent}%</p>
+        <p className="mt-1 text-xs text-cyan-200/80">
+          {hasLiveStageData
+            ? `기준 수용치 ${theater?.capacityHint ?? 0}명 대비 ${occupancyPercent}%`
+            : "실시간 데이터가 연결되면 노천극장 밀집도가 이 게이지에 표시됩니다."}
+        </p>
         <div className="mt-2 h-3 overflow-hidden rounded bg-slate-900/80">
           <div
             className="h-full rounded"

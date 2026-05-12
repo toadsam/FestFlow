@@ -9,6 +9,28 @@ function intensityClass(intensity) {
   return "bg-emerald-300";
 }
 
+const trafficPreview = [
+  { hour: "18:00", count: 18 },
+  { hour: "19:00", count: 34 },
+  { hour: "20:00", count: 42 },
+  { hour: "21:00", count: 56 },
+  { hour: "22:00", count: 46 },
+  { hour: "23:00", count: 31 },
+];
+
+const campusZonePreview = [
+  { boothId: "preview-stage", boothName: "노천극장", score: "대기" },
+  { boothId: "preview-plaza", boothName: "중앙광장", score: "대기" },
+  { boothId: "preview-booth", boothName: "축제 본부", score: "대기" },
+];
+
+const heatmapPreview = [
+  { latitude: 37.282, longitude: 127.046, intensity: 2, label: "노천극장" },
+  { latitude: 37.281, longitude: 127.045, intensity: 4, label: "중앙광장" },
+  { latitude: 37.280, longitude: 127.044, intensity: 6, label: "부스 거리" },
+  { latitude: 37.283, longitude: 127.047, intensity: 3, label: "축제 본부" },
+];
+
 export default function AnalyticsPage() {
   const [traffic, setTraffic] = useState([]);
   const [popular, setPopular] = useState([]);
@@ -51,9 +73,13 @@ export default function AnalyticsPage() {
   const hasTraffic = traffic.length > 0;
   const hasPopular = popular.length > 0;
   const hasHeatmap = heatmap.length > 0;
+  const visibleTraffic = hasTraffic ? traffic : trafficPreview;
+  const visiblePopular = hasPopular ? popular : campusZonePreview;
+  const visibleHeatmap = hasHeatmap ? heatmap.slice(0, 12) : heatmapPreview;
+  const visibleTrafficMax = Math.max(1, ...visibleTraffic.map((item) => Number(item.count) || 0));
 
   return (
-    <section className="cyber-page pt-4 space-y-3 scan-enter">
+    <section className="cyber-page festival-live-dashboard pt-4 space-y-3 scan-enter">
       <article className="rounded-2xl border border-cyan-300/65 bg-gradient-to-br from-[#063463] via-[#0b4f86] to-[#1189be] p-4 text-cyan-50 shadow-[0_0_26px_rgba(34,211,238,0.28)]">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-start gap-2.5">
@@ -82,15 +108,21 @@ export default function AnalyticsPage() {
       <div className="grid grid-cols-3 gap-2">
         <article className="rounded-xl border border-cyan-300/50 bg-slate-950/70 p-2.5">
           <p className="text-[10px] text-cyan-200/90 text-role-ops inline-flex items-center gap-1"><span className="visual-icon-badge-sm visual-icon-badge--ops"><IconUsers className="h-3.5 w-3.5 icon-role-ops" /></span>총 방문 집계</p>
-          <p className="mt-0.5 text-base font-extrabold text-cyan-100">{totalTraffic.toLocaleString()}명</p>
+          <p className="mt-0.5 text-base font-extrabold text-cyan-100">
+            {hasTraffic ? `${totalTraffic.toLocaleString()}명` : "수집 전"}
+          </p>
         </article>
         <article className="rounded-xl border border-cyan-300/50 bg-slate-950/70 p-2.5">
           <p className="text-[10px] text-cyan-200/90 text-role-ops inline-flex items-center gap-1"><span className="visual-icon-badge-sm visual-icon-badge--ops"><IconTrophy className="h-3.5 w-3.5 icon-role-ops" /></span>현재 1위 부스</p>
-          <p className="mt-0.5 text-sm font-bold text-cyan-100 line-clamp-1">{topBooth?.boothName || "-"}</p>
+          <p className="mt-0.5 text-sm font-bold text-cyan-100 line-clamp-1">
+            {topBooth?.boothName || "집계 대기"}
+          </p>
         </article>
         <article className="rounded-xl border border-cyan-300/50 bg-slate-950/70 p-2.5">
           <p className="text-[10px] text-cyan-200/90 text-role-alert inline-flex items-center gap-1"><span className="visual-icon-badge-sm visual-icon-badge--alert"><IconFlame className="h-3.5 w-3.5 icon-role-alert" /></span>최고 강도 포인트</p>
-          <p className="mt-0.5 text-sm font-bold text-cyan-100">{hottestPoint ? `Lv.${hottestPoint.intensity}` : "-"}</p>
+          <p className="mt-0.5 text-sm font-bold text-cyan-100">
+            {hottestPoint ? `Lv.${hottestPoint.intensity}` : "집계 대기"}
+          </p>
         </article>
       </div>
 
@@ -103,26 +135,20 @@ export default function AnalyticsPage() {
           </span>
           시간대별 방문량 (최근 24시간)
         </h3>
-        <div className="mt-3 h-28 flex items-end gap-1 overflow-x-auto">
+        <div className="festival-crowd-chart mt-3 h-28 flex items-end gap-1 overflow-x-auto">
           {!hasTraffic && (
-            <div className="app-empty-chart" aria-label="방문량 데이터 준비 중">
-              {[28, 46, 36, 64, 52, 72, 44, 58].map((height, index) => (
-                <span
-                  key={`traffic-placeholder-${index}`}
-                  style={{ height: `${height}%` }}
-                />
-              ))}
-              <p>방문 데이터가 쌓이면 시간대별 흐름이 표시됩니다.</p>
-            </div>
+            <p className="festival-data-note">방문 데이터 연결 대기</p>
           )}
-          {traffic.map((item) => (
+          {visibleTraffic.map((item, index) => (
             <div key={item.hour} className="min-w-7 text-center">
               <div
                 className="mx-auto w-5 rounded-t bg-gradient-to-t from-cyan-600 to-sky-300 shadow-[0_0_14px_rgba(34,211,238,0.45)]"
-                style={{ height: `${Math.max(6, (item.count / trafficMax) * 100)}px` }}
+                style={{ height: `${Math.max(14, ((Number(item.count) || 0) / visibleTrafficMax) * 100)}px` }}
                 title={`${item.hour}: ${item.count}`}
               />
-              <p className="mt-1 text-[10px] text-cyan-200/70">{item.hour.slice(-5)}</p>
+              <p className="mt-1 text-[10px] text-cyan-200/70">
+                {`${item.hour}`.slice(-5) || `${index + 1}`}
+              </p>
             </div>
           ))}
         </div>
@@ -143,10 +169,12 @@ export default function AnalyticsPage() {
               <p>GPS 전송과 부스 방문 기록이 쌓이면 지금 가장 뜨거운 부스를 보여드립니다.</p>
             </div>
           )}
-          {popular.map((item, idx) => (
+          {visiblePopular.map((item, idx) => (
             <div key={item.boothId} className="flex items-center justify-between rounded-lg border border-cyan-400/25 bg-slate-900/70 px-2 py-1.5">
               <p className="text-sm text-cyan-100">{idx + 1}. {item.boothName}</p>
-              <span className="text-xs font-bold text-cyan-300">{item.score}명</span>
+              <span className="text-xs font-bold text-cyan-300">
+                {hasPopular ? `${item.score}명` : item.score}
+              </span>
             </div>
           ))}
         </div>
@@ -168,13 +196,15 @@ export default function AnalyticsPage() {
               <p>혼잡 포인트가 감지되면 지도 기준으로 바로 표시됩니다.</p>
             </div>
           )}
-          {heatmap.slice(0, 12).map((point) => (
+          {visibleHeatmap.map((point) => (
             <div key={`${point.latitude}-${point.longitude}`} className="rounded-lg border border-cyan-400/25 bg-slate-900/75 p-2">
               <div className="flex items-center justify-between">
                 <span className={`inline-block w-2.5 h-2.5 rounded-full ${intensityClass(point.intensity)}`} />
                 <span className="text-xs font-semibold text-cyan-200/90">강도 {point.intensity}</span>
               </div>
-              <p className="mt-1 text-[11px] text-cyan-200/70">{point.latitude.toFixed(3)}, {point.longitude.toFixed(3)}</p>
+              <p className="mt-1 text-[11px] text-cyan-200/70">
+                {point.label || `${point.latitude.toFixed(3)}, ${point.longitude.toFixed(3)}`}
+              </p>
             </div>
           ))}
         </div>

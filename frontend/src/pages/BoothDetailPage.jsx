@@ -216,6 +216,16 @@ function tableStatusClasses(status) {
   }
 }
 
+function createEmptyReservationState(maxReservationMinutes = 10) {
+  return {
+    maxReservationMinutes,
+    tables: [],
+    activeReservations: [],
+    myReservation: null,
+    penalty: null,
+  };
+}
+
 export default function BoothDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -252,27 +262,73 @@ export default function BoothDetailPage() {
   const [showMenuBoardSection, setShowMenuBoardSection] = useState(false);
   const [showReservationSection, setShowReservationSection] = useState(true);
 
+  function applyReservationState(nextState) {
+    setReservationState(nextState);
+
+    setSelectedTableId((currentTableId) => {
+      const tables = nextState.tables ?? [];
+      if (tables.length === 0) {
+        return null;
+      }
+      if (currentTableId && tables.some((table) => table.id === currentTableId)) {
+        return currentTableId;
+      }
+      const firstReservableTable =
+        tables.find((table) => isTableReservable(table)) || tables[0];
+      return firstReservableTable.id;
+    });
+  }
+
+  async function loadReservationState(token = reservationToken, boothData = booth) {
+    try {
+      const reservationData = await fetchBoothReservations(id, token);
+      applyReservationState(reservationData);
+      setReservationError("");
+      return;
+    } catch (e) {
+      if (token) {
+        clearReservationAuth();
+        setReservationToken("");
+        setCheckInQrDataUrl("");
+        setCheckInQrToken("");
+        setCheckInQrExpiresAt("");
+        setReservationError("예약 인증이 만료되어 다시 인증해 주세요.");
+
+        try {
+          const publicReservationData = await fetchBoothReservations(id, "");
+          applyReservationState(publicReservationData);
+          return;
+        } catch {
+          // 공개 예약 현황도 실패하면 상세 화면 자체는 계속 보여줍니다.
+        }
+      } else {
+        setReservationError(e.message);
+      }
+
+      applyReservationState(
+        createEmptyReservationState(boothData?.maxReservationMinutes),
+      );
+    }
+  }
+
   async function loadPage() {
     try {
-      const [boothData, congestionData, reservationData] = await Promise.all([
+      const [boothData, congestionData] = await Promise.all([
         fetchBoothById(id),
         fetchCongestion(id),
-        fetchBoothReservations(id, reservationToken),
       ]);
 
       setBooth(boothData);
       setCongestion(congestionData);
-      setReservationState(reservationData);
-
-      if (!selectedTableId && reservationData.tables.length > 0) {
-        const firstReservableTable =
-          reservationData.tables.find((table) => isTableReservable(table)) ||
-          reservationData.tables[0];
-        setSelectedTableId(firstReservableTable.id);
-      }
+      setSelectedTableId(null);
+      setReservationState(
+        createEmptyReservationState(boothData.maxReservationMinutes),
+      );
       setError("");
+      loadReservationState(reservationToken, boothData);
     } catch (e) {
       setError(e.message);
+      setReservationState((current) => current || createEmptyReservationState());
     }
   }
 
@@ -345,14 +401,7 @@ export default function BoothDetailPage() {
   }
 
   async function refreshReservations() {
-    const updated = await fetchBoothReservations(id, reservationToken);
-    setReservationState(updated);
-    if (!selectedTableId && updated.tables.length > 0) {
-      const firstReservableTable =
-        updated.tables.find((table) => isTableReservable(table)) ||
-        updated.tables[0];
-      setSelectedTableId(firstReservableTable.id);
-    }
+    await loadReservationState(reservationToken);
   }
 
   async function handleSendCode() {

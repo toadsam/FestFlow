@@ -111,7 +111,7 @@ export default function LostFoundPage() {
   }
 
   return (
-    <section className="cyber-page pt-4 pb-24 space-y-3 scan-enter">
+    <section className="cyber-page festival-lost-page pt-4 pb-24 space-y-3 scan-enter">
       <article className="rounded-2xl border border-cyan-300/65 bg-gradient-to-br from-[#05345f] via-[#0c5f93] to-[#18b8da] p-4 text-cyan-50 shadow-[0_0_24px_rgba(34,211,238,0.28)]">
         <div className="flex items-start gap-2.5">
           <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-cyan-100/50 bg-cyan-500/25">

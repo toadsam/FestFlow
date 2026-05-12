@@ -146,7 +146,7 @@ export default function ChatPage() {
   const lastVisibleIndex = visibleMessages.length - 1;
 
   return (
-    <section className="cyber-page min-h-[calc(100vh-5rem)] space-y-3 pb-24 pt-3 scan-enter">
+    <section className="cyber-page festival-chat-page min-h-[calc(100vh-5rem)] space-y-3 pb-24 pt-3 scan-enter">
       <header className="rounded-2xl border border-cyan-300/60 bg-slate-950/90 p-3 text-cyan-50 shadow-[0_0_22px_rgba(34,211,238,0.22)]">
         <div className="flex items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2.5">

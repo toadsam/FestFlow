@@ -194,7 +194,7 @@ export default function LineupPage() {
   }
 
   return (
-    <section className="cyber-page pt-4 space-y-3 lineup-page">
+    <section className="cyber-page festival-lineup-page pt-4 space-y-3 lineup-page">
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold text-role-ops inline-flex items-center gap-2">
           <IconMusic className="h-5 w-5 icon-role-ops" />

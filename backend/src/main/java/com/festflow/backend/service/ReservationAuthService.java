@@ -140,9 +140,13 @@ public class ReservationAuthService {
             return null;
         }
 
-        String statelessPhoneNumber = resolveStatelessReservationToken(token);
-        if (statelessPhoneNumber != null) {
-            return statelessPhoneNumber;
+        try {
+            String statelessPhoneNumber = resolveStatelessReservationToken(token);
+            if (statelessPhoneNumber != null) {
+                return statelessPhoneNumber;
+            }
+        } catch (ResponseStatusException ignored) {
+            return null;
         }
 
         LocalDateTime now = LocalDateTime.now();

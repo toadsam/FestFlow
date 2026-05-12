@@ -15,6 +15,12 @@ const statusClassName = {
 
 const statusFilters = ["전체", "예정", "대기중", "곧 시작", "지연", "진행중", "종료", "취소"];
 
+const emptyTimelinePreview = [
+  { time: "18:00", title: "오프닝 무대", caption: "라인업 공개 전", tone: "mint" },
+  { time: "19:30", title: "메인 공연", caption: "아티스트 준비 중", tone: "coral" },
+  { time: "21:00", title: "피날레", caption: "노천극장 예정", tone: "sky" },
+];
+
 function isCoarsePointer() {
   return typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches;
 }
@@ -223,7 +229,7 @@ export default function EventPage() {
     <section
       ref={arenaRef}
       data-burst-scope="local"
-      className={`cyber-page pt-4 space-y-3 scan-enter events-arena ${arenaShock ? "events-arena-shock" : ""}`}
+      className={`cyber-page festival-stage-page pt-4 space-y-3 scan-enter events-arena ${arenaShock ? "events-arena-shock" : ""}`}
       onMouseMove={handleArenaMouseMove}
       onMouseLeave={handleArenaMouseLeave}
     >
@@ -400,7 +406,7 @@ export default function EventPage() {
       </div>
 
       {filtered.length === 0 && (
-        <article className="app-empty-state event-empty-state rounded-xl border border-dashed border-slate-300 bg-white p-5">
+        <article className="festival-timetable-preview app-empty-state event-empty-state rounded-xl border border-dashed border-slate-300 bg-white p-5">
           <p className="app-empty-state__eyebrow">
             {allEventsEmpty ? "라인업 공개 전" : `${statusFilter} 공연 없음`}
           </p>
@@ -414,6 +420,20 @@ export default function EventPage() {
               ? "공연 데이터가 등록되면 지금 공연, 다음 공연, 전체 타임테이블이 이 화면에 표시됩니다."
               : "다른 상태를 선택하거나 전체 일정에서 다시 확인해 주세요."}
           </p>
+          {allEventsEmpty && (
+            <div className="festival-timetable-preview__list">
+              {emptyTimelinePreview.map((item) => (
+                <div
+                  key={item.time}
+                  className={`festival-timetable-preview__row festival-timetable-preview__row--${item.tone}`}
+                >
+                  <span>{item.time}</span>
+                  <strong>{item.title}</strong>
+                  <small>{item.caption}</small>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="app-empty-actions">
             <Link to="/events/lineup" className="app-primary-cta">
               라인업 보기
