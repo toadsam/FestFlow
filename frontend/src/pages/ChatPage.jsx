@@ -155,13 +155,13 @@ export default function ChatPage() {
             </span>
             <div className="min-w-0">
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-200/80">
-                AI 축제 도우미
+                AU:SUM 도우미
               </p>
               <h2 className="mt-0.5 text-lg font-extrabold leading-tight text-role-ops">
                 지금 뭐 할까요?
               </h2>
               <p className="mt-1 text-[11px] font-semibold text-cyan-100/70">
-                부스, 공연, 혼잡도, 분실물을 바로 행동으로 연결합니다.
+                노천극장, 부스, 혼잡도, 분실물을 아주대 축제 기준으로 안내합니다.
               </p>
             </div>
           </div>
@@ -600,7 +600,7 @@ function getEvidenceActions(evidence) {
     return [{ label: "분실물 바로 찾기", to: `/lost-found?query=${query}`, icon: IconSearch }];
   }
   if (evidence.type === "event") {
-    return [{ label: "공연 일정 보기", to: "/events", icon: IconCalendar }];
+    return [{ label: "노천극장 라인업 보기", to: "/events", icon: IconCalendar }];
   }
   return [];
 }

@@ -145,6 +145,7 @@ export default function EventPage() {
     () => filtered.find((event) => event.id === selectedId) || null,
     [filtered, selectedId],
   );
+  const allEventsEmpty = events.length === 0;
 
   function triggerShock() {
     setArenaShock(true);
@@ -229,16 +230,22 @@ export default function EventPage() {
       <div className="event-grid-noise" aria-hidden />
       <div ref={cursorGlowRef} className="event-cursor-glow" aria-hidden />
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-lg font-bold text-role-ops inline-flex items-center gap-2">
-          <span className="visual-icon-badge visual-icon-badge--ops">
-            <IconMusic className="h-5 w-5 icon-role-ops" />
-          </span>
-          공연 일정
-        </h2>
+        <div className="festival-page-title">
+          <p className="festival-page-kicker">AU:SUM STAGE</p>
+          <h2 className="text-lg font-bold text-role-ops inline-flex items-center gap-2">
+            <span className="visual-icon-badge visual-icon-badge--ops">
+              <IconMusic className="h-5 w-5 icon-role-ops" />
+            </span>
+            노천극장 라인업
+          </h2>
+          <p className="festival-page-copy">
+            노천극장 공연, 다음 순서, 지연 여부를 빠르게 확인하세요.
+          </p>
+        </div>
         <div className="flex items-center gap-1.5">
           <Link
             to="/events/lineup"
-            className="event-cta text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)] inline-flex items-center"
+            className="app-primary-cta event-cta text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)] inline-flex items-center"
             onClick={(e) => spawnBurst(e.nativeEvent, 1.3)}
           >
             <span className="mr-1 visual-icon-badge-sm">
@@ -252,7 +259,7 @@ export default function EventPage() {
               spawnBurst(e.nativeEvent, 1.35);
               downloadEventCsv();
             }}
-            className="event-cta text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)]"
+            className="app-secondary-cta event-cta text-xs rounded-lg border border-cyan-300/60 bg-sky-500/15 text-cyan-100 px-2 py-1 min-h-11 shadow-[0_0_16px_rgba(34,211,238,0.35)]"
           >
             <span className="mr-1 inline-flex visual-icon-badge-sm">
               <IconDownload className="h-3.5 w-3.5 icon-role-log" />
@@ -304,7 +311,8 @@ export default function EventPage() {
               spawnBurst(e.nativeEvent, 1.1);
               setStatusFilter(status);
             }}
-            className={`event-cta rounded-md py-1.5 min-h-11 text-xs font-semibold ${statusFilter === status ? "bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50 shadow-sm" : "text-slate-300"}`}
+            aria-pressed={statusFilter === status}
+            className={`app-filter-chip event-cta rounded-md py-1.5 min-h-11 text-xs font-semibold ${statusFilter === status ? "bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50 shadow-sm" : "text-slate-300"}`}
           >
             {status}
           </button>
@@ -392,10 +400,33 @@ export default function EventPage() {
       </div>
 
       {filtered.length === 0 && (
-        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-sm text-slate-600">
-          선택한 상태의 공연이 없습니다. 관리자에서 공연을 등록하거나, 잠시 후
-          새로고침해 주세요.
-        </div>
+        <article className="app-empty-state event-empty-state rounded-xl border border-dashed border-slate-300 bg-white p-5">
+          <p className="app-empty-state__eyebrow">
+            {allEventsEmpty ? "라인업 공개 전" : `${statusFilter} 공연 없음`}
+          </p>
+          <h3>
+            {allEventsEmpty
+              ? "노천극장 라인업이 준비되면 바로 알려드릴게요"
+              : "선택한 상태의 공연이 없습니다"}
+          </h3>
+          <p>
+            {allEventsEmpty
+              ? "공연 데이터가 등록되면 지금 공연, 다음 공연, 전체 타임테이블이 이 화면에 표시됩니다."
+              : "다른 상태를 선택하거나 전체 일정에서 다시 확인해 주세요."}
+          </p>
+          <div className="app-empty-actions">
+            <Link to="/events/lineup" className="app-primary-cta">
+              라인업 보기
+            </Link>
+            <button
+              type="button"
+              className="app-secondary-cta"
+              onClick={() => setStatusFilter("전체")}
+            >
+              전체 보기
+            </button>
+          </div>
+        </article>
       )}
 
       <div className="pointer-events-none absolute inset-0 overflow-hidden">

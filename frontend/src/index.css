@@ -5467,22 +5467,36 @@ body::after,
     display: grid !important;
     grid-template-columns: 1fr !important;
     gap: 0.45rem !important;
-    padding: 0.8rem 1rem 0.55rem !important;
+    padding: 0.65rem 0.9rem 0.42rem !important;
+  }
+
+  .app-shell .festival-app-kicker {
+    font-size: 0.72rem !important;
   }
 
   .app-shell .festival-app-title {
-    font-size: 1.55rem !important;
+    font-size: 1.35rem !important;
   }
 
   .app-shell .festival-app-subtitle {
-    font-size: 0.82rem !important;
+    margin-top: 0.12rem !important;
+    font-size: 0.74rem !important;
   }
 
   .app-shell .festival-app-meta {
     display: flex !important;
     flex-wrap: wrap !important;
     gap: 0.35rem 0.6rem !important;
+    font-size: 0.68rem !important;
     text-align: left !important;
+  }
+
+  .app-shell .festival-app-toolbar {
+    padding: 0.42rem 0.9rem 0.55rem !important;
+  }
+
+  .app-shell .festival-app-toolbar__row p {
+    font-size: 0.72rem !important;
   }
 
   .app-shell .festival-app-toolbar__row {
@@ -5500,7 +5514,7 @@ body::after,
 
   .app-shell .festival-control-button {
     width: 100% !important;
-    min-height: 2.35rem !important;
+    min-height: 2.05rem !important;
   }
 
   .app-shell .festival-main {
@@ -5558,5 +5572,1315 @@ body::after,
   .app-shell .events-arena > .flex.items-center.justify-between a,
   .app-shell .events-arena > .flex.items-center.justify-between button {
     justify-content: center !important;
+  }
+}
+
+/* Signature pass: make the home screen feel like a finished festival app. */
+html,
+body,
+#root {
+  background:
+    radial-gradient(620px 280px at 50% -120px, rgba(37, 99, 235, 0.16), transparent 70%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%) !important;
+}
+
+.app-shell.festival-shell,
+.app-shell.festival-shell:not([data-display-mode="outdoor"]) {
+  background:
+    radial-gradient(520px 260px at 18% -70px, rgba(37, 99, 235, 0.12), transparent 68%),
+    linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%) !important;
+}
+
+.app-shell .festival-app-header {
+  border-bottom: 1px solid rgba(188, 203, 224, 0.85) !important;
+  background: rgba(255, 255, 255, 0.9) !important;
+  backdrop-filter: blur(18px) saturate(1.15) !important;
+}
+
+.app-shell .festival-hero-premium {
+  position: relative !important;
+  overflow: hidden !important;
+  min-height: 30rem !important;
+  border: 1px solid rgba(23, 37, 84, 0.18) !important;
+  border-radius: 8px !important;
+  background: #07111f !important;
+  color: #ffffff !important;
+  box-shadow:
+    0 24px 60px rgba(15, 23, 42, 0.2),
+    0 2px 8px rgba(15, 23, 42, 0.08) !important;
+}
+
+.app-shell .festival-hero-media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.app-shell .festival-hero-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 54% center;
+  filter: saturate(1.08) contrast(1.04);
+}
+
+.app-shell .festival-hero-media::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(90deg, rgba(3, 8, 20, 0.92) 0%, rgba(5, 15, 32, 0.74) 48%, rgba(6, 16, 34, 0.2) 100%),
+    linear-gradient(180deg, rgba(3, 8, 20, 0.1) 0%, rgba(3, 8, 20, 0.82) 100%);
+}
+
+.app-shell .festival-hero-content {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  min-height: inherit;
+  align-content: end;
+  gap: 1rem;
+  padding: 1.35rem !important;
+}
+
+.app-shell .festival-live-strip {
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  gap: 0.55rem;
+  padding: 0.42rem 0.62rem;
+  border: 1px solid rgba(147, 197, 253, 0.45);
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.56);
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.app-shell .festival-live-strip span,
+.app-shell .festival-live-strip strong {
+  color: #e8f2ff !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+  letter-spacing: 0 !important;
+}
+
+.app-shell .festival-live-strip span {
+  color: #93c5fd !important;
+}
+
+.app-shell .festival-hero-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.55fr);
+  align-items: end;
+  gap: 1rem;
+}
+
+.app-shell .festival-hero-copyblock {
+  max-width: 34rem;
+}
+
+.app-shell .festival-hero-premium .festival-eyebrow {
+  color: #93c5fd !important;
+  font-size: 0.82rem !important;
+}
+
+.app-shell .festival-hero-premium .festival-hero__title {
+  max-width: 11ch;
+  color: #ffffff !important;
+  font-size: clamp(2.35rem, 6.6vw, 4.6rem) !important;
+  line-height: 0.98 !important;
+  letter-spacing: -0.02em !important;
+  text-wrap: balance;
+}
+
+.app-shell .festival-hero-premium .festival-hero__title span {
+  display: block !important;
+  color: #ffffff !important;
+  line-height: inherit !important;
+}
+
+.app-shell .festival-hero-premium .festival-hero__copy {
+  max-width: 31rem;
+  margin-top: 0.75rem !important;
+  color: rgba(226, 236, 255, 0.9) !important;
+  font-size: 1rem !important;
+  font-weight: 700 !important;
+  line-height: 1.55 !important;
+}
+
+.app-shell button.festival-hero-pick,
+.app-shell button.festival-hero-pick:not(.quick-orbit-item):not(.radial-fab) {
+  display: grid !important;
+  gap: 0.25rem !important;
+  min-width: 0 !important;
+  min-height: 9.6rem !important;
+  padding: 1rem !important;
+  border: 1px solid rgba(147, 197, 253, 0.5) !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(135deg, rgba(37, 99, 235, 0.9), rgba(14, 165, 233, 0.72)),
+    rgba(15, 23, 42, 0.72) !important;
+  color: #ffffff !important;
+  text-align: left !important;
+  box-shadow: 0 18px 45px rgba(37, 99, 235, 0.32) !important;
+  backdrop-filter: blur(18px) !important;
+}
+
+.app-shell button.festival-hero-pick span,
+.app-shell button.festival-hero-pick strong,
+.app-shell button.festival-hero-pick small {
+  color: #ffffff !important;
+}
+
+.app-shell button.festival-hero-pick span {
+  font-size: 0.76rem !important;
+  font-weight: 900 !important;
+  opacity: 0.82;
+}
+
+.app-shell button.festival-hero-pick strong {
+  font-size: 1.5rem !important;
+  line-height: 1.15 !important;
+  white-space: normal !important;
+}
+
+.app-shell button.festival-hero-pick small {
+  margin-top: auto !important;
+  font-size: 0.82rem !important;
+  font-weight: 800 !important;
+  opacity: 0.86;
+}
+
+.app-shell .festival-hero-premium .festival-status-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+}
+
+.app-shell .festival-hero-premium .festival-status-card {
+  border-color: rgba(191, 219, 254, 0.32) !important;
+  background: rgba(255, 255, 255, 0.11) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: blur(16px) !important;
+}
+
+.app-shell .festival-hero-premium .festival-status-card--primary {
+  border-color: rgba(147, 197, 253, 0.54) !important;
+  background: rgba(37, 99, 235, 0.24) !important;
+}
+
+.app-shell .festival-hero-premium .festival-status-card span,
+.app-shell .festival-hero-premium .festival-status-card small {
+  color: rgba(226, 236, 255, 0.78) !important;
+}
+
+.app-shell .festival-hero-premium .festival-status-card strong {
+  color: #ffffff !important;
+}
+
+.app-shell .festival-hero-premium .festival-quick-actions button {
+  border-color: rgba(191, 219, 254, 0.42) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #10203d !important;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.18) !important;
+}
+
+.app-shell .festival-hero-premium .festival-quick-actions button:first-child {
+  border-color: #ffffff !important;
+  background: #ffffff !important;
+  color: #2458d3 !important;
+}
+
+.app-shell .festival-section {
+  border-color: rgba(199, 214, 235, 0.9) !important;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 252, 255, 0.96)) !important;
+  box-shadow:
+    0 18px 46px rgba(15, 23, 42, 0.08),
+    0 1px 2px rgba(15, 23, 42, 0.06) !important;
+}
+
+.app-shell .festival-recommend-card {
+  border-color: rgba(191, 219, 254, 0.9) !important;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f5f9ff 100%) !important;
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.08) !important;
+}
+
+@media (max-width: 640px) {
+  .app-shell .festival-hero-premium {
+    min-height: 35rem !important;
+  }
+
+  .app-shell .festival-hero-media img {
+    object-position: 61% center;
+  }
+
+  .app-shell .festival-hero-media::after {
+    background:
+      linear-gradient(180deg, rgba(3, 8, 20, 0.48) 0%, rgba(3, 8, 20, 0.9) 58%, rgba(3, 8, 20, 0.96) 100%),
+      linear-gradient(90deg, rgba(3, 8, 20, 0.78) 0%, rgba(3, 8, 20, 0.36) 100%);
+  }
+
+  .app-shell .festival-hero-content {
+    align-content: end;
+    gap: 0.8rem;
+    padding: 1rem !important;
+  }
+
+  .app-shell .festival-hero-main {
+    grid-template-columns: 1fr !important;
+  }
+
+  .app-shell .festival-hero-premium .festival-hero__title {
+    max-width: 100%;
+    font-size: 2.38rem !important;
+  }
+
+  .app-shell .festival-hero-premium .festival-hero__copy {
+    font-size: 0.9rem !important;
+  }
+
+  .app-shell button.festival-hero-pick,
+  .app-shell button.festival-hero-pick:not(.quick-orbit-item):not(.radial-fab) {
+    min-height: 7.4rem !important;
+  }
+
+  .app-shell button.festival-hero-pick strong {
+    font-size: 1.28rem !important;
+  }
+
+  .app-shell .festival-hero-premium .festival-status-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  .app-shell .festival-hero-premium .festival-status-card:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Full app pass: align every route with the public festival app system. */
+.app-shell[data-route-scope="public"],
+.app-shell[data-route-scope="ops"] {
+  width: min(100%, 1180px) !important;
+  max-width: 1180px !important;
+}
+
+.app-shell .festival-app-header--compact {
+  border-bottom: 1px solid rgba(211, 222, 238, 0.92) !important;
+  background: rgba(255, 255, 255, 0.94) !important;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06) !important;
+}
+
+.app-shell .festival-app-header--compact .festival-app-header__main {
+  align-items: center !important;
+  padding: 0.7rem 1.1rem 0.52rem !important;
+}
+
+.app-shell .festival-app-header--compact .festival-app-kicker {
+  font-size: 0.68rem !important;
+}
+
+.app-shell .festival-app-header--compact .festival-app-title {
+  margin-top: 0.1rem !important;
+  font-size: 1.12rem !important;
+  line-height: 1.1 !important;
+}
+
+.app-shell .festival-app-header--compact .festival-app-subtitle {
+  display: none !important;
+}
+
+.app-shell .festival-app-header--compact .festival-app-meta {
+  font-size: 0.68rem !important;
+}
+
+.app-shell .festival-app-header--compact .festival-app-toolbar {
+  padding: 0.48rem 1.1rem 0.58rem !important;
+}
+
+.app-shell .festival-app-header--compact .festival-app-toolbar__row p {
+  display: none !important;
+}
+
+.app-shell .festival-app-header--compact .festival-app-actions {
+  width: 100% !important;
+  justify-content: flex-end !important;
+}
+
+.app-shell .festival-app-header--compact .festival-control-button {
+  min-height: 1.95rem !important;
+  padding: 0.26rem 0.62rem !important;
+  font-size: 0.7rem !important;
+}
+
+.app-shell .festival-main--subpage {
+  width: min(100%, 1120px) !important;
+  padding: 1rem 1rem 6.6rem !important;
+}
+
+.app-shell[data-route-scope="ops"] .festival-main--subpage {
+  padding-bottom: 2.25rem !important;
+}
+
+.app-shell[data-route-scope="ops"] .festival-bottom-nav {
+  display: none !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page,
+.app-shell[data-route-scope="ops"] .cyber-page {
+  display: grid !important;
+  width: 100% !important;
+  gap: 0.85rem !important;
+  padding-top: 0 !important;
+  background: transparent !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > header:first-child,
+.app-shell[data-route-scope="public"] .cyber-page > article:first-child,
+.app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type,
+.app-shell[data-route-scope="public"] .lineup-page > .flex.items-center.justify-between:first-child,
+.app-shell[data-route-scope="ops"] .cyber-page > .flex.items-center.justify-between:first-child,
+.app-shell[data-route-scope="ops"] .cyber-page > h2:first-child {
+  position: relative !important;
+  overflow: hidden !important;
+  min-height: 6.1rem !important;
+  align-items: center !important;
+  padding: 1.05rem !important;
+  border: 1px solid rgba(188, 203, 224, 0.96) !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f2f7ff 56%, #eef8f5 100%) !important;
+  box-shadow:
+    0 18px 42px rgba(15, 23, 42, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85) !important;
+}
+
+.app-shell[data-route-scope="ops"] .cyber-page > .flex.items-center.justify-between:first-child,
+.app-shell[data-route-scope="ops"] .cyber-page > h2:first-child {
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f5f7fb 62%, #eef2f7 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > header:first-child::after,
+.app-shell[data-route-scope="public"] .cyber-page > article:first-child::after,
+.app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type::after,
+.app-shell[data-route-scope="public"] .lineup-page > .flex.items-center.justify-between:first-child::after,
+.app-shell[data-route-scope="ops"] .cyber-page > .flex.items-center.justify-between:first-child::after,
+.app-shell[data-route-scope="ops"] .cyber-page > h2:first-child::after {
+  content: "" !important;
+  position: absolute !important;
+  inset: auto 1rem 0 1rem !important;
+  display: block !important;
+  height: 3px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(90deg, #2563eb, #14b8a6, #f9735b) !important;
+}
+
+.app-shell[data-route-scope="ops"] .cyber-page > .flex.items-center.justify-between:first-child::after,
+.app-shell[data-route-scope="ops"] .cyber-page > h2:first-child::after {
+  background: linear-gradient(90deg, #334155, #2563eb, #10b981) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > header:first-child h2,
+.app-shell[data-route-scope="public"] .cyber-page > article:first-child h2,
+.app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type h2,
+.app-shell[data-route-scope="public"] .lineup-page > .flex.items-center.justify-between:first-child h2,
+.app-shell[data-route-scope="ops"] .cyber-page > .flex.items-center.justify-between:first-child h2,
+.app-shell[data-route-scope="ops"] .cyber-page > h2:first-child {
+  color: #0f172a !important;
+  font-size: clamp(1.25rem, 2.1vw, 1.7rem) !important;
+  font-weight: 950 !important;
+  line-height: 1.15 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > header:first-child p,
+.app-shell[data-route-scope="public"] .cyber-page > article:first-child p,
+.app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type p,
+.app-shell[data-route-scope="public"] .lineup-page > p:first-of-type {
+  color: #64748b !important;
+  font-weight: 750 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > article:not(:first-child),
+.app-shell[data-route-scope="public"] .event-card,
+.app-shell[data-route-scope="public"] .event-highlight,
+.app-shell[data-route-scope="public"] .event-alert,
+.app-shell[data-route-scope="public"] .lineup-focus,
+.app-shell[data-route-scope="public"] form,
+.app-shell[data-route-scope="public"] .cyber-page > .rounded-2xl,
+.app-shell[data-route-scope="public"] .cyber-page > .rounded-xl,
+.app-shell[data-route-scope="ops"] .cyber-page > article,
+.app-shell[data-route-scope="ops"] form {
+  border: 1px solid rgba(211, 222, 238, 0.95) !important;
+  border-radius: 8px !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  box-shadow:
+    0 14px 34px rgba(15, 23, 42, 0.07),
+    0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > .grid:not(.lineup-track),
+.app-shell[data-route-scope="ops"] .cyber-page > .grid {
+  gap: 0.7rem !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > .grid > article,
+.app-shell[data-route-scope="public"] .cyber-page > .grid > div,
+.app-shell[data-route-scope="ops"] .cyber-page > .grid > article,
+.app-shell[data-route-scope="ops"] .cyber-page > .grid > div {
+  border-radius: 8px !important;
+  border-color: rgba(211, 222, 238, 0.95) !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 26px rgba(15, 23, 42, 0.06) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page h3,
+.app-shell[data-route-scope="ops"] .cyber-page h3 {
+  color: #172033 !important;
+  font-weight: 900 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page p,
+.app-shell[data-route-scope="public"] .cyber-page small,
+.app-shell[data-route-scope="public"] .cyber-page span,
+.app-shell[data-route-scope="ops"] .cyber-page p,
+.app-shell[data-route-scope="ops"] .cyber-page small,
+.app-shell[data-route-scope="ops"] .cyber-page span {
+  color: #64748b !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page strong,
+.app-shell[data-route-scope="public"] .cyber-page .font-bold,
+.app-shell[data-route-scope="public"] .cyber-page .font-extrabold,
+.app-shell[data-route-scope="public"] .cyber-page .font-semibold,
+.app-shell[data-route-scope="ops"] .cyber-page strong,
+.app-shell[data-route-scope="ops"] .cyber-page .font-bold,
+.app-shell[data-route-scope="ops"] .cyber-page .font-extrabold,
+.app-shell[data-route-scope="ops"] .cyber-page .font-semibold {
+  color: #111827 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page button:not(.quick-orbit-item):not(.radial-fab),
+.app-shell[data-route-scope="public"] .cyber-page a,
+.app-shell[data-route-scope="ops"] .cyber-page button:not(.quick-orbit-item):not(.radial-fab),
+.app-shell[data-route-scope="ops"] .cyber-page a {
+  min-height: 2.45rem !important;
+  border-radius: 8px !important;
+  font-weight: 850 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page button[class*="bg-cyan"],
+.app-shell[data-route-scope="public"] .cyber-page button[class*="bg-sky"],
+.app-shell[data-route-scope="public"] .cyber-page button[class*="bg-blue"],
+.app-shell[data-route-scope="public"] .cyber-page a[class*="bg-cyan"],
+.app-shell[data-route-scope="public"] .cyber-page a[class*="bg-sky"],
+.app-shell[data-route-scope="public"] .cyber-page a[class*="bg-blue"],
+.app-shell[data-route-scope="public"] .event-cta,
+.app-shell[data-route-scope="ops"] .cyber-page button[class*="bg-cyan"],
+.app-shell[data-route-scope="ops"] .cyber-page button[class*="bg-sky"],
+.app-shell[data-route-scope="ops"] .cyber-page button[class*="bg-teal"] {
+  border-color: #2563eb !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.16) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page button[class*="bg-cyan"] *,
+.app-shell[data-route-scope="public"] .cyber-page button[class*="bg-sky"] *,
+.app-shell[data-route-scope="public"] .cyber-page button[class*="bg-blue"] *,
+.app-shell[data-route-scope="public"] .cyber-page a[class*="bg-cyan"] *,
+.app-shell[data-route-scope="public"] .cyber-page a[class*="bg-sky"] *,
+.app-shell[data-route-scope="public"] .cyber-page a[class*="bg-blue"] *,
+.app-shell[data-route-scope="public"] .event-cta *,
+.app-shell[data-route-scope="ops"] .cyber-page button[class*="bg-cyan"] *,
+.app-shell[data-route-scope="ops"] .cyber-page button[class*="bg-sky"] *,
+.app-shell[data-route-scope="ops"] .cyber-page button[class*="bg-teal"] * {
+  color: #ffffff !important;
+}
+
+.app-shell[data-route-scope="public"] input,
+.app-shell[data-route-scope="public"] select,
+.app-shell[data-route-scope="public"] textarea,
+.app-shell[data-route-scope="ops"] input,
+.app-shell[data-route-scope="ops"] select,
+.app-shell[data-route-scope="ops"] textarea {
+  border-color: #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+}
+
+.app-shell[data-route-scope="public"] .event-metric {
+  display: grid !important;
+  align-content: center !important;
+  min-height: 4.2rem !important;
+  border: 1px solid #dbe7f7 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06) !important;
+}
+
+.app-shell[data-route-scope="public"] .event-metric p:last-child,
+.app-shell[data-route-scope="public"] .event-highlight h3,
+.app-shell[data-route-scope="public"] .event-card h3 {
+  color: #111827 !important;
+}
+
+.app-shell[data-route-scope="public"] .event-alert {
+  border-color: #fed7aa !important;
+  background: linear-gradient(135deg, #fff7ed 0%, #ffffff 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .event-alert p,
+.app-shell[data-route-scope="public"] .event-alert span {
+  color: #9a3412 !important;
+}
+
+.app-shell[data-route-scope="public"] .event-highlight {
+  border-color: #bfdbfe !important;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .event-progress {
+  background: linear-gradient(90deg, #2563eb, #14b8a6) !important;
+}
+
+.app-shell[data-route-scope="public"] .lineup-page {
+  overflow: hidden !important;
+}
+
+.app-shell[data-route-scope="public"] .lineup-card,
+.app-shell[data-route-scope="public"] .lineup-face {
+  background: #ffffff !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12) !important;
+}
+
+.app-shell[data-route-scope="public"] .lineup-empty {
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .lineup-card-active {
+  border-color: #2563eb !important;
+  box-shadow:
+    0 22px 52px rgba(37, 99, 235, 0.18),
+    0 1px 2px rgba(15, 23, 42, 0.08) !important;
+}
+
+.app-shell[data-route-scope="public"] .lineup-portrait {
+  border-radius: 8px !important;
+}
+
+.app-shell[data-route-scope="public"] .lineup-dot {
+  border-color: #cbd5e1 !important;
+  background: #ffffff !important;
+}
+
+.app-shell[data-route-scope="public"] .lineup-dot-active {
+  background: #2563eb !important;
+}
+
+.app-shell[data-route-scope="public"] .leaflet-container {
+  border-radius: 8px !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > .rounded-2xl:has(.space-y-3),
+.app-shell[data-route-scope="public"] .cyber-page > article:has(input),
+.app-shell[data-route-scope="public"] .cyber-page > form {
+  background: #ffffff !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > article:has(img) img {
+  border-radius: 8px !important;
+}
+
+.app-shell[data-route-scope="ops"] .cyber-page {
+  color: #172033 !important;
+}
+
+.app-shell[data-route-scope="ops"] .cyber-page > article:first-of-type,
+.app-shell[data-route-scope="ops"] .cyber-page > form:first-of-type {
+  border-color: #cbd5e1 !important;
+}
+
+.app-shell[data-route-scope="ops"] .cyber-page > article {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.055) !important;
+}
+
+.app-shell[data-route-scope="ops"] .cyber-page [class*="bg-rose"] {
+  border-color: #fecdd3 !important;
+  background: #fff1f2 !important;
+}
+
+.app-shell[data-route-scope="ops"] .cyber-page [class*="bg-amber"] {
+  border-color: #fde68a !important;
+  background: #fffbeb !important;
+}
+
+.app-shell[data-route-scope="ops"] .cyber-page [class*="bg-emerald"] {
+  border-color: #bbf7d0 !important;
+  background: #ecfdf5 !important;
+}
+
+.app-shell[data-route-scope="ops"] .cyber-page [class*="bg-rose"] *,
+.app-shell[data-route-scope="ops"] .cyber-page [class*="bg-amber"] *,
+.app-shell[data-route-scope="ops"] .cyber-page [class*="bg-emerald"] * {
+  color: #172033 !important;
+}
+
+@media (min-width: 900px) {
+  .app-shell .festival-app-header--compact .festival-app-header__main,
+  .app-shell .festival-app-header--compact .festival-app-toolbar {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+
+  .app-shell .festival-main--subpage {
+    padding-left: 1.5rem !important;
+    padding-right: 1.5rem !important;
+  }
+
+  .app-shell[data-route-scope="public"] .events-arena {
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.42fr) !important;
+    align-items: start !important;
+  }
+
+  .app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type,
+  .app-shell[data-route-scope="public"] .events-arena > .grid.grid-cols-4,
+  .app-shell[data-route-scope="public"] .events-arena > .grid.grid-cols-4 + .event-alert + .grid {
+    grid-column: 1 / -1 !important;
+  }
+
+  .app-shell[data-route-scope="public"] .events-arena > .event-alert,
+  .app-shell[data-route-scope="public"] .events-arena > .event-highlight {
+    grid-column: 2 !important;
+  }
+
+  .app-shell[data-route-scope="public"] .events-arena > .stagger-list {
+    grid-column: 1 !important;
+    grid-row: span 4 !important;
+  }
+
+  .app-shell[data-route-scope="public"] .events-arena > .pointer-events-none {
+    display: none !important;
+  }
+
+  .app-shell[data-route-scope="public"] .events-arena > .grid.grid-cols-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  .app-shell .festival-bottom-nav {
+    display: none !important;
+  }
+
+  .app-shell .festival-main {
+    padding-bottom: 2.5rem !important;
+  }
+
+  .app-shell[data-route-scope="public"] .festival-main--subpage {
+    padding-bottom: 2.5rem !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page:not(.events-arena):not(.lineup-page):not(:has(.leaflet-container)) {
+    grid-template-columns: minmax(0, 0.94fr) minmax(18rem, 0.46fr) !important;
+    align-items: start !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page:not(.events-arena):not(.lineup-page):not(:has(.leaflet-container)) > header:first-child,
+  .app-shell[data-route-scope="public"] .cyber-page:not(.events-arena):not(.lineup-page):not(:has(.leaflet-container)) > article:first-child {
+    grid-column: 1 / -1 !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page:not(.events-arena):not(.lineup-page):not(:has(.leaflet-container)) > article:nth-of-type(2),
+  .app-shell[data-route-scope="public"] .cyber-page:not(.events-arena):not(.lineup-page):not(:has(.leaflet-container)) > .rounded-2xl:nth-of-type(2),
+  .app-shell[data-route-scope="public"] .cyber-page:not(.events-arena):not(.lineup-page):not(:has(.leaflet-container)) > form {
+    grid-column: 1 !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page:not(.events-arena):not(.lineup-page):not(:has(.leaflet-container)) > article:nth-of-type(n + 3),
+  .app-shell[data-route-scope="public"] .cyber-page:not(.events-arena):not(.lineup-page):not(:has(.leaflet-container)) > .grid:nth-child(n + 3) {
+    grid-column: 2 !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page:has(.leaflet-container) > article:first-child,
+  .app-shell[data-route-scope="public"] .cyber-page:has(.leaflet-container) > article:nth-child(2) {
+    grid-column: 1 / -1 !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page:has(.leaflet-container) > .rounded-2xl:has(.leaflet-container) {
+    grid-column: 1 / -1 !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page:has(.leaflet-container) .leaflet-container {
+    height: 34rem !important;
+  }
+
+  .app-shell[data-route-scope="ops"] .cyber-page {
+    grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+    align-items: start !important;
+  }
+
+  .app-shell[data-route-scope="ops"] .cyber-page > .flex.items-center.justify-between:first-child,
+  .app-shell[data-route-scope="ops"] .cyber-page > h2:first-child,
+  .app-shell[data-route-scope="ops"] .cyber-page > p,
+  .app-shell[data-route-scope="ops"] .cyber-page > form:first-of-type {
+    grid-column: 1 / -1 !important;
+  }
+
+  .app-shell[data-route-scope="ops"] .cyber-page > article {
+    grid-column: span 6 !important;
+  }
+
+  .app-shell[data-route-scope="ops"] .cyber-page > article:has(.grid-cols-3),
+  .app-shell[data-route-scope="ops"] .cyber-page > article:has(.leaflet-container) {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-shell[data-route-scope="public"],
+  .app-shell[data-route-scope="ops"] {
+    max-width: 430px !important;
+  }
+
+  .app-shell .festival-app-header--compact .festival-app-header__main {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    gap: 0.5rem !important;
+    padding: 0.58rem 0.85rem 0.42rem !important;
+  }
+
+  .app-shell .festival-app-header--compact .festival-app-meta {
+    justify-self: end !important;
+    max-width: 7.5rem !important;
+    font-size: 0.61rem !important;
+    line-height: 1.2 !important;
+  }
+
+  .app-shell .festival-app-header--compact .festival-app-title {
+    font-size: 1.02rem !important;
+  }
+
+  .app-shell .festival-app-header--compact .festival-app-toolbar {
+    padding: 0.38rem 0.85rem 0.48rem !important;
+  }
+
+  .app-shell .festival-app-header--compact .festival-app-actions {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 0.38rem !important;
+  }
+
+  .app-shell .festival-main--subpage {
+    padding: 0.75rem 0.75rem 6.2rem !important;
+  }
+
+  .app-shell[data-route-scope="ops"] .festival-main--subpage {
+    padding-bottom: 1.2rem !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page > header:first-child,
+  .app-shell[data-route-scope="public"] .cyber-page > article:first-child,
+  .app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type,
+  .app-shell[data-route-scope="public"] .lineup-page > .flex.items-center.justify-between:first-child,
+  .app-shell[data-route-scope="ops"] .cyber-page > .flex.items-center.justify-between:first-child,
+  .app-shell[data-route-scope="ops"] .cyber-page > h2:first-child {
+    min-height: auto !important;
+    padding: 0.88rem !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page > .grid.grid-cols-4,
+  .app-shell[data-route-scope="public"] .cyber-page > article .grid.grid-cols-4,
+  .app-shell[data-route-scope="ops"] .cyber-page .grid.grid-cols-4,
+  .app-shell[data-route-scope="ops"] .cyber-page .grid.grid-cols-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page > .grid.grid-cols-3,
+  .app-shell[data-route-scope="public"] .cyber-page > article .grid.grid-cols-3,
+  .app-shell[data-route-scope="ops"] .cyber-page .grid.grid-cols-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type > .flex {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    width: 100% !important;
+  }
+
+  .app-shell[data-route-scope="public"] .cyber-page:has(.leaflet-container) .leaflet-container {
+    height: 58vh !important;
+  }
+}
+
+/* Product polish pass: stronger hierarchy, better empty states, calmer actions. */
+.app-shell .festival-page-title {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.app-shell .festival-page-kicker,
+.app-shell .app-empty-state__eyebrow {
+  margin: 0 !important;
+  color: #2563eb !important;
+  font-size: 0.72rem !important;
+  font-weight: 950 !important;
+}
+
+.app-shell .festival-page-copy {
+  max-width: 34rem;
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 0.82rem !important;
+  font-weight: 750 !important;
+  line-height: 1.45 !important;
+}
+
+.app-shell .festival-now-board {
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f7fbff 58%, #f4fbf7 100%) !important;
+}
+
+.app-shell .festival-situation-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.app-shell button.festival-situation-card,
+.app-shell button.festival-situation-card:not(.quick-orbit-item):not(.radial-fab) {
+  display: grid !important;
+  align-content: start !important;
+  gap: 0.35rem !important;
+  min-height: 8rem !important;
+  padding: 0.95rem !important;
+  border: 1px solid #d7e4f4 !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #111827 !important;
+  text-align: left !important;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.065) !important;
+}
+
+.app-shell button.festival-situation-card--primary,
+.app-shell button.festival-situation-card--primary:not(.quick-orbit-item):not(.radial-fab) {
+  border-color: #2563eb !important;
+  background:
+    linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%) !important;
+  box-shadow: 0 18px 42px rgba(37, 99, 235, 0.2) !important;
+}
+
+.app-shell .festival-situation-card span {
+  color: #64748b !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+}
+
+.app-shell .festival-situation-card strong {
+  color: #0f172a !important;
+  font-size: 1.05rem !important;
+  line-height: 1.22 !important;
+}
+
+.app-shell .festival-situation-card small {
+  color: #64748b !important;
+  font-size: 0.76rem !important;
+  font-weight: 750 !important;
+  line-height: 1.4 !important;
+}
+
+.app-shell .festival-situation-card--primary span,
+.app-shell .festival-situation-card--primary strong,
+.app-shell .festival-situation-card--primary small {
+  color: #ffffff !important;
+}
+
+.app-shell .app-empty-state {
+  display: grid !important;
+  gap: 0.65rem !important;
+  border: 1px dashed #cbd5e1 !important;
+  border-radius: 8px !important;
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
+  color: #111827 !important;
+  text-align: left !important;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.055) !important;
+}
+
+.app-shell .app-empty-state--compact {
+  padding: 0.85rem !important;
+  box-shadow: none !important;
+}
+
+.app-shell .app-empty-state h3 {
+  margin: 0 !important;
+  color: #111827 !important;
+  font-size: 1rem !important;
+  font-weight: 950 !important;
+}
+
+.app-shell .app-empty-state p {
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 0.82rem !important;
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+}
+
+.app-shell .app-empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.app-shell .app-primary-cta,
+.app-shell button.app-primary-cta:not(.quick-orbit-item):not(.radial-fab),
+.app-shell a.app-primary-cta {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 2.45rem !important;
+  padding: 0.55rem 0.9rem !important;
+  border: 1px solid #2563eb !important;
+  border-radius: 8px !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.18) !important;
+  font-weight: 900 !important;
+  text-decoration: none !important;
+}
+
+.app-shell .app-primary-cta *,
+.app-shell button.app-primary-cta *,
+.app-shell a.app-primary-cta * {
+  color: #ffffff !important;
+}
+
+.app-shell .app-secondary-cta,
+.app-shell button.app-secondary-cta:not(.quick-orbit-item):not(.radial-fab),
+.app-shell a.app-secondary-cta {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 2.45rem !important;
+  padding: 0.55rem 0.9rem !important;
+  border: 1px solid #c7d7ef !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.055) !important;
+  font-weight: 900 !important;
+  text-decoration: none !important;
+}
+
+.app-shell .app-secondary-cta *,
+.app-shell button.app-secondary-cta *,
+.app-shell a.app-secondary-cta * {
+  color: #1d4ed8 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page button:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]),
+.app-shell[data-route-scope="public"] .cyber-page a:not(.app-primary-cta):not(.festival-bottom-nav__item) {
+  border-color: #cbdaf0 !important;
+  background: #ffffff !important;
+  color: #1d4ed8 !important;
+  box-shadow: 0 5px 12px rgba(15, 23, 42, 0.045) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page button:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]) *,
+.app-shell[data-route-scope="public"] .cyber-page a:not(.app-primary-cta):not(.festival-bottom-nav__item) * {
+  color: #1d4ed8 !important;
+}
+
+.app-shell .app-filter-chip,
+.app-shell button.app-filter-chip:not(.quick-orbit-item):not(.radial-fab) {
+  min-height: 2.2rem !important;
+  border-color: #d9e4f3 !important;
+  background: #ffffff !important;
+  color: #475569 !important;
+  box-shadow: none !important;
+}
+
+.app-shell button.app-filter-chip[aria-pressed="true"],
+.app-shell button.app-filter-chip[aria-pressed="true"]:not(.quick-orbit-item):not(.radial-fab) {
+  border-color: #2563eb !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+}
+
+.app-shell .app-empty-chart {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(1rem, 1fr));
+  align-items: end;
+  width: 100%;
+  min-width: 17rem;
+  height: 100%;
+  gap: 0.45rem;
+  padding: 0.75rem 0.2rem 1.8rem;
+}
+
+.app-shell .app-empty-chart span {
+  display: block !important;
+  min-height: 1.2rem;
+  border-radius: 8px 8px 2px 2px;
+  background: linear-gradient(180deg, #dbeafe, #eff6ff) !important;
+}
+
+.app-shell .app-empty-chart p {
+  position: absolute;
+  inset: auto 0 0;
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 0.74rem !important;
+  font-weight: 750 !important;
+}
+
+.app-shell .app-heat-placeholder {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.app-shell .app-heat-placeholder span {
+  display: grid !important;
+  min-height: 3rem;
+  place-items: center;
+  border: 1px solid #dbe7f7;
+  border-radius: 8px;
+  background: #f8fbff !important;
+  color: #64748b !important;
+  font-size: 0.74rem !important;
+  font-weight: 900 !important;
+}
+
+.app-shell .app-heat-placeholder p {
+  grid-column: 1 / -1;
+  margin: 0 !important;
+  color: #64748b !important;
+  font-size: 0.78rem !important;
+  font-weight: 750 !important;
+}
+
+.app-shell[data-route-scope="public"] .event-empty-state {
+  text-align: left !important;
+}
+
+.app-shell[data-route-scope="public"] .event-empty-state .app-empty-actions {
+  margin-top: 0.15rem;
+}
+
+@media (max-width: 640px) {
+  .app-shell .festival-situation-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.55rem;
+  }
+
+  .app-shell button.festival-situation-card,
+  .app-shell button.festival-situation-card:not(.quick-orbit-item):not(.radial-fab) {
+    min-height: 7.2rem !important;
+    padding: 0.78rem !important;
+  }
+
+  .app-shell .festival-situation-card strong {
+    font-size: 0.95rem !important;
+  }
+
+  .app-shell .app-heat-placeholder {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Ajou/AU:SUM identity pass: deep campus blue with restrained coral and mint accents. */
+:root {
+  --ff-page: #f3f7fb;
+  --ff-surface: #ffffff;
+  --ff-soft: #f7fafc;
+  --ff-text: #101827;
+  --ff-muted: #627083;
+  --ff-line: #cfdae8;
+  --ff-primary: #063b75;
+  --ff-primary-soft: #eaf3fb;
+  --ff-coral: #ff6b4a;
+  --ff-green: #12a99a;
+  --ff-yellow: #d98918;
+  --ajou-navy: #062b55;
+  --ajou-blue: #063b75;
+  --ajou-blue-2: #0a5796;
+  --ausum-mint: #12a99a;
+  --ausum-coral: #ff6b4a;
+}
+
+html,
+body,
+#root,
+.app-shell.festival-shell,
+.app-shell.festival-shell:not([data-display-mode="outdoor"]) {
+  background:
+    radial-gradient(680px 260px at 16% -120px, rgba(6, 59, 117, 0.13), transparent 72%),
+    radial-gradient(520px 240px at 88% -90px, rgba(18, 169, 154, 0.1), transparent 70%),
+    linear-gradient(180deg, #f8fbfe 0%, #eef5fa 100%) !important;
+}
+
+.app-shell .festival-app-header {
+  border-bottom-color: rgba(6, 43, 85, 0.14) !important;
+  background: rgba(255, 255, 255, 0.93) !important;
+  box-shadow: 0 10px 28px rgba(6, 43, 85, 0.07) !important;
+}
+
+.app-shell .festival-app-kicker,
+.app-shell .festival-eyebrow,
+.app-shell .festival-page-kicker,
+.app-shell .app-empty-state__eyebrow {
+  color: var(--ajou-blue) !important;
+}
+
+.app-shell .festival-app-title,
+.app-shell h1,
+.app-shell h2,
+.app-shell h3,
+.app-shell strong {
+  color: var(--ff-text) !important;
+}
+
+.app-shell .visual-icon-badge,
+.app-shell .visual-icon-badge-sm {
+  border-color: rgba(6, 59, 117, 0.16) !important;
+  background: #edf5fb !important;
+  color: var(--ajou-blue) !important;
+}
+
+.app-shell .visual-icon-badge svg,
+.app-shell .visual-icon-badge-sm svg,
+.app-shell svg.icon-role-ops,
+.app-shell svg.icon-role-map,
+.app-shell svg.icon-role-log,
+.app-shell svg.icon-role-schedule {
+  color: var(--ajou-blue) !important;
+  stroke: currentColor !important;
+}
+
+.app-shell .festival-hero-media::after {
+  background:
+    linear-gradient(90deg, rgba(4, 17, 39, 0.94) 0%, rgba(6, 43, 85, 0.78) 46%, rgba(6, 43, 85, 0.18) 100%),
+    linear-gradient(180deg, rgba(4, 17, 39, 0.06) 0%, rgba(4, 17, 39, 0.84) 100%) !important;
+}
+
+.app-shell .festival-live-strip {
+  border-color: rgba(18, 169, 154, 0.52) !important;
+  background: rgba(6, 43, 85, 0.62) !important;
+  box-shadow: 0 14px 32px rgba(18, 169, 154, 0.16) !important;
+}
+
+.app-shell .festival-live-strip span,
+.app-shell .festival-hero-premium .festival-eyebrow {
+  color: #8ff0e5 !important;
+}
+
+.app-shell button.festival-hero-pick,
+.app-shell button.festival-hero-pick:not(.quick-orbit-item):not(.radial-fab),
+.app-shell button.festival-situation-card--primary,
+.app-shell button.festival-situation-card--primary:not(.quick-orbit-item):not(.radial-fab),
+.app-shell .app-primary-cta,
+.app-shell button.app-primary-cta:not(.quick-orbit-item):not(.radial-fab),
+.app-shell a.app-primary-cta {
+  border-color: rgba(6, 43, 85, 0.9) !important;
+  background:
+    linear-gradient(135deg, var(--ajou-navy) 0%, var(--ajou-blue-2) 72%, var(--ausum-mint) 125%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 16px 36px rgba(6, 43, 85, 0.22) !important;
+}
+
+.app-shell .app-secondary-cta,
+.app-shell button.app-secondary-cta:not(.quick-orbit-item):not(.radial-fab),
+.app-shell a.app-secondary-cta {
+  border-color: rgba(6, 59, 117, 0.22) !important;
+  background: #ffffff !important;
+  color: var(--ajou-blue) !important;
+}
+
+.app-shell .festival-hero-premium .festival-status-card--primary {
+  border-color: rgba(18, 169, 154, 0.5) !important;
+  background: rgba(6, 59, 117, 0.3) !important;
+}
+
+.app-shell .festival-hero-premium .festival-quick-actions button:first-child {
+  color: var(--ajou-blue) !important;
+}
+
+.app-shell .festival-hero-premium .festival-status-grid,
+.app-shell .festival-section__head,
+.app-shell[data-route-scope="public"] .cyber-page > header:first-child,
+.app-shell[data-route-scope="public"] .cyber-page > article:first-child,
+.app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type,
+.app-shell[data-route-scope="public"] .lineup-page > .flex.items-center.justify-between:first-child {
+  border-color: rgba(6, 59, 117, 0.16) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > header:first-child,
+.app-shell[data-route-scope="public"] .cyber-page > article:first-child,
+.app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type,
+.app-shell[data-route-scope="public"] .lineup-page > .flex.items-center.justify-between:first-child {
+  background:
+    linear-gradient(135deg, #ffffff 0%, #f1f7fc 58%, #f5fbf8 100%) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page > header:first-child::after,
+.app-shell[data-route-scope="public"] .cyber-page > article:first-child::after,
+.app-shell[data-route-scope="public"] .events-arena > .flex.items-center.justify-between:first-of-type::after,
+.app-shell[data-route-scope="public"] .lineup-page > .flex.items-center.justify-between:first-child::after,
+.app-shell .festival-section__head::after {
+  background: linear-gradient(90deg, var(--ajou-blue), var(--ausum-mint), var(--ausum-coral)) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page button:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]),
+.app-shell[data-route-scope="public"] .cyber-page a:not(.app-primary-cta):not(.festival-bottom-nav__item) {
+  border-color: rgba(6, 59, 117, 0.2) !important;
+  background: #ffffff !important;
+  color: var(--ajou-blue) !important;
+}
+
+.app-shell button.app-filter-chip[aria-pressed="true"],
+.app-shell button.app-filter-chip[aria-pressed="true"]:not(.quick-orbit-item):not(.radial-fab),
+.app-shell .booth-list-toolbar__button--active {
+  border-color: rgba(6, 59, 117, 0.5) !important;
+  background: #eaf3fb !important;
+  color: var(--ajou-blue) !important;
+}
+
+.app-shell .event-progress,
+.app-shell .app-empty-chart span {
+  background: linear-gradient(90deg, var(--ajou-blue), var(--ausum-mint)) !important;
+}
+
+.app-shell .app-heat-placeholder span:nth-child(3),
+.app-shell .app-heat-placeholder span:nth-child(4) {
+  border-color: rgba(255, 107, 74, 0.32) !important;
+  background: #fff3ef !important;
+  color: #b4432d !important;
+}
+
+.app-shell .festival-bottom-nav__item--active,
+.app-shell .festival-bottom-nav__item--active svg,
+.app-shell .festival-bottom-nav__item--active span {
+  color: var(--ajou-blue) !important;
+}
+
+.app-shell .quick-orbit-root .radial-fab {
+  background: linear-gradient(135deg, var(--ajou-blue), var(--ausum-mint)) !important;
+  box-shadow: 0 18px 40px rgba(6, 43, 85, 0.28) !important;
+}
+
+.app-shell .quick-orbit-root .quick-orbit-item-active {
+  border-color: rgba(18, 169, 154, 0.72) !important;
+  background: rgba(6, 59, 117, 0.96) !important;
+}
+
+@media (max-width: 640px) {
+  .app-shell .festival-hero-media::after {
+    background:
+      linear-gradient(180deg, rgba(4, 17, 39, 0.52) 0%, rgba(4, 17, 39, 0.9) 58%, rgba(4, 17, 39, 0.97) 100%),
+      linear-gradient(90deg, rgba(6, 43, 85, 0.78) 0%, rgba(6, 43, 85, 0.28) 100%) !important;
   }
 }

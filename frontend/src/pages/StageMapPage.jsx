@@ -96,9 +96,9 @@ export default function StageMapPage() {
               <IconMapPin className="h-5 w-5 icon-role-map" />
             </span>
             <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">실시간 지도</p>
-              <h2 className="mt-1 text-xl font-extrabold text-role-map">노천극장 실시간 인원</h2>
-              <p className="mt-1 text-xs text-cyan-100/90">최근 {minutesWindow}분 기준 군중 밀집도를 시각화합니다.</p>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">AJOU CAMPUS MAP</p>
+              <h2 className="mt-1 text-xl font-extrabold text-role-map">아주대 캠퍼스 축제 지도</h2>
+              <p className="mt-1 text-xs text-cyan-100/90">노천극장과 캠퍼스 주요 구역의 혼잡도를 확인합니다.</p>
             </div>
           </div>
           <button

@@ -198,7 +198,7 @@ export default function LineupPage() {
       <div className="flex items-center justify-between gap-2">
         <h2 className="text-lg font-bold text-role-ops inline-flex items-center gap-2">
           <IconMusic className="h-5 w-5 icon-role-ops" />
-          아티스트 라인업
+          노천극장 라인업
         </h2>
         <Link
           to="/events"
@@ -210,145 +210,168 @@ export default function LineupPage() {
       </div>
 
       <p className="text-xs text-cyan-200/90 text-role-log">
-        아티스트 카드형 라인업 · 좌우 스와이프
+        AU:SUM 노천극장 라인업 · 좌우 스와이프
       </p>
 
       {error && <p className="text-sm text-rose-500">{error}</p>}
 
-      <div
-        className="lineup-carousel"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-      >
-        <div
-          className="lineup-track"
-          style={{
-            transform: `translateX(calc((100% - 74%) / 2 - ${activeIndex} * (74% + 14px) + ${dragOffset}px))`,
-          }}
-        >
-          {lineup.map((item, index) => {
-            const distance = Math.abs(index - activeIndex);
-            const isActive = index === activeIndex;
-            const flipped = flippedIds.has(item.id);
-            const profile = buildProfile(item);
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={`lineup-card ${item.theme.frame} ${isActive ? "lineup-card-active" : ""} ${flipped ? "lineup-card-flipped" : ""} ${spinId === item.id ? "lineup-card-spin" : ""}`}
-                onClick={() => toggleCard(index, item.id)}
-                onMouseMove={handleCardMove}
-                onMouseLeave={handleCardLeave}
-                style={{
-                  opacity: distance > 2 ? 0.32 : 1 - distance * 0.18,
-                  transform: `scale(${isActive ? 1 : distance === 1 ? 0.92 : 0.86})`,
-                }}
+      {!error && lineup.length === 0 && (
+        <article className="lineup-empty rounded-xl border border-slate-200 bg-white p-4">
+          <p className="text-sm font-extrabold text-slate-900">라인업을 준비 중입니다</p>
+          <p className="mt-1 text-xs text-slate-500">
+            공연 데이터가 등록되면 아티스트 카드와 시간표가 이 화면에 바로 표시됩니다.
+          </p>
+          <div className="mt-3 grid grid-cols-3 gap-2">
+            {["공연", "아티스트", "시간표"].map((label) => (
+              <div
+                key={`lineup-empty-${label}`}
+                className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-3 text-center text-xs font-bold text-slate-600"
               >
-                <div className="lineup-card-inner">
-                  <div className="lineup-face lineup-face-front">
-                    <div className="lineup-card-noise" />
-                    <div className="lineup-card-guides" />
-                    <p className="lineup-chip">{item.theme.accent}</p>
-                    <p className="lineup-code">{item.code}</p>
-                    <p className="lineup-vertical-role">{item.theme.role}</p>
+                {label}
+              </div>
+            ))}
+          </div>
+        </article>
+      )}
 
-                    <div
-                      className={`lineup-portrait ${item.imageUrl ? "lineup-portrait-has-image" : ""}`}
-                    >
-                      {item.imageUrl && (
-                        <>
-                          <img
-                            className="lineup-portrait-image-bg"
-                            src={item.imageUrl}
-                            style={{
-                              objectPosition: item.imageFocus || "center",
-                            }}
-                            alt=""
-                            aria-hidden="true"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                          <img
-                            className="lineup-portrait-image"
-                            src={item.imageUrl}
-                            style={{
-                              objectPosition: item.imageFocus || "center",
-                            }}
-                            alt={`${item.title} 라인업 사진`}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        </>
-                      )}
-                      <div className="lineup-portrait-glow" />
-                      <span className="lineup-artist-name">{item.artist}</span>
+      {lineup.length > 0 && (
+        <div
+          className="lineup-carousel"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          <div
+            className="lineup-track"
+            style={{
+              transform: `translateX(calc((100% - 74%) / 2 - ${activeIndex} * (74% + 14px) + ${dragOffset}px))`,
+            }}
+          >
+            {lineup.map((item, index) => {
+              const distance = Math.abs(index - activeIndex);
+              const isActive = index === activeIndex;
+              const flipped = flippedIds.has(item.id);
+              const profile = buildProfile(item);
+
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={`lineup-card ${item.theme.frame} ${isActive ? "lineup-card-active" : ""} ${flipped ? "lineup-card-flipped" : ""} ${spinId === item.id ? "lineup-card-spin" : ""}`}
+                  onClick={() => toggleCard(index, item.id)}
+                  onMouseMove={handleCardMove}
+                  onMouseLeave={handleCardLeave}
+                  style={{
+                    opacity: distance > 2 ? 0.32 : 1 - distance * 0.18,
+                    transform: `scale(${isActive ? 1 : distance === 1 ? 0.92 : 0.86})`,
+                  }}
+                >
+                  <div className="lineup-card-inner">
+                    <div className="lineup-face lineup-face-front">
+                      <div className="lineup-card-noise" />
+                      <div className="lineup-card-guides" />
+                      <p className="lineup-chip">{item.theme.accent}</p>
+                      <p className="lineup-code">{item.code}</p>
+                      <p className="lineup-vertical-role">{item.theme.role}</p>
+
+                      <div
+                        className={`lineup-portrait ${item.imageUrl ? "lineup-portrait-has-image" : ""}`}
+                      >
+                        {item.imageUrl && (
+                          <>
+                            <img
+                              className="lineup-portrait-image-bg"
+                              src={item.imageUrl}
+                              style={{
+                                objectPosition: item.imageFocus || "center",
+                              }}
+                              alt=""
+                              aria-hidden="true"
+                              loading="lazy"
+                              decoding="async"
+                            />
+                            <img
+                              className="lineup-portrait-image"
+                              src={item.imageUrl}
+                              style={{
+                                objectPosition: item.imageFocus || "center",
+                              }}
+                              alt={`${item.title} 라인업 사진`}
+                              loading="lazy"
+                              decoding="async"
+                            />
+                          </>
+                        )}
+                        <div className="lineup-portrait-glow" />
+                        <span className="lineup-artist-name">{item.artist}</span>
+                      </div>
+
+                      <div className="lineup-hud-grid">
+                        <div className="lineup-hud-item">
+                          <p>리듬감</p>
+                          <span style={{ width: `${profile.rhythm}%` }} />
+                        </div>
+                        <div className="lineup-hud-item">
+                          <p>무대 장악</p>
+                          <span style={{ width: `${profile.stage}%` }} />
+                        </div>
+                        <div className="lineup-hud-item">
+                          <p>현장 반응</p>
+                          <span style={{ width: `${profile.pulse}%` }} />
+                        </div>
+                      </div>
+
+                      <div className="lineup-meta">
+                        <p className="lineup-role">{item.theme.role}</p>
+                        <p className="lineup-title">{item.title}</p>
+                        <p className="lineup-time">
+                          {formatScheduleRange(item)}
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="lineup-hud-grid">
-                      <div className="lineup-hud-item">
-                        <p>리듬감</p>
-                        <span style={{ width: `${profile.rhythm}%` }} />
-                      </div>
-                      <div className="lineup-hud-item">
-                        <p>무대 장악</p>
-                        <span style={{ width: `${profile.stage}%` }} />
-                      </div>
-                      <div className="lineup-hud-item">
-                        <p>현장 반응</p>
-                        <span style={{ width: `${profile.pulse}%` }} />
-                      </div>
-                    </div>
-
-                    <div className="lineup-meta">
-                      <p className="lineup-role">{item.theme.role}</p>
-                      <p className="lineup-title">{item.title}</p>
-                      <p className="lineup-time">
+                    <div className="lineup-face lineup-face-back">
+                      <p className="lineup-back-label">아티스트 정보</p>
+                      <p className="lineup-back-name">{item.artist}</p>
+                      <p className="lineup-back-title">{item.title}</p>
+                      <p className="lineup-back-time">
                         {formatScheduleRange(item)}
                       </p>
+                      {item.imageCredit && (
+                        <p className="lineup-back-time">{item.imageCredit}</p>
+                      )}
+                      <div className="lineup-back-row">
+                        <span className="lineup-back-chip">
+                          {item.theme.role}
+                        </span>
+                        <span className="lineup-back-chip">{item.status}</span>
+                        <span className="lineup-back-chip">
+                          무대감 {profile.aura}%
+                        </span>
+                      </div>
+                      <p className="lineup-back-tip">카드를 다시 누르면 앞면으로 돌아갑니다</p>
                     </div>
                   </div>
-
-                  <div className="lineup-face lineup-face-back">
-                    <p className="lineup-back-label">아티스트 정보</p>
-                    <p className="lineup-back-name">{item.artist}</p>
-                    <p className="lineup-back-title">{item.title}</p>
-                    <p className="lineup-back-time">
-                      {formatScheduleRange(item)}
-                    </p>
-                    {item.imageCredit && (
-                      <p className="lineup-back-time">{item.imageCredit}</p>
-                    )}
-                    <div className="lineup-back-row">
-                      <span className="lineup-back-chip">
-                        {item.theme.role}
-                      </span>
-                      <span className="lineup-back-chip">{item.status}</span>
-                      <span className="lineup-back-chip">
-                        무대감 {profile.aura}%
-                      </span>
-                    </div>
-                    <p className="lineup-back-tip">카드를 다시 누르면 앞면으로 돌아갑니다</p>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
-      <div className="lineup-dots">
-        {lineup.map((item, idx) => (
-          <button
-            key={`dot-${item.id}`}
-            type="button"
-            className={`lineup-dot ${idx === activeIndex ? "lineup-dot-active" : ""}`}
-            onClick={() => goToIndex(idx)}
-            aria-label={`${item.title} 카드로 이동`}
-          />
-        ))}
-      </div>
+      {lineup.length > 0 && (
+        <div className="lineup-dots">
+          {lineup.map((item, idx) => (
+            <button
+              key={`dot-${item.id}`}
+              type="button"
+              className={`lineup-dot ${idx === activeIndex ? "lineup-dot-active" : ""}`}
+              onClick={() => goToIndex(idx)}
+              aria-label={`${item.title} 카드로 이동`}
+            />
+          ))}
+        </div>
+      )}
 
       {selected && (
         <article className="lineup-focus rounded-xl p-3 border border-cyan-300/50">

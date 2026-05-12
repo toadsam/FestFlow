@@ -36,6 +36,11 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const { language, toggleLanguage } = useLanguage();
+  const isHomeRoute = location.pathname === "/";
+  const isOpsRoute = ["/admin", "/staff", "/ops"].some((path) =>
+    location.pathname.startsWith(path),
+  );
+  const routeScope = isHomeRoute ? "home" : isOpsRoute ? "ops" : "public";
 
   const [noticeMessage, setNoticeMessage] = useState("");
   const [outdoorMode, setOutdoorMode] = useState(() => {
@@ -89,8 +94,11 @@ export default function App() {
     <div
       className="mx-auto app-shell festival-shell relative"
       data-display-mode={outdoorMode ? "outdoor" : "default"}
+      data-route-scope={routeScope}
     >
-      <header className="festival-app-header">
+      <header
+        className={`festival-app-header ${isHomeRoute ? "festival-app-header--home" : "festival-app-header--compact"}`}
+      >
         <div className="festival-app-header__main">
           <div>
             <p className="festival-app-kicker">
@@ -159,7 +167,9 @@ export default function App() {
         </div>
       </header>
 
-      <main className="festival-main">
+      <main
+        className={`festival-main ${isHomeRoute ? "festival-main--home" : "festival-main--subpage"}`}
+      >
         <Outlet />
       </main>
 

@@ -148,6 +148,14 @@ function boothReservationBadgeClass(booth) {
   }
 }
 
+function formatEventTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return `${value || ""}`.replace("T", " ").slice(11, 16);
+  }
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
 function ZoomWatcher({ onZoomChange, onMapReady }) {
   const map = useMapEvents({
     zoomend: (event) => onZoomChange(event.target.getZoom()),
@@ -558,6 +566,31 @@ export default function HomePage() {
       .slice(0, 3);
   }, [filteredBooths, congestionMap]);
 
+  const relaxedBooth = useMemo(
+    () => recommendedBooths[0] || filteredBooths[0] || null,
+    [recommendedBooths, filteredBooths],
+  );
+  const busyBooth = useMemo(() => {
+    return [...filteredBooths]
+      .sort((a, b) => {
+        const scoreA = levelToScore[congestionMap[a.id]?.level] || 0;
+        const scoreB = levelToScore[congestionMap[b.id]?.level] || 0;
+        return scoreB - scoreA;
+      })[0] || null;
+  }, [filteredBooths, congestionMap]);
+  const reservationBooth = useMemo(() => {
+    return [...filteredBooths]
+      .filter((booth) => reservationAvailableSeats(booth) > 0)
+      .sort(
+        (a, b) =>
+          reservationAvailableSeats(b) - reservationAvailableSeats(a),
+      )[0] || null;
+  }, [filteredBooths]);
+
+  const heroBooth = recommendedBooths[0] || filteredBooths[0] || null;
+  const heroBoothCongestion = heroBooth ? congestionMap[heroBooth.id] : null;
+  const liveBoothCount = openBoothCount || filteredBooths.length;
+
   useEffect(() => {
     if (activeView === "list" || !focusedBoothId) return undefined;
 
@@ -686,45 +719,180 @@ export default function HomePage() {
 
   return (
     <section className="cyber-page festival-home space-y-4 pt-4 scan-enter">
-      <article className="festival-hero">
-        <p className="festival-eyebrow">오늘의 아주대 축제</p>
-        <h2 className="festival-hero__title">지금 뭐 할지 바로 고르세요</h2>
-        <p className="festival-hero__copy">
-          공연 일정, 부스 위치, 혼잡도를 한 화면에서 확인하세요.
-        </p>
-
-        <div className="festival-status-grid">
-          <div className="festival-status-card festival-status-card--primary">
-            <span>다음 공연</span>
-            <strong>{nextEvent ? nextEvent.title : "일정 확인"}</strong>
-            <small>
-              {nextEvent
-                ? `${nextEvent.startTime?.replace("T", " ").slice(11, 16)} 시작`
-                : "공연 일정에서 전체 라인업을 볼 수 있어요"}
-            </small>
-          </div>
-          <div className="festival-status-card">
-            <span>운영 부스</span>
-            <strong>{openBoothCount}곳</strong>
-            <small>예약 가능 {visibleReservationSeats}명</small>
-          </div>
+      <article className="festival-hero festival-hero-premium">
+        <div className="festival-hero-media" aria-hidden>
+          <img
+            src="/images/og-festflow.png"
+            alt=""
+            loading="eager"
+            decoding="async"
+          />
         </div>
+        <div className="festival-hero-content">
+          <div className="festival-live-strip">
+            <span>AU:SUM LIVE</span>
+            <strong>
+              {liveBoothCount > 0
+                ? `${liveBoothCount}개 부스 운영 중`
+                : "실시간 동선 추천 중"}
+            </strong>
+          </div>
 
-        <div className="festival-quick-actions">
-          <button type="button" onClick={() => navigate("/events")}>
-            <IconCalendar className="h-4 w-4" />
-            공연 일정
-          </button>
-          <button type="button" onClick={() => setActiveView("list")}>
-            <IconSearch className="h-4 w-4" />
-            부스 찾기
-          </button>
-          <button type="button" onClick={() => setActiveView("split")}>
-            <IconMapPin className="h-4 w-4" />
-            지도 보기
-          </button>
+          <div className="festival-hero-main">
+            <div className="festival-hero-copyblock">
+              <p className="festival-eyebrow">오늘의 아주대 축제</p>
+              <h2 className="festival-hero__title">
+                <span>오늘은</span>
+                <span>여기부터</span>
+              </h2>
+              <p className="festival-hero__copy">
+                혼잡도, 대기시간, 예약 가능 좌석을 보고 지금 바로 움직일 곳을 골라드릴게요.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              className="festival-hero-pick"
+              onClick={() =>
+                heroBooth ? openBoothDetail(heroBooth.id) : navigate("/events")
+              }
+            >
+              <span>지금 추천</span>
+              <strong>
+                {heroBooth
+                  ? heroBooth.name
+                  : nextEvent
+                    ? nextEvent.title
+                    : "축제 둘러보기"}
+              </strong>
+              <small>
+                {heroBooth
+                  ? `${heroBooth.category || "부스"} · ${heroBoothCongestion?.level || "집계중"} · 대기 ${heroBooth.estimatedWaitMinutes ?? 0}분`
+                  : nextEvent
+                    ? `다음 공연 · ${formatEventTime(nextEvent.startTime)} 시작`
+                    : "공연, 부스, 지도를 한 번에 확인"}
+              </small>
+            </button>
+          </div>
+
+          <div className="festival-status-grid">
+            <div className="festival-status-card festival-status-card--primary">
+              <span>다음 공연</span>
+              <strong>{nextEvent ? nextEvent.title : "일정 확인"}</strong>
+              <small>
+                {nextEvent
+                  ? `${formatEventTime(nextEvent.startTime)} 시작`
+                  : "전체 라인업을 볼 수 있어요"}
+              </small>
+            </div>
+            <div className="festival-status-card">
+              <span>운영 부스</span>
+              <strong>{liveBoothCount > 0 ? `${liveBoothCount}곳` : "전체 안내"}</strong>
+              <small>
+                {visibleReservationSeats > 0
+                  ? `예약 가능 ${visibleReservationSeats}명`
+                  : "부스 정보를 바로 확인"}
+              </small>
+            </div>
+            <div className="festival-status-card">
+              <span>라이브 지도</span>
+              <strong>바로 확인</strong>
+              <small>부스 위치와 혼잡도</small>
+            </div>
+          </div>
+
+          <div className="festival-quick-actions">
+            <button type="button" onClick={() => navigate("/events")}>
+              <IconCalendar className="h-4 w-4" />
+              노천극장 라인업
+            </button>
+            <button type="button" onClick={() => setActiveView("list")}>
+              <IconSearch className="h-4 w-4" />
+              부스 찾기
+            </button>
+            <button type="button" onClick={() => setActiveView("split")}>
+              <IconMapPin className="h-4 w-4" />
+              지도 보기
+            </button>
+          </div>
         </div>
       </article>
+
+      <section className="festival-section festival-now-board">
+        <div className="festival-section__head">
+          <div>
+            <p className="festival-eyebrow">지금 축제 상황</p>
+            <h3>켜자마자 바로 결정하기</h3>
+          </div>
+          <p className="festival-section__meta">
+            친구랑 움직이기 전에 확인할 것들
+          </p>
+        </div>
+        <div className="festival-situation-grid">
+          <button
+            type="button"
+            className="festival-situation-card festival-situation-card--primary"
+            onClick={() =>
+              relaxedBooth ? openBoothDetail(relaxedBooth.id) : setActiveView("list")
+            }
+          >
+            <span>지금 바로 갈 곳</span>
+            <strong>{relaxedBooth ? relaxedBooth.name : "추천 준비 중"}</strong>
+            <small>
+              {relaxedBooth
+                ? `${congestionMap[relaxedBooth.id]?.level || "집계중"} · 대기 ${relaxedBooth.estimatedWaitMinutes ?? 0}분`
+                : "부스 운영 정보가 들어오면 추천해드릴게요"}
+            </small>
+          </button>
+          <button
+            type="button"
+            className="festival-situation-card"
+            onClick={() =>
+              busyBooth ? focusBoothOnMap(busyBooth.id) : setActiveView("split")
+            }
+          >
+            <span>사람 많은 곳 피하기</span>
+            <strong>{busyBooth ? busyBooth.name : "혼잡도 수집 중"}</strong>
+            <small>
+              {busyBooth
+                ? `${congestionMap[busyBooth.id]?.level || "집계중"} 표시 · 지도에서 확인`
+                : "위치 데이터가 쌓이면 바로 보여드려요"}
+            </small>
+          </button>
+          <button
+            type="button"
+            className="festival-situation-card"
+            onClick={() =>
+              reservationBooth
+                ? openBoothDetail(reservationBooth.id)
+                : setActiveView("list")
+            }
+          >
+            <span>예약 가능한 부스</span>
+            <strong>
+              {reservationBooth ? reservationBooth.name : "예약 정보 확인 중"}
+            </strong>
+            <small>
+              {reservationBooth
+                ? `${reservationAvailableSeats(reservationBooth)}명 가능 · 바로 보기`
+                : "예약 가능 좌석이 생기면 표시됩니다"}
+            </small>
+          </button>
+          <button
+            type="button"
+            className="festival-situation-card"
+            onClick={() => navigate("/events")}
+          >
+            <span>다음 일정</span>
+            <strong>{nextEvent ? nextEvent.title : "라인업 확인"}</strong>
+            <small>
+              {nextEvent
+                ? `${formatEventTime(nextEvent.startTime)} 시작`
+                : "노천극장 라인업이 공개되면 바로 볼 수 있어요"}
+            </small>
+          </button>
+        </div>
+      </section>
 
       <section className="festival-section">
         <div className="festival-section__head">

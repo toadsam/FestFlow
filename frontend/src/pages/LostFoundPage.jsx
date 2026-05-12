@@ -118,8 +118,8 @@ export default function LostFoundPage() {
             <IconBox className="h-5 w-5 icon-role-map" />
           </span>
           <div>
-            <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">분실물 안내</p>
-            <h2 className="mt-1 text-xl font-extrabold text-role-map">분실물 센터</h2>
+            <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">AU:SUM LOST & FOUND</p>
+            <h2 className="mt-1 text-xl font-extrabold text-role-map">축제 본부 분실물 센터</h2>
             <p className="mt-1 text-xs text-cyan-100/90">
               분실물 사진 확인 후 내 물건 표시가 가능합니다. 연락처가 등록된 물품은 바로 연락할 수 있습니다.
             </p>

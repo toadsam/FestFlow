@@ -48,6 +48,9 @@ export default function AnalyticsPage() {
     if (!heatmap.length) return null;
     return [...heatmap].sort((a, b) => (b.intensity || 0) - (a.intensity || 0))[0];
   }, [heatmap]);
+  const hasTraffic = traffic.length > 0;
+  const hasPopular = popular.length > 0;
+  const hasHeatmap = heatmap.length > 0;
 
   return (
     <section className="cyber-page pt-4 space-y-3 scan-enter">
@@ -58,9 +61,9 @@ export default function AnalyticsPage() {
               <IconChart className="h-5 w-5 icon-role-ops" />
             </span>
             <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">축제 데이터</p>
-              <h2 className="mt-1 text-xl font-extrabold text-role-ops">데이터 분석 대시보드</h2>
-              <p className="mt-1 text-xs text-cyan-100/90">방문량 흐름, 인기 부스, 혼잡 포인트를 한 화면에서 확인합니다.</p>
+              <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">AU:SUM LIVE CROWD</p>
+              <h2 className="mt-1 text-xl font-extrabold text-role-ops">지금 붐비는 캠퍼스 구역</h2>
+              <p className="mt-1 text-xs text-cyan-100/90">노천극장과 캠퍼스 축제 구역의 붐빔 흐름을 보고 이동할 곳을 정하세요.</p>
             </div>
           </div>
           <button
@@ -71,7 +74,7 @@ export default function AnalyticsPage() {
             <span className="visual-icon-badge-sm">
               <IconRefresh className="h-3.5 w-3.5 icon-role-log" />
             </span>
-            새로고침
+            혼잡도 다시 확인
           </button>
         </div>
       </article>
@@ -101,8 +104,16 @@ export default function AnalyticsPage() {
           시간대별 방문량 (최근 24시간)
         </h3>
         <div className="mt-3 h-28 flex items-end gap-1 overflow-x-auto">
-          {traffic.length === 0 && (
-            <p className="text-xs text-cyan-200/80">집계 데이터가 없습니다. 홈에서 GPS를 전송해 보세요.</p>
+          {!hasTraffic && (
+            <div className="app-empty-chart" aria-label="방문량 데이터 준비 중">
+              {[28, 46, 36, 64, 52, 72, 44, 58].map((height, index) => (
+                <span
+                  key={`traffic-placeholder-${index}`}
+                  style={{ height: `${height}%` }}
+                />
+              ))}
+              <p>방문 데이터가 쌓이면 시간대별 흐름이 표시됩니다.</p>
+            </div>
           )}
           {traffic.map((item) => (
             <div key={item.hour} className="min-w-7 text-center">
@@ -125,8 +136,12 @@ export default function AnalyticsPage() {
           인기 부스 랭킹 (최근 1시간)
         </h3>
         <div className="mt-2 space-y-1.5">
-          {popular.length === 0 && (
-            <p className="text-xs text-cyan-200/80">집계 데이터가 없습니다. 홈에서 GPS를 전송해 보세요.</p>
+          {!hasPopular && (
+            <div className="app-empty-state app-empty-state--compact">
+              <p className="app-empty-state__eyebrow">인기 부스 준비 중</p>
+              <h3>아직 충분한 방문 데이터가 없어요</h3>
+              <p>GPS 전송과 부스 방문 기록이 쌓이면 지금 가장 뜨거운 부스를 보여드립니다.</p>
+            </div>
           )}
           {popular.map((item, idx) => (
             <div key={item.boothId} className="flex items-center justify-between rounded-lg border border-cyan-400/25 bg-slate-900/70 px-2 py-1.5">
@@ -145,8 +160,13 @@ export default function AnalyticsPage() {
           혼잡 히트맵 포인트 (최근 1시간)
         </h3>
         <div className="mt-2 grid grid-cols-2 gap-2">
-          {heatmap.length === 0 && (
-            <p className="text-xs text-cyan-200/80">집계 데이터가 없습니다. 홈에서 GPS를 전송해 보세요.</p>
+          {!hasHeatmap && (
+            <div className="app-heat-placeholder">
+              {["여유", "보통", "혼잡", "매우혼잡"].map((label) => (
+                <span key={`heat-placeholder-${label}`}>{label}</span>
+              ))}
+              <p>혼잡 포인트가 감지되면 지도 기준으로 바로 표시됩니다.</p>
+            </div>
           )}
           {heatmap.slice(0, 12).map((point) => (
             <div key={`${point.latitude}-${point.longitude}`} className="rounded-lg border border-cyan-400/25 bg-slate-900/75 p-2">
