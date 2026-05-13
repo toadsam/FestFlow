@@ -1,5 +1,6 @@
 package com.festflow.backend.controller.analytics;
 
+import com.festflow.backend.dto.AnalyticsDashboardDto;
 import com.festflow.backend.dto.HeatPointDto;
 import com.festflow.backend.dto.PopularBoothDto;
 import com.festflow.backend.dto.StageCrowdResponseDto;
@@ -40,5 +41,10 @@ public class AnalyticsController {
     @GetMapping("/stage-crowd")
     public StageCrowdResponseDto stageCrowd(@RequestParam(defaultValue = "10") int minutes) {
         return analyticsService.stageCrowd(minutes);
+    }
+
+    @GetMapping("/dashboard")
+    public AnalyticsDashboardDto dashboard(@RequestParam(defaultValue = "15") int minutes) {
+        return analyticsService.dashboard(minutes);
     }
 }

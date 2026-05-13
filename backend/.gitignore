@@ -39,3 +39,5 @@ out/
 ### Local secrets ###
 application-secrets.properties
 
+### Local run logs ###
+bootrun.*.log

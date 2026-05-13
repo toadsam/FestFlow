@@ -25,11 +25,22 @@ async function parseJson(response, errorMessage) {
     let detail = "";
     try {
       const data = await response.json();
-      detail = data.message ? ` (${data.message})` : "";
+      if (data && typeof data === "string") {
+        detail = data;
+      } else if (data && typeof data.message === "string") {
+        detail = data.message;
+      }
     } catch {
       detail = "";
     }
-    throw new Error(`${errorMessage}${detail}`);
+    const error = new Error(`${errorMessage}${detail ? ` (${detail})` : ""}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    return response.text();
   }
   return response.json();
 }
@@ -310,6 +321,11 @@ export async function fetchPopularBooths() {
 export async function fetchHeatmap() {
   const response = await fetch(`${API_BASE}/analytics/congestion-heatmap`);
   return parseJson(response, "혼잡 히트맵 데이터를 불러오지 못했습니다.");
+}
+
+export async function fetchAnalyticsDashboard(minutes = 15) {
+  const response = await fetch(`${API_BASE}/analytics/dashboard?minutes=${minutes}`);
+  return parseJson(response, "실시간 혼잡도 데이터를 불러오지 못했습니다.");
 }
 
 export function createCongestionStream() {

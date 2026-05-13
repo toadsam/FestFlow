@@ -1,5 +1,10 @@
 package com.festflow.backend.service.analytics;
 
+import com.festflow.backend.dto.AnalyticsDashboardDto;
+import com.festflow.backend.dto.AnalyticsOverviewDto;
+import com.festflow.backend.dto.AnalyticsRecommendationDto;
+import com.festflow.backend.dto.AnalyticsTrendPointDto;
+import com.festflow.backend.dto.AnalyticsZoneCrowdDto;
 import com.festflow.backend.dto.HeatPointDto;
 import com.festflow.backend.dto.PopularBoothDto;
 import com.festflow.backend.dto.StageCrowdResponseDto;
@@ -12,7 +17,9 @@ import com.festflow.backend.repository.GpsLogRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -24,8 +31,20 @@ public class AnalyticsService {
     private record StageZone(String key, String name, double latitude, double longitude, int radiusMeters, int capacityHint) {
     }
 
+    private record CrowdZone(String key, String name, double latitude, double longitude, int radiusMeters, int capacityHint) {
+    }
+
     private static final List<StageZone> STAGE_ZONES = List.of(
-            new StageZone("open-air-theater", "아주대 노천극장", 37.281785, 127.045501, 55, 180)
+            new StageZone("open-air-theater", "\uC544\uC8FC\uB300 \uB178\uCC9C\uADF9\uC7A5", 37.281785, 127.045501, 55, 180)
+    );
+
+    private static final List<CrowdZone> CROWD_ZONES = List.of(
+            new CrowdZone("ajou-square", "Ajou Plaza", 37.282610, 127.044430, 90, 80),
+            new CrowdZone("lawn-square", "Lawn Plaza", 37.281785, 127.045501, 85, 110),
+            new CrowdZone("gym-front", "Gym Front", 37.283740, 127.044240, 90, 95),
+            new CrowdZone("student-hall", "Student Hall", 37.282840, 127.043050, 80, 75),
+            new CrowdZone("seongho-hall", "Seongho Hall", 37.283500, 127.046080, 85, 80),
+            new CrowdZone("rear-gate", "Rear Gate Street", 37.280950, 127.044020, 110, 100)
     );
 
     private final GpsLogRepository gpsLogRepository;
@@ -118,18 +137,173 @@ public class AnalyticsService {
         return new StageCrowdResponseDto(LocalDateTime.now(), minutes, total, zones);
     }
 
+    public AnalyticsDashboardDto dashboard(int minutesWindow) {
+        int minutes = Math.max(5, Math.min(60, minutesWindow));
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime currentFrom = now.minusMinutes(minutes);
+        LocalDateTime previousFrom = now.minusMinutes(minutes * 2L);
+
+        List<GpsLog> recentLogs = gpsLogRepository.findByCreatedAtAfter(previousFrom);
+        List<GpsLog> currentLogs = recentLogs.stream()
+                .filter(log -> !log.getCreatedAt().isBefore(currentFrom))
+                .toList();
+        List<GpsLog> previousLogs = recentLogs.stream()
+                .filter(log -> log.getCreatedAt().isBefore(currentFrom))
+                .toList();
+
+        List<AnalyticsZoneCrowdDto> zones = CROWD_ZONES.stream()
+                .map(zone -> zoneCrowd(zone, currentLogs, previousLogs))
+                .toList();
+
+        int totalCapacity = CROWD_ZONES.stream().mapToInt(CrowdZone::capacityHint).sum();
+        int currentCount = countInAnyZone(currentLogs);
+        int previousCount = countInAnyZone(previousLogs);
+        int currentPercent = toPercent(currentCount, totalCapacity);
+        int previousPercent = toPercent(previousCount, totalCapacity);
+        AnalyticsOverviewDto overview = new AnalyticsOverviewDto(
+                currentPercent,
+                levelForPercent(currentPercent),
+                currentPercent - previousPercent,
+                currentCount,
+                previousCount
+        );
+
+        List<AnalyticsTrendPointDto> trend = todayTrend(now, totalCapacity);
+        AnalyticsRecommendationDto recommendation = recommendLowCrowdTime(trend);
+
+        return new AnalyticsDashboardDto(
+                now,
+                minutes,
+                currentLogs.size(),
+                overview,
+                zones,
+                trend,
+                recommendation
+        );
+    }
+
+    private AnalyticsZoneCrowdDto zoneCrowd(CrowdZone zone, List<GpsLog> currentLogs, List<GpsLog> previousLogs) {
+        int currentCount = countInZone(currentLogs, zone);
+        int previousCount = countInZone(previousLogs, zone);
+        int currentPercent = toPercent(currentCount, zone.capacityHint());
+        int previousPercent = toPercent(previousCount, zone.capacityHint());
+
+        return new AnalyticsZoneCrowdDto(
+                zone.key(),
+                zone.name(),
+                zone.latitude(),
+                zone.longitude(),
+                zone.radiusMeters(),
+                currentCount,
+                previousCount,
+                currentPercent,
+                currentPercent - previousPercent,
+                levelForPercent(currentPercent)
+        );
+    }
+
+    private List<AnalyticsTrendPointDto> todayTrend(LocalDateTime now, int totalCapacity) {
+        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
+        List<GpsLog> todayLogs = gpsLogRepository.findByCreatedAtAfter(startOfDay.minusSeconds(1));
+        List<AnalyticsTrendPointDto> result = new ArrayList<>();
+
+        for (int hour = 0; hour < 24; hour += 3) {
+            LocalDateTime from = startOfDay.plusHours(hour);
+            LocalDateTime to = from.plusHours(3);
+            long count = todayLogs.stream()
+                    .filter(log -> !log.getCreatedAt().isBefore(from) && log.getCreatedAt().isBefore(to))
+                    .filter(this::isInAnyZone)
+                    .count();
+            int percent = toPercent(count, totalCapacity);
+            boolean current = !now.isBefore(from) && now.isBefore(to);
+            result.add(new AnalyticsTrendPointDto(
+                    String.format("%02d\uC2DC", hour),
+                    from.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")),
+                    to.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")),
+                    percent,
+                    count,
+                    current
+            ));
+        }
+
+        return result;
+    }
+
+    private AnalyticsRecommendationDto recommendLowCrowdTime(List<AnalyticsTrendPointDto> trend) {
+        long measuredCount = trend.stream().mapToLong(AnalyticsTrendPointDto::count).sum();
+        if (measuredCount == 0) {
+            return new AnalyticsRecommendationDto(null, null, 0, "NO_DATA");
+        }
+
+        AnalyticsTrendPointDto best = trend.stream()
+                .min(Comparator
+                        .comparingInt(AnalyticsTrendPointDto::percent)
+                        .thenComparing(AnalyticsTrendPointDto::startTime))
+                .orElse(null);
+
+        if (best == null) {
+            return new AnalyticsRecommendationDto(null, null, 0, "NO_DATA");
+        }
+
+        LocalTime start = LocalTime.parse(best.startTime());
+        LocalTime end = start.plusHours(1);
+        return new AnalyticsRecommendationDto(
+                start.format(DateTimeFormatter.ofPattern("HH:mm")),
+                end.format(DateTimeFormatter.ofPattern("HH:mm")),
+                best.percent(),
+                "LOWEST_TODAY"
+        );
+    }
+
+    private int countInZone(List<GpsLog> logs, CrowdZone zone) {
+        return (int) logs.stream()
+                .filter(log -> distanceInMeters(zone.latitude(), zone.longitude(), log.getLatitude(), log.getLongitude()) <= zone.radiusMeters())
+                .count();
+    }
+
+    private int countInAnyZone(List<GpsLog> logs) {
+        return (int) logs.stream()
+                .filter(this::isInAnyZone)
+                .count();
+    }
+
+    private boolean isInAnyZone(GpsLog log) {
+        return CROWD_ZONES.stream()
+                .anyMatch(zone -> distanceInMeters(zone.latitude(), zone.longitude(), log.getLatitude(), log.getLongitude()) <= zone.radiusMeters());
+    }
+
+    private int toPercent(long count, int capacityHint) {
+        if (capacityHint <= 0 || count <= 0) {
+            return 0;
+        }
+        return Math.min(100, Math.max(0, (int) Math.round((count * 100.0) / capacityHint)));
+    }
+
+    private String levelForPercent(int percent) {
+        if (percent < 35) {
+            return "LOW";
+        }
+        if (percent < 65) {
+            return "NORMAL";
+        }
+        if (percent < 85) {
+            return "BUSY";
+        }
+        return "PACKED";
+    }
+
     private String resolveLevel(int count, int capacityHint) {
         double ratio = capacityHint <= 0 ? 0.0 : (double) count / capacityHint;
         if (ratio < 0.35) {
-            return "여유";
+            return "\uC5EC\uC720";
         }
         if (ratio < 0.65) {
-            return "보통";
+            return "\uBCF4\uD1B5";
         }
         if (ratio < 0.9) {
-            return "혼잡";
+            return "\uD63C\uC7A1";
         }
-        return "매우혼잡";
+        return "\uB9E4\uC6B0 \uD63C\uC7A1";
     }
 
     private double distanceInMeters(double lat1, double lon1, double lat2, double lon2) {

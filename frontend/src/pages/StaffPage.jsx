@@ -75,6 +75,12 @@ const LOST_STATUS_OPTIONS = [
   { value: "RETURNED", label: "반환완료" },
 ];
 
+const RESPONSE_TOOL_TABS = [
+  { id: "translate", label: "통역" },
+  { id: "ai", label: "AI 응대" },
+  { id: "lost", label: "분실물" },
+];
+
 const TRANSLATE_LANGUAGES = [
   { value: "ko", label: "한국어" },
   { value: "en", label: "English" },
@@ -325,6 +331,7 @@ export default function StaffPage() {
   const [voiceListening, setVoiceListening] = useState(false);
   const [voicePreview, setVoicePreview] = useState("");
   const [showAllNotices, setShowAllNotices] = useState(false);
+  const [responseToolTab, setResponseToolTab] = useState("translate");
   const recognitionRef = useRef(null);
 
   async function load(token = staffToken) {
@@ -1003,7 +1010,7 @@ export default function StaffPage() {
         </div>
       </section>
 
-      <section className="staff-reference-section">
+      <section className="staff-reference-section staff-mission-section">
         <div className="staff-reference-section-head">
           <h2>빠른 미션</h2>
         </div>
@@ -1025,7 +1032,26 @@ export default function StaffPage() {
         </div>
       </section>
 
-      <section className="staff-reference-section">
+      <section className="staff-reference-section staff-tool-tabs-section">
+        <div className="staff-reference-section-head">
+          <h2>응대 도구</h2>
+          <span>통역 · AI · 분실물</span>
+        </div>
+        <div className="staff-tool-tabs" role="tablist" aria-label="스태프 응대 도구">
+          {RESPONSE_TOOL_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={responseToolTab === tab.id ? "active" : ""}
+              onClick={() => setResponseToolTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className={responseToolTab === "ai" ? "staff-reference-section staff-tool-panel staff-ai-panel" : "staff-reference-section staff-tool-panel staff-ai-panel staff-tool-panel-hidden"}>
         <div className="staff-reference-section-head">
           <h2>AI 운영 도구</h2>
           <span>{aiBusy ? "생성 중" : "즉시 응대"}</span>
@@ -1068,7 +1094,7 @@ export default function StaffPage() {
         )}
       </section>
 
-      <section className="staff-reference-section staff-reference-translate">
+      <section className={responseToolTab === "translate" ? "staff-reference-section staff-reference-translate staff-tool-panel" : "staff-reference-section staff-reference-translate staff-tool-panel staff-tool-panel-hidden"}>
         <div className="staff-reference-section-head">
           <h2>실시간 통역</h2>
           <span>{translateBusy ? "번역 중" : "방문객 응대"}</span>
@@ -1142,7 +1168,7 @@ export default function StaffPage() {
         )}
       </section>
 
-      <section className="staff-reference-section">
+      <section className="staff-reference-section staff-staff-list-section">
         <div className="staff-reference-section-head">
           <h2>실시간 스태프 목록</h2>
           <button type="button" onClick={() => setShowAllStaff((prev) => !prev)}>
@@ -1175,7 +1201,7 @@ export default function StaffPage() {
         </div>
       </section>
 
-      <section className="staff-reference-section">
+      <section className="staff-reference-section staff-emergency-section">
         <div className="staff-reference-section-head">
           <h2>긴급 연락 / 빠른 대응</h2>
         </div>
@@ -1235,7 +1261,7 @@ export default function StaffPage() {
         />
       </section>
 
-      <form className="staff-reference-lost-form" onSubmit={handleCreateLostItem}>
+      <form className={responseToolTab === "lost" ? "staff-reference-lost-form staff-tool-panel" : "staff-reference-lost-form staff-tool-panel staff-tool-panel-hidden"} onSubmit={handleCreateLostItem}>
         <div className="staff-reference-section-head">
           <h2>분실물 등록</h2>
           <span>{lostItems.length}건</span>
@@ -1274,7 +1300,7 @@ export default function StaffPage() {
         </button>
       </form>
 
-      <section className="staff-reference-section staff-lost-manager">
+      <section className={responseToolTab === "lost" ? "staff-reference-section staff-lost-manager staff-tool-panel" : "staff-reference-section staff-lost-manager staff-tool-panel staff-tool-panel-hidden"}>
         <div className="staff-reference-section-head">
           <h2>분실물 센터</h2>
           <span>{lostItems.length}건 관리</span>
@@ -1386,7 +1412,7 @@ export default function StaffPage() {
         </div>
       </section>
 
-      <section className="staff-reference-section">
+      <section className="staff-reference-section staff-notice-section">
         <div className="staff-reference-section-head">
           <h2>공지사항</h2>
           <button type="button" onClick={() => setShowAllNotices((prev) => !prev)}>

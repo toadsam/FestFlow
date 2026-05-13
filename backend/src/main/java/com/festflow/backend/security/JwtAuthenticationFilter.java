@@ -33,7 +33,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 Claims claims = jwtService.parse(token);
                 String username = claims.getSubject();
-                String role = String.valueOf(claims.get("role"));
+                String rawRole = String.valueOf(claims.get("role"));
+                if (rawRole == null || "null".equals(rawRole)) {
+                    SecurityContextHolder.clearContext();
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                String role = rawRole.startsWith("ROLE_") ? rawRole.substring("ROLE_".length()) : rawRole;
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
