@@ -14,6 +14,22 @@ async function fetch(...args) {
   }
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.", { cause: error });
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function withAuth(headers = {}) {
   const token = getAccessToken();
   if (!token) return headers;
@@ -91,7 +107,7 @@ export async function sendGps(latitude, longitude) {
 }
 
 export async function askChat(question) {
-  const response = await fetch(`${API_BASE}/chat`, {
+  const response = await fetchWithTimeout(`${API_BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question }),
