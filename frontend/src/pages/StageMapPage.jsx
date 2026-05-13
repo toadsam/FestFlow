@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
+import L from "leaflet";
+import { CircleMarker, MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { useLocation, useNavigate } from "react-router-dom";
 import { createBoothStream, fetchBooths, sendGps } from "../api";
 import {
   IconBox,
   IconMapPin,
   IconMusic,
-  IconRefresh,
   IconSearch,
   IconSettings,
   IconShield,
@@ -13,47 +14,78 @@ import {
 import { fallbackBooths, mapCategories } from "../data/festivalUiData";
 import { AJOU_CENTER } from "../utils/location";
 
-const FALLBACK_PIN_POSITIONS = [
-  [18, 28],
-  [72, 26],
-  [28, 56],
-  [58, 54],
-  [80, 68],
-  [42, 76],
-  [16, 72],
-  [82, 46],
+const FALLBACK_COORD_OFFSETS = [
+  [-0.0009, -0.001],
+  [-0.0005, 0.0008],
+  [0.00045, -0.00085],
+  [0.0002, 0.00015],
+  [0.0007, 0.001],
+  [-0.0011, 0.00025],
+  [0.001, -0.0002],
+  [-0.0002, 0.0012],
 ];
 
 function normalize(value) {
   return `${value || ""}`.toLowerCase();
 }
 
+function includesAny(text, keywords) {
+  return keywords.some((keyword) => text.includes(keyword));
+}
+
 function boothWait(booth) {
   const value = booth?.estimatedWaitMinutes ?? booth?.wait;
-  if (value == null || value === "") return "대기 확인 중";
+  if (value == null || value === "") return "확인 중";
   return `${String(value).replace("분", "")}분`;
+}
+
+function getBoothCoords(booth, index) {
+  const lat = Number(booth?.latitude);
+  const lng = Number(booth?.longitude);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return { latitude: lat, longitude: lng, real: true };
+  }
+  const [latOffset, lngOffset] = FALLBACK_COORD_OFFSETS[index % FALLBACK_COORD_OFFSETS.length];
+  return {
+    latitude: AJOU_CENTER.latitude + latOffset,
+    longitude: AJOU_CENTER.longitude + lngOffset,
+    real: false,
+  };
 }
 
 function boothDistance(booth, index) {
   if (booth?.distance) return booth.distance;
-  const lat = Number(booth?.latitude);
-  const lng = Number(booth?.longitude);
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    const latM = (lat - AJOU_CENTER.latitude) * 111000;
-    const lngM = (lng - AJOU_CENTER.longitude) * 88800;
-    const meters = Math.round(Math.sqrt(latM * latM + lngM * lngM));
-    if (meters > 0) return `${Math.min(999, meters)}m`;
-  }
-  return `${100 + index * 50}m`;
+  const point = getBoothCoords(booth, index);
+  const latM = (point.latitude - AJOU_CENTER.latitude) * 111000;
+  const lngM = (point.longitude - AJOU_CENTER.longitude) * 88800;
+  const meters = Math.max(30, Math.round(Math.sqrt(latM * latM + lngM * lngM)));
+  return `${Math.min(999, meters)}m`;
 }
 
 function displayCategory(booth) {
-  const category = booth?.category || "";
-  if (category.includes("음식") || category.includes("푸드") || category.includes("주점")) return "푸드";
-  if (category.includes("공연") || category.includes("무대")) return "공연";
-  if (category.includes("체험") || category.includes("이벤트")) return "체험";
-  if (category.includes("안내") || category.includes("본부")) return "안내";
-  if (category.includes("응급") || category.includes("안전") || category.includes("편의")) return "편의";
+  const category = normalize(booth?.category).replace(/\s+/g, "");
+  const primaryText = normalize(`${booth?.name || ""} ${booth?.description || ""} ${booth?.locationName || ""} ${booth?.tags || ""}`).replace(/\s+/g, "");
+  const allText = `${primaryText}${category}`;
+
+  if (includesAny(primaryText, ["중앙무대", "메인무대", "무대", "스테이지", "노천극장", "공연", "라인업", "dj"])) {
+    return "공연";
+  }
+  if (includesAny(primaryText, ["응급", "케어", "안전", "의무", "구급", "분실물", "화장실", "충전"])) {
+    return "편의";
+  }
+  if (includesAny(primaryText, ["vr", "ai", "캐리커처", "챌린지", "체험", "이벤트", "럭키드로우", "스탬프", "게임", "미션"])) {
+    return "체험";
+  }
+  if (includesAny(primaryText, ["안내", "본부", "스태프", "센터"])) {
+    return "안내";
+  }
+  if (includesAny(allText, ["음식", "푸드", "주점", "먹거리", "트럭", "타코", "야끼", "카페", "분식", "메뉴"])) {
+    return "푸드";
+  }
+  if (includesAny(category, ["공연", "무대"])) return "공연";
+  if (includesAny(category, ["체험", "이벤트"])) return "체험";
+  if (includesAny(category, ["안내", "본부"])) return "안내";
+  if (includesAny(category, ["응급", "안전", "편의"])) return "편의";
   return category || "전체";
 }
 
@@ -63,14 +95,19 @@ function categoryMatches(booth, activeCategory) {
 }
 
 function mapStatus(booth) {
-  const wait = Number(booth?.estimatedWaitMinutes ?? String(booth?.wait || "").replace(/[^0-9]/g, ""));
+  const rawWait = booth?.estimatedWaitMinutes ?? booth?.wait;
+  const wait =
+    rawWait == null || rawWait === ""
+      ? Number.NaN
+      : Number(String(rawWait).replace(/[^0-9]/g, ""));
   if (Number.isFinite(wait)) {
-    if (wait >= 25) return { label: "혼잡", tone: "danger" };
-    if (wait >= 10) return { label: "보통", tone: "warning" };
-    return { label: "여유", tone: "good" };
+    if (wait >= 25) return { label: "혼잡", tone: "danger", color: "#ef4444" };
+    if (wait >= 10) return { label: "보통", tone: "warning", color: "#f59e0b" };
+    return { label: "여유", tone: "good", color: "#22c55e" };
   }
-  if (booth?.congestion) return { label: booth.congestion, tone: booth.congestion === "여유" ? "good" : "warning" };
-  return { label: "보통", tone: "warning" };
+  if (booth?.congestion === "여유") return { label: "여유", tone: "good", color: "#22c55e" };
+  if (booth?.congestion === "혼잡") return { label: "혼잡", tone: "danger", color: "#ef4444" };
+  return { label: booth?.congestion || "보통", tone: "warning", color: "#f59e0b" };
 }
 
 function pinTone(booth, index) {
@@ -82,15 +119,110 @@ function pinTone(booth, index) {
   return ["mint", "blue", "orange", "violet", "green"][index % 5];
 }
 
-function boothPinPosition(booth, index) {
-  const lat = Number(booth?.latitude);
-  const lng = Number(booth?.longitude);
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
-    const x = Math.min(88, Math.max(12, 50 + (lng - AJOU_CENTER.longitude) * 60000));
-    const y = Math.min(86, Math.max(12, 50 - (lat - AJOU_CENTER.latitude) * 75000));
-    return [x, y];
+function listIconCategory(booth, index) {
+  const category = displayCategory(booth);
+  if (category !== "푸드") return category;
+
+  const name = normalize(booth?.name).replace(/\s+/g, "");
+  if (includesAny(name, ["무대", "스테이지", "공연"])) return "공연";
+  if (includesAny(name, ["응급", "케어", "안전", "분실물"])) return "편의";
+  if (includesAny(name, ["vr", "ai", "캐리커처", "챌린지", "스탬프", "미션", "럭키드로우"])) return "체험";
+
+  if (index === 1) return "공연";
+  if (index === 2) return "편의";
+  return category;
+}
+
+function categoryIconSvg(category) {
+  if (category === "푸드") {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3v7M9 3v7M7.5 10v11M18 3v18M15 3v5.5c0 2 1.2 3.4 3 4.2"/></svg>';
   }
-  return FALLBACK_PIN_POSITIONS[index % FALLBACK_PIN_POSITIONS.length];
+  if (category === "공연") {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18V5l10-2v13"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>';
+  }
+  if (category === "편의") {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.8-2.8 8.3-7 10-4.2-1.7-7-5.2-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>';
+  }
+  if (category === "안내") {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-4.4 7-11A7 7 0 1 0 5 10c0 6.6 7 11 7 11z"/><path d="M12 10v5"/><path d="M12 7h.01"/></svg>';
+  }
+  if (category === "체험") {
+    return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z"/><path d="M12 12l8-4.5"/><path d="M12 12v9"/><path d="M12 12L4 7.5"/></svg>';
+  }
+  return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s7-4.4 7-11A7 7 0 1 0 5 10c0 6.6 7 11 7 11z"/><circle cx="12" cy="10" r="2"/></svg>';
+}
+
+function pinIconMarkup(booth) {
+  const category = displayCategory(booth);
+  return categoryIconSvg(category);
+}
+
+function markerIcon(booth, index) {
+  return L.divIcon({
+    className: `festival-map-pin festival-map-pin--${pinTone(booth, index)}`,
+    html: `<span>${pinIconMarkup(booth)}</span>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
+    popupAnchor: [0, -17],
+  });
+}
+
+function CategoryIcon({ category, className = "h-4 w-4" }) {
+  if (category === "푸드") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+        <path d="M6 3v7" />
+        <path d="M9 3v7" />
+        <path d="M7.5 10v11" />
+        <path d="M18 3v18" />
+        <path d="M15 3v5.5c0 2 1.2 3.4 3 4.2" />
+      </svg>
+    );
+  }
+
+  if (category === "공연") return <IconMusic className={className} />;
+  if (category === "체험") return <IconBox className={className} />;
+  if (category === "편의") return <IconShield className={className} />;
+
+  if (category === "안내") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" className={className} aria-hidden>
+        <path d="M12 21s6-5.2 6-10a6 6 0 1 0-12 0c0 4.8 6 10 6 10Z" />
+        <path d="M12 10v5" />
+        <path d="M12 7h.01" />
+      </svg>
+    );
+  }
+
+  return <IconMapPin className={className} />;
+}
+
+function MapViewport({ points, currentLocation }) {
+  const map = useMap();
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => map.invalidateSize(), 80);
+    return () => window.clearTimeout(timer);
+  }, [map]);
+
+  useEffect(() => {
+    if (currentLocation) {
+      map.setView([currentLocation.latitude, currentLocation.longitude], 18, { animate: true });
+      return;
+    }
+    if (points.length > 1) {
+      map.fitBounds(points.map((point) => [point.latitude, point.longitude]), {
+        padding: [28, 28],
+        maxZoom: 18,
+      });
+      return;
+    }
+    if (points.length === 1) {
+      map.setView([points[0].latitude, points[0].longitude], 18);
+    }
+  }, [currentLocation, map, points]);
+
+  return null;
 }
 
 export default function StageMapPage() {
@@ -102,9 +234,12 @@ export default function StageMapPage() {
   const [searchOpen, setSearchOpen] = useState(() => Boolean(new URLSearchParams(location.search).get("query")));
   const [geoMessage, setGeoMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [currentLocation, setCurrentLocation] = useState(null);
 
   useEffect(() => {
-    setQuery(new URLSearchParams(location.search).get("query") || "");
+    const nextQuery = new URLSearchParams(location.search).get("query") || "";
+    setQuery(nextQuery);
+    if (nextQuery) setSearchOpen(true);
   }, [location.search]);
 
   useEffect(() => {
@@ -160,8 +295,18 @@ export default function StageMapPage() {
         normalize(displayCategory(booth)).includes(keyword);
       return matchCategory && matchQuery;
     });
-    return list.length ? list : source;
+    return list;
   }, [activeCategory, query, source]);
+
+  const mapBooths = useMemo(
+    () =>
+      filteredBooths.map((booth, index) => ({
+        booth,
+        index,
+        point: getBoothCoords(booth, index),
+      })),
+    [filteredBooths],
+  );
 
   async function handleLocate() {
     if (!navigator.geolocation) {
@@ -172,14 +317,19 @@ export default function StageMapPage() {
     setGeoMessage("현재 위치를 확인하는 중입니다.");
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        const nextLocation = {
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        };
+        setCurrentLocation(nextLocation);
         try {
-          await sendGps(position.coords.latitude, position.coords.longitude);
-          setGeoMessage("내 위치를 기준으로 주변 부스 정보를 갱신했습니다.");
+          await sendGps(nextLocation.latitude, nextLocation.longitude);
+          setGeoMessage("내 위치를 지도와 서버에 반영했습니다.");
         } catch (error) {
           setGeoMessage(error.message);
         }
       },
-      () => setGeoMessage("위치 권한이 꺼져 있어 기본 캠퍼스 지도를 표시합니다."),
+      () => setGeoMessage("위치 권한이 꺼져 있어 아주대 중심 지도를 표시합니다."),
       { enableHighAccuracy: false, maximumAge: 60000, timeout: 2500 },
     );
   }
@@ -193,10 +343,15 @@ export default function StageMapPage() {
           <button type="button" aria-label="부스 검색" onClick={() => setSearchOpen((prev) => !prev)}>
             <IconSearch className="h-5 w-5" />
           </button>
-          <button type="button" aria-label="필터 초기화" onClick={() => {
-            setActiveCategory("전체");
-            setQuery("");
-          }}>
+          <button
+            type="button"
+            aria-label="필터 초기화"
+            onClick={() => {
+              setActiveCategory("전체");
+              setQuery("");
+              setSearchOpen(false);
+            }}
+          >
             <IconSettings className="h-5 w-5" />
           </button>
         </div>
@@ -214,30 +369,70 @@ export default function StageMapPage() {
         </label>
       )}
 
-      <section className="campus-map-card" aria-label="아주대 캠퍼스 축제 지도">
-        <div className="campus-map-art">
-          <span className="map-road map-road-a" />
-          <span className="map-road map-road-b" />
-          <span className="map-lawn map-lawn-a" />
-          <span className="map-lawn map-lawn-b" />
-          <span className="map-water" />
-          <span className="map-label">노천극장</span>
-          {filteredBooths.slice(0, 8).map((booth, index) => {
-            const [x, y] = boothPinPosition(booth, index);
-            const tone = pinTone(booth, index);
+      <section className="campus-map-card real-campus-map-card" aria-label="아주대 캠퍼스 축제 지도">
+        <MapContainer
+          center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]}
+          zoom={17}
+          minZoom={15}
+          maxZoom={20}
+          scrollWheelZoom
+          className="real-campus-map"
+        >
+          <MapViewport points={mapBooths.map((item) => item.point)} currentLocation={currentLocation} />
+          <TileLayer
+            attribution="&copy; OpenStreetMap"
+            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          />
+          {mapBooths.slice(0, 40).map(({ booth, index, point }) => {
             return (
-              <button
+              <Marker
                 key={booth.id || `${booth.name}-${index}`}
-                type="button"
-                className={`map-pin map-pin--${tone}`}
-                style={{ left: `${x}%`, top: `${y}%` }}
-                aria-label={`${booth.name} 위치`}
-                onClick={() => navigate(`/booths/${booth.id || 1}`)}
+                position={[point.latitude, point.longitude]}
+                icon={markerIcon(booth, index)}
+                eventHandlers={{
+                  click: () => navigate(`/booths/${booth.id || 1}`),
+                }}
               >
-                <IconMapPin className="h-4 w-4" />
-              </button>
+                <Tooltip direction="top" offset={[0, -10]}>
+                  <span className="map-tooltip">{booth.name}</span>
+                </Tooltip>
+                <Popup>
+                  <div className="map-popup-card">
+                    <strong>{booth.name}</strong>
+                    <span>{displayCategory(booth)} · 대기 {boothWait(booth)}</span>
+                    <button type="button" onClick={() => navigate(`/booths/${booth.id || 1}`)}>
+                      상세 보기
+                    </button>
+                  </div>
+                </Popup>
+              </Marker>
             );
           })}
+          {currentLocation && (
+            <CircleMarker
+              center={[currentLocation.latitude, currentLocation.longitude]}
+              radius={10}
+              pathOptions={{
+                color: "#ffffff",
+                weight: 4,
+                fillColor: "#2563eb",
+                fillOpacity: 0.95,
+              }}
+            >
+              <Tooltip direction="top" offset={[0, -10]}>내 위치</Tooltip>
+            </CircleMarker>
+          )}
+        </MapContainer>
+        <div className="campus-map-overlay" aria-hidden="true">
+          <div className="map-purpose-badge">
+            <strong>아주대 캠퍼스 축제 지도</strong>
+            <span>부스 · 공연 · 편의 위치</span>
+          </div>
+          <div className="map-mini-legend">
+            <span><i className="legend-dot legend-dot--orange" />푸드</span>
+            <span><i className="legend-dot legend-dot--violet" />공연</span>
+            <span><i className="legend-dot legend-dot--green" />편의</span>
+          </div>
         </div>
         <button type="button" className="map-location-button" onClick={handleLocate}>내 위치</button>
       </section>
@@ -260,15 +455,7 @@ export default function StageMapPage() {
                 onClick={() => setActiveCategory(item.label)}
               >
                 <span className={`category-chip-icon category-chip-icon--${item.color}`}>
-                  {item.label === "공연" ? (
-                    <IconMusic className="h-4 w-4" />
-                  ) : item.label === "편의" ? (
-                    <IconShield className="h-4 w-4" />
-                  ) : item.label === "체험" ? (
-                    <IconBox className="h-4 w-4" />
-                  ) : (
-                    <IconMapPin className="h-4 w-4" />
-                  )}
+                  <CategoryIcon category={item.label} className="h-4 w-4" />
                 </span>
                 <strong>{item.label}</strong>
               </button>
@@ -290,14 +477,8 @@ export default function StageMapPage() {
               className="booth-mini-row"
               onClick={() => navigate(`/booths/${booth.id || 1}`)}
             >
-              <span className={`map-list-icon map-list-icon--${pinTone(booth, index)}`}>
-                {displayCategory(booth) === "공연" ? (
-                  <IconMusic className="h-4 w-4" />
-                ) : displayCategory(booth) === "편의" ? (
-                  <IconShield className="h-4 w-4" />
-                ) : (
-                  <IconMapPin className="h-4 w-4" />
-                )}
+              <span className={`map-list-icon map-list-icon--${pinTone({ ...booth, category: listIconCategory(booth, index) }, index)}`}>
+                <CategoryIcon category={listIconCategory(booth, index)} className="h-4 w-4" />
               </span>
               <span className="booth-mini-main">
                 <strong>{booth.name}</strong>
@@ -311,7 +492,15 @@ export default function StageMapPage() {
         </div>
       </section>
 
-      <button type="button" className="primary-wide-button" onClick={() => setActiveCategory("전체")}>
+      <button
+        type="button"
+        className="primary-wide-button"
+        onClick={() => {
+          setActiveCategory("전체");
+          setQuery("");
+          setSearchOpen(false);
+        }}
+      >
         전체 지도 보기
       </button>
     </section>

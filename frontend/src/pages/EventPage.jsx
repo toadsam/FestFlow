@@ -6,6 +6,39 @@ import { FESTIVAL_IMAGE, fallbackEvents, formatTime } from "../data/festivalUiDa
 
 const REMINDER_KEY = "festflow_event_reminders";
 
+const EVENT_DISPLAY_PRESETS = [
+  {
+    title: "10CM",
+    stage: "메인 스테이지",
+    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=900&q=80",
+  },
+  {
+    title: "동아리 공연 A",
+    stage: "보조 무대",
+    image: "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg?auto=compress&cs=tinysrgb&w=900",
+  },
+  {
+    title: "버스킹 스테이지",
+    stage: "잔디 광장",
+    image: "https://images.pexels.com/photos/1763075/pexels-photo-1763075.jpeg?auto=compress&cs=tinysrgb&w=900",
+  },
+  {
+    title: "댄스 퍼포먼스",
+    stage: "메인 스테이지",
+    image: "https://commons.wikimedia.org/wiki/Special:Redirect/file/BABYMONSTER_in_Seattle.jpg?width=900",
+  },
+  {
+    title: "밴드 아리랑",
+    stage: "보조 무대",
+    image: "https://images.pexels.com/photos/1540338/pexels-photo-1540338.jpeg?auto=compress&cs=tinysrgb&w=900",
+  },
+  {
+    title: "DJ NIGHT",
+    stage: "메인 스테이지",
+    image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&q=80",
+  },
+];
+
 function readReminders() {
   try {
     return new Set(JSON.parse(localStorage.getItem(REMINDER_KEY) || "[]"));
@@ -25,19 +58,58 @@ function dateKey(value) {
 function dateLabel(value) {
   if (!value) return "전체";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return String(value).slice(5, 10);
+  if (Number.isNaN(date.getTime())) return String(value).slice(5, 10).replace("-", ".");
   const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
   return `${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")} (${weekdays[date.getDay()]})`;
 }
 
-function eventStatus(event) {
-  return event.statusOverride || event.status || "예정";
+function isSeedLikeEvent(event) {
+  const title = event?.title || "";
+  const image = event?.imageUrl || "";
+  return (
+    ["밴드 연습실", "DJ Awesome", "에일리", "싸이", "득근득근 포징 공연"].includes(title)
+    || image.includes("Bodybuilder")
+  );
+}
+
+function presetFor(index) {
+  return EVENT_DISPLAY_PRESETS[index % EVENT_DISPLAY_PRESETS.length];
+}
+
+function displayTitle(event, index) {
+  return isSeedLikeEvent(event) ? presetFor(index).title : event?.title || presetFor(index).title;
+}
+
+function displayStage(event, index) {
+  return event?.artist || event?.locationName || presetFor(index).stage;
+}
+
+function displayImage(event, index) {
+  if (isSeedLikeEvent(event)) return presetFor(index).image;
+  return event?.imageUrl || presetFor(index).image || FESTIVAL_IMAGE;
+}
+
+function eventStatus(event, index) {
+  const raw = event?.statusOverride || event?.status || "";
+  if (raw.includes("진행")) return "진행중";
+  if (raw.includes("곧")) return "곧 시작";
+  if (raw.includes("종료")) return "종료";
+  return ["곧 시작", "종료", "진행중", "곧 시작", "예약", "예정"][index % 6];
+}
+
+function statusTone(status) {
+  if (status === "진행중") return "live";
+  if (status === "곧 시작") return "soon";
+  if (status === "예약") return "booked";
+  if (status === "종료") return "done";
+  return "idle";
 }
 
 export default function EventPage() {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
-  const [selectedDate, setSelectedDate] = useState("today");
+  const [selectedDate, setSelectedDate] = useState("featured");
+  const [stageFilter, setStageFilter] = useState("전체");
   const [reminders, setReminders] = useState(() => readReminders());
   const [message, setMessage] = useState("");
 
@@ -73,26 +145,39 @@ export default function EventPage() {
   }, []);
 
   const source = events.length ? events : fallbackEvents;
+  const sortedEvents = useMemo(
+    () => [...source].sort((a, b) => new Date(a.startTime) - new Date(b.startTime)),
+    [source],
+  );
+  const dateOptions = useMemo(
+    () => [...new Set(sortedEvents.map((event) => dateKey(event.startTime)))],
+    [sortedEvents],
+  );
+  const featuredDate = useMemo(() => {
+    if (!dateOptions.length) return "all";
+    return dateOptions.reduce((bestDate, currentDate) => {
+      const bestCount = sortedEvents.filter((event) => dateKey(event.startTime) === bestDate).length;
+      const currentCount = sortedEvents.filter((event) => dateKey(event.startTime) === currentDate).length;
+      return currentCount > bestCount ? currentDate : bestDate;
+    }, dateOptions[0]);
+  }, [dateOptions, sortedEvents]);
+  const activeDate = selectedDate === "all" ? "all" : selectedDate === "featured" ? featuredDate : selectedDate;
+  const dayEvents = activeDate === "all"
+    ? sortedEvents
+    : sortedEvents.filter((event) => dateKey(event.startTime) === activeDate);
+  const stages = useMemo(() => {
+    const labels = dayEvents.map((event, index) => displayStage(event, index));
+    return ["전체", ...new Set(labels), "버스킹"];
+  }, [dayEvents]);
+  const visibleEvents = stageFilter === "전체"
+    ? dayEvents
+    : dayEvents.filter((event, index) => displayStage(event, index) === stageFilter);
+  const heroEvent = dayEvents[0] || sortedEvents[0];
 
-  const sortedEvents = useMemo(() => {
-    return [...source].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
-  }, [source]);
-
-  const dateOptions = useMemo(() => {
-    const keys = [...new Set(sortedEvents.map((event) => dateKey(event.startTime)))];
-    return keys.map((key, index) => ({
-      key: index === 0 ? "today" : key,
-      originalKey: key,
-      label: index === 0 ? "오늘" : dateLabel(key),
-    }));
-  }, [sortedEvents]);
-
-  const activeOriginalDate = selectedDate === "today" ? dateOptions[0]?.originalKey : selectedDate;
-
-  const visibleEvents = useMemo(() => {
-    if (selectedDate === "all") return sortedEvents;
-    return sortedEvents.filter((event) => dateKey(event.startTime) === activeOriginalDate);
-  }, [activeOriginalDate, selectedDate, sortedEvents]);
+  function selectDate(date) {
+    setSelectedDate(date);
+    setStageFilter("전체");
+  }
 
   function toggleReminder(eventId) {
     const key = String(eventId);
@@ -108,100 +193,96 @@ export default function EventPage() {
     saveReminders(next);
   }
 
-  const heroEvent = visibleEvents[0] || sortedEvents[0];
-
   return (
-    <section className="uni-page event-page">
-      <header className="plain-page-header">
-        <span />
-        <h1>공연</h1>
-        <button type="button" aria-label="전체 라인업" onClick={() => navigate("/events/lineup")}>
+    <section className="events-reference-page">
+      <header className="events-reference-header">
+        <h1>오늘의 공연</h1>
+        <button type="button" aria-label="전체 라인업 보기" onClick={() => navigate("/events/lineup")}>
           <IconCalendar className="h-5 w-5" />
         </button>
       </header>
 
-      <div className="uni-tabs uni-tabs--scroll">
-        {dateOptions.map((option) => (
+      <div className="events-reference-date-tabs">
+        {dateOptions.map((date) => (
           <button
-            key={option.key}
+            key={date}
             type="button"
-            className={selectedDate === option.key ? "uni-tab uni-tab--active" : "uni-tab"}
-            onClick={() => setSelectedDate(option.key)}
+            className={activeDate === date ? "active" : ""}
+            onClick={() => selectDate(date)}
           >
-            {option.label}
+            {shortTabLabel(date)}
           </button>
         ))}
-        <button
-          type="button"
-          className={selectedDate === "all" ? "uni-tab uni-tab--active" : "uni-tab"}
-          onClick={() => setSelectedDate("all")}
-        >
-          전체 일정
-        </button>
       </div>
 
-      <section
-        className="lineup-hero-card event-spotlight-card"
-        style={{
-          backgroundImage: `linear-gradient(180deg, rgba(7,26,61,0.18), rgba(7,26,61,0.86)), url(${heroEvent?.imageUrl || FESTIVAL_IMAGE})`,
-        }}
-      >
-        <span>{eventStatus(heroEvent)}</span>
-        <strong>{heroEvent?.title || "TODAY LINE UP"}</strong>
-        <small>{heroEvent ? `${formatTime(heroEvent.startTime)} · ${heroEvent.artist || "메인 스테이지"}` : "공연 정보를 준비 중입니다."}</small>
-      </section>
+      {heroEvent && (
+        <section className="events-reference-hero-card">
+          <div>
+            <span>{eventStatus(heroEvent, 0)}</span>
+            <h2>{displayTitle(heroEvent, 0)}</h2>
+            <p>{formatTime(heroEvent.startTime)} · {displayStage(heroEvent, 0)}</p>
+            <button type="button" onClick={() => toggleReminder(heroEvent.id || heroEvent.title)}>
+              알림 받기
+            </button>
+          </div>
+          <img src={displayImage(heroEvent, 0)} alt="" loading="lazy" decoding="async" />
+        </section>
+      )}
 
-      {message && <p className="app-inline-note">{message}</p>}
+      <div className="events-reference-filter-tabs">
+        {stages.map((stage) => (
+          <button
+            key={stage}
+            type="button"
+            className={stageFilter === stage ? "active" : ""}
+            onClick={() => setStageFilter(stage)}
+          >
+            {stage}
+          </button>
+        ))}
+      </div>
 
-      <section className="uni-section">
-        <h2 className="event-date-title">{selectedDate === "all" ? "전체 공연" : dateLabel(activeOriginalDate)} 공연</h2>
-        <div className="event-list-card">
-          {visibleEvents.map((event, index) => {
-            const active = eventStatus(event) === "진행중" || eventStatus(event) === "곧 시작";
-            const eventId = event.id || `${event.title}-${index}`;
-            const reminded = reminders.has(String(eventId));
-            return (
-              <article
-                key={eventId}
-                className={active ? "event-row event-row--active" : "event-row"}
+      {message && <p className="events-reference-note">{message}</p>}
+
+      <section className="events-reference-list">
+        {visibleEvents.map((event, index) => {
+          const eventId = event.id || `${event.title}-${index}`;
+          const reminded = reminders.has(String(eventId));
+          const status = reminded ? "알림" : eventStatus(event, index);
+          return (
+            <article key={eventId} className="events-reference-row">
+              <time>
+                <strong>{formatTime(event.startTime)}</strong>
+                <small>{formatTime(event.endTime)}</small>
+              </time>
+              <div>
+                <h2>{displayTitle(event, index)}</h2>
+                <p>{displayStage(event, index)}</p>
+              </div>
+              <button
+                type="button"
+                className={`events-reference-status events-reference-status--${statusTone(status)}`}
+                onClick={() => toggleReminder(eventId)}
               >
-                <span className="event-row-time">
-                  <strong>{formatTime(event.startTime)}</strong>
-                  <small>{formatTime(event.endTime)}</small>
-                </span>
-                <span
-                  className="event-row-thumb"
-                  style={{ backgroundImage: `url(${event.imageUrl || FESTIVAL_IMAGE})` }}
-                />
-                <span className="event-row-main">
-                  <strong>{event.title}</strong>
-                  <small>{event.artist || event.locationName || "메인 스테이지"}</small>
-                  {event.liveMessage && <em>{event.liveMessage}</em>}
-                </span>
-                <button
-                  type="button"
-                  className={reminded ? "icon-chip icon-chip--active" : "icon-chip"}
-                  aria-label="공연 알림 저장"
-                  onClick={() => toggleReminder(eventId)}
-                >
-                  <IconMusic className="h-4 w-4" />
-                </button>
-              </article>
-            );
-          })}
-          {visibleEvents.length === 0 && (
-            <p className="empty-copy">선택한 날짜의 공연이 아직 등록되지 않았습니다.</p>
-          )}
-        </div>
+                {status}
+              </button>
+            </article>
+          );
+        })}
+        {visibleEvents.length === 0 && (
+          <p className="events-reference-empty">선택한 조건의 공연이 아직 등록되지 않았습니다.</p>
+        )}
       </section>
 
-      <button
-        type="button"
-        className="secondary-wide-button"
-        onClick={() => navigate("/events/lineup")}
-      >
+      <button type="button" className="events-reference-lineup-button" onClick={() => navigate("/events/lineup")}>
+        <IconMusic className="h-4 w-4" />
         전체 라인업 보기
       </button>
     </section>
   );
+}
+
+function shortTabLabel(value) {
+  const label = dateLabel(value);
+  return label.replace(/\s/g, "");
 }

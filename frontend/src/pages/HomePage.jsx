@@ -3,8 +3,6 @@ import { useNavigate } from "react-router-dom";
 import {
   createBoothStream,
   createEventStream,
-  createNoticeStream,
-  fetchActiveNotices,
   fetchBooths,
   fetchEvents,
   fetchTrafficHourly,
@@ -15,16 +13,14 @@ import {
   IconMusic,
   IconSearch,
 } from "../components/UxIcons";
+import { resolveBoothImageUrl } from "../config/boothImages";
 import {
+  FESTIVAL_IMAGE,
   fallbackBooths,
   fallbackEvents,
 } from "../data/festivalUiData";
 
-function waitLabel(booth) {
-  const value = booth?.estimatedWaitMinutes ?? booth?.wait;
-  if (value == null || value === "") return "대기 확인 중";
-  return `${String(value).replace("분", "")}분 대기`;
-}
+const EVENT_RECOMMEND_IMAGE = "/images/og-festflow.png";
 
 function reservationLabel(booth) {
   if (booth?.reservationEnabled === false) return "현장 이용";
@@ -63,14 +59,13 @@ export default function HomePage() {
     Promise.allSettled([
       fetchBooths(),
       fetchEvents(),
-      fetchActiveNotices(),
       fetchTrafficHourly(),
-    ]).then(([boothResult, eventResult, noticeResult, trafficResult]) => {
+    ]).then(([boothResult, eventResult, trafficResult]) => {
       if (!mounted) return;
       if (boothResult.status === "fulfilled") setBooths(boothResult.value || []);
       if (eventResult.status === "fulfilled") setEvents(eventResult.value || []);
       if (trafficResult.status === "fulfilled") setTraffic(trafficResult.value || []);
-      const failed = [boothResult, eventResult, noticeResult].some((item) => item.status === "rejected");
+      const failed = [boothResult, eventResult].some((item) => item.status === "rejected");
       setMessage(failed ? "일부 실시간 정보는 기본 안내로 표시 중입니다." : "");
     });
 
@@ -105,21 +100,6 @@ export default function HomePage() {
       // Streaming is optional for the public home.
     }
 
-    try {
-      const noticeStream = createNoticeStream();
-      noticeStream.addEventListener("notices", (event) => {
-        try {
-          const next = JSON.parse(event.data);
-          if (Array.isArray(next)) setNotices(next);
-        } catch {
-          // Ignore malformed stream payloads.
-        }
-      });
-      streams.push(noticeStream);
-    } catch {
-      // Streaming is optional for the public home.
-    }
-
     return () => {
       mounted = false;
       streams.forEach((stream) => stream.close());
@@ -136,26 +116,37 @@ export default function HomePage() {
     const nextEvent = [...eventSource]
       .filter((event) => event.startTime)
       .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))[0];
-    const reservable = boothSource.find(
-      (booth) => booth.reservationEnabled !== false && Number(booth.reservationAvailableSeats) > 0,
-    ) || boothSource[0];
+    const firstBooth = sortedBooths[0];
+    const reservable =
+      boothSource.find(
+        (booth) =>
+          booth.id !== firstBooth?.id &&
+          booth.reservationEnabled !== false &&
+          Number(booth.reservationAvailableSeats) > 0,
+      ) ||
+      sortedBooths.find((booth) => booth.id !== firstBooth?.id) ||
+      boothSource[0];
 
     return [
       {
-        id: sortedBooths[0]?.id,
+        id: firstBooth?.id,
         type: "booth",
-        tag: crowdLevel(Math.min(95, Number(sortedBooths[0]?.estimatedWaitMinutes || 0) * 5)),
-        title: sortedBooths[0]?.name || "응급 케어 스팟",
-        caption: sortedBooths[0] ? compactWaitLabel(sortedBooths[0]) : "대기 0분",
+        tag: crowdLevel(Math.min(95, Number(firstBooth?.estimatedWaitMinutes || 0) * 5)),
+        title: firstBooth?.name || "응급 케어 스팟",
+        caption: firstBooth ? compactWaitLabel(firstBooth) : "대기 0분",
+        image: firstBooth ? resolveBoothImageUrl(firstBooth) : FESTIVAL_IMAGE,
+        imageFocus: "center",
       },
       {
         id: nextEvent?.id,
         type: "event",
-        tag: "큰 시간",
+        tag: "곧 시작",
         title: nextEvent?.title || "중앙무대 공연",
         caption: nextEvent?.startTime
           ? `${new Date(nextEvent.startTime).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 시작`
           : "18:30 시작",
+        image: nextEvent?.imageUrl || EVENT_RECOMMEND_IMAGE,
+        imageFocus: nextEvent?.imageFocus || "center",
       },
       {
         id: reservable?.id,
@@ -163,12 +154,14 @@ export default function HomePage() {
         tag: "예약 가능",
         title: reservable?.name || "푸드 박스 부스",
         caption: reservable ? reservationLabel(reservable) : "예약 가능 12명",
+        image: reservable ? resolveBoothImageUrl(reservable) : "/images/booths/%EC%A3%BC%EC%A0%90%EC%82%AC%EC%A7%84.jpg",
+        imageFocus: "center",
       },
     ];
   }, [boothSource, eventSource]);
 
   const crowdPercent = useMemo(() => {
-    if (!traffic.length) return 48;
+    if (!traffic.length) return 55;
     const latest = Number(traffic[traffic.length - 1]?.count) || 0;
     const max = Math.max(1, ...traffic.map((item) => Number(item.count) || 0));
     return Math.min(99, Math.max(1, Math.round((latest / max) * 100)));
@@ -217,11 +210,15 @@ export default function HomePage() {
           <button type="button" onClick={() => navigate("/stage-map")}>더보기</button>
         </div>
         <div className="recommend-strip">
-          {homeCards.map((item, index) => (
+          {homeCards.slice(0, 3).map((item, index) => (
             <button
               key={`${item.type}-${item.id || item.title}`}
               type="button"
               className={`recommend-card recommend-card--${cardTone(index)}`}
+              style={{
+                "--recommend-image": `url("${item.image}")`,
+                "--recommend-focus": item.imageFocus || "center",
+              }}
               onClick={() => {
                 if (item.type === "event") navigate("/events");
                 else navigate(item.id ? `/booths/${item.id}` : "/stage-map");
