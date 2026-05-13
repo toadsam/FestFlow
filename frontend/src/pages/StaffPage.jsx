@@ -21,6 +21,9 @@ import {
   loginStaff,
   logoutStaff,
   translateText as requestTranslation,
+  deleteLostItem,
+  updateLostItem,
+  updateLostItemStatus,
   updateMyStaffStatus,
 } from "../api";
 import {
@@ -65,6 +68,12 @@ const EMPTY_LOST_FORM = {
   foundLocation: "",
   finderContact: "",
 };
+
+const LOST_STATUS_OPTIONS = [
+  { value: "REGISTERED", label: "보관중" },
+  { value: "OWNER_CLAIMED", label: "소유자 확인중" },
+  { value: "RETURNED", label: "반환완료" },
+];
 
 const TRANSLATE_LANGUAGES = [
   { value: "ko", label: "한국어" },
@@ -140,6 +149,52 @@ function relativeTime(value) {
   if (minutes < 1) return "방금 전";
   if (minutes < 60) return `${minutes}분 전`;
   return `${Math.round(minutes / 60)}시간 전`;
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("ko-KR", {
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function lostStatusLabel(status, fallback) {
+  return LOST_STATUS_OPTIONS.find((option) => option.value === status)?.label || fallback || status || "보관중";
+}
+
+function lostStatusTone(status) {
+  if (status === "RETURNED") return "green";
+  if (status === "OWNER_CLAIMED") return "amber";
+  return "blue";
+}
+
+function createLostEditForm(item) {
+  return {
+    title: item?.title || "",
+    description: item?.description || "",
+    category: item?.category || "기타",
+    foundLocation: item?.foundLocation || "",
+    finderContact: item?.finderContact || "",
+    imageUrl: item?.imageUrl || "",
+    status: item?.status || "REGISTERED",
+    resolveNote: item?.resolveNote || "",
+  };
+}
+
+function normalizeAiAssist(result) {
+  if (!result) return null;
+  return {
+    title: result.title || "AI 응답",
+    summary: result.summary || result.answer || result.content || result.message || "",
+    highlights: Array.isArray(result.highlights) ? result.highlights : [],
+    actions: Array.isArray(result.recommendedActions) ? result.recommendedActions : [],
+    confidence: result.confidence || "",
+  };
 }
 
 function initialOf(name) {
@@ -258,13 +313,18 @@ export default function StaffPage() {
   const [lostForm, setLostForm] = useState(EMPTY_LOST_FORM);
   const [lostFile, setLostFile] = useState(null);
   const [lostSaving, setLostSaving] = useState(false);
+  const [selectedLostId, setSelectedLostId] = useState(null);
+  const [lostEditForm, setLostEditForm] = useState(null);
+  const [lostActionBusy, setLostActionBusy] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiText, setAiText] = useState("");
+  const [aiResult, setAiResult] = useState(null);
   const [translateForm, setTranslateForm] = useState(EMPTY_TRANSLATE_FORM);
   const [translateBusy, setTranslateBusy] = useState(false);
   const [translateResult, setTranslateResult] = useState(null);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voicePreview, setVoicePreview] = useState("");
+  const [showAllNotices, setShowAllNotices] = useState(false);
   const recognitionRef = useRef(null);
 
   async function load(token = staffToken) {
@@ -380,6 +440,20 @@ export default function StaffPage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (lostItems.length === 0) {
+      setSelectedLostId(null);
+      setLostEditForm(null);
+      return;
+    }
+
+    if (!selectedLostId || !lostItems.some((item) => String(item.id) === String(selectedLostId))) {
+      const first = lostItems[0];
+      setSelectedLostId(first.id);
+      setLostEditForm(createLostEditForm(first));
+    }
+  }, [lostItems, selectedLostId]);
+
   const statusSummary = summarizeStaff(staffList);
 
   const assignedBooth = useMemo(
@@ -397,6 +471,8 @@ export default function StaffPage() {
   );
 
   const visibleStaff = showAllStaff ? staffList : staffList.slice(0, 3);
+  const selectedLostItem = lostItems.find((item) => String(item.id) === String(selectedLostId)) || null;
+  const noticesToShow = showAllNotices ? notices : notices.slice(0, 3);
   const visibleLocationCount = staffList.filter(
     (staff) =>
       staff.locationSharingEnabled &&
@@ -435,6 +511,10 @@ export default function StaffPage() {
     setNotices([]);
     setLostItems([]);
     setFocusPoint(null);
+    setSelectedLostId(null);
+    setLostEditForm(null);
+    setAiResult(null);
+    setAiText("");
   }
 
   async function saveMyStatus(
@@ -520,16 +600,97 @@ export default function StaffPage() {
     }
     setLostSaving(true);
     try {
-      await createLostItem(lostForm, lostFile, staffToken);
+      const created = await createLostItem(lostForm, lostFile, staffToken);
       setLostForm(EMPTY_LOST_FORM);
       setLostFile(null);
       setMessage("분실물을 등록했습니다.");
       const next = await fetchLostItems(staffToken);
       setLostItems(next || []);
+      setSelectedLostId(created.id);
+      setLostEditForm(createLostEditForm(created));
     } catch (error) {
       setMessage(error.message);
     } finally {
       setLostSaving(false);
+    }
+  }
+
+  function selectLostItem(item) {
+    setSelectedLostId(item.id);
+    setLostEditForm(createLostEditForm(item));
+  }
+
+  function updateLostItemInState(updated) {
+    setLostItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    setSelectedLostId(updated.id);
+    setLostEditForm(createLostEditForm(updated));
+  }
+
+  async function handleLostStatusChange(status) {
+    if (!selectedLostItem) return;
+    setLostActionBusy(`status-${selectedLostItem.id}`);
+    try {
+      const updated = await updateLostItemStatus(
+        selectedLostItem.id,
+        { status, resolveNote: lostEditForm?.resolveNote || selectedLostItem.resolveNote || "" },
+        staffToken,
+      );
+      updateLostItemInState(updated);
+      setMessage("분실물 상태를 변경했습니다.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLostActionBusy("");
+    }
+  }
+
+  async function handleUpdateLostItem(event) {
+    event.preventDefault();
+    if (!selectedLostItem || !lostEditForm) return;
+    if (!lostEditForm.title.trim() || !lostEditForm.foundLocation.trim()) {
+      setMessage("분실물명과 발견 위치를 입력해 주세요.");
+      return;
+    }
+
+    setLostActionBusy(`update-${selectedLostItem.id}`);
+    try {
+      const updated = await updateLostItem(
+        selectedLostItem.id,
+        {
+          title: lostEditForm.title,
+          description: lostEditForm.description || "-",
+          category: lostEditForm.category || "기타",
+          foundLocation: lostEditForm.foundLocation,
+          finderContact: lostEditForm.finderContact || "",
+          imageUrl: lostEditForm.imageUrl || "",
+          status: lostEditForm.status || selectedLostItem.status || "REGISTERED",
+          resolveNote: lostEditForm.resolveNote || "",
+        },
+        staffToken,
+      );
+      updateLostItemInState(updated);
+      setMessage("분실물 정보를 수정했습니다.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLostActionBusy("");
+    }
+  }
+
+  async function handleDeleteLostItem() {
+    if (!selectedLostItem) return;
+    const confirmed = window.confirm(`${selectedLostItem.title} 분실물을 삭제할까요?`);
+    if (!confirmed) return;
+
+    setLostActionBusy(`delete-${selectedLostItem.id}`);
+    try {
+      await deleteLostItem(selectedLostItem.id, staffToken);
+      setLostItems((prev) => prev.filter((item) => item.id !== selectedLostItem.id));
+      setMessage("분실물을 삭제했습니다.");
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      setLostActionBusy("");
     }
   }
 
@@ -543,8 +704,11 @@ export default function StaffPage() {
           : type === "lost"
             ? await createStaffAiLostItemAssist("분실물 센터 응대 문구를 작성해줘.", staffToken)
             : await createStaffAiReplyDraft("축제 방문객에게 친절한 안내 답변을 작성해줘.", staffToken);
-      setAiText(result.answer || result.content || result.message || "AI 응답을 생성했습니다.");
+      const normalized = normalizeAiAssist(result);
+      setAiResult(normalized);
+      setAiText(normalized?.summary || "AI 응답을 생성했습니다.");
     } catch (error) {
+      setAiResult(null);
       setAiText(error.message);
     } finally {
       setAiBusy(false);
@@ -880,7 +1044,28 @@ export default function StaffPage() {
             <strong>응대 문구</strong>
           </button>
         </div>
-        {aiText && <p className="staff-reference-ai-result">{aiText}</p>}
+        {aiResult ? (
+          <article className="staff-reference-ai-result staff-reference-ai-card">
+            <strong>{aiResult.title}</strong>
+            {aiResult.summary && <p>{aiResult.summary}</p>}
+            {aiResult.highlights.length > 0 && (
+              <div>
+                {aiResult.highlights.map((item) => (
+                  <span key={item}>{item}</span>
+                ))}
+              </div>
+            )}
+            {aiResult.actions.length > 0 && (
+              <ul>
+                {aiResult.actions.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            )}
+          </article>
+        ) : (
+          aiText && <p className="staff-reference-ai-result">{aiText}</p>
+        )}
       </section>
 
       <section className="staff-reference-section staff-reference-translate">
@@ -1089,17 +1274,134 @@ export default function StaffPage() {
         </button>
       </form>
 
+      <section className="staff-reference-section staff-lost-manager">
+        <div className="staff-reference-section-head">
+          <h2>분실물 센터</h2>
+          <span>{lostItems.length}건 관리</span>
+        </div>
+        <div className="staff-lost-manager-grid">
+          <div className="staff-lost-list">
+            {lostItems.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                className={String(selectedLostItem?.id) === String(item.id) ? "active" : ""}
+                onClick={() => selectLostItem(item)}
+              >
+                {item.imageUrl ? <img src={item.imageUrl} alt="" /> : <IconBox className="h-5 w-5" />}
+                <span>
+                  <strong>{item.title}</strong>
+                  <small>{item.foundLocation} · {formatDateTime(item.createdAt)}</small>
+                </span>
+                <em className={`staff-lost-status staff-lost-status--${lostStatusTone(item.status)}`}>
+                  {lostStatusLabel(item.status, item.statusLabel)}
+                </em>
+              </button>
+            ))}
+            {lostItems.length === 0 && <p>등록된 분실물이 없습니다.</p>}
+          </div>
+
+          {selectedLostItem && lostEditForm && (
+            <form className="staff-lost-detail" onSubmit={handleUpdateLostItem}>
+              <div className="staff-lost-detail-head">
+                {selectedLostItem.imageUrl ? (
+                  <img src={selectedLostItem.imageUrl} alt="" />
+                ) : (
+                  <IconBox className="h-6 w-6" />
+                )}
+                <div>
+                  <strong>{selectedLostItem.title}</strong>
+                  <small>접수 {formatDateTime(selectedLostItem.createdAt)}</small>
+                </div>
+              </div>
+
+              <div className="staff-lost-contact-grid">
+                <p><span>습득자 연락처</span><strong>{selectedLostItem.finderContact || "미입력"}</strong></p>
+                <p><span>소유자 요청</span><strong>{selectedLostItem.claimantName || "없음"}</strong></p>
+                <p><span>소유자 연락처</span><strong>{selectedLostItem.claimantContact || "없음"}</strong></p>
+                <p><span>요청 메모</span><strong>{selectedLostItem.claimantNote || "없음"}</strong></p>
+              </div>
+
+              <div className="staff-lost-status-actions">
+                {LOST_STATUS_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={lostEditForm.status === option.value ? "active" : ""}
+                    onClick={() => {
+                      setLostEditForm((prev) => ({ ...prev, status: option.value }));
+                      handleLostStatusChange(option.value);
+                    }}
+                    disabled={Boolean(lostActionBusy)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+
+              <input
+                value={lostEditForm.title}
+                onChange={(event) => setLostEditForm((prev) => ({ ...prev, title: event.target.value }))}
+                placeholder="분실물명"
+              />
+              <div className="staff-lost-edit-row">
+                <input
+                  value={lostEditForm.category}
+                  onChange={(event) => setLostEditForm((prev) => ({ ...prev, category: event.target.value }))}
+                  placeholder="카테고리"
+                />
+                <input
+                  value={lostEditForm.foundLocation}
+                  onChange={(event) => setLostEditForm((prev) => ({ ...prev, foundLocation: event.target.value }))}
+                  placeholder="발견 위치"
+                />
+              </div>
+              <input
+                value={lostEditForm.finderContact}
+                onChange={(event) => setLostEditForm((prev) => ({ ...prev, finderContact: event.target.value }))}
+                placeholder="습득자 연락처"
+              />
+              <textarea
+                value={lostEditForm.description}
+                onChange={(event) => setLostEditForm((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder="상세 설명"
+                rows={2}
+              />
+              <textarea
+                value={lostEditForm.resolveNote}
+                onChange={(event) => setLostEditForm((prev) => ({ ...prev, resolveNote: event.target.value }))}
+                placeholder="처리 메모"
+                rows={2}
+              />
+              <div className="staff-lost-detail-actions">
+                <button type="submit" disabled={Boolean(lostActionBusy)}>
+                  {lostActionBusy.startsWith("update") ? "수정 중" : "정보 수정"}
+                </button>
+                <button type="button" onClick={handleDeleteLostItem} disabled={Boolean(lostActionBusy)}>
+                  {lostActionBusy.startsWith("delete") ? "삭제 중" : "삭제"}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+      </section>
+
       <section className="staff-reference-section">
         <div className="staff-reference-section-head">
           <h2>공지사항</h2>
-          <span>{notices.length}건</span>
+          <button type="button" onClick={() => setShowAllNotices((prev) => !prev)}>
+            {showAllNotices ? "접기" : "전체 보기"}
+          </button>
         </div>
         <div className="staff-reference-notices">
-          {notices.slice(0, 3).map((notice) => (
+          {noticesToShow.map((notice) => (
             <article key={notice.id || notice.title}>
               <IconAlert className="h-4 w-4" />
-              <strong>{notice.title}</strong>
-              <small>{notice.createdAt?.replace("T", " ").slice(5, 10) || "오늘"}</small>
+              <div>
+                <strong>{notice.title}</strong>
+                {showAllNotices && notice.content && <p>{notice.content}</p>}
+              </div>
+              <small>{formatDateTime(notice.createdAt)}</small>
             </article>
           ))}
           {notices.length === 0 && <p>현재 활성 공지가 없습니다.</p>}
