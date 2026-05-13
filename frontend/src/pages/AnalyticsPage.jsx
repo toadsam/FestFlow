@@ -1,214 +1,173 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import { fetchHeatmap, fetchPopularBooths, fetchTrafficHourly } from "../api";
-import { IconChart, IconFlame, IconRefresh, IconTrophy, IconUsers } from "../components/UxIcons";
+import { useEffect, useMemo, useState } from "react";
+import {
+  createCongestionStream,
+  fetchHeatmap,
+  fetchPopularBooths,
+  fetchStageCrowd,
+  fetchTrafficHourly,
+} from "../api";
+import { IconChart, IconRefresh } from "../components/UxIcons";
+import { crowdZones, trafficPrediction } from "../data/festivalUiData";
 
-function intensityClass(intensity) {
-  if (intensity >= 8) return "bg-rose-500";
-  if (intensity >= 5) return "bg-orange-400";
-  if (intensity >= 3) return "bg-amber-400";
-  return "bg-emerald-300";
+function level(percent) {
+  if (percent >= 75) return "혼잡";
+  if (percent >= 45) return "보통";
+  return "여유";
 }
-
-const trafficPreview = [
-  { hour: "18:00", count: 18 },
-  { hour: "19:00", count: 34 },
-  { hour: "20:00", count: 42 },
-  { hour: "21:00", count: 56 },
-  { hour: "22:00", count: 46 },
-  { hour: "23:00", count: 31 },
-];
-
-const campusZonePreview = [
-  { boothId: "preview-stage", boothName: "노천극장", score: "대기" },
-  { boothId: "preview-plaza", boothName: "중앙광장", score: "대기" },
-  { boothId: "preview-booth", boothName: "축제 본부", score: "대기" },
-];
-
-const heatmapPreview = [
-  { latitude: 37.282, longitude: 127.046, intensity: 2, label: "노천극장" },
-  { latitude: 37.281, longitude: 127.045, intensity: 4, label: "중앙광장" },
-  { latitude: 37.280, longitude: 127.044, intensity: 6, label: "부스 거리" },
-  { latitude: 37.283, longitude: 127.047, intensity: 3, label: "축제 본부" },
-];
 
 export default function AnalyticsPage() {
   const [traffic, setTraffic] = useState([]);
   const [popular, setPopular] = useState([]);
   const [heatmap, setHeatmap] = useState([]);
-  const [error, setError] = useState("");
+  const [stageCrowd, setStageCrowd] = useState(null);
+  const [message, setMessage] = useState("");
+  const [updatedAt, setUpdatedAt] = useState("");
 
-  async function loadAnalytics() {
-    try {
-      const [trafficData, popularData, heatmapData] = await Promise.all([
-        fetchTrafficHourly(),
-        fetchPopularBooths(),
-        fetchHeatmap(),
-      ]);
-      setTraffic(trafficData);
-      setPopular(popularData);
-      setHeatmap(heatmapData);
-      setError("");
-    } catch (e) {
-      setError(e.message);
-    }
+  async function load() {
+    const [trafficResult, popularResult, heatmapResult, stageResult] = await Promise.allSettled([
+      fetchTrafficHourly(),
+      fetchPopularBooths(),
+      fetchHeatmap(),
+      fetchStageCrowd(10),
+    ]);
+    if (trafficResult.status === "fulfilled") setTraffic(trafficResult.value || []);
+    if (popularResult.status === "fulfilled") setPopular(popularResult.value || []);
+    if (heatmapResult.status === "fulfilled") setHeatmap(heatmapResult.value || []);
+    if (stageResult.status === "fulfilled") setStageCrowd(stageResult.value);
+    setUpdatedAt(new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }));
+    setMessage(
+      [trafficResult, popularResult, heatmapResult].some((item) => item.status === "rejected")
+        ? "일부 혼잡 정보는 예시 데이터로 표시 중입니다."
+        : "",
+    );
   }
 
   useEffect(() => {
-    loadAnalytics();
+    load();
+
+    let stream = null;
+    try {
+      stream = createCongestionStream();
+      stream.addEventListener("congestion", (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (Array.isArray(payload)) setHeatmap(payload);
+          setUpdatedAt(new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" }));
+        } catch {
+          // Ignore malformed stream payloads.
+        }
+      });
+    } catch {
+      // Streaming is optional.
+    }
+
+    return () => stream?.close();
   }, []);
 
-  const trafficMax = useMemo(
-    () => Math.max(1, ...traffic.map((item) => item.count)),
-    [traffic],
-  );
-  const totalTraffic = useMemo(
-    () => traffic.reduce((sum, item) => sum + (item.count || 0), 0),
-    [traffic],
-  );
-  const topBooth = useMemo(() => popular[0] || null, [popular]);
-  const hottestPoint = useMemo(() => {
-    if (!heatmap.length) return null;
-    return [...heatmap].sort((a, b) => (b.intensity || 0) - (a.intensity || 0))[0];
+  const crowdPercent = useMemo(() => {
+    if (stageCrowd?.crowdPercent != null) {
+      return Math.min(99, Math.max(1, Math.round(Number(stageCrowd.crowdPercent))));
+    }
+    if (!traffic.length) return 48;
+    const latest = Number(traffic[traffic.length - 1]?.count) || 0;
+    const max = Math.max(1, ...traffic.map((item) => Number(item.count) || 0));
+    return Math.min(99, Math.max(1, Math.round((latest / max) * 100)));
+  }, [stageCrowd, traffic]);
+
+  const zoneData = useMemo(() => {
+    if (!heatmap.length) return crowdZones;
+    return crowdZones.map((zone, index) => {
+      const item = heatmap[index] || {};
+      const value = item.percent ?? item.value ?? item.intensity;
+      return {
+        ...zone,
+        name: item.zoneName || item.boothName || zone.name,
+        value: Math.min(95, Math.max(10, Math.round(Number(value) || zone.value))),
+      };
+    });
   }, [heatmap]);
-  const hasTraffic = traffic.length > 0;
-  const hasPopular = popular.length > 0;
-  const hasHeatmap = heatmap.length > 0;
-  const visibleTraffic = hasTraffic ? traffic : trafficPreview;
-  const visiblePopular = hasPopular ? popular : campusZonePreview;
-  const visibleHeatmap = hasHeatmap ? heatmap.slice(0, 12) : heatmapPreview;
-  const visibleTrafficMax = Math.max(1, ...visibleTraffic.map((item) => Number(item.count) || 0));
+
+  const prediction = useMemo(() => {
+    if (!traffic.length) return trafficPrediction;
+    return traffic.slice(-6).map((item, index) => ({
+      hour: `${item.hour || index}`.slice(-5),
+      value: Math.min(95, Math.max(15, Math.round(Number(item.count) || 0))),
+    }));
+  }, [traffic]);
 
   return (
-    <section className="cyber-page festival-live-dashboard pt-4 space-y-3 scan-enter">
-      <article className="rounded-2xl border border-cyan-300/65 bg-gradient-to-br from-[#063463] via-[#0b4f86] to-[#1189be] p-4 text-cyan-50 shadow-[0_0_26px_rgba(34,211,238,0.28)]">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2.5">
-            <span className="mt-0.5 visual-icon-badge visual-icon-badge--ops shrink-0">
-              <IconChart className="h-5 w-5 icon-role-ops" />
-            </span>
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.16em] text-cyan-200/95">AU:SUM LIVE CROWD</p>
-              <h2 className="mt-1 text-xl font-extrabold text-role-ops">지금 붐비는 캠퍼스 구역</h2>
-              <p className="mt-1 text-xs text-cyan-100/90">노천극장과 캠퍼스 축제 구역의 붐빔 흐름을 보고 이동할 곳을 정하세요.</p>
-            </div>
+    <section className="uni-page crowd-page">
+      <header className="plain-page-header">
+        <span />
+        <h1>혼잡도</h1>
+        <button type="button" aria-label="혼잡도 새로고침" onClick={load}>
+          <IconRefresh className="h-5 w-5" />
+        </button>
+      </header>
+
+      <section className="uni-card crowd-detail-card">
+        <div className="crowd-score-row">
+          <div>
+            <p>축제장 전체 혼잡도</p>
+            <span>{level(crowdPercent)}</span>
           </div>
-          <button
-            type="button"
-            onClick={loadAnalytics}
-            className="inline-flex items-center gap-1.5 text-xs rounded-lg border border-cyan-300/60 bg-sky-500/20 px-3 py-1.5 min-h-11 text-cyan-100"
-          >
-            <span className="visual-icon-badge-sm">
-              <IconRefresh className="h-3.5 w-3.5 icon-role-log" />
-            </span>
-            혼잡도 다시 확인
-          </button>
+          <strong>{crowdPercent}%</strong>
         </div>
-      </article>
-
-      <div className="grid grid-cols-3 gap-2">
-        <article className="rounded-xl border border-cyan-300/50 bg-slate-950/70 p-2.5">
-          <p className="text-[10px] text-cyan-200/90 text-role-ops inline-flex items-center gap-1"><span className="visual-icon-badge-sm visual-icon-badge--ops"><IconUsers className="h-3.5 w-3.5 icon-role-ops" /></span>총 방문 집계</p>
-          <p className="mt-0.5 text-base font-extrabold text-cyan-100">
-            {hasTraffic ? `${totalTraffic.toLocaleString()}명` : "수집 전"}
-          </p>
-        </article>
-        <article className="rounded-xl border border-cyan-300/50 bg-slate-950/70 p-2.5">
-          <p className="text-[10px] text-cyan-200/90 text-role-ops inline-flex items-center gap-1"><span className="visual-icon-badge-sm visual-icon-badge--ops"><IconTrophy className="h-3.5 w-3.5 icon-role-ops" /></span>현재 1위 부스</p>
-          <p className="mt-0.5 text-sm font-bold text-cyan-100 line-clamp-1">
-            {topBooth?.boothName || "집계 대기"}
-          </p>
-        </article>
-        <article className="rounded-xl border border-cyan-300/50 bg-slate-950/70 p-2.5">
-          <p className="text-[10px] text-cyan-200/90 text-role-alert inline-flex items-center gap-1"><span className="visual-icon-badge-sm visual-icon-badge--alert"><IconFlame className="h-3.5 w-3.5 icon-role-alert" /></span>최고 강도 포인트</p>
-          <p className="mt-0.5 text-sm font-bold text-cyan-100">
-            {hottestPoint ? `Lv.${hottestPoint.intensity}` : "집계 대기"}
-          </p>
-        </article>
-      </div>
-
-      {error && <p className="text-sm text-rose-600">{error}</p>}
-
-      <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3">
-        <h3 className="text-sm font-semibold text-cyan-100 text-role-log inline-flex items-center gap-1.5">
-          <span className="visual-icon-badge-sm">
-            <IconChart className="h-4 w-4 icon-role-log" />
-          </span>
-          시간대별 방문량 (최근 24시간)
-        </h3>
-        <div className="festival-crowd-chart mt-3 h-28 flex items-end gap-1 overflow-x-auto">
-          {!hasTraffic && (
-            <p className="festival-data-note">방문 데이터 연결 대기</p>
-          )}
-          {visibleTraffic.map((item, index) => (
-            <div key={item.hour} className="min-w-7 text-center">
-              <div
-                className="mx-auto w-5 rounded-t bg-gradient-to-t from-cyan-600 to-sky-300 shadow-[0_0_14px_rgba(34,211,238,0.45)]"
-                style={{ height: `${Math.max(14, ((Number(item.count) || 0) / visibleTrafficMax) * 100)}px` }}
-                title={`${item.hour}: ${item.count}`}
-              />
-              <p className="mt-1 text-[10px] text-cyan-200/70">
-                {`${item.hour}`.slice(-5) || `${index + 1}`}
-              </p>
-            </div>
-          ))}
+        <div className="crowd-meter crowd-meter--large" aria-hidden="true">
+          <span className="meter-green" />
+          <span className="meter-yellow" />
+          <span className="meter-red" />
         </div>
-      </article>
+        <div className="crowd-scale">
+          <span>0%</span>
+          <span>100%</span>
+        </div>
+        <p className="crowd-note">
+          {updatedAt ? `${updatedAt} 갱신` : "실시간 데이터 연결 중"}
+          {popular[0] ? ` · 인기 구역 ${popular[0].boothName || popular[0].name}` : ""}
+        </p>
+      </section>
 
-      <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3">
-        <h3 className="text-sm font-semibold text-cyan-100 text-role-ops inline-flex items-center gap-1.5">
-          <span className="visual-icon-badge-sm visual-icon-badge--ops">
-            <IconTrophy className="h-4 w-4 icon-role-ops" />
-          </span>
-          인기 부스 랭킹 (최근 1시간)
-        </h3>
-        <div className="mt-2 space-y-1.5">
-          {!hasPopular && (
-            <div className="app-empty-state app-empty-state--compact">
-              <p className="app-empty-state__eyebrow">인기 부스 준비 중</p>
-              <h3>아직 충분한 방문 데이터가 없어요</h3>
-              <p>GPS 전송과 부스 방문 기록이 쌓이면 지금 가장 뜨거운 부스를 보여드립니다.</p>
-            </div>
-          )}
-          {visiblePopular.map((item, idx) => (
-            <div key={item.boothId} className="flex items-center justify-between rounded-lg border border-cyan-400/25 bg-slate-900/70 px-2 py-1.5">
-              <p className="text-sm text-cyan-100">{idx + 1}. {item.boothName}</p>
-              <span className="text-xs font-bold text-cyan-300">
-                {hasPopular ? `${item.score}명` : item.score}
+      {message && <p className="app-inline-note">{message}</p>}
+
+      <section className="uni-section">
+        <h2>구역별 혼잡도</h2>
+        <div className="crowd-map-card">
+          <div className="crowd-map-art">
+            <span className="map-road map-road-a" />
+            <span className="map-road map-road-b" />
+            <span className="map-lawn map-lawn-a" />
+            <span className="map-lawn map-lawn-b" />
+            {zoneData.map((zone) => (
+              <span
+                key={zone.name}
+                className={`crowd-zone crowd-zone--${zone.tone}`}
+                style={{ left: `${zone.x}%`, top: `${zone.y}%` }}
+              >
+                <strong>{zone.name}</strong>
+                <small>{zone.value}%</small>
               </span>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </article>
+      </section>
 
-      <article className="rounded-xl border border-cyan-300/50 bg-slate-950/75 p-3">
-        <h3 className="text-sm font-semibold text-cyan-100 text-role-alert inline-flex items-center gap-1.5">
-          <span className="visual-icon-badge-sm visual-icon-badge--alert">
-            <IconFlame className="h-4 w-4 icon-role-alert" />
-          </span>
-          혼잡 히트맵 포인트 (최근 1시간)
-        </h3>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          {!hasHeatmap && (
-            <div className="app-heat-placeholder">
-              {["여유", "보통", "혼잡", "매우혼잡"].map((label) => (
-                <span key={`heat-placeholder-${label}`}>{label}</span>
-              ))}
-              <p>혼잡 포인트가 감지되면 지도 기준으로 바로 표시됩니다.</p>
-            </div>
-          )}
-          {visibleHeatmap.map((point) => (
-            <div key={`${point.latitude}-${point.longitude}`} className="rounded-lg border border-cyan-400/25 bg-slate-900/75 p-2">
-              <div className="flex items-center justify-between">
-                <span className={`inline-block w-2.5 h-2.5 rounded-full ${intensityClass(point.intensity)}`} />
-                <span className="text-xs font-semibold text-cyan-200/90">강도 {point.intensity}</span>
-              </div>
-              <p className="mt-1 text-[11px] text-cyan-200/70">
-                {point.label || `${point.latitude.toFixed(3)}, ${point.longitude.toFixed(3)}`}
-              </p>
+      <section className="uni-card prediction-card">
+        <div className="uni-section-head">
+          <h2>혼잡도 예측</h2>
+          <IconChart className="h-4 w-4" />
+        </div>
+        <div className="prediction-chart">
+          {prediction.map((item) => (
+            <div key={item.hour} className="prediction-bar">
+              <strong>{item.value}%</strong>
+              <span style={{ height: `${Math.max(22, item.value)}px` }} />
+              <small>{item.hour}</small>
             </div>
           ))}
         </div>
-      </article>
+        <p>혼잡도가 낮은 시간대를 골라 이동하면 대기 시간을 줄일 수 있어요.</p>
+      </section>
     </section>
   );
 }
