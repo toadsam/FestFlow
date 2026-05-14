@@ -24,6 +24,16 @@ import {
 
 const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
 
+function createKakaoDirectionsUrl(booth) {
+  const name = booth?.name || booth?.locationName || "FestFlow 부스";
+  const lat = Number(booth?.latitude);
+  const lng = Number(booth?.longitude);
+  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+    return `https://map.kakao.com/link/to/${encodeURIComponent(name)},${lat},${lng}`;
+  }
+  return `https://map.kakao.com/link/search/${encodeURIComponent(name)}`;
+}
+
 function fallbackBooth(id) {
   return fallbackBooths.find((item) => Number(item.id) === Number(id)) || fallbackBooths[0];
 }
@@ -377,6 +387,13 @@ export default function BoothDetailPage() {
     navigate(`/ops/booth/${id}`);
   }
 
+  function handleDirections() {
+    const url = createKakaoDirectionsUrl(booth);
+    const opened = window.open(url, "_blank");
+    if (opened) opened.opener = null;
+    if (!opened) window.location.href = url;
+  }
+
   const imageUrl = resolveBoothImageUrl(booth);
   const congestionLabel = congestion?.level || congestion?.label || booth?.congestion || "보통";
 
@@ -414,11 +431,11 @@ export default function BoothDetailPage() {
           <span>운영 시간</span>
           <strong>{formatTimeRange(booth)}</strong>
         </article>
-        <article>
+        <button type="button" onClick={handleDirections} aria-label={`${booth?.name || "부스"} 길찾기`}>
           <IconMapPin className="h-5 w-5" />
-          <span>위치</span>
+          <span>길찾기</span>
           <strong>{booth?.locationName || "아주대 캠퍼스"}</strong>
-        </article>
+        </button>
         <article>
           <IconSearch className="h-5 w-5" />
           <span>혼잡도</span>

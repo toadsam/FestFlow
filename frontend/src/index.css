@@ -9689,7 +9689,8 @@ body,
   gap: 0.55rem;
 }
 
-.app-shell[data-route-scope="public"] .uni-page .detail-info-grid article {
+.app-shell[data-route-scope="public"] .uni-page .detail-info-grid article,
+.app-shell[data-route-scope="public"] .uni-page .detail-info-grid button {
   display: grid;
   min-height: 5.6rem;
   place-items: center;
@@ -9703,17 +9704,24 @@ body,
   animation: none !important;
 }
 
-.app-shell .detail-info-grid article svg {
+.app-shell .detail-info-grid button {
+  cursor: pointer;
+}
+
+.app-shell .detail-info-grid article svg,
+.app-shell .detail-info-grid button svg {
   color: var(--app-blue);
 }
 
-.app-shell .detail-info-grid article span {
+.app-shell .detail-info-grid article span,
+.app-shell .detail-info-grid button span {
   color: var(--app-muted) !important;
   font-size: 0.68rem;
   font-weight: 760;
 }
 
-.app-shell .detail-info-grid article strong {
+.app-shell .detail-info-grid article strong,
+.app-shell .detail-info-grid button strong {
   color: var(--app-text) !important;
   font-size: 0.78rem;
   font-weight: 880;
@@ -11425,6 +11433,20 @@ html[data-contrast="high"] .app-shell .uni-page {
   font-size: 0.94rem !important;
 }
 
+.app-shell[data-route-scope="public"] .reference-home-page .uni-section-head button {
+  display: inline-flex !important;
+  min-width: 4.25rem !important;
+  min-height: 1.9rem !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 0.85rem !important;
+  border: 1px solid #dbeafe !important;
+  border-radius: 999px !important;
+  background: #eff6ff !important;
+  color: #071a3d !important;
+  white-space: nowrap !important;
+}
+
 .app-shell[data-route-scope="public"] .reference-home-page .recommend-strip {
   gap: 0.45rem !important;
   overflow: hidden !important;
@@ -11436,11 +11458,13 @@ html[data-contrast="high"] .app-shell .uni-page {
   min-width: 0 !important;
   min-height: 7.15rem !important;
   align-content: end !important;
+  justify-items: center !important;
   padding: 0.68rem !important;
   border-radius: 0.65rem !important;
   background-position: var(--recommend-focus, center) !important;
   background-size: cover !important;
   box-shadow: 0 12px 26px rgba(7, 26, 61, 0.15) !important;
+  text-align: center !important;
 }
 
 .app-shell[data-route-scope="public"] .reference-home-page .recommend-card.recommend-card--mint,
@@ -11454,6 +11478,11 @@ html[data-contrast="high"] .app-shell .uni-page {
 }
 
 .app-shell[data-route-scope="public"] .reference-home-page .recommend-card span {
+  position: absolute !important;
+  top: 0.68rem !important;
+  left: 50% !important;
+  z-index: 1 !important;
+  transform: translateX(-50%) !important;
   font-size: 0.62rem !important;
   padding: 0.18rem 0.42rem !important;
   background: rgba(20, 214, 196, 0.88) !important;

@@ -25,6 +25,7 @@ const FALLBACK_COORD_OFFSETS = [
   [-0.0002, 0.0012],
 ];
 const CAMPUS_RADIUS_METERS = 2500;
+const SEARCH_RESULT_MAX_ZOOM = 17;
 
 function normalize(value) {
   return `${value || ""}`.toLowerCase();
@@ -207,7 +208,7 @@ function CategoryIcon({ category, className = "h-4 w-4" }) {
   return <IconMapPin className={className} />;
 }
 
-function MapViewport({ points, currentLocation }) {
+function MapViewport({ points, currentLocation, searchActive }) {
   const map = useMap();
 
   useEffect(() => {
@@ -216,6 +217,17 @@ function MapViewport({ points, currentLocation }) {
   }, [map]);
 
   useEffect(() => {
+    if (searchActive) {
+      if (points.length > 1) {
+        map.fitBounds(points.map((point) => [point.latitude, point.longitude]), {
+          padding: [44, 44],
+          maxZoom: SEARCH_RESULT_MAX_ZOOM,
+        });
+      } else if (points.length === 1) {
+        map.flyTo([points[0].latitude, points[0].longitude], SEARCH_RESULT_MAX_ZOOM, { animate: true });
+      }
+      return;
+    }
     if (currentLocation) {
       map.setView([currentLocation.latitude, currentLocation.longitude], 18, { animate: true });
       return;
@@ -230,7 +242,7 @@ function MapViewport({ points, currentLocation }) {
     if (points.length === 1) {
       map.setView([points[0].latitude, points[0].longitude], 18);
     }
-  }, [currentLocation, map, points]);
+  }, [currentLocation, map, points, searchActive]);
 
   return null;
 }
@@ -317,6 +329,7 @@ export default function StageMapPage() {
       })),
     [filteredBooths],
   );
+  const mapPoints = useMemo(() => mapBooths.map((item) => item.point), [mapBooths]);
 
   async function handleLocate() {
     if (!navigator.geolocation) {
@@ -384,13 +397,14 @@ export default function StageMapPage() {
           center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]}
           zoom={17}
           minZoom={15}
-          maxZoom={20}
+          maxZoom={19}
           scrollWheelZoom
           className="real-campus-map"
         >
-          <MapViewport points={mapBooths.map((item) => item.point)} currentLocation={currentLocation} />
+          <MapViewport points={mapPoints} currentLocation={currentLocation} searchActive={Boolean(query.trim())} />
           <TileLayer
             attribution="&copy; OpenStreetMap"
+            maxNativeZoom={19}
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           {mapBooths.slice(0, 40).map(({ booth, index, point }) => {
@@ -399,9 +413,6 @@ export default function StageMapPage() {
                 key={booth.id || `${booth.name}-${index}`}
                 position={[point.latitude, point.longitude]}
                 icon={markerIcon(booth, index)}
-                eventHandlers={{
-                  click: () => navigate(`/booths/${booth.id || 1}`),
-                }}
               >
                 <Tooltip direction="top" offset={[0, -10]}>
                   <span className="map-tooltip">{booth.name}</span>
