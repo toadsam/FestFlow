@@ -65,6 +65,15 @@ export function getApiBase() {
   return API_BASE;
 }
 
+export function resolveApiAssetUrl(url) {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url) || url.startsWith("data:")) return url;
+  if (url.startsWith("/uploads/")) {
+    return `${API_BASE.replace(/\/api$/, "")}${url}`;
+  }
+  return url;
+}
+
 export async function loginAdmin(username, password) {
   const response = await fetch(`${API_BASE}/auth/login`, {
     method: "POST",
@@ -921,5 +930,60 @@ export async function translateText(payload) {
 export async function fetchTranslateMetrics() {
   const response = await fetch(`${API_BASE}/translate/metrics`);
   return parseJson(response, "통역 지표를 불러오지 못했습니다.");
+}
+
+export async function fetchAiMatchProfiles() {
+  const response = await fetch(`${API_BASE}/ai-match/profiles`);
+  return parseJson(response, "AI 프로필 목록을 불러오지 못했습니다.");
+}
+
+export async function createAiMatchImagePreview(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetchWithTimeout(`${API_BASE}/ai-match/image-preview`, {
+    method: "POST",
+    body: formData,
+  }, 120000);
+  return parseJson(response, "웹툰 이미지 변환에 실패했습니다.");
+}
+
+export async function createAiMatchProfile(form, file) {
+  const formData = new FormData();
+  formData.append("nickname", form.nickname || "");
+  formData.append("gender", form.gender || "");
+  formData.append("intro", form.intro || "");
+  formData.append("meetPlace", form.meetPlace || "");
+  formData.append("consent", String(Boolean(form.consent)));
+  if (form.originalImageUrl) {
+    formData.append("originalImageUrl", form.originalImageUrl);
+  }
+  if (form.generatedImageUrl) {
+    formData.append("generatedImageUrl", form.generatedImageUrl);
+  }
+  if (file) {
+    formData.append("file", file);
+  }
+
+  const response = await fetchWithTimeout(`${API_BASE}/ai-match/profiles`, {
+    method: "POST",
+    body: formData,
+  }, 120000);
+  return parseJson(response, "AI 프로필 등록에 실패했습니다.");
+}
+
+export async function fetchAiMatchRequests(profileId) {
+  const query = profileId ? `?profileId=${encodeURIComponent(profileId)}` : "";
+  const response = await fetch(`${API_BASE}/ai-match/requests${query}`);
+  return parseJson(response, "데이트 신청 목록을 불러오지 못했습니다.");
+}
+
+export async function createAiMatchRequest(profileId, payload) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/${profileId}/requests`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "데이트 신청에 실패했습니다.");
 }
 

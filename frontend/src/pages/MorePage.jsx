@@ -10,6 +10,7 @@ import {
 } from "../components/UxIcons";
 
 const menuItems = [
+  { to: "/ai-match", label: "AI 프로필 매칭", icon: IconUsers, caption: "사진 등록, AI 카드, 데이트 신청" },
   { to: "/lost-found", label: "분실물 센터", icon: IconBox, caption: "보관 물품 검색과 내 물건 표시" },
   { to: "/chat", label: "AI 챗봇", icon: IconChat, caption: "공연, 부스, 혼잡도 빠른 답변" },
   { to: "/staff", label: "운영진 문의", icon: IconUsers, caption: "현장 문의와 스태프 연결" },

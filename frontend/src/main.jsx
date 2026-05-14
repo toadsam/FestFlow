@@ -14,6 +14,7 @@ const StageMapPage = lazy(() => import("./pages/StageMapPage"));
 const ChatPage = lazy(() => import("./pages/ChatPage"));
 const BoothDetailPage = lazy(() => import("./pages/BoothDetailPage"));
 const MorePage = lazy(() => import("./pages/MorePage"));
+const AiMatchPage = lazy(() => import("./pages/AiMatchPage"));
 const AdminPage = lazy(() => import("./pages/AdminPage"));
 const OpsMasterPage = lazy(() => import("./pages/OpsMasterPage"));
 const OpsBoothPage = lazy(() => import("./pages/OpsBoothPage"));
@@ -58,6 +59,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="chat" element={lazyElement(ChatPage)} />
             <Route path="lost-found" element={lazyElement(LostFoundPage)} />
             <Route path="more" element={lazyElement(MorePage)} />
+            <Route path="ai-match" element={lazyElement(AiMatchPage)} />
             <Route path="admin" element={lazyElement(AdminPage)} />
             <Route path="ops/master" element={lazyElement(OpsMasterPage)} />
             <Route path="ops/booth/:id" element={lazyElement(OpsBoothPage)} />

@@ -10603,6 +10603,404 @@ body,
   transform: translateX(20px);
 }
 
+.app-shell .ai-match-page {
+  gap: 0.9rem !important;
+}
+
+.app-shell .ai-match-qr-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: center;
+  padding: 1rem;
+  border: 1px solid #dbeafe;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.app-shell .ai-match-qr {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.18rem;
+  width: 3.4rem;
+  height: 3.4rem;
+  padding: 0.42rem;
+  border-radius: 0.8rem;
+  background: #071a3d;
+}
+
+.app-shell .ai-match-qr span {
+  border-radius: 0.18rem;
+  background: #ffffff;
+}
+
+.app-shell .ai-match-qr span:nth-child(2),
+.app-shell .ai-match-qr span:nth-child(3) {
+  background: #22d3ee;
+}
+
+.app-shell .ai-match-qr-card strong {
+  color: #071a3d;
+  font-size: 0.96rem;
+  font-weight: 920;
+}
+
+.app-shell .ai-match-qr-card p {
+  margin: 0.18rem 0 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 720;
+  line-height: 1.45;
+}
+
+.app-shell .ai-profile-form {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.app-shell .form-error-copy,
+.app-shell .form-success-copy {
+  margin: 0;
+  padding: 0.72rem 0.82rem;
+  border-radius: 0.78rem;
+  font-size: 0.76rem;
+  font-weight: 820;
+  line-height: 1.45;
+}
+
+.app-shell .form-error-copy {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.app-shell .form-success-copy {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #15803d;
+}
+
+.app-shell .ai-profile-form label {
+  display: grid;
+  gap: 0.34rem;
+  color: #071a3d;
+  font-size: 0.76rem;
+  font-weight: 860;
+}
+
+.app-shell .ai-profile-form input,
+.app-shell .ai-profile-form select,
+.app-shell .ai-profile-form textarea,
+.app-shell .ai-match-dialog input,
+.app-shell .ai-match-dialog select,
+.app-shell .ai-match-dialog textarea {
+  width: 100%;
+  border: 1px solid #dbe4ef !important;
+  border-radius: 0.72rem !important;
+  background: #f8fafc !important;
+  color: #071a3d !important;
+  font-size: 0.78rem !important;
+  font-weight: 760 !important;
+}
+
+.app-shell .ai-profile-form input,
+.app-shell .ai-profile-form select,
+.app-shell .ai-match-dialog input,
+.app-shell .ai-match-dialog select {
+  min-height: 2.65rem;
+  padding: 0 0.75rem !important;
+}
+
+.app-shell .ai-profile-form textarea,
+.app-shell .ai-match-dialog textarea {
+  min-height: 4.8rem;
+  padding: 0.75rem !important;
+  resize: vertical;
+}
+
+.app-shell .ai-photo-preview {
+  position: relative;
+  display: grid;
+  min-height: 13.5rem;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(34, 211, 238, 0.4), transparent 5rem),
+    linear-gradient(135deg, #101a3d, #6d28d9 54%, #f97316);
+}
+
+.app-shell .ai-photo-preview img {
+  width: 100%;
+  height: 13.5rem;
+  object-fit: cover;
+  filter: saturate(1.45) contrast(1.08);
+  mix-blend-mode: screen;
+}
+
+.app-shell .ai-photo-preview > span {
+  display: grid;
+  width: 4.2rem;
+  height: 4.2rem;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.app-shell .ai-photo-preview em {
+  position: absolute;
+  left: 0.75rem;
+  bottom: 0.75rem;
+  padding: 0.28rem 0.58rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.88);
+  color: #071a3d;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.app-shell .ai-converting-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.44rem;
+  background: rgba(7, 26, 61, 0.72);
+  color: #ffffff;
+  text-align: center;
+  backdrop-filter: blur(4px);
+}
+
+.app-shell .ai-converting-overlay strong {
+  font-size: 0.9rem;
+  font-weight: 930;
+}
+
+.app-shell .ai-converting-overlay small {
+  color: #dbeafe;
+  font-size: 0.72rem;
+  font-weight: 820;
+}
+
+.app-shell .ai-converting-spinner {
+  width: 2.15rem;
+  height: 2.15rem;
+  border: 3px solid rgba(255, 255, 255, 0.32);
+  border-top-color: #22d3ee;
+  border-radius: 999px;
+  animation: ai-converting-spin 0.8s linear infinite;
+}
+
+@keyframes ai-converting-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.app-shell .ai-upload-button {
+  display: inline-flex !important;
+  min-height: 2.65rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed #93c5fd;
+  border-radius: 0.72rem;
+  background: #eff6ff;
+  color: #2563eb !important;
+  cursor: pointer;
+}
+
+.app-shell .ai-upload-button input {
+  display: none;
+}
+
+.app-shell .ai-consent-row {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  color: #64748b !important;
+  font-size: 0.7rem !important;
+}
+
+.app-shell .ai-consent-row input {
+  width: 1rem !important;
+  height: 1rem !important;
+}
+
+.app-shell .ai-profile-section,
+.app-shell .ai-request-section {
+  display: grid;
+  gap: 0.78rem;
+}
+
+.app-shell .ai-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.62rem;
+}
+
+.app-shell .ai-profile-card {
+  display: grid;
+  gap: 0.55rem;
+  min-width: 0;
+  padding: 0.66rem;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 0.9rem !important;
+  background: #ffffff !important;
+  box-shadow: 0 10px 22px rgba(7, 26, 61, 0.06);
+  text-align: left;
+}
+
+.app-shell .ai-profile-image {
+  display: grid;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 0.82rem;
+  background: linear-gradient(135deg, #dbeafe, #7c3aed);
+  color: #ffffff;
+}
+
+.app-shell .ai-profile-card--mint .ai-profile-image {
+  background: linear-gradient(135deg, #ccfbf1, #0f766e);
+}
+
+.app-shell .ai-profile-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.35) contrast(1.05);
+}
+
+.app-shell .ai-profile-meta {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.app-shell .ai-profile-meta em,
+.app-shell .ai-match-dialog-head em {
+  width: fit-content;
+  padding: 0.18rem 0.45rem;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.app-shell .ai-profile-meta strong,
+.app-shell .ai-match-dialog-head strong {
+  color: #071a3d;
+  font-size: 0.88rem;
+  font-weight: 930;
+}
+
+.app-shell .ai-profile-meta small,
+.app-shell .ai-match-dialog-head small {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 720;
+  line-height: 1.35;
+}
+
+.app-shell .ai-request-list {
+  display: grid;
+  gap: 0.48rem;
+}
+
+.app-shell .ai-request-list article {
+  display: grid;
+  gap: 0.18rem;
+  padding: 0.66rem 0;
+  border-bottom: 1px solid #eef2f7;
+}
+
+.app-shell .ai-request-list article:last-child {
+  border-bottom: 0;
+}
+
+.app-shell .ai-request-list strong {
+  color: #071a3d;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.app-shell .ai-request-list span {
+  display: inline-flex;
+  gap: 0.24rem;
+  align-items: center;
+  color: #2563eb;
+  font-size: 0.7rem;
+  font-weight: 820;
+}
+
+.app-shell .ai-request-list small {
+  color: #64748b;
+  font-size: 0.7rem;
+  font-weight: 720;
+}
+
+.app-shell .ai-match-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  align-items: end;
+  padding: 1rem 1rem 6.75rem;
+  background: rgba(7, 26, 61, 0.38);
+}
+
+.app-shell .ai-match-dialog {
+  display: grid;
+  gap: 0.72rem;
+  width: 100%;
+  max-width: 390px;
+  max-height: calc(100dvh - 8rem);
+  margin: 0 auto;
+  padding: 1rem;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 24px 60px rgba(7, 26, 61, 0.22);
+  overflow-y: auto;
+}
+
+.app-shell .ai-match-close {
+  justify-self: end;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 860;
+}
+
+.app-shell .ai-match-dialog-head {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.app-shell .ai-match-dialog label {
+  display: grid;
+  gap: 0.34rem;
+  color: #071a3d;
+  font-size: 0.76rem;
+  font-weight: 860;
+}
+
+.app-shell .ai-match-dialog .primary-wide-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.36rem;
+}
+
 .app-shell .reservation-table-grid .empty-copy {
   grid-column: 1 / -1;
 }

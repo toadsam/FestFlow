@@ -17,7 +17,7 @@ const navTabs = [
     to: "/more",
     label: "더보기",
     icon: IconSettings,
-    match: ["/more", "/lost-found", "/chat", "/staff", "/admin"],
+    match: ["/more", "/ai-match", "/lost-found", "/chat", "/staff", "/admin"],
   },
 ];
 
