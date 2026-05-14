@@ -24,6 +24,7 @@ const FALLBACK_COORD_OFFSETS = [
   [0.001, -0.0002],
   [-0.0002, 0.0012],
 ];
+const CAMPUS_RADIUS_METERS = 2500;
 
 function normalize(value) {
   return `${value || ""}`.toLowerCase();
@@ -39,10 +40,21 @@ function boothWait(booth) {
   return `${String(value).replace("분", "")}분`;
 }
 
+function distanceFromAjou(lat, lng) {
+  const latM = (lat - AJOU_CENTER.latitude) * 111000;
+  const lngM = (lng - AJOU_CENTER.longitude) * 88800;
+  return Math.sqrt(latM * latM + lngM * lngM);
+}
+
+function isCampusCoordinate(lat, lng) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return false;
+  return distanceFromAjou(lat, lng) <= CAMPUS_RADIUS_METERS;
+}
+
 function getBoothCoords(booth, index) {
   const lat = Number(booth?.latitude);
   const lng = Number(booth?.longitude);
-  if (Number.isFinite(lat) && Number.isFinite(lng)) {
+  if (isCampusCoordinate(lat, lng)) {
     return { latitude: lat, longitude: lng, real: true };
   }
   const [latOffset, lngOffset] = FALLBACK_COORD_OFFSETS[index % FALLBACK_COORD_OFFSETS.length];
@@ -56,9 +68,7 @@ function getBoothCoords(booth, index) {
 function boothDistance(booth, index) {
   if (booth?.distance) return booth.distance;
   const point = getBoothCoords(booth, index);
-  const latM = (point.latitude - AJOU_CENTER.latitude) * 111000;
-  const lngM = (point.longitude - AJOU_CENTER.longitude) * 88800;
-  const meters = Math.max(30, Math.round(Math.sqrt(latM * latM + lngM * lngM)));
+  const meters = Math.max(30, Math.round(distanceFromAjou(point.latitude, point.longitude)));
   return `${Math.min(999, meters)}m`;
 }
 

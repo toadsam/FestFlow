@@ -17,7 +17,7 @@ const navTabs = [
     to: "/more",
     label: "더보기",
     icon: IconSettings,
-    match: ["/more", "/lost-found", "/chat", "/staff"],
+    match: ["/more", "/lost-found", "/chat", "/staff", "/admin"],
   },
 ];
 
@@ -53,7 +53,7 @@ export default function App() {
         <Outlet />
       </main>
 
-      {!isOpsRoute && (
+      {!isOpsPanelRoute && (
         <nav className="festival-bottom-nav" aria-label="주요 메뉴">
           {navTabs.map((tab) => {
             const Icon = tab.icon;

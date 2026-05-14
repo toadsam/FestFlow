@@ -30,6 +30,8 @@ import {
   IconAlert,
   IconBox,
   IconChat,
+  IconEye,
+  IconEyeOff,
   IconMapPin,
   IconMic,
   IconRefresh,
@@ -46,20 +48,6 @@ const STATUS_META = {
   STANDBY: { label: "대기중", tone: "blue" },
   URGENT: { label: "긴급", tone: "red" },
 };
-
-const QUICK_MISSIONS = [
-  { title: "입구 동선 안내", status: "ON_DUTY", icon: IconUsers },
-  { title: "대기열 정리", status: "MOVING", icon: IconUsers },
-  { title: "분실물 대응", status: "ON_DUTY", icon: IconBox },
-  { title: "무대 안전 관리", status: "ON_DUTY", icon: IconShield },
-];
-
-const EMERGENCY_ACTIONS = [
-  { title: "비상벨 울리기", action: "urgent", icon: IconAlert },
-  { title: "보안팀 호출", action: "security", icon: IconShield },
-  { title: "의료팀 호출", action: "medical", icon: IconShield },
-  { title: "분실물 센터", action: "lost", icon: IconBox },
-];
 
 const EMPTY_LOST_FORM = {
   title: "",
@@ -300,6 +288,7 @@ export default function StaffPage() {
   const [staffToken, setStaffToken] = useState(getSavedToken());
   const [staffNoInput, setStaffNoInput] = useState("1");
   const [pinInput, setPinInput] = useState("1");
+  const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(Boolean(staffToken));
   const [message, setMessage] = useState("");
   const [skipAutoLogin, setSkipAutoLogin] = useState(false);
@@ -496,6 +485,7 @@ export default function StaffPage() {
       setSavedToken(data.staffToken);
       setStaffToken(data.staffToken);
       setMessage("스태프 로그인이 완료되었습니다.");
+      setShowPin(false);
     } catch (error) {
       setMessage(error.message);
       setLoading(false);
@@ -833,22 +823,6 @@ export default function StaffPage() {
     recognition.start();
   }
 
-  async function handleEmergencyAction(action) {
-    if (action === "lost") {
-      await runAi("lost");
-      return;
-    }
-    if (action === "security") {
-      await saveMyStatus("MOVING", "보안팀 호출");
-      return;
-    }
-    if (action === "medical") {
-      await saveMyStatus("URGENT", "의료팀 호출");
-      return;
-    }
-    await saveMyStatus("URGENT", "비상벨 대응");
-  }
-
   function focusAssignedBooth() {
     if (!assignedBooth || !validCoord(assignedBooth.latitude, assignedBooth.longitude)) return;
     setFocusPoint({
@@ -859,35 +833,54 @@ export default function StaffPage() {
 
   if (!staffToken) {
     return (
-      <section className="staff-reference-page staff-reference-login" data-i18n-skip>
-        <header className="staff-reference-topbar">
-          <h1>스태프</h1>
-          <div>
-            <IconShield className="h-5 w-5" />
+      <section className="staff-reference-page staff-reference-login auth-entry-screen" data-i18n-skip>
+        <div className="auth-entry-orb auth-entry-orb--violet" aria-hidden="true" />
+        <div className="auth-entry-orb auth-entry-orb--cyan" aria-hidden="true" />
+        <form className="auth-entry-card" onSubmit={handleLogin}>
+          <p className="auth-entry-brand">FestFlow</p>
+          <div className="auth-entry-copy">
+            <h1>운영진 전용 페이지</h1>
+            <p>실시간 현장 운영과 응대를 위한 운영진 시스템입니다.</p>
           </div>
-        </header>
-        <form className="staff-reference-login-card" onSubmit={handleLogin}>
-          <IconShield className="h-10 w-10" />
-          <h2>운영진 전용 로그인</h2>
-          <p>데모 계정은 스태프 번호와 PIN에 같은 숫자를 입력하면 됩니다.</p>
-          <input
-            value={staffNoInput}
-            onChange={(event) => setStaffNoInput(event.target.value)}
-            placeholder="스태프 번호"
-          />
-          <input
-            type="password"
-            value={pinInput}
-            onChange={(event) => setPinInput(event.target.value)}
-            placeholder="PIN"
-          />
-          <button type="submit" disabled={loading}>
+          <div className="auth-entry-field">
+            <input
+              className="auth-entry-input"
+              value={staffNoInput}
+              onChange={(event) => setStaffNoInput(event.target.value)}
+              placeholder="스태프 번호"
+              autoComplete="username"
+            />
+          </div>
+          <div className="auth-entry-field auth-entry-field--password">
+            <input
+              type={showPin ? "text" : "password"}
+              className="auth-entry-input"
+              value={pinInput}
+              onChange={(event) => setPinInput(event.target.value)}
+              placeholder="PIN"
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              className="auth-entry-visibility"
+              aria-label={showPin ? "PIN 숨기기" : "PIN 보기"}
+              onClick={() => setShowPin((prev) => !prev)}
+            >
+              {showPin ? <IconEyeOff className="h-5 w-5" /> : <IconEye className="h-5 w-5" />}
+            </button>
+          </div>
+          <button type="submit" className="auth-entry-submit" disabled={loading}>
             {loading ? "로그인 중" : "로그인"}
           </button>
-          <button type="button" onClick={enterDemoStaff} disabled={loading}>
-            데모로 바로 입장
-          </button>
-          {message && <p>{message}</p>}
+          {message && !loading && <p className="auth-entry-message">{message}</p>}
+          <div className="auth-entry-footer">
+            <p className="auth-entry-helper">
+              운영 계정이 없으신가요? <strong>관리자에게 문의</strong>
+            </p>
+            <button type="button" className="auth-entry-link-button" onClick={enterDemoStaff} disabled={loading}>
+              데모로 바로 입장
+            </button>
+          </div>
         </form>
       </section>
     );
@@ -1010,39 +1003,18 @@ export default function StaffPage() {
         </div>
       </section>
 
-      <section className="staff-reference-section staff-mission-section">
-        <div className="staff-reference-section-head">
-          <h2>빠른 미션</h2>
-        </div>
-        <div className="staff-reference-missions">
-          {QUICK_MISSIONS.map((mission, index) => {
-            const Icon = mission.icon;
-            return (
-              <button
-                key={mission.title}
-                type="button"
-                onClick={() => saveMyStatus(mission.status, mission.title)}
-              >
-                <Icon className="h-5 w-5" />
-                <strong>{mission.title}</strong>
-                <small>진행중 {index === 0 ? statusSummary.ON_DUTY : index + 3}</small>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
       <section className="staff-reference-section staff-tool-tabs-section">
         <div className="staff-reference-section-head">
           <h2>응대 도구</h2>
           <span>통역 · AI · 분실물</span>
         </div>
-        <div className="staff-tool-tabs" role="tablist" aria-label="스태프 응대 도구">
+        <div className="staff-tool-tabs" role="toolbar" aria-label="스태프 응대 도구">
           {RESPONSE_TOOL_TABS.map((tab) => (
             <button
               key={tab.id}
               type="button"
               className={responseToolTab === tab.id ? "active" : ""}
+              aria-pressed={responseToolTab === tab.id}
               onClick={() => setResponseToolTab(tab.id)}
             >
               {tab.label}
@@ -1196,28 +1168,6 @@ export default function StaffPage() {
                 <small>{booth?.name || staff.currentTask || point.source}</small>
                 <time>{relativeTime(staff.lastUpdatedAt)}</time>
               </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="staff-reference-section staff-emergency-section">
-        <div className="staff-reference-section-head">
-          <h2>긴급 연락 / 빠른 대응</h2>
-        </div>
-        <div className="staff-reference-emergency">
-          {EMERGENCY_ACTIONS.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.title}
-                type="button"
-                onClick={() => handleEmergencyAction(item.action)}
-                disabled={aiBusy}
-              >
-                <Icon className="h-5 w-5" />
-                <strong>{item.title}</strong>
-              </button>
             );
           })}
         </div>
