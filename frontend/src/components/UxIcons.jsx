@@ -145,6 +145,67 @@ export function IconArrowLeft(props) {
   );
 }
 
+export function IconChevronRight(props) {
+  return (
+    <IconBase {...props}>
+      <path d="m9 6 6 6-6 6" />
+    </IconBase>
+  );
+}
+
+export function IconHeart(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 20.2c-5.1-3.2-8-6.3-8-10a4.6 4.6 0 0 1 8-3.1 4.6 4.6 0 0 1 8 3.1c0 3.7-2.9 6.8-8 10Z" />
+    </IconBase>
+  );
+}
+
+export function IconHeartFilled(props) {
+  const { className = "h-4 w-4" } = props;
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden>
+      <path d="M12 20.2c-5.1-3.2-8-6.3-8-10a4.6 4.6 0 0 1 8-3.1 4.6 4.6 0 0 1 8 3.1c0 3.7-2.9 6.8-8 10Z" />
+    </svg>
+  );
+}
+
+export function IconSparkles(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M12 3.5 13.7 8l4.3 1.7-4.3 1.7L12 16l-1.7-4.6L6 9.7 10.3 8 12 3.5Z" />
+      <path d="m18.2 14.5.8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8.8-2.1Z" />
+      <path d="m5.8 14 .8 2.1 2.1.8-2.1.8-.8 2.1-.8-2.1-2.1-.8 2.1-.8.8-2.1Z" />
+    </IconBase>
+  );
+}
+
+export function IconCamera(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.2-2h5.6L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8A2.5 2.5 0 0 1 17.5 19h-11A2.5 2.5 0 0 1 4 16.5v-8Z" />
+      <circle cx="12" cy="12.5" r="3.2" />
+    </IconBase>
+  );
+}
+
+export function IconCheck(props) {
+  return (
+    <IconBase {...props}>
+      <path d="m5 12 4.2 4.2L19 6.8" />
+    </IconBase>
+  );
+}
+
+export function IconX(props) {
+  return (
+    <IconBase {...props}>
+      <path d="m6 6 12 12" />
+      <path d="M18 6 6 18" />
+    </IconBase>
+  );
+}
+
 export function IconMusic(props) {
   return (
     <IconBase {...props}>

@@ -37,6 +37,7 @@ export default function App() {
   const location = useLocation();
   const isOpsRoute = ["/admin", "/ops"].some((path) => location.pathname.startsWith(path));
   const isOpsPanelRoute = location.pathname.startsWith("/ops");
+  const isAiMatchRoute = location.pathname.startsWith("/ai-match");
 
   return (
     <div className="app-shell festival-shell" data-route-scope={isOpsRoute ? "ops" : "public"}>
@@ -53,7 +54,7 @@ export default function App() {
         <Outlet />
       </main>
 
-      {!isOpsPanelRoute && (
+      {!isOpsPanelRoute && !isAiMatchRoute && (
         <nav className="festival-bottom-nav" aria-label="주요 메뉴">
           {navTabs.map((tab) => {
             const Icon = tab.icon;
