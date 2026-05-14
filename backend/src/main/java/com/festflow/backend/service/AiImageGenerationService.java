@@ -132,14 +132,15 @@ public class AiImageGenerationService {
 
     private String buildWebtoonPrompt(String nickname, String intro) {
         return """
-                Make a realistic identity-preserving portrait edit of the uploaded person photo.
-                The output should still look like the same real person from the source photo, not a new illustrated character.
-                Keep at least 90 percent of the original facial identity: face shape, eye shape and spacing, eyelids, eyebrows, nose bridge and tip, lips, jawline, cheek structure, skin tone, hairstyle, hair length, expression, age impression, pose, and camera angle.
-                Do not beautify, glamorize, idolize, age-change, slim the face, enlarge the eyes, sharpen the jaw, change hairstyle, change skin tone, or alter gender presentation.
-                Keep the original photo composition, clothing, visible accessories, lighting direction, and background as much as possible.
-                Apply only a very subtle webtoon-inspired finish: slightly cleaner skin texture, gentle line definition around facial features, mild cel-shading, and soft color polish.
-                The result should look closer to a realistic photo with a light cartoon filter than to a full webtoon drawing.
-                Avoid anime style, chibi style, fantasy style, doll-like skin, oversized eyes, dramatic makeup, and highly stylized character art.
+                Edit the uploaded person photo into a clean Korean webtoon portrait while keeping the same real person recognizable.
+                This should be a true webtoon-style redraw, not a photoreal retouch and not a totally different character.
+                Preserve the source person's identity very closely: face shape, eye shape and spacing, eyebrows, nose bridge and tip, lips, jawline, hairstyle, hair length, expression, age impression, and camera angle.
+                Do not beautify, idolize, age-change, slim the face, enlarge the eyes, sharpen the jaw, change hairstyle, or change skin tone.
+                Use visible but tasteful webtoon styling: clean line art around the eyes, nose, lips, jaw, and hair; flat but soft cel shading; simplified skin texture; illustrated hair strands; and slightly posterized colors.
+                Keep the composition and clothing close to the original.
+                Remove flashy neon glow, purple-orange gradients, lens flare, futuristic lighting, and synthetic beauty-filter effects.
+                Keep the background simple and understated so the face remains the focus.
+                Avoid anime exaggeration, chibi style, doll-like skin, fantasy styling, dramatic makeup, glossy idol styling, and over-rendered realism.
                 Keep the result friendly, non-sexual, fully clothed, and appropriate for a public campus festival dating profile.
                 Do not include text, logos, watermarks, UI, QR codes, or captions inside the image.
                 Profile nickname context: %s

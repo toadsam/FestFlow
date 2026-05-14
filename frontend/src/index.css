@@ -10814,6 +10814,11 @@ body,
   cursor: pointer;
 }
 
+.app-shell .ai-upload-button.is-disabled {
+  opacity: 0.66;
+  cursor: wait;
+}
+
 .app-shell .ai-upload-button input {
   display: none;
 }
