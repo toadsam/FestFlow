@@ -10,6 +10,7 @@ import {
   IconHome,
   IconMapPin,
   IconRefresh,
+  IconSearch,
   IconSend,
   IconShield,
   IconSparkles,
@@ -40,6 +41,24 @@ const NAV_ITEMS = [
 ];
 const PROFILE_FILTERS = ["전체", "남자", "여자", "신청 가능"];
 const REGISTRATION_TAGS = ["운동", "음악", "영화", "여행", "맛집", "독서", "게임", "보드게임", "사진", "공연", "기타"];
+const MBTI_OPTIONS = [
+  "ISTJ",
+  "ISFJ",
+  "INFJ",
+  "INTJ",
+  "ISTP",
+  "ISFP",
+  "INFP",
+  "INTP",
+  "ESTP",
+  "ESFP",
+  "ENFP",
+  "ENTP",
+  "ESTJ",
+  "ESFJ",
+  "ENFJ",
+  "ENTJ",
+];
 const STEP_ITEMS = [
   { number: "01", title: "QR 스캔", copy: "부스 QR을 스캔해요" },
   { number: "02", title: "사진 업로드", copy: "정면 사진을 올려요" },
@@ -61,8 +80,21 @@ const QR_PATTERN = [
   "100011001111",
 ].join("");
 
+const ACTIVE_FILTER_TAG_STYLE = {
+  borderColor: "#d8b4fe",
+  background: "linear-gradient(180deg, rgba(253, 244, 255, 0.98), rgba(250, 245, 255, 0.96))",
+  color: "#64748b",
+  boxShadow: "inset 0 0 0 1px rgba(255, 255, 255, 0.92), 0 10px 22px rgba(216, 180, 254, 0.22)",
+  filter: "none",
+};
+
 function cleanTagValue(tag) {
   return `${tag || ""}`.replace(/^#/, "").trim().slice(0, 8);
+}
+
+function cleanMbtiValue(mbti) {
+  const normalized = `${mbti || ""}`.trim().toUpperCase();
+  return MBTI_OPTIONS.includes(normalized) ? normalized : "";
 }
 
 function parseProfileCopy(rawIntro) {
@@ -71,19 +103,30 @@ function parseProfileCopy(rawIntro) {
     return {
       summary: "따뜻한 분위기의 축제 메이트를 찾고 있어요.",
       tags: [],
+      mbti: "",
     };
   }
 
   const tags = [];
   const summaryParts = [];
+  let mbti = "";
 
   source.split(/\n+/).forEach((line) => {
+    const mbtiMatch = line.match(/\bMBTI\s*:\s*([A-Za-z]{4})\b/i);
+    if (!mbti && mbtiMatch) {
+      mbti = cleanMbtiValue(mbtiMatch[1]);
+    }
+
     const matches = [...line.matchAll(/#([^\s#]+)/g)].map((match) => cleanTagValue(match[1]));
     if (matches.length) {
       tags.push(...matches);
     }
 
-    const cleanedLine = line.replace(/#([^\s#]+)/g, "").replace(/\s+/g, " ").trim();
+    const cleanedLine = line
+      .replace(/\bMBTI\s*:\s*[A-Za-z]{4}\b/gi, "")
+      .replace(/#([^\s#]+)/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
     if (cleanedLine) {
       summaryParts.push(cleanedLine);
     }
@@ -92,14 +135,22 @@ function parseProfileCopy(rawIntro) {
   return {
     summary: summaryParts.join(" ").trim() || "따뜻한 분위기의 축제 메이트를 찾고 있어요.",
     tags: [...new Set(tags)].filter(Boolean).slice(0, 6),
+    mbti,
   };
 }
 
-function serializeProfileCopy(summary, tags) {
+function serializeProfileCopy(summary, tags, mbti) {
   const cleanSummary = `${summary || ""}`.trim();
   const cleanTags = [...new Set((tags || []).map(cleanTagValue))].filter(Boolean).slice(0, 6);
-  if (!cleanTags.length) return cleanSummary;
-  return `${cleanSummary}\n${cleanTags.map((tag) => `#${tag}`).join(" ")}`;
+  const cleanMbti = cleanMbtiValue(mbti);
+  const lines = [cleanSummary];
+  if (cleanMbti) {
+    lines.push(`MBTI: ${cleanMbti}`);
+  }
+  if (cleanTags.length) {
+    lines.push(cleanTags.map((tag) => `#${tag}`).join(" "));
+  }
+  return lines.filter(Boolean).join("\n");
 }
 
 function getFallbackTags(profile) {
@@ -161,6 +212,7 @@ function buildDecoratedProfiles(profiles) {
       ...profile,
       summary: parsed.summary,
       tags: parsed.tags.length ? parsed.tags.slice(0, 4) : getFallbackTags(profile).slice(0, 4),
+      mbti: parsed.mbti,
       tone: getProfileTone(profile.gender),
       genderLabel: getProfileGenderLabel(profile.gender),
       isRequestable: Boolean(profile.generatedImageUrl),
@@ -175,6 +227,40 @@ function matchesProfileFilter(filter, profile) {
   return true;
 }
 
+function matchesDiscoveryFilters(profile, searchQuery, mbtiFilter, tagFilters) {
+  const normalizedQuery = `${searchQuery || ""}`.trim().toLowerCase();
+  const normalizedMbtiFilter = cleanMbtiValue(mbtiFilter);
+  const normalizedTagFilters = Array.isArray(tagFilters)
+    ? tagFilters.map((tag) => `${tag || ""}`.trim()).filter(Boolean)
+    : [];
+
+  if (normalizedMbtiFilter && profile.mbti !== normalizedMbtiFilter) {
+    return false;
+  }
+
+  if (normalizedTagFilters.length && !normalizedTagFilters.some((tag) => profile.tags.includes(tag))) {
+    return false;
+  }
+
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  const haystack = [
+    profile.nickname,
+    profile.summary,
+    profile.meetPlace,
+    profile.genderLabel,
+    profile.mbti,
+    ...(profile.tags || []),
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+  return haystack.includes(normalizedQuery);
+}
+
 export default function AiMatchPage() {
   const [activeScreen, setActiveScreen] = useState("intro");
   const [profiles, setProfiles] = useState([]);
@@ -182,6 +268,7 @@ export default function AiMatchPage() {
   const [selectedProfile, setSelectedProfile] = useState(null);
   const [nickname, setNickname] = useState("");
   const [gender, setGender] = useState("여성");
+  const [mbti, setMbti] = useState("");
   const [intro, setIntro] = useState("");
   const [place, setPlace] = useState(MEET_PLACES[0]);
   const [selectedTags, setSelectedTags] = useState([]);
@@ -195,7 +282,11 @@ export default function AiMatchPage() {
   const [requestMessage, setRequestMessage] = useState("");
   const [requestPlace, setRequestPlace] = useState(MEET_PLACES[0]);
   const [activeFilter, setActiveFilter] = useState("전체");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [peopleTagFilters, setPeopleTagFilters] = useState([]);
+  const [peopleMbtiFilter, setPeopleMbtiFilter] = useState("");
   const [favoriteProfileIds, setFavoriteProfileIds] = useState([]);
+  const [expandedTagProfileIds, setExpandedTagProfileIds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -211,7 +302,11 @@ export default function AiMatchPage() {
       : successMessage;
   const isDetailScreen = Boolean(selectedProfile);
   const decoratedProfiles = buildDecoratedProfiles(profiles);
-  const filteredProfiles = decoratedProfiles.filter((profile) => matchesProfileFilter(activeFilter, profile));
+  const filteredProfiles = decoratedProfiles.filter(
+    (profile) =>
+      matchesProfileFilter(activeFilter, profile) &&
+      matchesDiscoveryFilters(profile, searchQuery, peopleMbtiFilter, peopleTagFilters),
+  );
   const selectedDetailProfile = selectedProfile
     ? buildDecoratedProfiles([selectedProfile])[0]
     : null;
@@ -270,6 +365,18 @@ export default function AiMatchPage() {
     );
   }
 
+  function toggleExpandedTags(profileId) {
+    setExpandedTagProfileIds((current) =>
+      current.includes(profileId) ? current.filter((item) => item !== profileId) : [...current, profileId],
+    );
+  }
+
+  function togglePeopleTagFilter(tag) {
+    setPeopleTagFilters((current) =>
+      current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag],
+    );
+  }
+
   function openProfile(profile) {
     setSelectedProfile(profile);
     setSuccessMessage("");
@@ -283,6 +390,7 @@ export default function AiMatchPage() {
   function resetRegistrationForm() {
     setNickname("");
     setGender("여성");
+    setMbti("");
     setIntro("");
     setPlace(MEET_PLACES[0]);
     setSelectedTags([]);
@@ -332,7 +440,7 @@ export default function AiMatchPage() {
         {
           nickname: nickname.trim(),
           gender,
-          intro: serializeProfileCopy(intro, selectedTags),
+          intro: serializeProfileCopy(intro, selectedTags, mbti),
           meetPlace: place,
           consent,
           originalImageUrl,
@@ -537,26 +645,45 @@ export default function AiMatchPage() {
 
           <div className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>4. 관심사 태그</span>
-              <small>최대 6개</small>
+              <span>4. MBTI</span>
+              <small>선택 사항</small>
+            </div>
+            <select value={mbti} onChange={(event) => setMbti(cleanMbtiValue(event.target.value))}>
+              <option value="">선택 안 함</option>
+              {MBTI_OPTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="ai-match-field">
+            <div className="ai-match-field-head">
+              <span>5. 관심사 태그</span>
+              <small>{selectedTags.length}/6 선택</small>
             </div>
             <div className="ai-match-tag-grid">
-              {REGISTRATION_TAGS.map((tag) => (
-                <button
-                  key={tag}
-                  type="button"
-                  className={`ai-match-tag-chip${selectedTags.includes(tag) ? " is-selected" : ""}`}
-                  onClick={() => toggleTag(tag)}
-                >
-                  {tag}
-                </button>
-              ))}
+              {REGISTRATION_TAGS.map((tag) => {
+                const isSelected = selectedTags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    aria-pressed={isSelected}
+                    className={`ai-match-tag-chip${isSelected ? " is-selected" : ""}`}
+                    onClick={() => toggleTag(tag)}
+                  >
+                    <span>{tag}</span>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           <label className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>5. 자기소개</span>
+              <span>6. 자기소개</span>
               <small>{intro.length}/120</small>
             </div>
             <textarea
@@ -609,11 +736,57 @@ export default function AiMatchPage() {
               key={filter}
               type="button"
               className={`ai-match-filter-chip ai-match-filter-chip--${getFilterTone(filter)}${activeFilter === filter ? " is-active" : ""}`}
+              style={activeFilter === filter ? ACTIVE_FILTER_TAG_STYLE : undefined}
               onClick={() => setActiveFilter(filter)}
             >
               {filter}
             </button>
           ))}
+        </section>
+
+        <section className="ai-match-discovery-card">
+          <label className="search-field ai-match-search-field">
+            <IconSearch className="h-4 w-4" />
+            <input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="닉네임, 소개, 장소, MBTI 검색"
+            />
+          </label>
+
+          <label className="ai-match-field ai-match-field--compact">
+            <div className="ai-match-field-head">
+              <span>MBTI 필터</span>
+            </div>
+            <select value={peopleMbtiFilter} onChange={(event) => setPeopleMbtiFilter(cleanMbtiValue(event.target.value))}>
+              <option value="">전체</option>
+              {MBTI_OPTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="ai-match-field ai-match-field--compact">
+            <div className="ai-match-field-head">
+              <span>관심사 필터</span>
+              <small>{peopleTagFilters.length ? `${peopleTagFilters.length}개 선택` : "복수 선택 가능"}</small>
+            </div>
+            <div className="ai-match-tag-grid ai-match-tag-grid--filter">
+              {REGISTRATION_TAGS.map((tag) => (
+                <button
+                  key={tag}
+                  type="button"
+                  className={`ai-match-tag-chip${peopleTagFilters.includes(tag) ? " is-selected" : ""}`}
+                  style={peopleTagFilters.includes(tag) ? ACTIVE_FILTER_TAG_STYLE : undefined}
+                  onClick={() => togglePeopleTagFilter(tag)}
+                >
+                  <span>{tag}</span>
+                </button>
+              ))}
+            </div>
+          </div>
         </section>
 
         <section className="ai-match-list-meta">
@@ -625,6 +798,9 @@ export default function AiMatchPage() {
           <div className="ai-match-profile-list">
             {filteredProfiles.map((profile) => {
               const isFavorite = favoriteProfileIds.includes(profile.id);
+              const isTagsExpanded = expandedTagProfileIds.includes(profile.id);
+              const hasExtraTags = profile.tags.length > 3;
+              const visibleTags = isTagsExpanded || !hasExtraTags ? profile.tags : profile.tags.slice(0, 2);
               return (
                 <article key={profile.id} className={`ai-match-person-card ai-match-person-card--${profile.tone}`}>
                   <button
@@ -647,7 +823,7 @@ export default function AiMatchPage() {
 
                     <div className="ai-match-person-copy">
                       <button type="button" className="ai-match-person-copy-link" onClick={() => openProfile(profile)}>
-                        <em>{profile.genderLabel}</em>
+                        <em>{profile.mbti ? `${profile.genderLabel} · ${profile.mbti}` : profile.genderLabel}</em>
                         <strong>
                           {profile.nickname}
                           <span />
@@ -658,9 +834,18 @@ export default function AiMatchPage() {
 
                       <div className="ai-match-person-footer">
                         <div className="ai-match-inline-tags">
-                          {profile.tags.map((tag) => (
+                          {visibleTags.map((tag) => (
                             <span key={`${profile.id}-${tag}`}>{tag}</span>
                           ))}
+                          {hasExtraTags ? (
+                            <button
+                              type="button"
+                              className="ai-match-inline-tags__toggle"
+                              onClick={() => toggleExpandedTags(profile.id)}
+                            >
+                              {isTagsExpanded ? "접기" : `+${profile.tags.length - 2}`}
+                            </button>
+                          ) : null}
                         </div>
 
                         <button
@@ -754,6 +939,7 @@ export default function AiMatchPage() {
             {selectedDetailProfile.nickname}
             <span />
           </strong>
+          {selectedDetailProfile.mbti ? <em>{selectedDetailProfile.mbti}</em> : null}
           <small>{selectedDetailProfile.meetPlace || "축제 부스 주변에서 만나고 싶어요."}</small>
           <p>{selectedDetailProfile.summary}</p>
           <div className="ai-match-inline-tags">

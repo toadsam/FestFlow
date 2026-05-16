@@ -6,20 +6,7 @@ import { LanguageProvider } from "./i18n";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
 
-const HomePage = lazy(() => import("./pages/HomePage"));
-const EventPage = lazy(() => import("./pages/EventPage"));
-const LineupPage = lazy(() => import("./pages/LineupPage"));
-const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
-const StageMapPage = lazy(() => import("./pages/StageMapPage"));
-const ChatPage = lazy(() => import("./pages/ChatPage"));
-const BoothDetailPage = lazy(() => import("./pages/BoothDetailPage"));
-const MorePage = lazy(() => import("./pages/MorePage"));
 const AiMatchPage = lazy(() => import("./pages/AiMatchPage"));
-const AdminPage = lazy(() => import("./pages/AdminPage"));
-const OpsMasterPage = lazy(() => import("./pages/OpsMasterPage"));
-const OpsBoothPage = lazy(() => import("./pages/OpsBoothPage"));
-const StaffPage = lazy(() => import("./pages/StaffPage"));
-const LostFoundPage = lazy(() => import("./pages/LostFoundPage"));
 
 function PageFallback() {
   return (
@@ -51,21 +38,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<App />}>
-            <Route index element={lazyElement(HomePage)} />
-            <Route path="events" element={lazyElement(EventPage)} />
-            <Route path="events/lineup" element={lazyElement(LineupPage)} />
-            <Route path="analytics" element={lazyElement(AnalyticsPage)} />
-            <Route path="stage-map" element={lazyElement(StageMapPage)} />
-            <Route path="chat" element={lazyElement(ChatPage)} />
-            <Route path="lost-found" element={lazyElement(LostFoundPage)} />
-            <Route path="more" element={lazyElement(MorePage)} />
+            <Route index element={<Navigate to="/ai-match" replace />} />
             <Route path="ai-match" element={lazyElement(AiMatchPage)} />
-            <Route path="admin" element={lazyElement(AdminPage)} />
-            <Route path="ops/master" element={lazyElement(OpsMasterPage)} />
-            <Route path="ops/booth/:id" element={lazyElement(OpsBoothPage)} />
-            <Route path="staff" element={lazyElement(StaffPage)} />
-            <Route path="booths/:id" element={lazyElement(BoothDetailPage)} />
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/ai-match" replace />} />
           </Route>
         </Routes>
       </BrowserRouter>
