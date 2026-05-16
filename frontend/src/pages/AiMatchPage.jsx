@@ -18,12 +18,16 @@ import {
   IconX,
 } from "../components/UxIcons";
 import {
+  acceptAiMatchRequest,
+  accessAiMatchProfile,
+  cancelAiMatchRequest,
   createAiMatchImagePreview,
+  deleteAiMatchProfile,
   createAiMatchProfile,
   createAiMatchRequest,
-  fetchAiMatchProfiles,
-  fetchAiMatchRequests,
+  rejectAiMatchRequest,
   resolveApiAssetUrl,
+  updateAiMatchProfile,
 } from "../api";
 
 const MEET_PLACES = ["중앙무대 앞", "푸드트럭 존", "종합 안내 데스크", "네온 포토 터널"];
@@ -86,6 +90,13 @@ const ACTIVE_FILTER_TAG_STYLE = {
   color: "#64748b",
   boxShadow: "inset 0 0 0 1px rgba(255, 255, 255, 0.92), 0 10px 22px rgba(216, 180, 254, 0.22)",
   filter: "none",
+};
+const PIN_INPUT_PATTERN = /^\d{0,6}$/;
+const REQUEST_STATUS_LABELS = {
+  PENDING: "대기중",
+  ACCEPTED: "수락",
+  REJECTED: "거절",
+  CANCELED: "취소됨",
 };
 
 function cleanTagValue(tag) {
@@ -205,6 +216,30 @@ function formatRequestTime(createdAt) {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
+function getRequestStatusLabel(status) {
+  return REQUEST_STATUS_LABELS[status] || status || "대기중";
+}
+
+function getRequestStatusTone(status) {
+  if (status === "ACCEPTED") return "success";
+  if (status === "REJECTED") return "danger";
+  if (status === "CANCELED") return "muted";
+  return "pending";
+}
+
+function canSendRequest(status) {
+  return !status || status === "REJECTED" || status === "CANCELED";
+}
+
+function buildLatestSentRequestMap(sentRequests) {
+  return (sentRequests || []).reduce((map, request) => {
+    if (!map.has(request.profileId)) {
+      map.set(request.profileId, request);
+    }
+    return map;
+  }, new Map());
+}
+
 function buildDecoratedProfiles(profiles) {
   return profiles.map((profile) => {
     const parsed = parseProfileCopy(profile.intro);
@@ -264,9 +299,20 @@ function matchesDiscoveryFilters(profile, searchQuery, mbtiFilter, tagFilters) {
 export default function AiMatchPage() {
   const [activeScreen, setActiveScreen] = useState("intro");
   const [profiles, setProfiles] = useState([]);
-  const [requests, setRequests] = useState([]);
+  const [accessProfile, setAccessProfile] = useState(null);
+  const [accessRequests, setAccessRequests] = useState([]);
+  const [accessSentRequests, setAccessSentRequests] = useState([]);
+  const [accessNickname, setAccessNickname] = useState("");
+  const [accessPin, setAccessPin] = useState("");
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
+  const [accessSubmitting, setAccessSubmitting] = useState(false);
+  const [accessTargetScreen, setAccessTargetScreen] = useState("requests");
+  const [requestTab, setRequestTab] = useState("received");
   const [selectedProfile, setSelectedProfile] = useState(null);
+  const [editingProfileId, setEditingProfileId] = useState(null);
   const [nickname, setNickname] = useState("");
+  const [pin, setPin] = useState("");
+  const [pinConfirm, setPinConfirm] = useState("");
   const [gender, setGender] = useState("여성");
   const [mbti, setMbti] = useState("");
   const [intro, setIntro] = useState("");
@@ -291,15 +337,44 @@ export default function AiMatchPage() {
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [registerAttempted, setRegisterAttempted] = useState(false);
+  const [accessAttempted, setAccessAttempted] = useState(false);
 
+  const isEditingProfile = editingProfileId !== null;
+  const normalizedNickname = nickname.trim().toLowerCase();
+  const hasDuplicateNickname = Boolean(
+    normalizedNickname &&
+      profiles.some(
+        (profile) =>
+          profile.nickname.trim().toLowerCase() === normalizedNickname &&
+          profile.id !== editingProfileId,
+      ),
+  );
+  const pinMismatch = !isEditingProfile && pin.length > 0 && pinConfirm.length > 0 && pin !== pinConfirm;
+  const pinInvalid = !isEditingProfile && pin.length > 0 && !/^\d{4,6}$/.test(pin);
+  const imageMissing = !generatedImageUrl;
+  const nicknameMissing = !nickname.trim();
+  const pinMissing = !isEditingProfile && !pin.trim();
+  const pinConfirmMissing = !isEditingProfile && !pinConfirm.trim();
+  const introMissing = !intro.trim();
+  const consentMissing = !consent;
+  const accessNicknameMissing = !accessNickname.trim();
+  const accessPinMissing = !accessPin.trim();
   const canRegister = Boolean(
-    nickname.trim() && intro.trim() && generatedImageUrl && consent && !submitting && !converting,
+    !nicknameMissing &&
+      !introMissing &&
+      !imageMissing &&
+      !consentMissing &&
+      !submitting &&
+      !converting &&
+      !hasDuplicateNickname &&
+      (isEditingProfile || (/^\d{4,6}$/.test(pin) && pin === pinConfirm)),
   );
   const bannerText = errorMessage
     ? errorMessage
-    : converting
-      ? "웹툰 이미지로 변환 중입니다. 보통 20~60초 정도 걸립니다."
-      : successMessage;
+      : converting
+        ? "웹툰 이미지로 변환 중입니다. 보통 20~60초 정도 걸립니다."
+        : successMessage;
   const isDetailScreen = Boolean(selectedProfile);
   const decoratedProfiles = buildDecoratedProfiles(profiles);
   const filteredProfiles = decoratedProfiles.filter(
@@ -307,29 +382,18 @@ export default function AiMatchPage() {
       matchesProfileFilter(activeFilter, profile) &&
       matchesDiscoveryFilters(profile, searchQuery, peopleMbtiFilter, peopleTagFilters),
   );
+  const latestSentRequestMap = buildLatestSentRequestMap(accessSentRequests);
   const selectedDetailProfile = selectedProfile
     ? buildDecoratedProfiles([selectedProfile])[0]
     : null;
+  const selectedDetailRequest = selectedProfile ? latestSentRequestMap.get(selectedProfile.id) : null;
 
   async function loadData() {
-    setLoading(true);
-    setErrorMessage("");
-    try {
-      const [nextProfiles, nextRequests] = await Promise.all([
-        fetchAiMatchProfiles(),
-        fetchAiMatchRequests(),
-      ]);
-      setProfiles(Array.isArray(nextProfiles) ? nextProfiles : []);
-      setRequests(Array.isArray(nextRequests) ? nextRequests : []);
-    } catch (error) {
-      setErrorMessage(error.message || "AI 매칭 데이터를 불러오지 못했습니다.");
-    } finally {
-      setLoading(false);
-    }
+    setLoading(false);
   }
 
   useEffect(() => {
-    loadData();
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -346,6 +410,16 @@ export default function AiMatchPage() {
     if (!selectedProfile) return;
     setRequestPlace(selectedProfile.meetPlace || MEET_PLACES[0]);
   }, [selectedProfile]);
+
+  useEffect(() => {
+    if (!accessProfile || !accessNickname || !accessPin || isEditingProfile) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      loadAccessProfile(accessNickname, accessPin, activeScreen).catch(() => {});
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [accessProfile, accessNickname, accessPin, activeScreen, isEditingProfile]);
 
   function toggleTag(tag) {
     setSelectedTags((current) => {
@@ -377,6 +451,63 @@ export default function AiMatchPage() {
     );
   }
 
+  function openAccessModal(targetScreen = "requests") {
+    setAccessTargetScreen(targetScreen);
+    setAccessModalOpen(true);
+    setAccessAttempted(false);
+    setErrorMessage("");
+    setSuccessMessage("");
+  }
+
+  function closeAccessModal() {
+    setAccessModalOpen(false);
+    setAccessSubmitting(false);
+    setAccessAttempted(false);
+  }
+
+  async function loadAccessProfile(nextNickname, nextPin, nextScreen = "requests") {
+    const response = await accessAiMatchProfile(nextNickname, nextPin);
+    const nextProfiles = Array.isArray(response.profiles) ? response.profiles : [];
+    setAccessProfile(response.profile || null);
+    setAccessRequests(Array.isArray(response.receivedRequests) ? response.receivedRequests : []);
+    setAccessSentRequests(Array.isArray(response.sentRequests) ? response.sentRequests : []);
+    setProfiles(nextProfiles);
+    setAccessNickname(nextNickname);
+    setAccessPin(nextPin);
+    setRequesterNickname(response.profile?.nickname || nextNickname);
+    if (selectedProfile) {
+      setSelectedProfile(nextProfiles.find((profile) => profile.id === selectedProfile.id) || null);
+    }
+    setActiveScreen(nextScreen);
+    setAccessModalOpen(false);
+    return response;
+  }
+
+  async function handleAccessSubmit(event) {
+    event.preventDefault();
+    setAccessAttempted(true);
+    if (!accessNickname.trim()) {
+      setErrorMessage("닉네임을 입력해 주세요.");
+      return;
+    }
+    if (!accessPin.trim()) {
+      setErrorMessage("PIN을 입력해 주세요.");
+      return;
+    }
+
+    setAccessSubmitting(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      await loadAccessProfile(accessNickname.trim(), accessPin.trim(), accessTargetScreen);
+      setSuccessMessage("신청함 잠금이 해제되었습니다.");
+    } catch (error) {
+      setErrorMessage(error.message || "프로필 인증에 실패했습니다.");
+    } finally {
+      setAccessSubmitting(false);
+    }
+  }
+
   function openProfile(profile) {
     setSelectedProfile(profile);
     setSuccessMessage("");
@@ -388,7 +519,11 @@ export default function AiMatchPage() {
   }
 
   function resetRegistrationForm() {
+    setRegisterAttempted(false);
+    setEditingProfileId(null);
     setNickname("");
+    setPin("");
+    setPinConfirm("");
     setGender("여성");
     setMbti("");
     setIntro("");
@@ -399,6 +534,30 @@ export default function AiMatchPage() {
     setGeneratedImageUrl("");
     setConsent(false);
     setConvertSeconds(0);
+  }
+
+  function startEditingProfile() {
+    if (!accessProfile) return;
+    const parsed = parseProfileCopy(accessProfile.intro);
+    setRegisterAttempted(false);
+    setEditingProfileId(accessProfile.id);
+    setNickname(accessProfile.nickname || "");
+    setPin("");
+    setPinConfirm("");
+    setGender(accessProfile.gender || "여성");
+    setMbti(parsed.mbti || "");
+    setIntro(parsed.summary || "");
+    setPlace(accessProfile.meetPlace || MEET_PLACES[0]);
+    setSelectedTags(parsed.tags || []);
+    setOriginalImageUrl(accessProfile.originalImageUrl || "");
+    setGeneratedImageUrl(accessProfile.generatedImageUrl || "");
+    setPreviewUrl(resolveApiAssetUrl(accessProfile.generatedImageUrl || ""));
+    setConsent(true);
+    setConvertSeconds(0);
+    setSelectedProfile(null);
+    setActiveScreen("register");
+    setErrorMessage("");
+    setSuccessMessage("");
   }
 
   async function handleImageChange(event) {
@@ -429,6 +588,43 @@ export default function AiMatchPage() {
 
   async function handleRegister(event) {
     event.preventDefault();
+    setRegisterAttempted(true);
+    if (imageMissing) {
+      setErrorMessage("프로필 사진을 먼저 업로드해 주세요.");
+      return;
+    }
+    if (nicknameMissing) {
+      setErrorMessage("닉네임을 입력해 주세요.");
+      return;
+    }
+    if (hasDuplicateNickname) {
+      setErrorMessage("이미 사용 중인 닉네임입니다.");
+      return;
+    }
+    if (!isEditingProfile && pinMissing) {
+      setErrorMessage("PIN을 입력해 주세요.");
+      return;
+    }
+    if (!isEditingProfile && pinInvalid) {
+      setErrorMessage("PIN은 4~6자리 숫자여야 합니다.");
+      return;
+    }
+    if (!isEditingProfile && pinConfirmMissing) {
+      setErrorMessage("PIN 확인을 입력해 주세요.");
+      return;
+    }
+    if (!isEditingProfile && pinMismatch) {
+      setErrorMessage("PIN이 서로 일치하지 않습니다.");
+      return;
+    }
+    if (introMissing) {
+      setErrorMessage("자기소개를 입력해 주세요.");
+      return;
+    }
+    if (consentMissing) {
+      setErrorMessage("프로필 공개 동의가 필요합니다.");
+      return;
+    }
     if (!canRegister) return;
 
     setSubmitting(true);
@@ -436,25 +632,44 @@ export default function AiMatchPage() {
     setSuccessMessage("");
 
     try {
-      const nextProfile = await createAiMatchProfile(
-        {
+      if (isEditingProfile && accessProfile) {
+        const updatedProfile = await updateAiMatchProfile(editingProfileId, {
+          currentNickname: accessProfile.nickname,
           nickname: nickname.trim(),
           gender,
           intro: serializeProfileCopy(intro, selectedTags, mbti),
           meetPlace: place,
-          consent,
-          originalImageUrl,
-          generatedImageUrl,
-        },
-        null,
-      );
+          pin: accessPin,
+        });
+        setProfiles((current) => current.map((item) => (item.id === updatedProfile.id ? updatedProfile : item)));
+        setAccessProfile(updatedProfile);
+        setAccessNickname(updatedProfile.nickname);
+        resetRegistrationForm();
+        setActiveScreen("requests");
+        setSuccessMessage("내 프로필이 수정되었습니다.");
+      } else {
+        const createdNickname = nickname.trim();
+        const createdPin = pin.trim();
+        const nextProfile = await createAiMatchProfile(
+          {
+            nickname: createdNickname,
+            gender,
+            intro: serializeProfileCopy(intro, selectedTags, mbti),
+            pin: createdPin,
+            meetPlace: place,
+            consent,
+            originalImageUrl,
+            generatedImageUrl,
+          },
+          null,
+        );
 
-      setProfiles((current) => [nextProfile, ...current]);
-      resetRegistrationForm();
-      setActiveScreen("people");
-      setSuccessMessage("AI 프로필이 등록되었습니다. 등록된 사람들 화면에서 바로 확인해 보세요.");
+        resetRegistrationForm();
+        await loadAccessProfile(createdNickname, createdPin, "people");
+        setSuccessMessage("AI 프로필이 등록되었습니다. 등록된 사람들 화면에서 바로 확인해 보세요.");
+      }
     } catch (error) {
-      setErrorMessage(error.message || "AI 프로필 등록에 실패했습니다.");
+      setErrorMessage(error.message || (isEditingProfile ? "AI 프로필 수정에 실패했습니다." : "AI 프로필 등록에 실패했습니다."));
     } finally {
       setSubmitting(false);
     }
@@ -463,27 +678,129 @@ export default function AiMatchPage() {
   async function handleRequest(event) {
     event.preventDefault();
     if (!selectedProfile) return;
+    if (!accessProfile) {
+      setErrorMessage("등록한 닉네임과 PIN으로 먼저 입장해 주세요.");
+      openAccessModal("people");
+      return;
+    }
 
     setSubmitting(true);
     setErrorMessage("");
     setSuccessMessage("");
 
     try {
-      const nextRequest = await createAiMatchRequest(selectedProfile.id, {
-        requesterNickname: requesterNickname.trim() || "익명",
+      await createAiMatchRequest(selectedProfile.id, {
+        requesterNickname: accessProfile.nickname,
+        requesterPin: accessPin,
         meetPlace: requestPlace,
         message: requestMessage.trim() || "축제에서 잠깐 만나고 싶어요.",
       });
-
-      setRequests((current) => [nextRequest, ...current]);
-      setRequesterNickname("");
+      await loadAccessProfile(accessNickname, accessPin, "requests");
+      setRequesterNickname(accessProfile.nickname);
       setRequestMessage("");
       setRequestPlace(MEET_PLACES[0]);
       setSelectedProfile(null);
-      setActiveScreen("requests");
+      setRequestTab("sent");
       setSuccessMessage("데이트 신청이 전송되었습니다.");
+      window.alert("데이트 신청이 완료되었습니다.");
     } catch (error) {
       setErrorMessage(error.message || "데이트 신청에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDeleteProfile() {
+    if (!accessProfile) return;
+    const confirmed = window.confirm("내 프로필을 삭제할까요? 삭제 후에는 다시 잠금 해제할 수 없습니다.");
+    if (!confirmed) return;
+
+    setSubmitting(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      await deleteAiMatchProfile(accessProfile.id, {
+        currentNickname: accessProfile.nickname,
+        nickname: accessProfile.nickname,
+        pin: accessPin,
+      });
+      setProfiles((current) => current.filter((item) => item.id !== accessProfile.id));
+      setAccessProfile(null);
+      setAccessRequests([]);
+      setAccessSentRequests([]);
+      setProfiles([]);
+      setAccessNickname("");
+      setAccessPin("");
+      setRequesterNickname("");
+      resetRegistrationForm();
+      setActiveScreen("intro");
+      setSuccessMessage("프로필이 삭제되었습니다.");
+    } catch (error) {
+      setErrorMessage(error.message || "AI 프로필 삭제에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRequestsRefresh() {
+    if (!accessNickname || !accessPin) return;
+    setLoading(true);
+    setErrorMessage("");
+    try {
+      await loadAccessProfile(accessNickname, accessPin, "requests");
+    } catch (error) {
+      setErrorMessage(error.message || "신청함을 새로고침하지 못했습니다.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleAcceptRequest(requestId) {
+    if (!accessNickname || !accessPin) return;
+    setSubmitting(true);
+    setErrorMessage("");
+    try {
+      await acceptAiMatchRequest(requestId, accessNickname, accessPin);
+      await loadAccessProfile(accessNickname, accessPin, "requests");
+      setRequestTab("received");
+      setSuccessMessage("데이트 신청을 수락했습니다.");
+    } catch (error) {
+      setErrorMessage(error.message || "데이트 신청 수락에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleRejectRequest(requestId) {
+    if (!accessNickname || !accessPin) return;
+    setSubmitting(true);
+    setErrorMessage("");
+    try {
+      await rejectAiMatchRequest(requestId, accessNickname, accessPin);
+      await loadAccessProfile(accessNickname, accessPin, "requests");
+      setRequestTab("received");
+      setSuccessMessage("데이트 신청을 거절했습니다.");
+    } catch (error) {
+      setErrorMessage(error.message || "데이트 신청 거절에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleCancelRequest(requestId) {
+    if (!accessNickname || !accessPin) return;
+    const confirmed = window.confirm("보낸 데이트 신청을 취소할까요?");
+    if (!confirmed) return;
+
+    setSubmitting(true);
+    setErrorMessage("");
+    try {
+      await cancelAiMatchRequest(requestId, accessNickname, accessPin);
+      await loadAccessProfile(accessNickname, accessPin, activeScreen);
+      setRequestTab("sent");
+      setSuccessMessage("데이트 신청을 취소했습니다.");
+    } catch (error) {
+      setErrorMessage(error.message || "데이트 신청 취소에 실패했습니다.");
     } finally {
       setSubmitting(false);
     }
@@ -548,7 +865,7 @@ export default function AiMatchPage() {
         <button
           type="button"
           className="ai-match-secondary-button"
-          onClick={() => setActiveScreen("people")}
+          onClick={() => openAccessModal("people")}
         >
           등록된 사람 보기
         </button>
@@ -564,6 +881,16 @@ export default function AiMatchPage() {
   function renderRegisterScreen() {
     return (
       <form className="ai-match-flow" onSubmit={handleRegister}>
+        {isEditingProfile ? (
+          <section className="ai-match-section-card">
+            <div className="ai-match-section-head">
+              <h2>내 프로필 수정</h2>
+              <span>{accessProfile?.nickname}</span>
+            </div>
+            <p className="ai-match-note">신청함에서 인증된 PIN으로 수정이 진행됩니다.</p>
+          </section>
+        ) : null}
+
         <section className="ai-match-section-card">
           <div className="ai-match-section-head">
             <h2>1. 사진 업로드</h2>
@@ -609,6 +936,9 @@ export default function AiMatchPage() {
             {converting ? "변환 중..." : generatedImageUrl ? "다른 사진 올리기" : "사진 업로드"}
             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} disabled={converting} />
           </label>
+          {registerAttempted && imageMissing ? (
+            <small className="ai-match-field-error">프로필 사진을 먼저 업로드해 주세요.</small>
+          ) : null}
         </section>
 
         <section className="ai-match-section-card">
@@ -623,11 +953,58 @@ export default function AiMatchPage() {
               onChange={(event) => setNickname(event.target.value)}
               placeholder="예) 햇살같은하루"
             />
+            {registerAttempted && nicknameMissing ? <small className="ai-match-field-error">닉네임을 입력해 주세요.</small> : null}
+            {hasDuplicateNickname ? <small className="ai-match-field-error">이미 사용 중인 닉네임입니다.</small> : null}
           </label>
+
+          {!isEditingProfile ? (
+            <>
+              <label className="ai-match-field">
+                <div className="ai-match-field-head">
+                  <span>3. PIN</span>
+                  <small>4~6자리 숫자</small>
+                </div>
+                <input
+                  value={pin}
+                  inputMode="numeric"
+                  maxLength={6}
+                  onChange={(event) => {
+                    const nextValue = event.target.value.replace(/\D/g, "");
+                    if (PIN_INPUT_PATTERN.test(nextValue)) {
+                      setPin(nextValue);
+                    }
+                  }}
+                  placeholder="예) 1234"
+                />
+                {registerAttempted && pinMissing ? <small className="ai-match-field-error">PIN을 입력해 주세요.</small> : null}
+                {pinInvalid ? <small className="ai-match-field-error">PIN은 4~6자리 숫자여야 합니다.</small> : null}
+              </label>
+
+              <label className="ai-match-field">
+                <div className="ai-match-field-head">
+                  <span>4. PIN 확인</span>
+                </div>
+                <input
+                  value={pinConfirm}
+                  inputMode="numeric"
+                  maxLength={6}
+                  onChange={(event) => {
+                    const nextValue = event.target.value.replace(/\D/g, "");
+                    if (PIN_INPUT_PATTERN.test(nextValue)) {
+                      setPinConfirm(nextValue);
+                    }
+                  }}
+                  placeholder="PIN을 다시 입력해주세요"
+                />
+                {registerAttempted && pinConfirmMissing ? <small className="ai-match-field-error">PIN 확인을 입력해 주세요.</small> : null}
+                {pinMismatch ? <small className="ai-match-field-error">PIN이 서로 일치하지 않습니다.</small> : null}
+              </label>
+            </>
+          ) : null}
 
           <div className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>3. 성별</span>
+              <span>{isEditingProfile ? "3. 성별" : "5. 성별"}</span>
             </div>
             <div className="ai-match-gender-grid">
               {["남성", "여성", "비공개"].map((item) => (
@@ -645,7 +1022,7 @@ export default function AiMatchPage() {
 
           <div className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>4. MBTI</span>
+              <span>{isEditingProfile ? "4. MBTI" : "6. MBTI"}</span>
               <small>선택 사항</small>
             </div>
             <select value={mbti} onChange={(event) => setMbti(cleanMbtiValue(event.target.value))}>
@@ -660,7 +1037,7 @@ export default function AiMatchPage() {
 
           <div className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>5. 관심사 태그</span>
+              <span>{isEditingProfile ? "5. 관심사 태그" : "7. 관심사 태그"}</span>
               <small>{selectedTags.length}/6 선택</small>
             </div>
             <div className="ai-match-tag-grid">
@@ -683,7 +1060,7 @@ export default function AiMatchPage() {
 
           <label className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>6. 자기소개</span>
+              <span>{isEditingProfile ? "6. 자기소개" : "8. 자기소개"}</span>
               <small>{intro.length}/120</small>
             </div>
             <textarea
@@ -692,6 +1069,7 @@ export default function AiMatchPage() {
               onChange={(event) => setIntro(event.target.value)}
               placeholder="나를 간단히 소개해주세요. 예) 웃음이 많고 공원 산책을 좋아해요!"
             />
+            {registerAttempted && introMissing ? <small className="ai-match-field-error">자기소개를 입력해 주세요.</small> : null}
           </label>
 
           <label className="ai-match-field">
@@ -709,18 +1087,21 @@ export default function AiMatchPage() {
             <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
             <span>사진과 소개가 공개 목록에 표시되는 것에 동의합니다.</span>
           </label>
+          {registerAttempted && consentMissing ? (
+            <small className="ai-match-field-error">프로필 공개 동의가 필요합니다.</small>
+          ) : null}
         </section>
 
         <button
           type="submit"
           className="ai-match-primary-button ai-match-primary-button--form"
-          disabled={!canRegister}
+          disabled={submitting || converting}
         >
           <span className="ai-match-primary-button__icon">
             <IconHeart className="h-4 w-4" />
           </span>
           <span className="ai-match-primary-button__label">
-            {submitting ? "등록 중..." : converting ? "AI 변환 중..." : "등록하기"}
+            {submitting ? (isEditingProfile ? "수정 중..." : "등록 중...") : converting ? "AI 변환 중..." : isEditingProfile ? "수정 저장" : "등록하기"}
           </span>
         </button>
       </form>
@@ -728,6 +1109,20 @@ export default function AiMatchPage() {
   }
 
   function renderPeopleScreen() {
+    if (!accessProfile) {
+      return (
+        <div className="ai-match-flow">
+          <section className="ai-match-empty-card">
+            <strong>등록된 사람 목록은 닉네임과 PIN 인증 후 볼 수 있습니다.</strong>
+            <p>프로필을 등록한 닉네임과 PIN을 입력하면 다른 참가자 목록과 데이트 신청 화면이 열립니다.</p>
+            <button type="button" className="ai-match-secondary-button" onClick={() => openAccessModal("people")}>
+              닉네임 + PIN으로 입장
+            </button>
+          </section>
+        </div>
+      );
+    }
+
     return (
       <div className="ai-match-flow">
         <section className="ai-match-filter-bar">
@@ -801,6 +1196,8 @@ export default function AiMatchPage() {
               const isTagsExpanded = expandedTagProfileIds.includes(profile.id);
               const hasExtraTags = profile.tags.length > 3;
               const visibleTags = isTagsExpanded || !hasExtraTags ? profile.tags : profile.tags.slice(0, 2);
+              const sentRequest = latestSentRequestMap.get(profile.id);
+              const requestStatusLabel = sentRequest ? getRequestStatusLabel(sentRequest.status) : "";
               return (
                 <article key={profile.id} className={`ai-match-person-card ai-match-person-card--${profile.tone}`}>
                   <button
@@ -834,6 +1231,11 @@ export default function AiMatchPage() {
 
                       <div className="ai-match-person-footer">
                         <div className="ai-match-inline-tags">
+                          {sentRequest && sentRequest.status !== "CANCELED" ? (
+                            <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(sentRequest.status)}`}>
+                              신청 {requestStatusLabel}
+                            </span>
+                          ) : null}
                           {visibleTags.map((tag) => (
                             <span key={`${profile.id}-${tag}`}>{tag}</span>
                           ))}
@@ -856,7 +1258,15 @@ export default function AiMatchPage() {
                           <span className="ai-match-request-button__icon">
                             <IconHeart className="h-4 w-4" />
                           </span>
-                          <span className="ai-match-request-button__label">데이트 신청</span>
+                          <span className="ai-match-request-button__label">
+                            {sentRequest && sentRequest.status === "PENDING"
+                              ? "신청 상태 보기"
+                              : sentRequest && sentRequest.status === "REJECTED"
+                                ? "다시 신청"
+                                : sentRequest && sentRequest.status === "ACCEPTED"
+                                  ? "수락 상태 보기"
+                                  : "데이트 신청"}
+                          </span>
                         </button>
                       </div>
                     </div>
@@ -881,35 +1291,172 @@ export default function AiMatchPage() {
   }
 
   function renderRequestsScreen() {
+    if (!accessProfile) {
+      return (
+        <div className="ai-match-flow">
+          <section className="ai-match-empty-card">
+            <strong>신청함은 PIN으로 잠금되어 있습니다.</strong>
+            <p>프로필을 등록한 닉네임과 PIN을 입력하면 내 신청함과 프로필 관리 화면을 열 수 있어요.</p>
+            <button type="button" className="ai-match-secondary-button" onClick={() => openAccessModal("requests")}>
+              신청함 잠금 해제
+            </button>
+          </section>
+        </div>
+      );
+    }
+
     return (
       <div className="ai-match-flow">
         <section className="ai-match-request-summary">
-          <strong>최근 데이트 신청</strong>
-          <p>전송된 신청 내역을 시간순으로 확인할 수 있어요.</p>
-          <span>{requests.length}건</span>
+          <strong>{accessProfile.nickname}님의 신청함</strong>
+          <p>받은 요청과 보낸 요청 상태가 실시간으로 반영됩니다.</p>
+          <span>{accessRequests.length + accessSentRequests.length}건</span>
         </section>
 
-        {requests.length ? (
+        <section className="ai-match-section-card">
+          <div className="ai-match-section-head">
+            <h2>내 프로필 관리</h2>
+            <span>
+              {(() => {
+                const parsed = parseProfileCopy(accessProfile.intro);
+                return parsed.mbti
+                  ? `${getProfileGenderLabel(accessProfile.gender)} · ${parsed.mbti}`
+                  : getProfileGenderLabel(accessProfile.gender);
+              })()}
+            </span>
+          </div>
+          <div className="ai-match-request-actions">
+            <button type="button" className="ai-match-secondary-button" onClick={startEditingProfile}>
+              프로필 수정
+            </button>
+            <button type="button" className="ai-match-secondary-button ai-match-secondary-button--danger" onClick={handleDeleteProfile} disabled={submitting}>
+              프로필 삭제
+            </button>
+            <button
+              type="button"
+              className="ai-match-secondary-button"
+              onClick={() => {
+                setAccessProfile(null);
+                setAccessRequests([]);
+                setAccessSentRequests([]);
+                setProfiles([]);
+                setAccessNickname("");
+                setAccessPin("");
+                setRequesterNickname("");
+                openAccessModal("requests");
+              }}
+            >
+              다른 닉네임으로 열기
+            </button>
+          </div>
+        </section>
+
+        <section className="ai-match-filter-bar">
+          <button
+            type="button"
+            className={`ai-match-filter-chip ai-match-filter-chip--violet${requestTab === "received" ? " is-active" : ""}`}
+            style={requestTab === "received" ? ACTIVE_FILTER_TAG_STYLE : undefined}
+            onClick={() => setRequestTab("received")}
+          >
+            받은 요청
+          </button>
+          <button
+            type="button"
+            className={`ai-match-filter-chip ai-match-filter-chip--violet${requestTab === "sent" ? " is-active" : ""}`}
+            style={requestTab === "sent" ? ACTIVE_FILTER_TAG_STYLE : undefined}
+            onClick={() => setRequestTab("sent")}
+          >
+            보낸 요청
+          </button>
+        </section>
+
+        {requestTab === "received" ? (
+          accessRequests.length ? (
+            <div className="ai-match-request-history">
+              {accessRequests.map((request) => (
+                <article key={request.id} className="ai-match-request-history-card">
+                  <div className="ai-match-request-history-head">
+                    <strong>{request.requesterNickname}</strong>
+                    <small>{formatRequestTime(request.createdAt)}</small>
+                  </div>
+                  <div className="ai-match-request-history-status">
+                    <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(request.status)}`}>
+                      {getRequestStatusLabel(request.status)}
+                    </span>
+                  </div>
+                  <p>{request.requesterNickname}님이 데이트 신청을 보냈어요.</p>
+                  <span>
+                    <IconMapPin className="h-4 w-4" />
+                    {request.meetPlace}
+                  </span>
+                  <em>{request.message}</em>
+                  {request.status === "PENDING" ? (
+                    <div className="ai-match-request-actions">
+                      <button
+                        type="button"
+                        className="ai-match-secondary-button"
+                        onClick={() => handleAcceptRequest(request.id)}
+                        disabled={submitting}
+                      >
+                        수락
+                      </button>
+                      <button
+                        type="button"
+                        className="ai-match-secondary-button ai-match-secondary-button--danger"
+                        onClick={() => handleRejectRequest(request.id)}
+                        disabled={submitting}
+                      >
+                        거절
+                      </button>
+                    </div>
+                  ) : null}
+                </article>
+              ))}
+            </div>
+          ) : (
+            <section className="ai-match-empty-card">
+              <strong>아직 받은 요청이 없습니다.</strong>
+              <p>공개된 내 프로필로 도착한 신청이 생기면 여기에 표시됩니다.</p>
+            </section>
+          )
+        ) : accessSentRequests.length ? (
           <div className="ai-match-request-history">
-            {requests.map((request) => (
+            {accessSentRequests.map((request) => (
               <article key={request.id} className="ai-match-request-history-card">
                 <div className="ai-match-request-history-head">
                   <strong>{request.profileNickname}</strong>
                   <small>{formatRequestTime(request.createdAt)}</small>
                 </div>
-                <p>{request.requesterNickname}님이 데이트 신청을 보냈어요.</p>
+                <div className="ai-match-request-history-status">
+                  <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(request.status)}`}>
+                    {getRequestStatusLabel(request.status)}
+                  </span>
+                </div>
+                <p>{request.profileNickname}님에게 보낸 데이트 신청입니다.</p>
                 <span>
                   <IconMapPin className="h-4 w-4" />
                   {request.meetPlace}
                 </span>
                 <em>{request.message}</em>
+                {request.status === "PENDING" ? (
+                  <div className="ai-match-request-actions">
+                    <button
+                      type="button"
+                      className="ai-match-secondary-button ai-match-secondary-button--danger"
+                      onClick={() => handleCancelRequest(request.id)}
+                      disabled={submitting}
+                    >
+                      신청 취소
+                    </button>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>
         ) : (
           <section className="ai-match-empty-card">
-            <strong>아직 신청 내역이 없습니다.</strong>
-            <p>사람들 탭에서 마음에 드는 프로필을 선택해 첫 신청을 보내보세요.</p>
+            <strong>아직 보낸 요청이 없습니다.</strong>
+            <p>등록된 사람들에서 마음에 드는 상대에게 먼저 신청해 보세요.</p>
           </section>
         )}
       </div>
@@ -918,6 +1465,7 @@ export default function AiMatchPage() {
 
   function renderDetailScreen() {
     if (!selectedDetailProfile) return null;
+    const detailRequestStatus = selectedDetailRequest?.status || "";
 
     return (
       <div className="ai-match-flow ai-match-flow--detail">
@@ -943,6 +1491,11 @@ export default function AiMatchPage() {
           <small>{selectedDetailProfile.meetPlace || "축제 부스 주변에서 만나고 싶어요."}</small>
           <p>{selectedDetailProfile.summary}</p>
           <div className="ai-match-inline-tags">
+            {selectedDetailRequest && selectedDetailRequest.status !== "CANCELED" ? (
+              <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(selectedDetailRequest.status)}`}>
+                신청 {getRequestStatusLabel(selectedDetailRequest.status)}
+              </span>
+            ) : null}
             {selectedDetailProfile.tags.map((tag) => (
               <span key={`${selectedDetailProfile.id}-detail-${tag}`}>{tag}</span>
             ))}
@@ -965,12 +1518,12 @@ export default function AiMatchPage() {
           <label className="ai-match-field">
             <div className="ai-match-field-head">
               <span>신청자 닉네임</span>
-              <small>{requesterNickname.length}/12</small>
+              <small>인증 완료</small>
             </div>
             <input
-              value={requesterNickname}
+              value={accessProfile?.nickname || requesterNickname}
               maxLength={12}
-              onChange={(event) => setRequesterNickname(event.target.value)}
+              readOnly
               placeholder="예) 같이걷고싶어요"
             />
           </label>
@@ -1002,7 +1555,7 @@ export default function AiMatchPage() {
           <button
             type="submit"
             className="ai-match-primary-button ai-match-primary-button--sheet"
-            disabled={submitting}
+            disabled={submitting || !canSendRequest(detailRequestStatus)}
           >
             {submitting ? (
               <span className="ai-match-primary-button__icon">
@@ -1010,7 +1563,15 @@ export default function AiMatchPage() {
               </span>
             ) : null}
             <span className="ai-match-primary-button__label">
-              {submitting ? "전송 중..." : "데이트 신청 보내기"}
+              {submitting
+                ? "전송 중..."
+                : detailRequestStatus === "PENDING"
+                  ? "신청 대기중"
+                  : detailRequestStatus === "ACCEPTED"
+                    ? "수락됨"
+                    : selectedDetailRequest && (detailRequestStatus === "REJECTED" || detailRequestStatus === "CANCELED")
+                      ? "다시 신청 보내기"
+                      : "데이트 신청 보내기"}
             </span>
             {!submitting ? (
               <span className="ai-match-primary-button__accent" aria-hidden="true">
@@ -1018,6 +1579,16 @@ export default function AiMatchPage() {
               </span>
             ) : null}
           </button>
+          {selectedDetailRequest?.status === "PENDING" ? (
+            <button
+              type="button"
+              className="ai-match-secondary-button ai-match-secondary-button--danger"
+              onClick={() => handleCancelRequest(selectedDetailRequest.id)}
+              disabled={submitting}
+            >
+              신청 취소
+            </button>
+          ) : null}
         </form>
       </div>
     );
@@ -1074,7 +1645,7 @@ export default function AiMatchPage() {
         <h1>{SCREEN_COPY[activeScreen]}</h1>
 
         {activeScreen === "requests" ? (
-          <button type="button" aria-label="새로고침" onClick={loadData} disabled={loading}>
+          <button type="button" aria-label="새로고침" onClick={handleRequestsRefresh} disabled={loading || accessSubmitting}>
             <IconRefresh className="h-5 w-5" />
           </button>
         ) : (
@@ -1103,7 +1674,25 @@ export default function AiMatchPage() {
                 key={item.id}
                 type="button"
                 className={`ai-match-bottom-tab${isActive ? " is-active" : ""}`}
-                onClick={() => setActiveScreen(item.id)}
+                onClick={() => {
+                  if (item.id === "people") {
+                    if (accessProfile) {
+                      setActiveScreen("people");
+                    } else {
+                      openAccessModal("people");
+                    }
+                    return;
+                  }
+                  if (item.id === "requests") {
+                    if (accessProfile) {
+                      setActiveScreen("requests");
+                    } else {
+                      openAccessModal("requests");
+                    }
+                    return;
+                  }
+                  setActiveScreen(item.id);
+                }}
               >
                 <Icon className="h-5 w-5" />
                 <span>{item.label}</span>
@@ -1111,6 +1700,56 @@ export default function AiMatchPage() {
             );
           })}
         </nav>
+      ) : null}
+
+      {accessModalOpen ? (
+        <div className="ai-match-modal" role="dialog" aria-modal="true" aria-labelledby="ai-match-access-title">
+          <form className="ai-match-dialog" onSubmit={handleAccessSubmit}>
+            <button type="button" className="ai-match-close" onClick={closeAccessModal}>
+              닫기
+            </button>
+            <div className="ai-match-section-head">
+              <h2 id="ai-match-access-title">신청함 잠금 해제</h2>
+              <span>닉네임 + PIN</span>
+            </div>
+            <label className="ai-match-field">
+              <div className="ai-match-field-head">
+                <span>닉네임</span>
+              </div>
+              <input
+                value={accessNickname}
+                maxLength={12}
+                onChange={(event) => setAccessNickname(event.target.value)}
+                placeholder="등록한 닉네임"
+              />
+              {accessAttempted && accessNicknameMissing ? <small className="ai-match-field-error">닉네임을 입력해 주세요.</small> : null}
+            </label>
+            <label className="ai-match-field">
+              <div className="ai-match-field-head">
+                <span>PIN</span>
+                <small>4~6자리 숫자</small>
+              </div>
+              <input
+                value={accessPin}
+                inputMode="numeric"
+                maxLength={6}
+                onChange={(event) => {
+                  const nextValue = event.target.value.replace(/\D/g, "");
+                  if (PIN_INPUT_PATTERN.test(nextValue)) {
+                    setAccessPin(nextValue);
+                  }
+                }}
+                placeholder="예) 1234"
+              />
+              {accessAttempted && accessPinMissing ? <small className="ai-match-field-error">PIN을 입력해 주세요.</small> : null}
+            </label>
+            <button type="submit" className="ai-match-primary-button ai-match-primary-button--sheet" disabled={accessSubmitting}>
+              <span className="ai-match-primary-button__label">
+                {accessSubmitting ? "확인 중..." : "신청함 열기"}
+              </span>
+            </button>
+          </form>
+        </div>
       ) : null}
     </section>
   );

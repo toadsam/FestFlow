@@ -953,6 +953,7 @@ export async function createAiMatchProfile(form, file) {
   formData.append("nickname", form.nickname || "");
   formData.append("gender", form.gender || "");
   formData.append("intro", form.intro || "");
+  formData.append("pin", form.pin || "");
   formData.append("meetPlace", form.meetPlace || "");
   formData.append("consent", String(Boolean(form.consent)));
   if (form.originalImageUrl) {
@@ -972,18 +973,74 @@ export async function createAiMatchProfile(form, file) {
   return parseJson(response, "AI 프로필 등록에 실패했습니다.");
 }
 
-export async function fetchAiMatchRequests(profileId) {
-  const query = profileId ? `?profileId=${encodeURIComponent(profileId)}` : "";
-  const response = await fetch(`${API_BASE}/ai-match/requests${query}`);
-  return parseJson(response, "데이트 신청 목록을 불러오지 못했습니다.");
+export async function accessAiMatchProfile(nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/access`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "프로필 인증에 실패했습니다.");
+}
+
+export async function updateAiMatchProfile(profileId, payload) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/${profileId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "AI 프로필 수정에 실패했습니다.");
+}
+
+export async function deleteAiMatchProfile(profileId, payload) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/${profileId}/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data.message || "AI 프로필 삭제에 실패했습니다.");
+  }
 }
 
 export async function createAiMatchRequest(profileId, payload) {
   const response = await fetch(`${API_BASE}/ai-match/profiles/${profileId}/requests`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify({
+      requesterNickname: payload.requesterNickname || "",
+      requesterPin: payload.requesterPin || "",
+      meetPlace: payload.meetPlace || "",
+      message: payload.message || "",
+    }),
   });
   return parseJson(response, "데이트 신청에 실패했습니다.");
+}
+
+export async function acceptAiMatchRequest(requestId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/accept`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "데이트 신청 수락에 실패했습니다.");
+}
+
+export async function rejectAiMatchRequest(requestId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "데이트 신청 거절에 실패했습니다.");
+}
+
+export async function cancelAiMatchRequest(requestId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/cancel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "데이트 신청 취소에 실패했습니다.");
 }
 

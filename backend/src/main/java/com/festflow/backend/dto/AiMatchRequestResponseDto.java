@@ -6,9 +6,12 @@ public record AiMatchRequestResponseDto(
         Long id,
         Long profileId,
         String profileNickname,
+        Long requesterProfileId,
         String requesterNickname,
         String meetPlace,
         String message,
-        LocalDateTime createdAt
+        String status,
+        LocalDateTime createdAt,
+        LocalDateTime updatedAt
 ) {
 }

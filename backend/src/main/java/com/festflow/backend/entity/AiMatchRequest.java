@@ -25,6 +25,10 @@ public class AiMatchRequest {
     @JoinColumn(name = "profile_id", nullable = false)
     private AiMatchProfile profile;
 
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "requester_profile_id", nullable = false)
+    private AiMatchProfile requesterProfile;
+
     @Column(nullable = false, length = 40)
     private String requesterNickname;
 
@@ -37,16 +41,24 @@ public class AiMatchRequest {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
+    @Column(length = 20, nullable = false)
+    private String status;
+
+    @Column
+    private LocalDateTime updatedAt;
+
     protected AiMatchRequest() {
     }
 
     public AiMatchRequest(
             AiMatchProfile profile,
+            AiMatchProfile requesterProfile,
             String requesterNickname,
             String meetPlace,
             String message
     ) {
         this.profile = profile;
+        this.requesterProfile = requesterProfile;
         this.requesterNickname = requesterNickname;
         this.meetPlace = meetPlace;
         this.message = message;
@@ -55,6 +67,7 @@ public class AiMatchRequest {
     @PrePersist
     public void onCreate() {
         this.createdAt = LocalDateTime.now();
+        this.status = "PENDING";
     }
 
     public Long getId() {
@@ -69,6 +82,10 @@ public class AiMatchRequest {
         return requesterNickname;
     }
 
+    public AiMatchProfile getRequesterProfile() {
+        return requesterProfile;
+    }
+
     public String getMeetPlace() {
         return meetPlace;
     }
@@ -79,5 +96,28 @@ public class AiMatchRequest {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void accept() {
+        this.status = "ACCEPTED";
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void reject() {
+        this.status = "REJECTED";
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void cancel() {
+        this.status = "CANCELED";
+        this.updatedAt = LocalDateTime.now();
     }
 }

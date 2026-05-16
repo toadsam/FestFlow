@@ -27,6 +27,9 @@ public class AiMatchProfile {
     @Column(nullable = false, length = 500)
     private String intro;
 
+    @Column(length = 255)
+    private String pinHash;
+
     @Column(nullable = false, length = 120)
     private String meetPlace;
 
@@ -52,6 +55,7 @@ public class AiMatchProfile {
             String nickname,
             String gender,
             String intro,
+            String pinHash,
             String meetPlace,
             String originalImageUrl,
             String generatedImageUrl,
@@ -60,6 +64,7 @@ public class AiMatchProfile {
         this.nickname = nickname;
         this.gender = gender;
         this.intro = intro;
+        this.pinHash = pinHash;
         this.meetPlace = meetPlace;
         this.originalImageUrl = originalImageUrl;
         this.generatedImageUrl = generatedImageUrl;
@@ -88,6 +93,10 @@ public class AiMatchProfile {
         return intro;
     }
 
+    public String getPinHash() {
+        return pinHash;
+    }
+
     public String getMeetPlace() {
         return meetPlace;
     }
@@ -110,5 +119,16 @@ public class AiMatchProfile {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public void updateProfile(String nickname, String gender, String intro, String meetPlace) {
+        this.nickname = nickname;
+        this.gender = gender;
+        this.intro = intro;
+        this.meetPlace = meetPlace;
+    }
+
+    public void deactivate() {
+        this.status = "DELETED";
     }
 }
