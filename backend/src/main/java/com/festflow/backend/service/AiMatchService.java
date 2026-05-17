@@ -1,6 +1,7 @@
 package com.festflow.backend.service;
 
 import com.festflow.backend.dto.AiMatchAdminOverviewDto;
+import com.festflow.backend.dto.AiMatchAdminNoteUpdateDto;
 import com.festflow.backend.dto.AiMatchAdminProfileDto;
 import com.festflow.backend.dto.AiMatchAdminRequestDto;
 import com.festflow.backend.dto.AiMatchConnectionStatusUpdateDto;
@@ -236,6 +237,18 @@ public class AiMatchService {
     }
 
     @Transactional
+    public AiMatchAdminRequestDto updateAdminNote(Long requestId, AiMatchAdminNoteUpdateDto requestDto) {
+        AiMatchRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "데이트 신청을 찾을 수 없습니다."));
+        if (!isMatchedStatus(request.getStatus())) {
+            throw new ResponseStatusException(CONFLICT, "성사된 매치만 관리자 메모를 남길 수 있습니다.");
+        }
+        String safeAdminNote = trimOptional(requestDto == null ? "" : requestDto.adminNote(), 1000);
+        request.updateAdminNote(safeAdminNote);
+        return toAdminRequestDto(request);
+    }
+
+    @Transactional
     public void deleteProfile(Long profileId, AiMatchProfileDeleteDto requestDto) {
         AiMatchProfile profile = authenticateProfile(requestDto.currentNickname(), requestDto.pin());
         if (!profile.getId().equals(profileId)) {
@@ -456,6 +469,7 @@ public class AiMatchService {
                 request.getMessage(),
                 request.getStatus(),
                 request.getConnectionStatus(),
+                request.getAdminNote(),
                 request.getCreatedAt(),
                 request.getUpdatedAt()
         );
@@ -528,6 +542,14 @@ public class AiMatchService {
     private String trimOrNull(String value) {
         String trimmed = value == null ? "" : value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String trimOptional(String value, int maxLength) {
+        String trimmed = value == null ? "" : value.trim();
+        if (trimmed.length() > maxLength) {
+            throw new ResponseStatusException(BAD_REQUEST, "입력값은 최대 " + maxLength + "자 이하로 입력해 주세요.");
+        }
+        return trimmed;
     }
 
     private String normalizePhoneNumber(String value, boolean required) {

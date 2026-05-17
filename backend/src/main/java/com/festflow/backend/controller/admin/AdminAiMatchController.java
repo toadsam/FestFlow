@@ -1,6 +1,7 @@
 package com.festflow.backend.controller.admin;
 
 import com.festflow.backend.dto.AiMatchAdminOverviewDto;
+import com.festflow.backend.dto.AiMatchAdminNoteUpdateDto;
 import com.festflow.backend.dto.AiMatchAdminRequestDto;
 import com.festflow.backend.dto.AiMatchConnectionStatusUpdateDto;
 import com.festflow.backend.service.AiMatchService;
@@ -33,6 +34,14 @@ public class AdminAiMatchController {
             @RequestBody AiMatchConnectionStatusUpdateDto requestDto
     ) {
         return aiMatchService.updateConnectionStatus(requestId, requestDto);
+    }
+
+    @PutMapping("/requests/{requestId}/admin-note")
+    public AiMatchAdminRequestDto updateAdminNote(
+            @PathVariable Long requestId,
+            @RequestBody AiMatchAdminNoteUpdateDto requestDto
+    ) {
+        return aiMatchService.updateAdminNote(requestId, requestDto);
     }
 
     @DeleteMapping("/profiles/{profileId}")

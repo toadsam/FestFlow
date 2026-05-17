@@ -6,6 +6,7 @@ import {
   loginAdmin,
   resolveApiAssetUrl,
   updateAdminAiMatchConnectionStatus,
+  updateAdminAiMatchRequestNote,
 } from "../api";
 import {
   IconArrowLeft,
@@ -125,9 +126,11 @@ export default function AiMatchAdminPage() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const [statusBusyId, setStatusBusyId] = useState(null);
+  const [noteBusyId, setNoteBusyId] = useState(null);
   const [deleteBusyId, setDeleteBusyId] = useState(null);
   const [completePulseId, setCompletePulseId] = useState(null);
   const [profileQuery, setProfileQuery] = useState("");
+  const [requestQuery, setRequestQuery] = useState("");
   const [selectedInterestFilters, setSelectedInterestFilters] = useState([]);
   const [profileGenderFilter, setProfileGenderFilter] = useState("ALL");
   const [profileMbtiFilter, setProfileMbtiFilter] = useState("ALL");
@@ -135,6 +138,7 @@ export default function AiMatchAdminPage() {
   const [requestStatusFilter, setRequestStatusFilter] = useState("ALL");
   const [expandedMatchIds, setExpandedMatchIds] = useState([]);
   const [expandedProfileIds, setExpandedProfileIds] = useState([]);
+  const [noteDrafts, setNoteDrafts] = useState({});
   const overviewRefreshInFlightRef = useRef(false);
   const completePulseTimerRef = useRef(null);
 
@@ -150,6 +154,34 @@ export default function AiMatchAdminPage() {
     [matchedRequests],
   );
   const pendingRequests = useMemo(() => requests.filter((request) => request.status === "PENDING"), [requests]);
+  const adminStats = useMemo(() => {
+    const genderCounts = new Map();
+    const mbtiCounts = new Map();
+    const interestCounts = new Map();
+    profiles.forEach((profile) => {
+      const meta = parseProfileMeta(profile.intro);
+      if (profile.gender) genderCounts.set(profile.gender, (genderCounts.get(profile.gender) || 0) + 1);
+      if (meta.mbti) mbtiCounts.set(meta.mbti, (mbtiCounts.get(meta.mbti) || 0) + 1);
+      meta.tags.forEach((tag) => {
+        interestCounts.set(tag, (interestCounts.get(tag) || 0) + 1);
+      });
+    });
+    const topEntries = (map, limit = 4) => [...map.entries()]
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, limit);
+    const totalRequests = requests.length;
+    const matchedCount = requests.filter((request) => isMatched(request.status)).length;
+    const rejectedCount = requests.filter((request) => request.status === "REJECTED").length;
+    const canceledCount = requests.filter((request) => request.status === "CANCELED").length;
+    return {
+      genderCounts: topEntries(genderCounts),
+      mbtiCounts: topEntries(mbtiCounts),
+      interestCounts: topEntries(interestCounts, 6),
+      matchedRate: totalRequests ? Math.round((matchedCount / totalRequests) * 100) : 0,
+      rejectedCount,
+      canceledCount,
+    };
+  }, [profiles, requests]);
   const profileFilterOptions = useMemo(() => {
     const interestCounts = new Map();
     const genders = new Set();
@@ -202,10 +234,34 @@ export default function AiMatchAdminPage() {
     });
   }, [profiles, profileQuery, profileGenderFilter, profileMbtiFilter, profileStatusFilter, selectedInterestFilters]);
   const filteredRequests = useMemo(() => {
-    if (requestStatusFilter === "ALL") return requests;
-    if (requestStatusFilter === "MATCHED") return requests.filter((request) => isMatched(request.status));
-    return requests.filter((request) => request.status === requestStatusFilter);
-  }, [requests, requestStatusFilter]);
+    const query = requestQuery.trim().toLowerCase();
+    return requests.filter((request) => {
+      const statusMatched = requestStatusFilter === "ALL"
+        ? true
+        : requestStatusFilter === "MATCHED"
+          ? isMatched(request.status)
+          : request.status === requestStatusFilter;
+      if (!statusMatched) return false;
+      if (!query) return true;
+      return [
+        request.requesterNickname,
+        request.profileNickname,
+        request.requesterPhoneNumber,
+        request.profilePhoneNumber,
+        request.meetPlace,
+        request.message,
+        request.status,
+        getStatusLabel(request.status),
+        request.connectionStatus,
+        getConnectionStatusLabel(request.connectionStatus || "WAITING"),
+        request.adminNote,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [requests, requestStatusFilter, requestQuery]);
   const canAdminDeleteProfile = (profileId) => Boolean(profileId && profileStatusById.get(profileId) === "ACTIVE");
 
   async function loadOverview({ silent = false, force = false } = {}) {
@@ -322,6 +378,23 @@ export default function AiMatchAdminPage() {
       setMessage(adminErrorMessage(error));
     } finally {
       setStatusBusyId(null);
+    }
+  }
+
+  async function handleAdminNoteSave(request) {
+    if (!request?.id) return;
+    const nextNote = noteDrafts[request.id] ?? request.adminNote ?? "";
+    setNoteBusyId(request.id);
+    setMessage("관리자 메모를 저장하는 중입니다.");
+    try {
+      const saved = await updateAdminAiMatchRequestNote(request.id, nextNote);
+      setNoteDrafts((prev) => ({ ...prev, [request.id]: saved.adminNote || "" }));
+      await loadOverview({ force: true });
+      setMessage("관리자 메모를 저장했습니다.");
+    } catch (error) {
+      setMessage(adminErrorMessage(error));
+    } finally {
+      setNoteBusyId(null);
     }
   }
 
@@ -493,6 +566,50 @@ export default function AiMatchAdminPage() {
         </article>
       </section>
 
+      <section className="admin-ai-stat-panel" aria-label="간단 통계">
+        <div className="admin-ai-stat-panel__head">
+          <div>
+            <span>간단 통계</span>
+            <strong>운영 흐름 요약</strong>
+          </div>
+          <em>성사율 {adminStats.matchedRate}%</em>
+        </div>
+        <div className="admin-ai-stat-grid">
+          <article>
+            <span>성별</span>
+            <div>
+              {adminStats.genderCounts.length ? adminStats.genderCounts.map(([label, count]) => (
+                <small key={`gender-${label}`}>{label} {count}</small>
+              )) : <small>데이터 없음</small>}
+            </div>
+          </article>
+          <article>
+            <span>인기 관심사</span>
+            <div>
+              {adminStats.interestCounts.length ? adminStats.interestCounts.map(([label, count]) => (
+                <small key={`interest-${label}`}>{label} {count}</small>
+              )) : <small>데이터 없음</small>}
+            </div>
+          </article>
+          <article>
+            <span>MBTI</span>
+            <div>
+              {adminStats.mbtiCounts.length ? adminStats.mbtiCounts.map(([label, count]) => (
+                <small key={`mbti-${label}`}>{label} {count}</small>
+              )) : <small>데이터 없음</small>}
+            </div>
+          </article>
+          <article>
+            <span>신청 결과</span>
+            <div>
+              <small>성사 {matchedRequests.length}</small>
+              <small>거절 {adminStats.rejectedCount}</small>
+              <small>취소 {adminStats.canceledCount}</small>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <div className="admin-ai-dashboard-grid">
       <aside className="admin-ai-dashboard-side">
       <article className="admin-console-panel admin-console-panel--ai-match">
@@ -605,6 +722,29 @@ export default function AiMatchAdminPage() {
                 <span>{request.meetPlace || "장소 미지정"}</span>
                 <p>{request.message || "메시지 없음"}</p>
               </div>
+              <div className="admin-ai-note-box">
+                <div className="admin-ai-note-box__head">
+                  <strong>관리자 기록</strong>
+                  <span>{(noteDrafts[request.id] ?? request.adminNote ?? "").length}/1000</span>
+                </div>
+                <textarea
+                  value={noteDrafts[request.id] ?? request.adminNote ?? ""}
+                  maxLength={1000}
+                  placeholder="예) 신청자 18:20 전화 완료, 상대방 문자 발송, 19:00 재연락 필요"
+                  onChange={(event) => setNoteDrafts((prev) => ({ ...prev, [request.id]: event.target.value }))}
+                />
+                <div className="admin-ai-note-box__actions">
+                  <small>{request.updatedAt ? `마지막 변경 ${request.updatedAt.replace("T", " ").slice(5, 16)}` : "저장 기록 없음"}</small>
+                  <button
+                    type="button"
+                    className="admin-ai-note-save"
+                    onClick={() => handleAdminNoteSave(request)}
+                    disabled={noteBusyId === request.id}
+                  >
+                    {noteBusyId === request.id ? "저장 중" : "메모 저장"}
+                  </button>
+                </div>
+              </div>
                 </div>
               ) : null}
               <div className="admin-ai-connection-controls">
@@ -637,6 +777,14 @@ export default function AiMatchAdminPage() {
           </div>
           <strong>{filteredRequests.length}/{requests.length}건</strong>
         </div>
+        <label className="admin-ai-search-field admin-ai-search-field--compact">
+          <IconSearch className="h-4 w-4" />
+          <input
+            value={requestQuery}
+            onChange={(event) => setRequestQuery(event.target.value)}
+            placeholder="신청자, 상대, 연락처, 장소, 메시지, 메모 검색"
+          />
+        </label>
         <div className="admin-ai-status-filter">
           {[
             ["ALL", "전체"],
@@ -669,6 +817,7 @@ export default function AiMatchAdminPage() {
               <div className="admin-ai-request-row__meta">
                 <span>{getStatusLabel(request.status)}</span>
                 {isMatched(request.status) ? <span>{getConnectionStatusLabel(request.connectionStatus || "WAITING")}</span> : null}
+                {request.adminNote ? <span>메모 있음</span> : null}
                 <small>{request.meetPlace || "장소 없음"}</small>
               </div>
             </div>

@@ -52,6 +52,9 @@ public class AiMatchRequest {
     @Column(length = 30)
     private String connectionStatus;
 
+    @Column(length = 1000)
+    private String adminNote;
+
     @Column
     private LocalDateTime updatedAt;
 
@@ -129,6 +132,10 @@ public class AiMatchRequest {
         return connectionStatus == null ? "WAITING" : connectionStatus;
     }
 
+    public String getAdminNote() {
+        return adminNote == null ? "" : adminNote;
+    }
+
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
@@ -189,6 +196,11 @@ public class AiMatchRequest {
 
     public void updateConnectionStatus(String connectionStatus) {
         this.connectionStatus = connectionStatus;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateAdminNote(String adminNote) {
+        this.adminNote = adminNote;
         this.updatedAt = LocalDateTime.now();
     }
 

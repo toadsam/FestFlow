@@ -18,6 +18,7 @@ public record AiMatchAdminRequestDto(
         String message,
         String status,
         String connectionStatus,
+        String adminNote,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

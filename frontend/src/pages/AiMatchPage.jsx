@@ -238,6 +238,10 @@ function canSendRequest(status) {
   return !status || status === "REJECTED" || status === "CANCELED";
 }
 
+function shouldShowPeopleRequestStatus(status) {
+  return Boolean(status && status !== "PENDING" && status !== "CANCELED");
+}
+
 function isAccessExpiredError(error) {
   return error?.status === 401 || error?.status === 404;
 }
@@ -427,6 +431,7 @@ export default function AiMatchPage() {
       (!phoneMissing && !phoneInvalid) &&
       (isEditingProfile || (/^\d{4,6}$/.test(pin) && pin === pinConfirm)),
   );
+  const registerSubmitDisabled = !canRegister;
   const bannerText = errorMessage
     ? errorMessage
       : converting
@@ -477,7 +482,7 @@ export default function AiMatchPage() {
         return;
       }
       accessRefreshInFlightRef.current = true;
-      loadAccessProfile(accessNickname, accessPin, activeScreen)
+      loadAccessProfile(accessNickname, accessPin, activeScreen, { closeModal: false })
         .catch((error) => {
           if (isAccessExpiredError(error)) {
             clearAccessSession();
@@ -595,7 +600,7 @@ export default function AiMatchPage() {
     setErrorMessage(error.message || fallbackMessage);
   }
 
-  async function loadAccessProfile(nextNickname, nextPin, nextScreen = "requests") {
+  async function loadAccessProfile(nextNickname, nextPin, nextScreen = "requests", { closeModal = true } = {}) {
     const sessionSeq = accessSessionSeqRef.current;
     const response = await accessAiMatchProfile(nextNickname, nextPin);
     if (sessionSeq !== accessSessionSeqRef.current) {
@@ -618,7 +623,9 @@ export default function AiMatchPage() {
       setSelectedProfile(nextProfiles.find((profile) => profile.id === selectedProfile.id) || null);
     }
     setActiveScreen(nextScreen);
-    setAccessModalOpen(false);
+    if (closeModal) {
+      setAccessModalOpen(false);
+    }
     return response;
   }
 
@@ -1067,7 +1074,7 @@ export default function AiMatchPage() {
           className="ai-match-secondary-button"
           onClick={() => openAccessModal("people")}
         >
-          등록된 사람 보기
+          로그인
         </button>
 
         <p className="ai-match-note">
@@ -1136,7 +1143,7 @@ export default function AiMatchPage() {
             {converting ? "변환 중..." : generatedImageUrl ? "다른 사진 올리기" : "사진 업로드"}
             <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} disabled={converting} />
           </label>
-          {registerAttempted && imageMissing ? (
+          {imageMissing ? (
             <small className="ai-match-field-error">프로필 사진을 먼저 업로드해 주세요.</small>
           ) : null}
         </section>
@@ -1147,14 +1154,14 @@ export default function AiMatchPage() {
               <span>2. 닉네임을 입력해주세요</span>
               <small>{nickname.length}/12</small>
             </div>
+            {nicknameMissing ? <small className="ai-match-field-error">닉네임을 입력해 주세요.</small> : null}
+            {hasDuplicateNickname ? <small className="ai-match-field-error">이미 사용 중인 닉네임입니다.</small> : null}
             <input
               value={nickname}
               maxLength={12}
               onChange={(event) => setNickname(event.target.value)}
               placeholder="예) 햇살같은하루"
             />
-            {registerAttempted && nicknameMissing ? <small className="ai-match-field-error">닉네임을 입력해 주세요.</small> : null}
-            {hasDuplicateNickname ? <small className="ai-match-field-error">이미 사용 중인 닉네임입니다.</small> : null}
           </label>
 
           {!isEditingProfile ? (
@@ -1164,6 +1171,8 @@ export default function AiMatchPage() {
                   <span>3. PIN</span>
                   <small>4~6자리 숫자</small>
                 </div>
+                {pinMissing ? <small className="ai-match-field-error">PIN을 입력해 주세요.</small> : null}
+                {pinInvalid ? <small className="ai-match-field-error">PIN은 4~6자리 숫자여야 합니다.</small> : null}
                 <input
                   value={pin}
                   inputMode="numeric"
@@ -1176,14 +1185,14 @@ export default function AiMatchPage() {
                   }}
                   placeholder="예) 1234"
                 />
-                {registerAttempted && pinMissing ? <small className="ai-match-field-error">PIN을 입력해 주세요.</small> : null}
-                {pinInvalid ? <small className="ai-match-field-error">PIN은 4~6자리 숫자여야 합니다.</small> : null}
               </label>
 
               <label className="ai-match-field">
                 <div className="ai-match-field-head">
                   <span>4. PIN 확인</span>
                 </div>
+                {pinConfirmMissing ? <small className="ai-match-field-error">PIN 확인을 입력해 주세요.</small> : null}
+                {pinMismatch ? <small className="ai-match-field-error">PIN이 서로 일치하지 않습니다.</small> : null}
                 <input
                   value={pinConfirm}
                   inputMode="numeric"
@@ -1196,8 +1205,6 @@ export default function AiMatchPage() {
                   }}
                   placeholder="PIN을 다시 입력해주세요"
                 />
-                {registerAttempted && pinConfirmMissing ? <small className="ai-match-field-error">PIN 확인을 입력해 주세요.</small> : null}
-                {pinMismatch ? <small className="ai-match-field-error">PIN이 서로 일치하지 않습니다.</small> : null}
               </label>
             </>
           ) : null}
@@ -1207,6 +1214,8 @@ export default function AiMatchPage() {
               <span>{isEditingProfile ? "3. 전화번호" : "5. 전화번호"}</span>
               <small>관리자 확인용 · 비공개</small>
             </div>
+            {phoneMissing ? <small className="ai-match-field-error">전화번호를 입력해 주세요.</small> : null}
+            {phoneInvalid ? <small className="ai-match-field-error">전화번호 형식이 올바르지 않습니다.</small> : null}
             <input
               value={phoneNumber}
               inputMode="tel"
@@ -1219,8 +1228,6 @@ export default function AiMatchPage() {
               }}
               placeholder={isEditingProfile ? "변경할 번호만 입력" : "예) 010-1234-5678"}
             />
-            {registerAttempted && phoneMissing ? <small className="ai-match-field-error">전화번호를 입력해 주세요.</small> : null}
-            {phoneInvalid ? <small className="ai-match-field-error">전화번호 형식이 올바르지 않습니다.</small> : null}
           </label>
 
           <div className="ai-match-field">
@@ -1284,13 +1291,13 @@ export default function AiMatchPage() {
               <span>{isEditingProfile ? "7. 자기소개" : "9. 자기소개"}</span>
               <small>{intro.length}/120</small>
             </div>
+            {introMissing ? <small className="ai-match-field-error">자기소개를 입력해 주세요.</small> : null}
             <textarea
               value={intro}
               maxLength={120}
               onChange={(event) => setIntro(event.target.value)}
               placeholder="나를 간단히 소개해주세요. 예) 웃음이 많고 공원 산책을 좋아해요!"
             />
-            {registerAttempted && introMissing ? <small className="ai-match-field-error">자기소개를 입력해 주세요.</small> : null}
           </label>
 
           <label className="ai-match-field">
@@ -1308,18 +1315,18 @@ export default function AiMatchPage() {
             <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
             <span>사진과 소개가 공개 목록에 표시되는 것에 동의합니다.</span>
           </label>
-          {registerAttempted && consentMissing ? (
+          {consentMissing ? (
             <small className="ai-match-field-error">프로필 공개 동의가 필요합니다.</small>
           ) : null}
         </section>
 
         <button
           type="submit"
-          className="ai-match-primary-button ai-match-primary-button--form"
-          disabled={submitting || converting}
+          className={`ai-match-primary-button ai-match-primary-button--form${registerSubmitDisabled ? " is-form-disabled" : ""}`}
+          disabled={registerSubmitDisabled}
         >
           <span className="ai-match-primary-button__icon">
-            <IconHeart className="h-4 w-4" />
+            <IconHeartFilled className="h-4 w-4" />
           </span>
           <span className="ai-match-primary-button__label">
             {submitting ? (isEditingProfile ? "수정 중..." : "등록 중...") : converting ? "AI 변환 중..." : isEditingProfile ? "수정 저장" : "등록하기"}
@@ -1452,7 +1459,7 @@ export default function AiMatchPage() {
 
                       <div className="ai-match-person-footer">
                         <div className="ai-match-inline-tags">
-                          {sentRequest && sentRequest.status !== "CANCELED" ? (
+                          {shouldShowPeopleRequestStatus(sentRequest?.status) ? (
                             <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(sentRequest.status)}`}>
                               신청 {requestStatusLabel}
                             </span>
@@ -1481,7 +1488,7 @@ export default function AiMatchPage() {
                           </span>
                           <span className="ai-match-request-button__label">
                             {sentRequest && sentRequest.status === "PENDING"
-                              ? "신청 상태 보기"
+                              ? "신청 완료"
                               : sentRequest && sentRequest.status === "REJECTED"
                                 ? "다시 신청"
                                 : sentRequest && sentRequest.status === "ACCEPTED"
@@ -1725,7 +1732,7 @@ export default function AiMatchPage() {
           <small>{selectedDetailProfile.meetPlace || "축제 부스 주변에서 만나고 싶어요."}</small>
           <p>{selectedDetailProfile.summary}</p>
           <div className="ai-match-inline-tags">
-            {selectedDetailRequest && selectedDetailRequest.status !== "CANCELED" ? (
+            {shouldShowPeopleRequestStatus(selectedDetailRequest?.status) ? (
               <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(selectedDetailRequest.status)}`}>
                 신청 {getRequestStatusLabel(selectedDetailRequest.status)}
               </span>
@@ -1800,7 +1807,7 @@ export default function AiMatchPage() {
               {submitting
                 ? "전송 중..."
                 : detailRequestStatus === "PENDING"
-                  ? "신청 대기중"
+                  ? "신청 완료"
                   : detailRequestStatus === "ACCEPTED"
                     ? "수락됨"
                     : selectedDetailRequest && (detailRequestStatus === "REJECTED" || detailRequestStatus === "CANCELED")
@@ -1949,7 +1956,7 @@ export default function AiMatchPage() {
               닫기
             </button>
             <div className="ai-match-section-head">
-              <h2 id="ai-match-access-title">신청함 잠금 해제</h2>
+              <h2 id="ai-match-access-title">{accessTargetScreen === "people" ? "로그인" : "신청함 잠금 해제"}</h2>
               <span>닉네임 + PIN</span>
             </div>
             <label className="ai-match-field">
@@ -1985,7 +1992,7 @@ export default function AiMatchPage() {
             </label>
             <button type="submit" className="ai-match-primary-button ai-match-primary-button--sheet" disabled={accessSubmitting}>
               <span className="ai-match-primary-button__label">
-                {accessSubmitting ? "확인 중..." : "신청함 열기"}
+                {accessSubmitting ? "확인 중..." : accessTargetScreen === "people" ? "로그인" : "신청함 열기"}
               </span>
             </button>
           </form>

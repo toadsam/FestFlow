@@ -392,6 +392,15 @@ export async function updateAdminAiMatchConnectionStatus(requestId, connectionSt
   return parseJson(response, "연결 상태 변경에 실패했습니다.");
 }
 
+export async function updateAdminAiMatchRequestNote(requestId, adminNote) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/admin-note`, {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ adminNote }),
+  });
+  return parseJson(response, "관리자 메모 저장에 실패했습니다.");
+}
+
 export async function deleteAdminAiMatchProfile(profileId) {
   const response = await fetch(`${API_BASE}/admin/ai-match/profiles/${profileId}`, {
     method: "DELETE",
