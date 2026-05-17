@@ -2,7 +2,9 @@
 
 const API_BASE = (
   import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api"
-).replace(/\/$/, "");
+)
+  .trim()
+  .replace(/\/+$/, "");
 const NETWORK_ERROR_MESSAGE =
   "서버에 연결할 수 없습니다. 네트워크 상태 또는 운영 서버 연결을 확인해 주세요.";
 
@@ -69,7 +71,7 @@ export function resolveApiAssetUrl(url) {
   if (!url) return "";
   if (/^https?:\/\//i.test(url) || url.startsWith("data:")) return url;
   if (url.startsWith("/uploads/")) {
-    return `${API_BASE.replace(/\/api$/, "")}${url}`;
+    return `${API_BASE.replace(/\/api$/i, "")}${url}`;
   }
   return url;
 }
