@@ -14,6 +14,22 @@ async function fetch(...args) {
   }
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = 12000) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("응답 시간이 초과되었습니다. 잠시 후 다시 시도해 주세요.", { cause: error });
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function withAuth(headers = {}) {
   const token = getAccessToken();
   if (!token) return headers;
@@ -25,17 +41,37 @@ async function parseJson(response, errorMessage) {
     let detail = "";
     try {
       const data = await response.json();
-      detail = data.message ? ` (${data.message})` : "";
+      if (data && typeof data === "string") {
+        detail = data;
+      } else if (data && typeof data.message === "string") {
+        detail = data.message;
+      }
     } catch {
       detail = "";
     }
-    throw new Error(`${errorMessage}${detail}`);
+    const error = new Error(`${errorMessage}${detail ? ` (${detail})` : ""}`);
+    error.status = response.status;
+    throw error;
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  if (!contentType.includes("application/json")) {
+    return response.text();
   }
   return response.json();
 }
 
 export function getApiBase() {
   return API_BASE;
+}
+
+export function resolveApiAssetUrl(url) {
+  if (!url) return "";
+  if (/^https?:\/\//i.test(url) || url.startsWith("data:")) return url;
+  if (url.startsWith("/uploads/")) {
+    return `${API_BASE.replace(/\/api$/, "")}${url}`;
+  }
+  return url;
 }
 
 export async function loginAdmin(username, password) {
@@ -80,7 +116,7 @@ export async function sendGps(latitude, longitude) {
 }
 
 export async function askChat(question) {
-  const response = await fetch(`${API_BASE}/chat`, {
+  const response = await fetchWithTimeout(`${API_BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question }),
@@ -312,6 +348,11 @@ export async function fetchHeatmap() {
   return parseJson(response, "혼잡 히트맵 데이터를 불러오지 못했습니다.");
 }
 
+export async function fetchAnalyticsDashboard(minutes = 15) {
+  const response = await fetch(`${API_BASE}/analytics/dashboard?minutes=${minutes}`);
+  return parseJson(response, "실시간 혼잡도 데이터를 불러오지 못했습니다.");
+}
+
 export function createCongestionStream() {
   return new EventSource(`${API_BASE}/stream/congestion`);
 }
@@ -333,6 +374,44 @@ export async function fetchAdminStaff() {
     headers: withAuth(),
   });
   return parseJson(response, "스태프 목록을 불러오지 못했습니다.");
+}
+
+export async function fetchAdminAiMatchOverview() {
+  const response = await fetch(`${API_BASE}/admin/ai-match/overview`, {
+    headers: withAuth(),
+  });
+  return parseJson(response, "AI 매칭 운영 현황을 불러오지 못했습니다.");
+}
+
+export async function updateAdminAiMatchConnectionStatus(requestId, connectionStatus) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/connection-status`, {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ connectionStatus }),
+  });
+  return parseJson(response, "연결 상태 변경에 실패했습니다.");
+}
+
+export async function updateAdminAiMatchRequestNote(requestId, adminNote) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/admin-note`, {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ adminNote }),
+  });
+  return parseJson(response, "관리자 메모 저장에 실패했습니다.");
+}
+
+export async function deleteAdminAiMatchProfile(profileId) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/profiles/${profileId}`, {
+    method: "DELETE",
+    headers: withAuth(),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const error = new Error(data.message || "AI 프로필 삭제에 실패했습니다.");
+    error.status = response.status;
+    throw error;
+  }
 }
 
 export async function updateAdminStaff(id, payload) {
@@ -889,5 +968,143 @@ export async function translateText(payload) {
 export async function fetchTranslateMetrics() {
   const response = await fetch(`${API_BASE}/translate/metrics`);
   return parseJson(response, "통역 지표를 불러오지 못했습니다.");
+}
+
+export async function fetchAiMatchProfiles() {
+  const response = await fetch(`${API_BASE}/ai-match/profiles`);
+  return parseJson(response, "AI 프로필 목록을 불러오지 못했습니다.");
+}
+
+export async function createAiMatchImagePreview(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetchWithTimeout(`${API_BASE}/ai-match/image-preview`, {
+    method: "POST",
+    body: formData,
+  }, 120000);
+  return parseJson(response, "웹툰 이미지 변환에 실패했습니다.");
+}
+
+export async function createAiMatchProfile(form, file) {
+  const formData = new FormData();
+  formData.append("nickname", form.nickname || "");
+  formData.append("gender", form.gender || "");
+  formData.append("intro", form.intro || "");
+  formData.append("pin", form.pin || "");
+  formData.append("phoneNumber", form.phoneNumber || "");
+  formData.append("meetPlace", form.meetPlace || "");
+  formData.append("consent", String(Boolean(form.consent)));
+  if (form.originalImageUrl) {
+    formData.append("originalImageUrl", form.originalImageUrl);
+  }
+  if (form.generatedImageUrl) {
+    formData.append("generatedImageUrl", form.generatedImageUrl);
+  }
+  if (file) {
+    formData.append("file", file);
+  }
+
+  const response = await fetchWithTimeout(`${API_BASE}/ai-match/profiles`, {
+    method: "POST",
+    body: formData,
+  }, 120000);
+  return parseJson(response, "AI 프로필 등록에 실패했습니다.");
+}
+
+export async function accessAiMatchProfile(nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/access`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "프로필 인증에 실패했습니다.");
+}
+
+export async function updateAiMatchProfile(profileId, payload) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/${profileId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "AI 프로필 수정에 실패했습니다.");
+}
+
+export async function deleteAiMatchProfile(profileId, payload) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/${profileId}/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    const error = new Error(data.message || "AI 프로필 삭제에 실패했습니다.");
+    error.status = response.status;
+    throw error;
+  }
+}
+
+export async function createAiMatchRequest(profileId, payload) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/${profileId}/requests`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      requesterNickname: payload.requesterNickname || "",
+      requesterPin: payload.requesterPin || "",
+      meetPlace: payload.meetPlace || "",
+      message: payload.message || "",
+    }),
+  });
+  return parseJson(response, "데이트 신청에 실패했습니다.");
+}
+
+export async function acceptAiMatchRequest(requestId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/accept`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "데이트 신청 수락에 실패했습니다.");
+}
+
+export async function rejectAiMatchRequest(requestId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/reject`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "데이트 신청 거절에 실패했습니다.");
+}
+
+export async function cancelAiMatchRequest(requestId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/cancel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "데이트 신청 취소에 실패했습니다.");
+}
+
+export async function proposeAiMatchMeetup(requestId, payload) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/meetup/propose`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      nickname: payload.nickname || "",
+      pin: payload.pin || "",
+      meetupPlace: payload.meetupPlace || "",
+      meetupAt: payload.meetupAt || "",
+    }),
+  });
+  return parseJson(response, "약속 제안에 실패했습니다.");
+}
+
+export async function confirmAiMatchMeetup(requestId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/meetup/confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "약속 확정에 실패했습니다.");
 }
 

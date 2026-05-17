@@ -1,368 +1,192 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
 import { createEventStream, fetchEvents } from "../api";
-import { IconArrowLeft, IconCalendar, IconMusic, IconTrophy } from "../components/UxIcons";
+import { IconMusic } from "../components/UxIcons";
+import { FESTIVAL_IMAGE, fallbackEvents, formatTime } from "../data/festivalUiData";
 
-const THEMES = [
+const LINEUP_POSTER_PRESETS = [
   {
-    id: "violet",
-    frame: "lineup-card-violet",
-    role: "HEAD VOCAL",
-    accent: "VX-01",
+    title: "10CM",
+    stage: "메인 스테이지",
+    image: "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=900&q=80",
   },
   {
-    id: "green",
-    frame: "lineup-card-green",
-    role: "MAIN DANCER",
-    accent: "GX-07",
+    title: "볼빨간사춘기",
+    stage: "메인 스테이지",
+    image: "https://commons.wikimedia.org/wiki/Special:Redirect/file/H1-Key_in_February_2026.png?width=900",
   },
   {
-    id: "silver",
-    frame: "lineup-card-silver",
-    role: "PERFORMANCE",
-    accent: "SX-22",
+    title: "하현상",
+    stage: "보조 무대",
+    image: "https://commons.wikimedia.org/wiki/Special:Redirect/file/BABYMONSTER_in_Seattle.jpg?width=900",
   },
   {
-    id: "cyan",
-    frame: "lineup-card-cyan",
-    role: "STAGE UNIT",
-    accent: "CX-13",
+    title: "DJ NIGHT",
+    stage: "메인 스테이지",
+    image: "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&q=80",
   },
 ];
 
-function toCode(title) {
-  return title.replace(/\s+/g, "").slice(0, 6).toUpperCase();
+const LINEUP_TONES = ["blue", "violet", "teal", "navy"];
+const LINEUP_HERO_IMAGE = "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg?auto=compress&cs=tinysrgb&w=1200";
+
+function dateKey(value) {
+  return value ? String(value).slice(0, 10) : "all";
 }
 
-function artistLabel(title) {
-  return title.split(" ")[0] || title;
+function shortDate(value) {
+  if (!value) return "전체";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value).slice(5, 10).replace("-", ".");
+  const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+  return `${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")} (${weekdays[date.getDay()]})`;
 }
 
-function hashCode(seed) {
-  return seed
-    .split("")
-    .reduce((acc, char) => (acc * 33 + char.charCodeAt(0)) % 100000, 5381);
+function isSeedLikeEvent(event) {
+  const title = event?.title || "";
+  const image = event?.imageUrl || "";
+  return (
+    ["밴드 연습실", "DJ Awesome", "에일리", "싸이", "득근득근 포징 공연"].includes(title)
+    || image.includes("Bodybuilder")
+  );
 }
 
-function toMetric(seed, min, max) {
-  const hashed = hashCode(seed);
-  const span = max - min;
-  return min + (hashed % (span + 1));
+function presetFor(index) {
+  return LINEUP_POSTER_PRESETS[index % LINEUP_POSTER_PRESETS.length];
 }
 
-function buildProfile(item) {
-  const source = `${item.id}-${item.title}-${item.theme.id}`;
-  return {
-    aura: toMetric(`${source}-aura`, 72, 99),
-    rhythm: toMetric(`${source}-rhythm`, 68, 97),
-    stage: toMetric(`${source}-stage`, 70, 98),
-    pulse: toMetric(`${source}-pulse`, 66, 95),
-  };
+function getPosterTitle(event, index) {
+  return isSeedLikeEvent(event) ? presetFor(index).title : event?.title || presetFor(index).title;
+}
+
+function getPosterStage(event, index) {
+  return event?.artist || event?.locationName || presetFor(index).stage;
+}
+
+function getPosterImage(event, index) {
+  if (isSeedLikeEvent(event)) return presetFor(index).image;
+  return event?.imageUrl || presetFor(index).image || FESTIVAL_IMAGE;
 }
 
 export default function LineupPage() {
   const [events, setEvents] = useState([]);
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [flippedIds, setFlippedIds] = useState(() => new Set());
-  const [spinId, setSpinId] = useState(null);
-  const [dragOffset, setDragOffset] = useState(0);
-  const [error, setError] = useState("");
-  const touchStartXRef = useRef(null);
-  const draggingRef = useRef(false);
+  const [selectedDate, setSelectedDate] = useState("featured");
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
+    let mounted = true;
     fetchEvents()
-      .then(setEvents)
-      .catch((e) => setError(e.message));
+      .then((data) => {
+        if (mounted) setEvents(data || []);
+      })
+      .catch(() => {
+        if (mounted) setEvents([]);
+      });
+
+    let stream = null;
+    try {
+      stream = createEventStream();
+      stream.addEventListener("events", (event) => {
+        try {
+          const next = JSON.parse(event.data);
+          if (Array.isArray(next)) setEvents(next);
+        } catch {
+          // Streaming is optional for this public view.
+        }
+      });
+    } catch {
+      // Streaming is optional.
+    }
+
+    return () => {
+      mounted = false;
+      stream?.close();
+    };
   }, []);
 
-  useEffect(() => {
-    const stream = createEventStream();
-    stream.addEventListener("events", (event) => {
-      try {
-        setEvents(JSON.parse(event.data));
-      } catch {
-        // ignore parse error
-      }
-    });
-    return () => stream.close();
-  }, []);
+  const source = events.length ? events : fallbackEvents;
+  const sortedEvents = useMemo(
+    () => [...source].sort((a, b) => new Date(a.startTime) - new Date(b.startTime)),
+    [source],
+  );
+  const dateOptions = useMemo(
+    () => [...new Set(sortedEvents.map((event) => dateKey(event.startTime)))],
+    [sortedEvents],
+  );
+  const featuredDate = useMemo(() => {
+    if (!dateOptions.length) return "all";
+    return dateOptions.reduce((bestDate, currentDate) => {
+      const bestCount = sortedEvents.filter((event) => dateKey(event.startTime) === bestDate).length;
+      const currentCount = sortedEvents.filter((event) => dateKey(event.startTime) === currentDate).length;
+      return currentCount > bestCount ? currentDate : bestDate;
+    }, dateOptions[0]);
+  }, [dateOptions, sortedEvents]);
+  const activeDate = selectedDate === "all" ? "all" : selectedDate === "featured" ? featuredDate : selectedDate;
+  const activeEvents = activeDate === "all"
+    ? sortedEvents
+    : sortedEvents.filter((event) => dateKey(event.startTime) === activeDate);
+  const visibleEvents = showAll ? activeEvents : activeEvents.slice(0, 3);
 
-  const lineup = useMemo(() => {
-    return events.map((event, index) => {
-      const theme = THEMES[index % THEMES.length];
-      return {
-        ...event,
-        theme,
-        artist: artistLabel(event.title),
-        code: toCode(event.title),
-      };
-    });
-  }, [events]);
-
-  useEffect(() => {
-    if (lineup.length === 0) {
-      setActiveIndex(0);
-      return;
-    }
-    setActiveIndex((prev) => Math.max(0, Math.min(prev, lineup.length - 1)));
-  }, [lineup]);
-
-  const selected = lineup[activeIndex] || null;
-
-  function handleCardMove(e) {
-    const card = e.currentTarget;
-    const rect = card.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
-    const y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-    card.style.setProperty("--rx", `${(-y * 9).toFixed(2)}deg`);
-    card.style.setProperty("--ry", `${(x * 11).toFixed(2)}deg`);
+  function selectDate(date) {
+    setSelectedDate(date);
+    setShowAll(false);
   }
 
-  function handleCardLeave(e) {
-    const card = e.currentTarget;
-    card.style.setProperty("--rx", "0deg");
-    card.style.setProperty("--ry", "0deg");
-  }
-
-  function goToIndex(index) {
-    if (lineup.length === 0) return;
-    setActiveIndex(Math.max(0, Math.min(index, lineup.length - 1)));
-  }
-
-  function toggleCard(index, id) {
-    if (index !== activeIndex) {
-      setActiveIndex(index);
-      return;
-    }
-
-    setFlippedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-    setSpinId(id);
-    window.setTimeout(
-      () => setSpinId((current) => (current === id ? null : current)),
-      560,
-    );
-  }
-
-  function handleTouchStart(e) {
-    touchStartXRef.current = e.touches[0]?.clientX ?? null;
-    draggingRef.current = true;
-  }
-
-  function handleTouchMove(e) {
-    if (!draggingRef.current || touchStartXRef.current == null) return;
-    const x = e.touches[0]?.clientX ?? touchStartXRef.current;
-    setDragOffset(x - touchStartXRef.current);
-  }
-
-  function handleTouchEnd() {
-    if (!draggingRef.current) return;
-    const threshold = 50;
-    if (dragOffset <= -threshold) {
-      goToIndex(activeIndex + 1);
-    } else if (dragOffset >= threshold) {
-      goToIndex(activeIndex - 1);
-    }
-    draggingRef.current = false;
-    touchStartXRef.current = null;
-    setDragOffset(0);
+  function showFullLineup() {
+    setSelectedDate("all");
+    setShowAll(true);
   }
 
   return (
-    <section className="cyber-page pt-4 space-y-3 lineup-page">
-      <div className="flex items-center justify-between gap-2">
-        <h2
-          className="text-lg font-bold glitch-title text-role-ops inline-flex items-center gap-2"
-          data-text="FESTIVAL LINEUP"
-        >
-          <IconMusic className="h-5 w-5 icon-role-ops" />
-          FESTIVAL LINEUP
-        </h2>
-        <Link
-          to="/events"
-          className="lineup-back text-role-log px-3 py-2 text-xs font-semibold rounded-lg inline-flex items-center gap-1.5"
-        >
-          <IconArrowLeft className="h-3.5 w-3.5 icon-role-log" />
-          BACK
-        </Link>
-      </div>
-
-      <p className="text-xs text-cyan-200/90 text-role-log">
-        아티스트 카드형 라인업 · 좌우 스와이프
-      </p>
-
-      {error && <p className="text-sm text-rose-500">{error}</p>}
-
-      <div
-        className="lineup-carousel"
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+    <section className="lineup-reference-page">
+      <header
+        className="lineup-reference-hero"
+        style={{
+          backgroundImage: `linear-gradient(180deg, rgba(2,8,23,0.12), rgba(2,8,23,0.72) 58%, #03112c 100%), url(${LINEUP_HERO_IMAGE})`,
+        }}
       >
-        <div
-          className="lineup-track"
-          style={{
-            transform: `translateX(calc((100% - 74%) / 2 - ${activeIndex} * (74% + 14px) + ${dragOffset}px))`,
-          }}
-        >
-          {lineup.map((item, index) => {
-            const distance = Math.abs(index - activeIndex);
-            const isActive = index === activeIndex;
-            const flipped = flippedIds.has(item.id);
-            const profile = buildProfile(item);
-
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={`lineup-card ${item.theme.frame} ${isActive ? "lineup-card-active" : ""} ${flipped ? "lineup-card-flipped" : ""} ${spinId === item.id ? "lineup-card-spin" : ""}`}
-                onClick={() => toggleCard(index, item.id)}
-                onMouseMove={handleCardMove}
-                onMouseLeave={handleCardLeave}
-                style={{
-                  opacity: distance > 2 ? 0.32 : 1 - distance * 0.18,
-                  transform: `scale(${isActive ? 1 : distance === 1 ? 0.92 : 0.86})`,
-                }}
-              >
-                <div className="lineup-card-inner">
-                  <div className="lineup-face lineup-face-front">
-                    <div className="lineup-card-noise" />
-                    <div className="lineup-card-guides" />
-                    <p className="lineup-chip">{item.theme.accent}</p>
-                    <p className="lineup-code">{item.code}</p>
-                    <p className="lineup-vertical-role">{item.theme.role}</p>
-
-                    <div
-                      className={`lineup-portrait ${item.imageUrl ? "lineup-portrait-has-image" : ""}`}
-                    >
-                      {item.imageUrl && (
-                        <>
-                          <img
-                            className="lineup-portrait-image-bg"
-                            src={item.imageUrl}
-                            style={{
-                              objectPosition: item.imageFocus || "center",
-                            }}
-                            alt=""
-                            aria-hidden="true"
-                            loading="lazy"
-                            decoding="async"
-                          />
-                          <img
-                            className="lineup-portrait-image"
-                            src={item.imageUrl}
-                            style={{
-                              objectPosition: item.imageFocus || "center",
-                            }}
-                            alt={`${item.title} 라인업 사진`}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        </>
-                      )}
-                      <div className="lineup-portrait-glow" />
-                      <span className="lineup-artist-name">{item.artist}</span>
-                    </div>
-
-                    <div className="lineup-hud-grid">
-                      <div className="lineup-hud-item">
-                        <p>RHYTHM</p>
-                        <span style={{ width: `${profile.rhythm}%` }} />
-                      </div>
-                      <div className="lineup-hud-item">
-                        <p>STAGE</p>
-                        <span style={{ width: `${profile.stage}%` }} />
-                      </div>
-                      <div className="lineup-hud-item">
-                        <p>PULSE</p>
-                        <span style={{ width: `${profile.pulse}%` }} />
-                      </div>
-                    </div>
-
-                    <div className="lineup-meta">
-                      <p className="lineup-role">{item.theme.role}</p>
-                      <p className="lineup-title">{item.title}</p>
-                      <p className="lineup-time">
-                        {item.startTime?.replace("T", " ").slice(5, 16)} -{" "}
-                        {item.endTime?.replace("T", " ").slice(11, 16)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="lineup-face lineup-face-back">
-                    <p className="lineup-back-label">ARTIST PROFILE</p>
-                    <p className="lineup-back-name">{item.artist}</p>
-                    <p className="lineup-back-title">{item.title}</p>
-                    <p className="lineup-back-time">
-                      {item.startTime?.replace("T", " ")} ~{" "}
-                      {item.endTime?.replace("T", " ")}
-                    </p>
-                    {item.imageCredit && (
-                      <p className="lineup-back-time">{item.imageCredit}</p>
-                    )}
-                    <div className="lineup-back-row">
-                      <span className="lineup-back-chip">
-                        {item.theme.role}
-                      </span>
-                      <span className="lineup-back-chip">{item.status}</span>
-                      <span className="lineup-back-chip">
-                        AURA {profile.aura}%
-                      </span>
-                    </div>
-                    <p className="lineup-back-tip">CLICK AGAIN TO FLIP BACK</p>
-                  </div>
-                </div>
-              </button>
-            );
-          })}
+        <div className="lineup-reference-copy">
+          <span>2026 아주대 축제</span>
+          <h1>LINEUP</h1>
+          <p>함께 만들어가는 우리의 무대</p>
         </div>
-      </div>
+        <div className="lineup-reference-tabs">
+          {dateOptions.map((date) => (
+            <button
+              key={date}
+              type="button"
+              className={activeDate === date ? "active" : ""}
+              onClick={() => selectDate(date)}
+            >
+              {shortDate(date)}
+            </button>
+          ))}
+        </div>
+      </header>
 
-      <div className="lineup-dots">
-        {lineup.map((item, idx) => (
-          <button
-            key={`dot-${item.id}`}
-            type="button"
-            className={`lineup-dot ${idx === activeIndex ? "lineup-dot-active" : ""}`}
-            onClick={() => goToIndex(idx)}
-            aria-label={`${item.title} 카드로 이동`}
-          />
+      <div className="lineup-reference-list">
+        {visibleEvents.map((event, index) => (
+          <article
+            key={event.id || `${event.title}-${index}`}
+            className={`lineup-reference-card lineup-reference-card--${LINEUP_TONES[index % LINEUP_TONES.length]}`}
+          >
+            <div className="lineup-reference-info">
+              {index === 0 && <span>헤드라이너</span>}
+              <h2>{getPosterTitle(event, index)}</h2>
+              <strong>{formatTime(event.startTime)}</strong>
+              <small>{getPosterStage(event, index)}</small>
+            </div>
+            <img src={getPosterImage(event, index)} alt="" loading="lazy" decoding="async" />
+          </article>
         ))}
+        {activeEvents.length === 0 && (
+          <p className="lineup-reference-empty">선택한 날짜의 라인업이 아직 등록되지 않았습니다.</p>
+        )}
       </div>
 
-      {selected && (
-        <article className="lineup-focus rounded-xl p-3 border border-cyan-300/50">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-bold text-role-ops inline-flex items-center gap-1.5">
-              <IconTrophy className="h-4 w-4 icon-role-ops" />
-              NOW SELECTED
-            </h3>
-            <span className="text-xs px-2 py-1 rounded-full border border-cyan-300/60">
-              {selected.status}
-            </span>
-          </div>
-          <p className="mt-1 text-base font-extrabold text-role-schedule inline-flex items-center gap-1.5">
-            <IconCalendar className="h-4 w-4 icon-role-schedule" />
-            {selected.title}
-          </p>
-          <p className="text-xs mt-1 text-cyan-200">
-            {selected.startTime?.replace("T", " ")} ~{" "}
-            {selected.endTime?.replace("T", " ")}
-          </p>
-        </article>
-      )}
+      <button type="button" className="lineup-reference-cta" onClick={showFullLineup}>
+        <IconMusic className="h-4 w-4" />
+        전체 라인업 보기
+      </button>
     </section>
   );
 }
-
-
-
-

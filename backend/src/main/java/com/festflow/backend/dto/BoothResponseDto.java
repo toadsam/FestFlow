@@ -24,7 +24,11 @@ public record BoothResponseDto(
         LocalTime closeTime,
         String tags,
         String contentJson,
-        Boolean reservationEnabled
+        Boolean reservationEnabled,
+        Integer reservationTableCount,
+        Integer reservationAvailableSeats,
+        Integer reservationReservedTables,
+        Integer reservationInUseTables
 ) {
 }
 

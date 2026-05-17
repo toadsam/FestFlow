@@ -48,6 +48,36 @@ public class UploadStorageService {
         return "/uploads/" + filename;
     }
 
+    public String saveImageBytes(byte[] imageBytes, String prefix, String extension) throws IOException {
+        if (imageBytes == null || imageBytes.length == 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image is required.");
+        }
+        Files.createDirectories(uploadPath);
+
+        String safePrefix = sanitizePrefix(prefix);
+        String safeExtension = sanitizeExtension(extension);
+        String filename = safePrefix + "-" + UUID.randomUUID() + safeExtension;
+        Path target = uploadPath.resolve(filename).normalize();
+
+        if (!target.startsWith(uploadPath)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload path.");
+        }
+
+        Files.write(target, imageBytes);
+        return "/uploads/" + filename;
+    }
+
+    public Path resolveUploadUrl(String imageUrl) {
+        if (imageUrl == null || !imageUrl.startsWith("/uploads/")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload URL.");
+        }
+        Path target = uploadPath.resolve(imageUrl.substring("/uploads/".length())).normalize();
+        if (!target.startsWith(uploadPath)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload path.");
+        }
+        return target;
+    }
+
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image file is required.");
@@ -69,5 +99,16 @@ public class UploadStorageService {
         String value = prefix == null ? "upload" : prefix.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9-]", "-");
         value = value.replaceAll("-+", "-").replaceAll("^-|-$", "");
         return value.isBlank() ? "upload" : value;
+    }
+
+    private String sanitizeExtension(String extension) {
+        String value = extension == null ? ".bin" : extension.toLowerCase(Locale.ROOT).trim();
+        if (!value.startsWith(".")) {
+            value = "." + value;
+        }
+        if (!value.matches("\\.[a-z0-9]{1,8}")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid image extension.");
+        }
+        return value;
     }
 }

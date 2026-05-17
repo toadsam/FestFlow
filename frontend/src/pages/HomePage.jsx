@@ -1,1204 +1,259 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  MapContainer,
-  Marker,
-  Popup,
-  TileLayer,
-  useMapEvents,
-  CircleMarker,
-} from "react-leaflet";
-import L from "leaflet";
-import {
-  createCongestionStream,
-  createNoticeStream,
   createBoothStream,
-  downloadBoothCsv,
-  fetchActiveNotices,
+  createEventStream,
   fetchBooths,
-  fetchCongestion,
   fetchEvents,
-  sendGps,
+  fetchTrafficHourly,
 } from "../api";
-import CongestionBadge from "../components/CongestionBadge";
-import { IconCalendar, IconClock, IconMapPin, IconMusic, IconTrophy, IconUsers } from "../components/UxIcons";
+import {
+  IconAlert,
+  IconMapPin,
+  IconMusic,
+  IconSearch,
+} from "../components/UxIcons";
 import { resolveBoothImageUrl } from "../config/boothImages";
 import {
-  AJOU_ADDRESS,
-  AJOU_CENTER,
-  reverseGeocodeKoreanShort,
-} from "../utils/location";
-import {
-  addRecentBooth,
-  getFavoriteIds,
-  toggleFavorite,
-} from "../utils/storage";
+  FESTIVAL_IMAGE,
+  fallbackBooths,
+  fallbackEvents,
+} from "../data/festivalUiData";
 
-const levelToScore = { 여유: 1, 보통: 2, 혼잡: 3, 매우혼잡: 4 };
-const scoreToLevel = ["여유", "보통", "혼잡", "매우혼잡"];
-const BOOTH_CATEGORY_OPTIONS = ["전체", "주점", "음식", "체험", "이벤트", "굿즈", "안내", "응급", "포토존", "플리마켓", "기타"];
-const BOOTH_DAY_PART_OPTIONS = ["전체", "상시", "주간", "야간"];
-const categoryMarkerMeta = {
-  주점: { icon: "🍺", color: "#f59e0b", shadow: "#f59e0b66", label: "주점" },
-  음식: { icon: "🍜", color: "#ef4444", shadow: "#ef444466", label: "음식" },
-  푸드: { icon: "🍜", color: "#ef4444", shadow: "#ef444466", label: "음식" },
-  체험: { icon: "🎮", color: "#8b5cf6", shadow: "#8b5cf666", label: "체험" },
-  이벤트: { icon: "🎪", color: "#06b6d4", shadow: "#06b6d466", label: "이벤트" },
-  굿즈: { icon: "🎁", color: "#ec4899", shadow: "#ec489966", label: "굿즈" },
-  안내: { icon: "i", color: "#2563eb", shadow: "#2563eb66", label: "안내" },
-  응급: { icon: "✚", color: "#dc2626", shadow: "#dc262666", label: "응급" },
-  포토존: { icon: "📷", color: "#10b981", shadow: "#10b98166", label: "포토존" },
-  포토: { icon: "📷", color: "#10b981", shadow: "#10b98166", label: "포토존" },
-  플리마켓: { icon: "🛍️", color: "#14b8a6", shadow: "#14b8a666", label: "플리마켓" },
-  기타: { icon: "•", color: "#64748b", shadow: "#64748b66", label: "기타" },
-};
-const noticeColor = {
-  긴급: "border-rose-300 bg-rose-50 text-rose-700",
-  분실물: "border-amber-300 bg-amber-50 text-amber-700",
-  우천: "border-sky-300 bg-sky-50 text-sky-700",
-};
+const EVENT_RECOMMEND_IMAGE = "/images/og-festflow.png";
 
-function getBoothCategoryMeta(category) {
-  return categoryMarkerMeta[category] || categoryMarkerMeta.기타;
+function reservationLabel(booth) {
+  if (booth?.reservationEnabled === false) return "현장 이용";
+  const seats = Number(booth?.reservationAvailableSeats);
+  if (Number.isFinite(seats) && seats > 0) return `예약 ${seats}석`;
+  if (booth?.reservation) return booth.reservation;
+  return "예약 확인";
 }
 
-function getBoothMarkerIcon(category) {
-  const meta = getBoothCategoryMeta(category || "주점");
-
-  return L.divIcon({
-    className: "booth-category-marker-wrap",
-    html: `
-      <div class="booth-category-marker" style="--marker-color: ${meta.color}; --marker-shadow: ${meta.shadow};" title="${meta.label}">
-        <span class="booth-category-marker__icon">${meta.icon}</span>
-      </div>
-    `,
-    iconSize: [36, 46],
-    iconAnchor: [18, 46],
-    popupAnchor: [0, -42],
-  });
+function compactWaitLabel(booth) {
+  const value = booth?.estimatedWaitMinutes ?? booth?.wait;
+  if (value == null || value === "") return "대기 확인 중";
+  return `대기 ${String(value).replace("분", "")}분`;
 }
 
-function normalizeLevel(level) {
-  return level;
+function crowdLevel(percent) {
+  if (percent >= 75) return "혼잡";
+  if (percent >= 45) return "보통";
+  return "여유";
 }
 
-function normalizeCongestion(item) {
-  return item ? { ...item, level: normalizeLevel(item.level) } : item;
-}
-
-function isBoothOpenNow(booth, now = new Date()) {
-  if (!booth.openTime || !booth.closeTime) return true;
-  const [openHour, openMinute] = booth.openTime.split(":").map(Number);
-  const [closeHour, closeMinute] = booth.closeTime.split(":").map(Number);
-  if ([openHour, openMinute, closeHour, closeMinute].some(Number.isNaN)) {
-    return true;
-  }
-  const current = now.getHours() * 60 + now.getMinutes();
-  const open = openHour * 60 + openMinute;
-  const close = closeHour * 60 + closeMinute;
-  if (open === close) return true;
-  if (open < close) return current >= open && current <= close;
-  return current >= open || current <= close;
-}
-
-function boothMetaLabel(booth) {
-  const time =
-    booth.openTime || booth.closeTime
-      ? `${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
-      : "시간 미정";
-  return `${booth.category || "주점"} · ${booth.dayPart || "야간"} · ${time}`;
-}
-
-function ZoomWatcher({ onZoomChange, onMapReady }) {
-  const map = useMapEvents({
-    zoomend: (event) => onZoomChange(event.target.getZoom()),
-  });
-
-  useEffect(() => {
-    if (onMapReady) {
-      onMapReady(map);
-    }
-  }, [map, onMapReady]);
-
-  return null;
-}
-
-function getDirectionLinks(booth) {
-  const encodedName = encodeURIComponent(booth.name);
-  return {
-    kakao: `https://map.kakao.com/link/to/${encodedName},${booth.latitude},${booth.longitude}`,
-    naver: `https://map.naver.com/v5/search/${encodedName}`,
-  };
-}
-
-function buildClusters(booths, congestionMap) {
-  const map = new Map();
-
-  booths.forEach((booth) => {
-    const key = `${booth.latitude.toFixed(3)}-${booth.longitude.toFixed(3)}`;
-    const congestionLevel = congestionMap[booth.id]?.level || "여유";
-
-    if (!map.has(key)) {
-      map.set(key, {
-        key,
-        latitude: Number(booth.latitude.toFixed(3)),
-        longitude: Number(booth.longitude.toFixed(3)),
-        booths: [],
-        totalScore: 0,
-      });
-    }
-
-    const cluster = map.get(key);
-    cluster.booths.push(booth);
-    cluster.totalScore += levelToScore[congestionLevel] || 1;
-  });
-
-  return Array.from(map.values()).map((cluster) => {
-    const avgScore = Math.max(
-      1,
-      Math.round(cluster.totalScore / cluster.booths.length),
-    );
-    return {
-      ...cluster,
-      level: scoreToLevel[avgScore - 1],
-    };
-  });
-}
-
-function notify(title, body) {
-  if ("Notification" in window && Notification.permission === "granted") {
-    new Notification(title, { body });
-  }
-}
-
-function scheduleIdleTask(callback) {
-  if ("requestIdleCallback" in window) {
-    return { type: "idle", id: window.requestIdleCallback(callback, { timeout: 2500 }) };
-  }
-  return { type: "timeout", id: window.setTimeout(callback, 600) };
-}
-
-function cancelIdleTask(task) {
-  if (!task) return;
-  if (task.type === "idle") {
-    window.cancelIdleCallback(task.id);
-    return;
-  }
-  window.clearTimeout(task.id);
-}
-
-async function fetchCongestionMap(boothList) {
-  const pairs = [];
-  const batchSize = 4;
-
-  for (let i = 0; i < boothList.length; i += batchSize) {
-    const batch = boothList.slice(i, i + batchSize);
-    const results = await Promise.all(
-      batch.map(async (booth) => {
-        try {
-          return [booth.id, normalizeCongestion(await fetchCongestion(booth.id))];
-        } catch {
-          return null;
-        }
-      }),
-    );
-    pairs.push(...results.filter(Boolean));
-  }
-
-  return Object.fromEntries(pairs);
+function cardTone(index) {
+  return ["mint", "violet", "amber"][index] || "mint";
 }
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [booths, setBooths] = useState([]);
-  const [congestionMap, setCongestionMap] = useState({});
-  const [mapZoom, setMapZoom] = useState(16);
-  const [isGridView, setIsGridView] = useState(true);
-  const [activeView, setActiveView] = useState("split");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [query, setQuery] = useState("");
-  const [sortBy, setSortBy] = useState("displayOrder");
-  const [levelFilter, setLevelFilter] = useState("전체");
-  const [categoryFilter, setCategoryFilter] = useState("전체");
-  const [dayPartFilter, setDayPartFilter] = useState("전체");
-  const [openNowOnly, setOpenNowOnly] = useState(false);
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
-  const [favorites, setFavorites] = useState(getFavoriteIds());
-  const [notices, setNotices] = useState([]);
   const [events, setEvents] = useState([]);
-  const [dismissedNoticeIds, setDismissedNoticeIds] = useState([]);
-  const [locationText, setLocationText] = useState("");
-  const [gpsSending, setGpsSending] = useState(false);
-  const [locatingMe, setLocatingMe] = useState(false);
-  const [myLocation, setMyLocation] = useState(null);
-  const [focusedBoothId, setFocusedBoothId] = useState(null);
-  const mapRef = useRef(null);
-  const mapSectionRef = useRef(null);
-  const markerRefs = useRef({});
-  const handledFocusParamRef = useRef("");
-  const previousCongestionRef = useRef({});
-
-  function getPosition(options) {
-    return new Promise((resolve, reject) => {
-      navigator.geolocation.getCurrentPosition(resolve, reject, options);
-    });
-  }
-
-  async function getCurrentPositionFast() {
-    // 1) 캐시/저정밀로 빠르게 1차 위치 확보
-    try {
-      return await getPosition({
-        enableHighAccuracy: false,
-        maximumAge: 120000,
-        timeout: 2500,
-      });
-    } catch {
-      // 2) 실패 시 고정밀 fallback
-      return getPosition({
-        enableHighAccuracy: true,
-        maximumAge: 0,
-        timeout: 10000,
-      });
-    }
-  }
+  const [traffic, setTraffic] = useState([]);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     let mounted = true;
-    let idleTask = null;
 
-    async function load() {
-      try {
-        const [boothData, noticeData, eventData] = await Promise.all([
-          fetchBooths(),
-          fetchActiveNotices(),
-          fetchEvents(),
-        ]);
-        if (!mounted) return;
-        setBooths(boothData);
-        setNotices(noticeData);
-        setEvents(eventData);
+    Promise.allSettled([
+      fetchBooths(),
+      fetchEvents(),
+      fetchTrafficHourly(),
+    ]).then(([boothResult, eventResult, trafficResult]) => {
+      if (!mounted) return;
+      if (boothResult.status === "fulfilled") setBooths(boothResult.value || []);
+      if (eventResult.status === "fulfilled") setEvents(eventResult.value || []);
+      if (trafficResult.status === "fulfilled") setTraffic(trafficResult.value || []);
+      const failed = [boothResult, eventResult].some((item) => item.status === "rejected");
+      setMessage(failed ? "일부 실시간 정보는 기본 안내로 표시 중입니다." : "");
+    });
 
-        idleTask = scheduleIdleTask(async () => {
-          const nextMap = await fetchCongestionMap(boothData);
-          if (!mounted || Object.keys(nextMap).length === 0) return;
-          previousCongestionRef.current = nextMap;
-          setCongestionMap(nextMap);
-        });
-      } catch (e) {
-        if (mounted) setError(e.message);
-      } finally {
-        if (mounted) setLoading(false);
-      }
+    const streams = [];
+    try {
+      const boothStream = createBoothStream();
+      boothStream.addEventListener("booths", (event) => {
+        try {
+          const next = JSON.parse(event.data);
+          if (Array.isArray(next)) setBooths(next);
+        } catch {
+          // Ignore malformed stream payloads.
+        }
+      });
+      streams.push(boothStream);
+    } catch {
+      // Streaming is optional for the public home.
     }
 
-    load();
+    try {
+      const eventStream = createEventStream();
+      eventStream.addEventListener("events", (event) => {
+        try {
+          const next = JSON.parse(event.data);
+          if (Array.isArray(next)) setEvents(next);
+        } catch {
+          // Ignore malformed stream payloads.
+        }
+      });
+      streams.push(eventStream);
+    } catch {
+      // Streaming is optional for the public home.
+    }
+
     return () => {
       mounted = false;
-      cancelIdleTask(idleTask);
+      streams.forEach((stream) => stream.close());
     };
   }, []);
 
-  useEffect(() => {
-    const boothStream = createBoothStream();
-    boothStream.addEventListener("booths", (event) => {
-      try {
-        setBooths(JSON.parse(event.data));
-      } catch {
-        // ignore parse failure
-      }
-    });
-    return () => boothStream.close();
-  }, []);
+  const boothSource = booths.length ? booths : fallbackBooths;
+  const eventSource = events.length ? events : fallbackEvents;
 
-  useEffect(() => {
-    const stream = createCongestionStream();
-
-    stream.addEventListener("congestion", (event) => {
-      try {
-        const list = JSON.parse(event.data);
-        const nextMap = Object.fromEntries(
-          list.map((item) => [item.boothId, normalizeCongestion(item)]),
-        );
-
-        Object.values(nextMap).forEach((item) => {
-          const prev = previousCongestionRef.current[item.boothId];
-          if (!prev) return;
-
-          const prevScore = levelToScore[prev.level] || 1;
-          const nextScore = levelToScore[item.level] || 1;
-          if (nextScore - prevScore >= 2) {
-            notify(
-              "혼잡 급상승",
-              `${item.boothName} 혼잡도가 ${prev.level} → ${item.level}로 상승했습니다.`,
-            );
-          }
-        });
-
-        previousCongestionRef.current = nextMap;
-        setCongestionMap(nextMap);
-      } catch {
-        // SSE 파싱 실패는 무시한다.
-      }
-    });
-
-    return () => stream.close();
-  }, []);
-
-  useEffect(() => {
-    const noticeStream = createNoticeStream();
-
-    noticeStream.addEventListener("notices", (event) => {
-      try {
-        const list = JSON.parse(event.data);
-        setNotices(list);
-      } catch {
-        // SSE 파싱 실패는 무시한다.
-      }
-    });
-
-    return () => noticeStream.close();
-  }, []);
-
-  const filteredBooths = useMemo(() => {
-    let list = booths.filter((booth) =>
-      booth.name.toLowerCase().includes(query.toLowerCase()),
+  const homeCards = useMemo(() => {
+    const sortedBooths = [...boothSource].sort(
+      (a, b) => (Number(a.estimatedWaitMinutes) || 0) - (Number(b.estimatedWaitMinutes) || 0),
     );
+    const nextEvent = [...eventSource]
+      .filter((event) => event.startTime)
+      .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))[0];
+    const firstBooth = sortedBooths[0];
+    const reservable =
+      boothSource.find(
+        (booth) =>
+          booth.id !== firstBooth?.id &&
+          booth.reservationEnabled !== false &&
+          Number(booth.reservationAvailableSeats) > 0,
+      ) ||
+      sortedBooths.find((booth) => booth.id !== firstBooth?.id) ||
+      boothSource[0];
 
-    if (levelFilter !== "전체") {
-      list = list.filter(
-        (booth) => congestionMap[booth.id]?.level === levelFilter,
-      );
-    }
+    return [
+      {
+        id: firstBooth?.id,
+        type: "booth",
+        tag: crowdLevel(Math.min(95, Number(firstBooth?.estimatedWaitMinutes || 0) * 5)),
+        title: firstBooth?.name || "응급 케어 스팟",
+        caption: firstBooth ? compactWaitLabel(firstBooth) : "대기 0분",
+        image: firstBooth ? resolveBoothImageUrl(firstBooth) : FESTIVAL_IMAGE,
+        imageFocus: "center",
+      },
+      {
+        id: nextEvent?.id,
+        type: "event",
+        tag: "곧 시작",
+        title: nextEvent?.title || "중앙무대 공연",
+        caption: nextEvent?.startTime
+          ? `${new Date(nextEvent.startTime).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" })} 시작`
+          : "18:30 시작",
+        image: nextEvent?.imageUrl || EVENT_RECOMMEND_IMAGE,
+        imageFocus: nextEvent?.imageFocus || "center",
+      },
+      {
+        id: reservable?.id,
+        type: "booth",
+        tag: "예약 가능",
+        title: reservable?.name || "푸드 박스 부스",
+        caption: reservable ? reservationLabel(reservable) : "예약 가능 12명",
+        image: reservable ? resolveBoothImageUrl(reservable) : "/images/booths/%EC%A3%BC%EC%A0%90%EC%82%AC%EC%A7%84.jpg",
+        imageFocus: "center",
+      },
+    ];
+  }, [boothSource, eventSource]);
 
-    if (categoryFilter !== "전체") {
-      list = list.filter((booth) => (booth.category || "주점") === categoryFilter);
-    }
-
-    if (dayPartFilter !== "전체") {
-      list = list.filter((booth) => (booth.dayPart || "야간") === dayPartFilter);
-    }
-
-    if (openNowOnly) {
-      list = list.filter((booth) => isBoothOpenNow(booth));
-    }
-
-    if (favoritesOnly) {
-      list = list.filter((booth) => favorites.includes(booth.id));
-    }
-
-    return [...list].sort((a, b) => {
-      if (sortBy === "congestion") {
-        return (
-          (levelToScore[congestionMap[b.id]?.level] || 1) -
-          (levelToScore[congestionMap[a.id]?.level] || 1)
-        );
-      }
-      if (sortBy === "name") {
-        return a.name.localeCompare(b.name, "ko");
-      }
-      return (a.displayOrder || 999) - (b.displayOrder || 999);
-    });
-  }, [
-    booths,
-    congestionMap,
-    favorites,
-    favoritesOnly,
-    categoryFilter,
-    dayPartFilter,
-    levelFilter,
-    openNowOnly,
-    query,
-    sortBy,
-  ]);
-
-  const clusters = useMemo(
-    () => buildClusters(filteredBooths, congestionMap),
-    [filteredBooths, congestionMap],
-  );
-  const mapQuickBooths = useMemo(() => {
-    return [...filteredBooths]
-      .sort((a, b) => {
-        const scoreDiff =
-          (levelToScore[congestionMap[b.id]?.level] || 1) -
-          (levelToScore[congestionMap[a.id]?.level] || 1);
-        if (scoreDiff !== 0) return scoreDiff;
-        return (a.displayOrder || 999) - (b.displayOrder || 999);
-      })
-      .slice(0, 12);
-  }, [filteredBooths, congestionMap]);
-
-  const nextEvent = useMemo(() => {
-    const now = new Date();
-    return (
-      (events || [])
-        .filter((event) => event.startTime && new Date(event.startTime) > now)
-        .sort((a, b) => new Date(a.startTime) - new Date(b.startTime))[0] ||
-      null
-    );
-  }, [events]);
-
-  const visibleNotices = useMemo(() => {
-    return (notices || []).filter(
-      (notice) => !dismissedNoticeIds.includes(notice.id),
-    );
-  }, [notices, dismissedNoticeIds]);
-
-  const recommendedBooths = useMemo(() => {
-    return [...booths]
-      .sort((a, b) => {
-        const scoreDiff =
-          (levelToScore[congestionMap[a.id]?.level] || 1) -
-          (levelToScore[congestionMap[b.id]?.level] || 1);
-        if (scoreDiff !== 0) return scoreDiff;
-        return (
-          (a.estimatedWaitMinutes ?? 999) - (b.estimatedWaitMinutes ?? 999)
-        );
-      })
-      .slice(0, 3);
-  }, [booths, congestionMap]);
-
-  useEffect(() => {
-    if (activeView === "list" || !focusedBoothId) return undefined;
-
-    const booth = booths.find((item) => item.id === focusedBoothId);
-    if (!booth) return undefined;
-
-    const timer = window.setTimeout(() => {
-      mapSectionRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-
-      if (!mapRef.current) return;
-
-      mapRef.current.flyTo([booth.latitude, booth.longitude], 18, {
-        duration: 0.6,
-      });
-
-      window.setTimeout(() => {
-        markerRefs.current[focusedBoothId]?.openPopup();
-      }, 450);
-    }, 120);
-
-    return () => window.clearTimeout(timer);
-  }, [activeView, booths, focusedBoothId]);
-
-  useEffect(() => {
-    const focusParam = new URLSearchParams(location.search).get("focusBooth");
-    if (!focusParam || focusParam === handledFocusParamRef.current || booths.length === 0) {
-      return;
-    }
-
-    const boothId = Number(focusParam);
-    if (!Number.isFinite(boothId) || boothId <= 0) {
-      return;
-    }
-
-    handledFocusParamRef.current = focusParam;
-    focusBoothOnMap(boothId);
-  }, [booths, location.search]);
-
-  async function refreshAllCongestion() {
-    const nextMap = await fetchCongestionMap(booths);
-    previousCongestionRef.current = nextMap;
-    setCongestionMap(nextMap);
-  }
-
-  async function handleSendCurrentGps() {
-    if (!navigator.geolocation) {
-      setError("현재 브라우저에서 GPS를 지원하지 않습니다.");
-      return;
-    }
-
-    setGpsSending(true);
-    try {
-      const position = await getCurrentPositionFast();
-      const latitude = position.coords.latitude;
-      const longitude = position.coords.longitude;
-      await sendGps(latitude, longitude);
-      const area = await reverseGeocodeKoreanShort(latitude, longitude);
-      setLocationText(
-        `${area} (위도 ${latitude.toFixed(4)}, 경도 ${longitude.toFixed(4)})`,
-      );
-      await refreshAllCongestion();
-    } catch (e) {
-      setError(e.message || "위치 권한이 거부되어 GPS를 전송하지 못했습니다.");
-    } finally {
-      setGpsSending(false);
-    }
-  }
-
-  function handleMoveToMyLocation() {
-    if (!navigator.geolocation) {
-      setError("현재 브라우저에서 GPS를 지원하지 않습니다.");
-      return;
-    }
-
-    setLocatingMe(true);
-    getCurrentPositionFast()
-      .then(async (position) => {
-        const latitude = position.coords.latitude;
-        const longitude = position.coords.longitude;
-        setMyLocation({ latitude, longitude });
-
-        try {
-          const area = await reverseGeocodeKoreanShort(latitude, longitude);
-          setLocationText(
-            `${area} (위도 ${latitude.toFixed(4)}, 경도 ${longitude.toFixed(4)})`,
-          );
-        } catch {
-          // reverse geocode 실패는 지도 이동에는 영향 없음
-        }
-
-        if (mapRef.current) {
-          const nextZoom = Math.max(mapRef.current.getZoom(), 18);
-          mapRef.current.flyTo([latitude, longitude], nextZoom, {
-            duration: 0.6,
-          });
-        }
-      })
-      .catch(() => {
-        setError("위치 권한이 거부되어 내 위치로 이동할 수 없습니다.");
-      })
-      .finally(() => {
-        setLocatingMe(false);
-      });
-  }
-
-  function openBoothDetail(boothId) {
-    addRecentBooth(boothId);
-    navigate(`/booths/${boothId}`);
-  }
-
-  function focusBoothOnMap(boothId) {
-    const booth = booths.find((item) => item.id === boothId);
-    if (!booth) return;
-
-    setFocusedBoothId(boothId);
-    setMapZoom(18);
-    setActiveView("split");
-  }
-
-  function handleFavorite(boothId) {
-    setFavorites(toggleFavorite(boothId));
-  }
+  const crowdPercent = useMemo(() => {
+    if (!traffic.length) return 55;
+    const latest = Number(traffic[traffic.length - 1]?.count) || 0;
+    const max = Math.max(1, ...traffic.map((item) => Number(item.count) || 0));
+    return Math.min(99, Math.max(1, Math.round((latest / max) * 100)));
+  }, [traffic]);
 
   return (
-    <section className="cyber-page space-y-4 pt-4 scan-enter">
-      <article className="rounded-2xl border border-cyan-300/60 bg-gradient-to-br from-[#05305b] via-[#0a6ea8] to-[#19c6e8] px-4 py-4 text-cyan-50 shadow-[0_0_28px_rgba(34,211,238,0.42)]">
-        <p className="text-xs tracking-[0.03em] text-cyan-200/95 drop-shadow-[0_0_8px_rgba(34,211,238,0.45)]">
-          아주대학교 축제 메인
-        </p>
-        <h2 className="mt-1 text-xl font-extrabold text-cyan-100 text-role-ops drop-shadow-[0_0_12px_rgba(125,249,255,0.65)] inline-flex items-center gap-2">
-          <IconMusic className="h-5 w-5 icon-role-ops" />
-          지금 축제를 바로 즐겨보세요
-        </h2>
-        <p className="mt-1 text-xs text-cyan-200/95 drop-shadow-[0_0_7px_rgba(34,211,238,0.4)]">
-          {nextEvent
-            ? `다음 공연: ${nextEvent.title} (${nextEvent.startTime?.replace("T", " ").slice(11, 16)})`
-            : "곧 시작하는 공연 정보를 확인해보세요."}
-        </p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            onClick={() => navigate("/stage-map")}
-            className="rounded-xl border border-cyan-300/60 bg-sky-500/20 px-3 py-2.5 min-h-11 text-sm font-semibold text-cyan-50 shadow-[0_0_22px_rgba(34,211,238,0.45)] inline-flex items-center justify-center gap-1.5"
-          >
-            <IconUsers className="h-4 w-4 icon-role-ops" />
-            노천극장 인원 보기
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate("/events")}
-            className="rounded-xl border border-cyan-200/70 bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 px-3 py-2.5 min-h-11 text-sm font-bold text-cyan-50 shadow-[0_0_24px_rgba(56,189,248,0.55)] inline-flex items-center justify-center gap-1.5"
-          >
-            <IconCalendar className="h-4 w-4 icon-role-schedule" />
-            공연 일정 보기
+    <section className="uni-page uni-home-page reference-home-page">
+      <header
+        className="home-hero-card"
+        style={{
+          backgroundImage: `linear-gradient(180deg, rgba(7,26,61,0.15), rgba(7,26,61,0.98)), url(/images/og-festflow.png)`,
+        }}
+      >
+        <div className="home-hero-top">
+          <strong>FestFlow</strong>
+          <button type="button" aria-label="공지사항" onClick={() => navigate("/more")}>
+            <IconAlert className="h-4 w-4" />
           </button>
         </div>
-      </article>
+        <div className="home-hero-copy">
+          <h1>오늘의 아주대 축제</h1>
+          <span>지금 뭐 할지 바로 고르세요!</span>
+          <small>공연, 부스, 지도, 혼잡도까지 한 번에 확인하세요.</small>
+        </div>
+        <div className="hero-action-grid">
+          <button type="button" onClick={() => navigate("/events")}>
+            <IconMusic className="h-5 w-5" />
+            <span>공연 보기</span>
+          </button>
+          <button type="button" onClick={() => navigate("/stage-map")}>
+            <IconSearch className="h-5 w-5" />
+            <span>부스 찾기</span>
+          </button>
+          <button type="button" onClick={() => navigate("/stage-map")}>
+            <IconMapPin className="h-5 w-5" />
+            <span>지도 열기</span>
+          </button>
+        </div>
+      </header>
 
-      <article className="rounded-xl border border-slate-200 bg-white p-3">
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-800 text-role-ops">
-            <IconTrophy className="mr-1.5 inline h-4 w-4 icon-role-ops" />지금 덜 붐비는 추천 부스
-          </p>
-          <button
-            type="button"
-            onClick={() => setActiveView("list")}
-            className="text-xs text-teal-700 font-semibold"
-          >
-            전체 보기
-          </button>
+      {message && <p className="app-inline-note">{message}</p>}
+
+      <section className="uni-section">
+        <div className="uni-section-head">
+          <h2>지금 추천</h2>
+          <button type="button" onClick={() => navigate("/stage-map")}>더보기</button>
         </div>
-        <div className="mt-2 grid grid-cols-3 gap-2 stagger-list">
-          {recommendedBooths.map((booth) => (
+        <div className="recommend-strip">
+          {homeCards.slice(0, 3).map((item, index) => (
             <button
-              key={`recommended-${booth.id}`}
+              key={`${item.type}-${item.id || item.title}`}
               type="button"
-              onClick={() => openBoothDetail(booth.id)}
-              className="rounded-lg border border-slate-200 bg-slate-50 p-2 text-left"
+              className={`recommend-card recommend-card--${cardTone(index)}`}
+              style={{
+                "--recommend-image": `url("${item.image}")`,
+                "--recommend-focus": item.imageFocus || "center",
+              }}
+              onClick={() => {
+                if (item.type === "event") navigate("/events");
+                else navigate(item.id ? `/booths/${item.id}` : "/stage-map");
+              }}
             >
-              <p className="text-xs font-semibold text-slate-800 line-clamp-1">
-                {booth.name}
-              </p>
-              <p className="mt-1 text-[11px] text-slate-600">
-                대기 {booth.estimatedWaitMinutes ?? "-"}분
-              </p>
-              <p className="mt-1 text-[10px] font-semibold text-cyan-700 line-clamp-1">
-                {booth.category || "주점"} · {booth.dayPart || "야간"}
-              </p>
-              <div className="mt-1">
-                <CongestionBadge
-                  level={congestionMap[booth.id]?.level || "여유"}
-                />
-              </div>
+              <span>{item.tag}</span>
+              <strong>{item.title}</strong>
+              <small>{item.caption}</small>
             </button>
           ))}
         </div>
-      </article>
+      </section>
 
-      <article className="rounded-xl border border-teal-100 bg-teal-50/70 p-3">
-        <p className="text-sm font-semibold text-teal-900 text-role-log inline-flex items-center gap-1.5"><IconClock className="h-4 w-4 icon-role-log" />실시간 운영 안내</p>
-        <p className="text-xs text-teal-800 mt-1">기준 위치: {AJOU_ADDRESS}</p>
-        {locationText && (
-          <p className="text-xs text-teal-700 mt-1">내 위치: {locationText}</p>
-        )}
-      </article>
-
-      <div className="space-y-2 stagger-list">
-        {visibleNotices.length === 0 && (
-          <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-600">
-            현재 등록된 운영 공지가 없습니다.
+      <section className="uni-card crowd-summary-card" onClick={() => navigate("/analytics")}>
+        <div className="uni-section-head">
+          <h2>실시간 혼잡도</h2>
+          <button type="button">더보기</button>
+        </div>
+        <div className="crowd-score-row">
+          <div>
+            <p>축제장 전체 혼잡도</p>
+            <span>{crowdLevel(crowdPercent)}</span>
           </div>
-        )}
-        {visibleNotices.slice(0, 2).map((notice) => (
-          <article
-            key={notice.id}
-            className={`rounded-lg border px-3 py-2 ${noticeColor[notice.category] || "border-slate-300 bg-slate-50 text-slate-700"}`}
-          >
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold">{notice.category}</span>
-                <span className="text-[10px] opacity-70">
-                  {notice.updatedAt?.replace("T", " ").slice(5, 16)}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() =>
-                  setDismissedNoticeIds((prev) => [...prev, notice.id])
-                }
-                className="rounded-full px-2 py-1 text-[11px] font-bold opacity-70 hover:opacity-100"
-                aria-label="공지 닫기"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="text-sm font-semibold mt-1">{notice.title}</p>
-            <p className="text-xs mt-1">{notice.content}</p>
-          </article>
-        ))}
-      </div>
-
-      <div className="home-view-toggle z-40 grid grid-cols-2 gap-2 rounded-xl border border-slate-200 bg-slate-900/90 backdrop-blur p-1 shadow-sm">
-        <button
-          type="button"
-          onClick={() => setActiveView("split")}
-          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === "split" ? "bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50" : "text-slate-300"}`}
-        >
-          동시 보기
-        </button>
-        <button
-          type="button"
-          onClick={() => setActiveView("list")}
-          className={`rounded-lg min-h-11 text-sm font-semibold ${activeView === "list" ? "bg-gradient-to-r from-blue-600 via-cyan-500 to-sky-400 text-cyan-50" : "text-slate-300"}`}
-        >
-          부스 목록
-        </button>
-      </div>
-
-      {activeView !== "list" && (
-        <>
-          <div
-            ref={mapSectionRef}
-            className="relative scroll-mt-3 rounded-2xl overflow-hidden border border-slate-200"
-          >
-            <MapContainer
-              center={[AJOU_CENTER.latitude, AJOU_CENTER.longitude]}
-              zoom={17}
-              maxZoom={22}
-              className="h-64 w-full"
-            >
-              <TileLayer
-                attribution="&copy; OpenStreetMap 기여자"
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                maxZoom={22}
-                maxNativeZoom={19}
-              />
-              <ZoomWatcher
-                onZoomChange={setMapZoom}
-                onMapReady={(map) => {
-                  mapRef.current = map;
-                }}
-              />
-
-              {mapZoom >= 16 &&
-                booths.map((booth) => {
-                  const links = getDirectionLinks(booth);
-                  const congestion = congestionMap[booth.id];
-
-                  return (
-                    <Marker
-                      key={booth.id}
-                      ref={(marker) => {
-                        if (marker) {
-                          markerRefs.current[booth.id] = marker;
-                        } else {
-                          delete markerRefs.current[booth.id];
-                        }
-                      }}
-                      position={[booth.latitude, booth.longitude]}
-                      icon={getBoothMarkerIcon(booth.category)}
-                      title={`${booth.category || "부스"} ${booth.name}`}
-                      zIndexOffset={focusedBoothId === booth.id ? 1000 : 0}
-                    >
-                      <Popup>
-                        <div className="space-y-1">
-                          <p className="font-bold">{booth.name}</p>
-                          <p className="text-xs text-slate-700">
-                            수원시 영통구 아주대학교
-                          </p>
-                          <p className="text-xs">
-                            혼잡도: {congestion?.level || "집계중"}
-                          </p>
-                          <div className="flex gap-2 text-xs">
-                            <a
-                              href={links.kakao}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              카카오 길찾기
-                            </a>
-                            <a
-                              href={links.naver}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              네이버 지도
-                            </a>
-                          </div>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  );
-                })}
-
-              {mapZoom < 16 &&
-                clusters.map((cluster) => (
-                  <CircleMarker
-                    key={cluster.key}
-                    center={[cluster.latitude, cluster.longitude]}
-                    radius={10 + Math.min(cluster.booths.length * 2, 12)}
-                    pathOptions={{
-                      color: "#0f766e",
-                      fillColor: "#14b8a6",
-                      fillOpacity: 0.5,
-                    }}
-                  >
-                    <Popup>
-                      <p className="font-semibold">
-                        {cluster.booths.length}개 부스 클러스터
-                      </p>
-                      <p className="text-xs">평균 혼잡도: {cluster.level}</p>
-                      <ul className="text-xs mt-1 space-y-0.5">
-                        {cluster.booths.map((booth) => (
-                          <li key={booth.id}>{booth.name}</li>
-                        ))}
-                      </ul>
-                    </Popup>
-                  </CircleMarker>
-                ))}
-
-              {myLocation && (
-                <CircleMarker
-                  center={[myLocation.latitude, myLocation.longitude]}
-                  radius={8}
-                  pathOptions={{
-                    color: "#ffffff",
-                    weight: 2,
-                    fillColor: "#0ea5e9",
-                    fillOpacity: 0.95,
-                  }}
-                >
-                  <Popup>
-                    <p className="text-xs font-semibold">내 위치</p>
-                  </Popup>
-                </CircleMarker>
-              )}
-            </MapContainer>
-            <div className="pointer-events-none absolute inset-0 z-[500]">
-              <div className="pointer-events-auto absolute right-3 top-3">
-                <button
-                  type="button"
-                  onClick={handleMoveToMyLocation}
-                  disabled={locatingMe}
-                  className="rounded-lg border border-cyan-300/80 bg-slate-950/80 px-3 py-2 text-xs font-semibold text-cyan-100 shadow-[0_0_16px_rgba(34,211,238,0.35)] backdrop-blur disabled:opacity-60"
-                >
-                  {locatingMe ? "위치 찾는 중..." : "내 위치로 가기"}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-3">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-sm font-semibold text-slate-800 text-role-map">
-                <IconMapPin className="mr-1.5 inline h-4 w-4 icon-role-map" />빠른 부스 이동
-              </p>
-              <button
-                type="button"
-                onClick={() => setActiveView("list")}
-                className="text-xs text-teal-700 font-semibold min-h-11 px-2"
-              >
-                전체 목록 보기
-              </button>
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 stagger-list">
-              {mapQuickBooths.map((booth) => {
-                const congestion = congestionMap[booth.id];
-                return (
-                  <button
-                    key={`quick-${booth.id}`}
-                    type="button"
-                    onClick={() => openBoothDetail(booth.id)}
-                    className="shrink-0 w-36 rounded-lg border border-slate-200 overflow-hidden text-left bg-slate-50"
-                  >
-                    <div className="h-20 bg-slate-200">
-                      <img
-                        src={resolveBoothImageUrl(booth)}
-                        alt={`${booth.name} 이미지`}
-                        className="h-full w-full object-cover"
-                        loading="lazy"
-                        decoding="async"
-                      />
-                    </div>
-                    <div className="p-2">
-                      <p className="text-xs font-semibold text-slate-800 line-clamp-1">
-                        {booth.name}
-                      </p>
-                      <p className="mt-1 text-[10px] font-semibold text-cyan-700 line-clamp-1">
-                        {booth.category || "주점"} · {booth.dayPart || "야간"}
-                      </p>
-                      <div className="mt-1">
-                        {congestion ? (
-                          <CongestionBadge level={congestion.level} />
-                        ) : (
-                          <span className="text-[11px] text-slate-600">
-                            집계중
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {activeView === "split" && (
-            <div className="rounded-xl border border-slate-200 bg-white p-3">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-semibold text-slate-800 text-role-map">
-                  <IconMapPin className="mr-1.5 inline h-4 w-4 icon-role-map" />지도 아래 부스 리스트
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setActiveView("list")}
-                  className="text-xs text-teal-700 font-semibold"
-                >
-                  전체 목록으로
-                </button>
-              </div>
-              <div className="space-y-2 max-h-60 overflow-auto pr-1 stagger-list">
-                {filteredBooths.slice(0, 8).map((booth) => {
-                  const congestion = congestionMap[booth.id];
-                  return (
-                    <button
-                      key={`split-${booth.id}`}
-                      type="button"
-                      onClick={() => openBoothDetail(booth.id)}
-                      className="w-full rounded-lg border border-slate-200 bg-slate-50 p-2 text-left"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-sm font-semibold text-slate-800 line-clamp-1">
-                          {booth.name}
-                        </p>
-                        {congestion ? (
-                          <CongestionBadge level={congestion.level} />
-                        ) : (
-                          <span className="text-xs text-slate-500">집계중</span>
-                        )}
-                      </div>
-                      <p className="mt-1 text-xs text-slate-600 line-clamp-1">
-                        {booth.description}
-                      </p>
-                      <p className="mt-1 text-[11px] font-semibold text-cyan-700 line-clamp-1">
-                        {boothMetaLabel(booth)}
-                        {isBoothOpenNow(booth) ? " · 운영중" : " · 운영전/종료"}
-                      </p>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 gap-2">
-            <button
-              type="button"
-              onClick={handleSendCurrentGps}
-              className="rounded-xl border border-cyan-300/70 bg-sky-500/15 text-cyan-100 min-h-11 py-2.5 font-semibold shadow-[0_0_18px_rgba(34,211,238,0.35)]"
-              disabled={gpsSending}
-            >
-              {gpsSending ? "GPS 전송 중..." : "내 위치 전송"}
-            </button>
-          </div>
-        </>
-      )}
-
-      {activeView === "list" && (
-        <>
-          <div className="sticky top-2 z-30 rounded-xl border border-slate-200 bg-white/95 backdrop-blur p-3 space-y-2 shadow-sm">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setIsGridView((prev) => !prev)}
-                className="rounded-lg border border-teal-700 text-teal-700 min-h-11 py-2 text-sm font-semibold"
-              >
-                {isGridView ? "세로 카드 보기" : "가로 카드 보기"}
-              </button>
-              <button
-                type="button"
-                onClick={downloadBoothCsv}
-                className="rounded-lg border border-slate-300 min-h-11 py-2 text-sm font-semibold text-slate-700"
-              >
-                부스 CSV
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => setFavoritesOnly((prev) => !prev)}
-                className={`rounded-lg min-h-11 py-2 text-sm font-semibold ${favoritesOnly ? "bg-gradient-to-r from-teal-700 via-cyan-600 to-emerald-600 text-white" : "border border-slate-300 text-slate-700"}`}
-              >
-                {favoritesOnly ? "좋아요만 보는 중" : "좋아요만 보기"}
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setFavoritesOnly(false);
-                  setLevelFilter("전체");
-                  setCategoryFilter("전체");
-                  setDayPartFilter("전체");
-                  setOpenNowOnly(false);
-                  setQuery("");
-                }}
-                className="rounded-lg border border-slate-300 min-h-11 py-2 text-sm font-semibold text-slate-700"
-              >
-                필터 초기화
-              </button>
-            </div>
-
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="부스 이름 검색"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 min-h-11 text-sm"
-            />
-
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
-              >
-                {BOOTH_CATEGORY_OPTIONS.map((category) => (
-                  <option key={category} value={category}>
-                    {category === "전체" ? "전체 유형" : category}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={dayPartFilter}
-                onChange={(e) => setDayPartFilter(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
-              >
-                {BOOTH_DAY_PART_OPTIONS.map((part) => (
-                  <option key={part} value={part}>
-                    {part === "전체" ? "전체 시간대" : part}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                onClick={() => setOpenNowOnly((prev) => !prev)}
-                className={`col-span-2 rounded-lg min-h-11 px-2 py-2 text-sm font-semibold ${openNowOnly ? "bg-emerald-600 text-white" : "border border-slate-300 text-slate-700"}`}
-              >
-                운영중
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <select
-                value={levelFilter}
-                onChange={(e) => setLevelFilter(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
-              >
-                <option>전체</option>
-                <option>여유</option>
-                <option>보통</option>
-                <option>혼잡</option>
-                <option>매우혼잡</option>
-              </select>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="rounded-lg border border-slate-300 px-3 py-2 pr-8 min-h-11 text-sm"
-              >
-                <option value="displayOrder">운영순</option>
-                <option value="name">이름순</option>
-                <option value="congestion">혼잡도순</option>
-              </select>
-            </div>
-          </div>
-
-          {loading && (
-            <p className="text-sm text-slate-600">
-              부스와 혼잡도 데이터를 불러오는 중...
-            </p>
-          )}
-          {error && (
-            <article className="overflow-hidden rounded-2xl border border-amber-300/40 bg-slate-950/75">
-              <img
-                src="/images/location-error.png"
-                alt=""
-                className="h-32 w-full object-cover object-[70%_center]"
-                loading="lazy"
-                decoding="async"
-              />
-              <div className="p-3">
-                <p className="text-sm font-bold text-amber-100">{error}</p>
-                <p className="mt-1 text-xs text-cyan-100/70">
-                  지도와 혼잡도 추천은 위치 권한과 네트워크 상태에 따라 달라질 수 있습니다.
-                </p>
-              </div>
-            </article>
-          )}
-
-          {!loading && filteredBooths.length === 0 && (
-            <div className="rounded-xl border border-dashed border-slate-300 bg-white p-5 text-center text-sm text-slate-600">
-              검색 조건에 맞는 부스가 없습니다. 지도 보기 탭에서 GPS를 전송하면
-              실시간 데이터가 더 정확해집니다.
-            </div>
-          )}
-
-          <div
-            className={
-              isGridView
-                ? "booth-card-grid stagger-list"
-                : "space-y-3 stagger-list"
-            }
-          >
-            {filteredBooths.map((booth) => {
-              const congestion = congestionMap[booth.id];
-              const isFavorite = favorites.includes(booth.id);
-
-              return (
-                <article
-                  key={booth.id}
-                  className={isGridView ? "booth-list-card" : "w-full rounded-2xl border border-slate-200 bg-white overflow-hidden"}
-                >
-                  <div className="booth-list-card__image bg-slate-100">
-                    <img
-                      src={resolveBoothImageUrl(booth)}
-                      alt={`${booth.name} 대표 이미지`}
-                      className="h-full w-full object-cover"
-                      loading="lazy"
-                      decoding="async"
-                    />
-                  </div>
-                  <div className="booth-list-card__body">
-                    <h3 className="booth-list-card__title text-slate-800 break-keep">
-                      {booth.name}
-                    </h3>
-                    <div className="booth-list-card__tags">
-                      <span className="rounded-full border border-cyan-300/60 bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-100">
-                        {booth.category || "주점"}
-                      </span>
-                      <span className="rounded-full border border-cyan-300/40 bg-slate-900/40 px-2 py-0.5 text-[10px] font-bold text-cyan-100">
-                        {booth.dayPart || "야간"}
-                      </span>
-                      <span className="rounded-full border border-slate-400/40 bg-slate-900/40 px-2 py-0.5 text-[10px] font-bold text-slate-100">
-                        {congestion?.level || "집계중"}
-                      </span>
-                    </div>
-                    <p className="booth-list-card__meta text-cyan-700">
-                      대기 {booth.estimatedWaitMinutes ?? "-"}분
-                      {" · "}
-                      {booth.openTime || booth.closeTime
-                        ? `${booth.openTime || "--:--"}~${booth.closeTime || "--:--"}`
-                        : "시간 미정"}
-                      {" · "}
-                      {isBoothOpenNow(booth) ? "운영중" : "운영전/종료"}
-                    </p>
-                    <p className="booth-list-card__reservation text-slate-600">
-                      {booth.reservationEnabled === false ? "예약 없이 현장 이용" : "\u00A0"}
-                    </p>
-                    <p className={`${isGridView ? "hidden" : "mt-1 line-clamp-1"} text-xs text-slate-600`}>
-                      {booth.description}
-                    </p>
-                    <div className="booth-card-actions">
-                      <button
-                        type="button"
-                        aria-label={`${booth.name} 자세히 보기`}
-                        title="자세히 보기"
-                        onClick={() => openBoothDetail(booth.id)}
-                        className="booth-card-action"
-                      >
-                        🔍
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`${booth.name} 지도에서 보기`}
-                        title="지도에서 보기"
-                        onClick={() => focusBoothOnMap(booth.id)}
-                        className="booth-card-action booth-card-action--map"
-                      >
-                        <IconMapPin className="h-5 w-5 icon-role-map" />
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}
-                        onClick={() => handleFavorite(booth.id)}
-                        className={`booth-card-action booth-card-action--favorite ${isFavorite ? "booth-card-action--favorite-on" : ""}`}
-                      >
-                        {isFavorite ? "⭐" : "☆"}
-                      </button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        </>
-      )}
+          <strong>{crowdPercent}%</strong>
+        </div>
+        <div className="crowd-meter" aria-hidden="true">
+          <span className="meter-green" />
+          <span className="meter-yellow" />
+          <span className="meter-red" />
+        </div>
+        <div className="crowd-scale">
+          <span>0%</span>
+          <span>100%</span>
+        </div>
+      </section>
     </section>
   );
 }
-
-
-
