@@ -1,12 +1,25 @@
 package com.festflow.backend.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
+import software.amazon.awssdk.core.ResponseBytes;
+import software.amazon.awssdk.core.sync.RequestBody;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Locale;
@@ -25,57 +38,185 @@ public class UploadStorageService {
     );
 
     private final Path uploadPath;
+    private final boolean s3Enabled;
+    private final String s3Bucket;
+    private final String s3PublicBaseUrl;
+    private final S3Client s3Client;
 
-    public UploadStorageService(@Value("${app.upload.dir}") String uploadDir) {
+    public UploadStorageService(
+            @Value("${app.upload.dir}") String uploadDir,
+            @Value("${app.storage.type:local}") String storageType,
+            @Value("${app.s3.bucket:}") String s3Bucket,
+            @Value("${app.s3.region:ap-northeast-2}") String s3Region,
+            @Value("${app.s3.endpoint:}") String s3Endpoint,
+            @Value("${app.s3.public-base-url:}") String s3PublicBaseUrl,
+            @Value("${app.s3.path-style-access:false}") boolean pathStyleAccess
+    ) {
         this.uploadPath = Path.of(uploadDir).toAbsolutePath().normalize();
+        this.s3Bucket = s3Bucket == null ? "" : s3Bucket.trim();
+        this.s3PublicBaseUrl = normalizePublicBaseUrl(s3PublicBaseUrl);
+        this.s3Enabled = "s3".equalsIgnoreCase(storageType) || !this.s3Bucket.isBlank();
+        if (s3Enabled) {
+            if (this.s3Bucket.isBlank()) {
+                throw new IllegalStateException("AWS_S3_BUCKET is required when APP_STORAGE_TYPE=s3.");
+            }
+            var builder = S3Client.builder()
+                    .region(Region.of(s3Region == null || s3Region.isBlank() ? "ap-northeast-2" : s3Region.trim()))
+                    .credentialsProvider(DefaultCredentialsProvider.create())
+                    .forcePathStyle(pathStyleAccess);
+            if (s3Endpoint != null && !s3Endpoint.isBlank()) {
+                builder.endpointOverride(URI.create(s3Endpoint.trim()));
+            }
+            this.s3Client = builder.build();
+        } else {
+            this.s3Client = null;
+        }
     }
 
     public String saveImage(MultipartFile file, String prefix) throws IOException {
         validateImage(file);
-        Files.createDirectories(uploadPath);
 
         String contentType = normalizeContentType(file.getContentType());
         String extension = IMAGE_EXTENSIONS.get(contentType);
-        String safePrefix = sanitizePrefix(prefix);
-        String filename = safePrefix + "-" + UUID.randomUUID() + extension;
-        Path target = uploadPath.resolve(filename).normalize();
-
-        if (!target.startsWith(uploadPath)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload path.");
+        String key = buildObjectKey(prefix, extension);
+        if (s3Enabled) {
+            putS3Object(key, file.getBytes(), contentType);
+            return toStoredUrl(key);
         }
 
+        Files.createDirectories(uploadPath);
+        Path target = resolveLocalTarget(key);
         file.transferTo(target);
-        return "/uploads/" + filename;
+        return toStoredUrl(key);
     }
 
     public String saveImageBytes(byte[] imageBytes, String prefix, String extension) throws IOException {
         if (imageBytes == null || imageBytes.length == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image is required.");
         }
-        Files.createDirectories(uploadPath);
 
-        String safePrefix = sanitizePrefix(prefix);
         String safeExtension = sanitizeExtension(extension);
-        String filename = safePrefix + "-" + UUID.randomUUID() + safeExtension;
-        Path target = uploadPath.resolve(filename).normalize();
-
-        if (!target.startsWith(uploadPath)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload path.");
+        String key = buildObjectKey(prefix, safeExtension);
+        if (s3Enabled) {
+            putS3Object(key, imageBytes, contentTypeForExtension(safeExtension));
+            return toStoredUrl(key);
         }
 
+        Files.createDirectories(uploadPath);
+        Path target = resolveLocalTarget(key);
         Files.write(target, imageBytes);
-        return "/uploads/" + filename;
+        return toStoredUrl(key);
     }
 
-    public Path resolveUploadUrl(String imageUrl) {
-        if (imageUrl == null || !imageUrl.startsWith("/uploads/")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload URL.");
+    public Path resolveUploadUrl(String imageUrl) throws IOException {
+        String key = extractObjectKey(imageUrl);
+        if (s3Enabled) {
+            StoredObject object = getS3Object(key);
+            String extension = extensionFromKey(key);
+            Path tempFile = Files.createTempFile("festflow-upload-", extension);
+            Files.write(tempFile, object.bytes());
+            tempFile.toFile().deleteOnExit();
+            return tempFile;
         }
-        Path target = uploadPath.resolve(imageUrl.substring("/uploads/".length())).normalize();
+        return resolveLocalTarget(key);
+    }
+
+    public StoredObject loadStoredObject(String imageUrl) throws IOException {
+        String key = extractObjectKey(imageUrl);
+        if (s3Enabled) {
+            return getS3Object(key);
+        }
+        Path target = resolveLocalTarget(key);
+        if (!Files.exists(target) || !Files.isRegularFile(target)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Upload not found.");
+        }
+        String contentType = Files.probeContentType(target);
+        return new StoredObject(
+                Files.readAllBytes(target),
+                contentType == null ? contentTypeForExtension(extensionFromKey(key)) : contentType
+        );
+    }
+
+    private Path resolveLocalTarget(String key) {
+        Path target = uploadPath.resolve(key).normalize();
         if (!target.startsWith(uploadPath)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload path.");
         }
         return target;
+    }
+
+    private void putS3Object(String key, byte[] bytes, String contentType) {
+        try {
+            s3Client.putObject(
+                    PutObjectRequest.builder()
+                            .bucket(s3Bucket)
+                            .key(key)
+                            .contentType(contentType)
+                            .cacheControl("public, max-age=31536000, immutable")
+                            .build(),
+                    RequestBody.fromBytes(bytes)
+            );
+        } catch (S3Exception ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "S3 image upload failed.", ex);
+        }
+    }
+
+    private StoredObject getS3Object(String key) {
+        try {
+            ResponseBytes<GetObjectResponse> objectBytes = s3Client.getObjectAsBytes(
+                    GetObjectRequest.builder()
+                            .bucket(s3Bucket)
+                            .key(key)
+                            .build()
+            );
+            String contentType = objectBytes.response().contentType();
+            return new StoredObject(
+                    objectBytes.asByteArray(),
+                    contentType == null || contentType.isBlank() ? contentTypeForExtension(extensionFromKey(key)) : contentType
+            );
+        } catch (NoSuchKeyException ex) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Upload not found.", ex);
+        } catch (S3Exception ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "S3 image download failed.", ex);
+        }
+    }
+
+    private String toStoredUrl(String key) {
+        if (s3Enabled && !s3PublicBaseUrl.isBlank()) {
+            return s3PublicBaseUrl + "/" + key;
+        }
+        return "/uploads/" + key;
+    }
+
+    private String extractObjectKey(String imageUrl) {
+        String value = imageUrl == null ? "" : imageUrl.trim();
+        if (value.startsWith("/uploads/")) {
+            return sanitizeObjectKey(value.substring("/uploads/".length()));
+        }
+        if (!s3PublicBaseUrl.isBlank() && value.startsWith(s3PublicBaseUrl + "/")) {
+            return sanitizeObjectKey(value.substring(s3PublicBaseUrl.length() + 1));
+        }
+        if (s3Enabled && value.startsWith("http")) {
+            try {
+                URI uri = new URI(value);
+                return sanitizeObjectKey(uri.getPath().replaceFirst("^/", ""));
+            } catch (URISyntaxException ignored) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload URL.");
+            }
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload URL.");
+    }
+
+    private String buildObjectKey(String prefix, String extension) {
+        return sanitizePrefix(prefix) + "-" + UUID.randomUUID() + extension;
+    }
+
+    private String sanitizeObjectKey(String key) {
+        String value = key == null ? "" : key.trim().replace("\\", "/");
+        if (value.isBlank() || value.contains("..") || value.startsWith("/") || value.endsWith("/")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload path.");
+        }
+        return value;
     }
 
     private void validateImage(MultipartFile file) {
@@ -110,5 +251,34 @@ public class UploadStorageService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid image extension.");
         }
         return value;
+    }
+
+    private String extensionFromKey(String key) {
+        int dotIndex = key == null ? -1 : key.lastIndexOf(".");
+        if (dotIndex < 0) {
+            return ".bin";
+        }
+        return sanitizeExtension(key.substring(dotIndex));
+    }
+
+    private String contentTypeForExtension(String extension) {
+        return switch (sanitizeExtension(extension)) {
+            case ".jpg", ".jpeg" -> "image/jpeg";
+            case ".png" -> "image/png";
+            case ".webp" -> "image/webp";
+            case ".gif" -> "image/gif";
+            default -> "application/octet-stream";
+        };
+    }
+
+    private String normalizePublicBaseUrl(String value) {
+        String trimmed = value == null ? "" : value.trim();
+        return trimmed.replaceAll("/+$", "");
+    }
+
+    public record StoredObject(byte[] bytes, String contentType) {
+        public Resource resource() {
+            return new org.springframework.core.io.ByteArrayResource(bytes);
+        }
     }
 }
