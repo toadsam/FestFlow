@@ -4,6 +4,7 @@ import com.festflow.backend.dto.AiMatchProfileAccessRequestDto;
 import com.festflow.backend.dto.AiMatchProfileAccessResponseDto;
 import com.festflow.backend.dto.AiMatchProfileDeleteDto;
 import com.festflow.backend.dto.AiMatchImagePreviewDto;
+import com.festflow.backend.dto.AiMatchMeetupProposalDto;
 import com.festflow.backend.dto.AiMatchProfileResponseDto;
 import com.festflow.backend.dto.AiMatchProfileUpdateDto;
 import com.festflow.backend.dto.AiMatchRequestCreateDto;
@@ -43,6 +44,7 @@ public class AiMatchController {
             @RequestParam("gender") String gender,
             @RequestParam("intro") String intro,
             @RequestParam("pin") String pin,
+            @RequestParam("phoneNumber") String phoneNumber,
             @RequestParam("meetPlace") String meetPlace,
             @RequestParam("consent") boolean consent,
             @RequestParam(value = "file", required = false) MultipartFile file,
@@ -54,6 +56,7 @@ public class AiMatchController {
                 gender,
                 intro,
                 pin,
+                phoneNumber,
                 meetPlace,
                 consent,
                 file,
@@ -115,5 +118,21 @@ public class AiMatchController {
             @RequestBody AiMatchProfileAccessRequestDto requestDto
     ) {
         return aiMatchService.cancelRequest(requestId, requestDto);
+    }
+
+    @PostMapping("/requests/{requestId}/meetup/propose")
+    public AiMatchRequestResponseDto proposeMeetup(
+            @PathVariable Long requestId,
+            @RequestBody AiMatchMeetupProposalDto requestDto
+    ) {
+        return aiMatchService.proposeMeetup(requestId, requestDto);
+    }
+
+    @PostMapping("/requests/{requestId}/meetup/confirm")
+    public AiMatchRequestResponseDto confirmMeetup(
+            @PathVariable Long requestId,
+            @RequestBody AiMatchProfileAccessRequestDto requestDto
+    ) {
+        return aiMatchService.confirmMeetup(requestId, requestDto);
     }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   IconArrowLeft,
@@ -21,10 +21,12 @@ import {
   acceptAiMatchRequest,
   accessAiMatchProfile,
   cancelAiMatchRequest,
+  confirmAiMatchMeetup,
   createAiMatchImagePreview,
   deleteAiMatchProfile,
   createAiMatchProfile,
   createAiMatchRequest,
+  proposeAiMatchMeetup,
   rejectAiMatchRequest,
   resolveApiAssetUrl,
   updateAiMatchProfile,
@@ -92,9 +94,12 @@ const ACTIVE_FILTER_TAG_STYLE = {
   filter: "none",
 };
 const PIN_INPUT_PATTERN = /^\d{0,6}$/;
+const PHONE_INPUT_PATTERN = /^[0-9+()\-\s]{0,30}$/;
 const REQUEST_STATUS_LABELS = {
   PENDING: "대기중",
-  ACCEPTED: "수락",
+  ACCEPTED: "매치 성사",
+  PROPOSED: "약속 제안",
+  CONFIRMED: "약속 확정",
   REJECTED: "거절",
   CANCELED: "취소됨",
 };
@@ -222,6 +227,8 @@ function getRequestStatusLabel(status) {
 
 function getRequestStatusTone(status) {
   if (status === "ACCEPTED") return "success";
+  if (status === "CONFIRMED") return "success";
+  if (status === "PROPOSED") return "pending";
   if (status === "REJECTED") return "danger";
   if (status === "CANCELED") return "muted";
   return "pending";
@@ -231,6 +238,10 @@ function canSendRequest(status) {
   return !status || status === "REJECTED" || status === "CANCELED";
 }
 
+function isAccessExpiredError(error) {
+  return error?.status === 401 || error?.status === 404;
+}
+
 function buildLatestSentRequestMap(sentRequests) {
   return (sentRequests || []).reduce((map, request) => {
     if (!map.has(request.profileId)) {
@@ -238,6 +249,44 @@ function buildLatestSentRequestMap(sentRequests) {
     }
     return map;
   }, new Map());
+}
+
+function normalizeDateTimeLocalValue(dateTime) {
+  if (!dateTime) return "";
+  const date = new Date(dateTime);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  const day = `${date.getDate()}`.padStart(2, "0");
+  const hours = `${date.getHours()}`.padStart(2, "0");
+  const minutes = `${date.getMinutes()}`.padStart(2, "0");
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function formatMeetupDateTime(dateTime) {
+  if (!dateTime) return "";
+  const date = new Date(dateTime);
+  if (Number.isNaN(date.getTime())) return "";
+  const hours = `${date.getHours()}`.padStart(2, "0");
+  const minutes = `${date.getMinutes()}`.padStart(2, "0");
+  return `${date.getMonth() + 1}/${date.getDate()} ${hours}:${minutes}`;
+}
+
+function buildMeetupTimeOptions() {
+  const now = new Date();
+  const roundedMinutes = Math.ceil(now.getMinutes() / 5) * 5;
+  now.setMinutes(roundedMinutes, 0, 0);
+  const offsets = [10, 20, 30, 45, 60, 90];
+
+  return offsets.map((offset) => {
+    const optionDate = new Date(now.getTime() + offset * 60000);
+    const hours = `${optionDate.getHours()}`.padStart(2, "0");
+    const minutes = `${optionDate.getMinutes()}`.padStart(2, "0");
+    return {
+      value: normalizeDateTimeLocalValue(optionDate.toISOString()),
+      label: `${hours}:${minutes} (${offset}분 뒤)`,
+    };
+  });
 }
 
 function buildDecoratedProfiles(profiles) {
@@ -313,6 +362,7 @@ export default function AiMatchPage() {
   const [nickname, setNickname] = useState("");
   const [pin, setPin] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [gender, setGender] = useState("여성");
   const [mbti, setMbti] = useState("");
   const [intro, setIntro] = useState("");
@@ -327,6 +377,7 @@ export default function AiMatchPage() {
   const [requesterNickname, setRequesterNickname] = useState("");
   const [requestMessage, setRequestMessage] = useState("");
   const [requestPlace, setRequestPlace] = useState(MEET_PLACES[0]);
+  const [meetupDrafts, setMeetupDrafts] = useState({});
   const [activeFilter, setActiveFilter] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
   const [peopleTagFilters, setPeopleTagFilters] = useState([]);
@@ -339,6 +390,8 @@ export default function AiMatchPage() {
   const [errorMessage, setErrorMessage] = useState("");
   const [registerAttempted, setRegisterAttempted] = useState(false);
   const [accessAttempted, setAccessAttempted] = useState(false);
+  const accessSessionSeqRef = useRef(0);
+  const accessRefreshInFlightRef = useRef(false);
 
   const isEditingProfile = editingProfileId !== null;
   const normalizedNickname = nickname.trim().toLowerCase();
@@ -352,6 +405,9 @@ export default function AiMatchPage() {
   );
   const pinMismatch = !isEditingProfile && pin.length > 0 && pinConfirm.length > 0 && pin !== pinConfirm;
   const pinInvalid = !isEditingProfile && pin.length > 0 && !/^\d{4,6}$/.test(pin);
+  const phoneDigits = phoneNumber.replace(/\D/g, "");
+  const phoneMissing = !isEditingProfile && !phoneNumber.trim();
+  const phoneInvalid = phoneNumber.trim().length > 0 && (phoneDigits.length < 8 || phoneDigits.length > 15);
   const imageMissing = !generatedImageUrl;
   const nicknameMissing = !nickname.trim();
   const pinMissing = !isEditingProfile && !pin.trim();
@@ -368,6 +424,7 @@ export default function AiMatchPage() {
       !submitting &&
       !converting &&
       !hasDuplicateNickname &&
+      (!phoneMissing && !phoneInvalid) &&
       (isEditingProfile || (/^\d{4,6}$/.test(pin) && pin === pinConfirm)),
   );
   const bannerText = errorMessage
@@ -387,6 +444,7 @@ export default function AiMatchPage() {
     ? buildDecoratedProfiles([selectedProfile])[0]
     : null;
   const selectedDetailRequest = selectedProfile ? latestSentRequestMap.get(selectedProfile.id) : null;
+  const meetupTimeOptions = buildMeetupTimeOptions();
 
   async function loadData() {
     setLoading(false);
@@ -414,12 +472,38 @@ export default function AiMatchPage() {
   useEffect(() => {
     if (!accessProfile || !accessNickname || !accessPin || isEditingProfile) return undefined;
 
-    const intervalId = window.setInterval(() => {
-      loadAccessProfile(accessNickname, accessPin, activeScreen).catch(() => {});
-    }, 5000);
+    const refreshSilently = () => {
+      if (document.visibilityState === "hidden" || accessRefreshInFlightRef.current || submitting || accessSubmitting) {
+        return;
+      }
+      accessRefreshInFlightRef.current = true;
+      loadAccessProfile(accessNickname, accessPin, activeScreen)
+        .catch((error) => {
+          if (isAccessExpiredError(error)) {
+            clearAccessSession();
+            setActiveScreen("intro");
+            setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 PIN으로 다시 입장해 주세요.");
+          }
+        })
+        .finally(() => {
+          accessRefreshInFlightRef.current = false;
+        });
+    };
+    const intervalId = window.setInterval(refreshSilently, 2000);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        refreshSilently();
+      }
+    };
+    window.addEventListener("focus", refreshSilently);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    return () => window.clearInterval(intervalId);
-  }, [accessProfile, accessNickname, accessPin, activeScreen, isEditingProfile]);
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshSilently);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [accessProfile, accessNickname, accessPin, activeScreen, isEditingProfile, submitting, accessSubmitting]);
 
   function toggleTag(tag) {
     setSelectedTags((current) => {
@@ -451,6 +535,24 @@ export default function AiMatchPage() {
     );
   }
 
+  function getMeetupDraft(request) {
+    const savedDraft = meetupDrafts[request.id];
+    return {
+      meetupPlace: savedDraft?.meetupPlace || request.meetupPlace || request.meetPlace || MEET_PLACES[0],
+      meetupAt: savedDraft?.meetupAt || normalizeDateTimeLocalValue(request.meetupAt) || meetupTimeOptions[0]?.value || "",
+    };
+  }
+
+  function updateMeetupDraft(requestId, patch) {
+    setMeetupDrafts((current) => ({
+      ...current,
+      [requestId]: {
+        ...(current[requestId] || {}),
+        ...patch,
+      },
+    }));
+  }
+
   function openAccessModal(targetScreen = "requests") {
     setAccessTargetScreen(targetScreen);
     setAccessModalOpen(true);
@@ -465,11 +567,48 @@ export default function AiMatchPage() {
     setAccessAttempted(false);
   }
 
+  function clearAccessSession({ resetForm = false } = {}) {
+    accessSessionSeqRef.current += 1;
+    setAccessProfile(null);
+    setAccessRequests([]);
+    setAccessSentRequests([]);
+    setProfiles([]);
+    setAccessNickname("");
+    setAccessPin("");
+    setRequesterNickname("");
+    setSelectedProfile(null);
+    setRequestMessage("");
+    setRequestPlace(MEET_PLACES[0]);
+    setMeetupDrafts({});
+    if (resetForm) {
+      resetRegistrationForm();
+    }
+  }
+
+  function showAuthenticatedActionError(error, fallbackMessage) {
+    if (isAccessExpiredError(error)) {
+      clearAccessSession();
+      setActiveScreen("intro");
+      setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 PIN으로 다시 입장해 주세요.");
+      return;
+    }
+    setErrorMessage(error.message || fallbackMessage);
+  }
+
   async function loadAccessProfile(nextNickname, nextPin, nextScreen = "requests") {
+    const sessionSeq = accessSessionSeqRef.current;
     const response = await accessAiMatchProfile(nextNickname, nextPin);
+    if (sessionSeq !== accessSessionSeqRef.current) {
+      return response;
+    }
     const nextProfiles = Array.isArray(response.profiles) ? response.profiles : [];
+    const nextReceivedRequests = Array.isArray(response.receivedRequests)
+      ? response.receivedRequests
+      : Array.isArray(response.requests)
+        ? response.requests
+        : [];
     setAccessProfile(response.profile || null);
-    setAccessRequests(Array.isArray(response.receivedRequests) ? response.receivedRequests : []);
+    setAccessRequests(nextReceivedRequests);
     setAccessSentRequests(Array.isArray(response.sentRequests) ? response.sentRequests : []);
     setProfiles(nextProfiles);
     setAccessNickname(nextNickname);
@@ -524,6 +663,7 @@ export default function AiMatchPage() {
     setNickname("");
     setPin("");
     setPinConfirm("");
+    setPhoneNumber("");
     setGender("여성");
     setMbti("");
     setIntro("");
@@ -544,6 +684,7 @@ export default function AiMatchPage() {
     setNickname(accessProfile.nickname || "");
     setPin("");
     setPinConfirm("");
+    setPhoneNumber("");
     setGender(accessProfile.gender || "여성");
     setMbti(parsed.mbti || "");
     setIntro(parsed.summary || "");
@@ -617,6 +758,14 @@ export default function AiMatchPage() {
       setErrorMessage("PIN이 서로 일치하지 않습니다.");
       return;
     }
+    if (phoneMissing) {
+      setErrorMessage("전화번호를 입력해 주세요.");
+      return;
+    }
+    if (phoneInvalid) {
+      setErrorMessage("전화번호 형식이 올바르지 않습니다.");
+      return;
+    }
     if (introMissing) {
       setErrorMessage("자기소개를 입력해 주세요.");
       return;
@@ -638,6 +787,7 @@ export default function AiMatchPage() {
           nickname: nickname.trim(),
           gender,
           intro: serializeProfileCopy(intro, selectedTags, mbti),
+          phoneNumber: phoneNumber.trim(),
           meetPlace: place,
           pin: accessPin,
         });
@@ -656,6 +806,7 @@ export default function AiMatchPage() {
             gender,
             intro: serializeProfileCopy(intro, selectedTags, mbti),
             pin: createdPin,
+            phoneNumber: phoneNumber.trim(),
             meetPlace: place,
             consent,
             originalImageUrl,
@@ -664,9 +815,18 @@ export default function AiMatchPage() {
           null,
         );
 
+        setAccessProfile(nextProfile);
+        setAccessNickname(createdNickname);
+        setAccessPin(createdPin);
+        setRequesterNickname(createdNickname);
         resetRegistrationForm();
-        await loadAccessProfile(createdNickname, createdPin, "people");
-        setSuccessMessage("AI 프로필이 등록되었습니다. 등록된 사람들 화면에서 바로 확인해 보세요.");
+        setActiveScreen("people");
+        try {
+          await loadAccessProfile(createdNickname, createdPin, "people");
+          setSuccessMessage("AI 프로필이 등록되었습니다. 등록된 사람들 화면에서 바로 확인해 보세요.");
+        } catch (accessError) {
+          setSuccessMessage("AI 프로필은 등록되었습니다. 목록 갱신이 늦으면 신청함에서 닉네임과 PIN으로 다시 입장해 주세요.");
+        }
       }
     } catch (error) {
       setErrorMessage(error.message || (isEditingProfile ? "AI 프로필 수정에 실패했습니다." : "AI 프로필 등록에 실패했습니다."));
@@ -704,7 +864,7 @@ export default function AiMatchPage() {
       setSuccessMessage("데이트 신청이 전송되었습니다.");
       window.alert("데이트 신청이 완료되었습니다.");
     } catch (error) {
-      setErrorMessage(error.message || "데이트 신청에 실패했습니다.");
+      showAuthenticatedActionError(error, "데이트 신청에 실패했습니다.");
     } finally {
       setSubmitting(false);
     }
@@ -724,15 +884,7 @@ export default function AiMatchPage() {
         nickname: accessProfile.nickname,
         pin: accessPin,
       });
-      setProfiles((current) => current.filter((item) => item.id !== accessProfile.id));
-      setAccessProfile(null);
-      setAccessRequests([]);
-      setAccessSentRequests([]);
-      setProfiles([]);
-      setAccessNickname("");
-      setAccessPin("");
-      setRequesterNickname("");
-      resetRegistrationForm();
+      clearAccessSession({ resetForm: true });
       setActiveScreen("intro");
       setSuccessMessage("프로필이 삭제되었습니다.");
     } catch (error) {
@@ -749,7 +901,13 @@ export default function AiMatchPage() {
     try {
       await loadAccessProfile(accessNickname, accessPin, "requests");
     } catch (error) {
-      setErrorMessage(error.message || "신청함을 새로고침하지 못했습니다.");
+      if (isAccessExpiredError(error)) {
+        clearAccessSession();
+        setActiveScreen("intro");
+        setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 PIN으로 다시 입장해 주세요.");
+      } else {
+        setErrorMessage(error.message || "신청함을 새로고침하지 못했습니다.");
+      }
     } finally {
       setLoading(false);
     }
@@ -765,7 +923,7 @@ export default function AiMatchPage() {
       setRequestTab("received");
       setSuccessMessage("데이트 신청을 수락했습니다.");
     } catch (error) {
-      setErrorMessage(error.message || "데이트 신청 수락에 실패했습니다.");
+      showAuthenticatedActionError(error, "데이트 신청 수락에 실패했습니다.");
     } finally {
       setSubmitting(false);
     }
@@ -781,7 +939,7 @@ export default function AiMatchPage() {
       setRequestTab("received");
       setSuccessMessage("데이트 신청을 거절했습니다.");
     } catch (error) {
-      setErrorMessage(error.message || "데이트 신청 거절에 실패했습니다.");
+      showAuthenticatedActionError(error, "데이트 신청 거절에 실패했습니다.");
     } finally {
       setSubmitting(false);
     }
@@ -800,7 +958,49 @@ export default function AiMatchPage() {
       setRequestTab("sent");
       setSuccessMessage("데이트 신청을 취소했습니다.");
     } catch (error) {
-      setErrorMessage(error.message || "데이트 신청 취소에 실패했습니다.");
+      showAuthenticatedActionError(error, "데이트 신청 취소에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleProposeMeetup(request) {
+    if (!accessNickname || !accessPin) return;
+    const draft = getMeetupDraft(request);
+    if (!draft.meetupPlace || !draft.meetupAt) {
+      setErrorMessage("만날 장소와 시간을 모두 선택해 주세요.");
+      return;
+    }
+
+    setSubmitting(true);
+    setErrorMessage("");
+    try {
+      await proposeAiMatchMeetup(request.id, {
+        nickname: accessNickname,
+        pin: accessPin,
+        meetupPlace: draft.meetupPlace,
+        meetupAt: draft.meetupAt,
+      });
+      await loadAccessProfile(accessNickname, accessPin, "requests");
+      setSuccessMessage("약속 제안을 보냈습니다.");
+    } catch (error) {
+      showAuthenticatedActionError(error, "약속 제안에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleConfirmMeetup(requestId) {
+    if (!accessNickname || !accessPin) return;
+
+    setSubmitting(true);
+    setErrorMessage("");
+    try {
+      await confirmAiMatchMeetup(requestId, accessNickname, accessPin);
+      await loadAccessProfile(accessNickname, accessPin, "requests");
+      setSuccessMessage("약속이 확정되었습니다.");
+    } catch (error) {
+      showAuthenticatedActionError(error, "약속 확정에 실패했습니다.");
     } finally {
       setSubmitting(false);
     }
@@ -1002,9 +1202,30 @@ export default function AiMatchPage() {
             </>
           ) : null}
 
+          <label className="ai-match-field">
+            <div className="ai-match-field-head">
+              <span>{isEditingProfile ? "3. 전화번호" : "5. 전화번호"}</span>
+              <small>관리자 확인용 · 비공개</small>
+            </div>
+            <input
+              value={phoneNumber}
+              inputMode="tel"
+              maxLength={30}
+              onChange={(event) => {
+                const nextValue = event.target.value;
+                if (PHONE_INPUT_PATTERN.test(nextValue)) {
+                  setPhoneNumber(nextValue);
+                }
+              }}
+              placeholder={isEditingProfile ? "변경할 번호만 입력" : "예) 010-1234-5678"}
+            />
+            {registerAttempted && phoneMissing ? <small className="ai-match-field-error">전화번호를 입력해 주세요.</small> : null}
+            {phoneInvalid ? <small className="ai-match-field-error">전화번호 형식이 올바르지 않습니다.</small> : null}
+          </label>
+
           <div className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "3. 성별" : "5. 성별"}</span>
+              <span>{isEditingProfile ? "4. 성별" : "6. 성별"}</span>
             </div>
             <div className="ai-match-gender-grid">
               {["남성", "여성", "비공개"].map((item) => (
@@ -1022,7 +1243,7 @@ export default function AiMatchPage() {
 
           <div className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "4. MBTI" : "6. MBTI"}</span>
+              <span>{isEditingProfile ? "5. MBTI" : "7. MBTI"}</span>
               <small>선택 사항</small>
             </div>
             <select value={mbti} onChange={(event) => setMbti(cleanMbtiValue(event.target.value))}>
@@ -1037,7 +1258,7 @@ export default function AiMatchPage() {
 
           <div className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "5. 관심사 태그" : "7. 관심사 태그"}</span>
+              <span>{isEditingProfile ? "6. 관심사 태그" : "8. 관심사 태그"}</span>
               <small>{selectedTags.length}/6 선택</small>
             </div>
             <div className="ai-match-tag-grid">
@@ -1060,7 +1281,7 @@ export default function AiMatchPage() {
 
           <label className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "6. 자기소개" : "8. 자기소개"}</span>
+              <span>{isEditingProfile ? "7. 자기소개" : "9. 자기소개"}</span>
               <small>{intro.length}/120</small>
             </div>
             <textarea
@@ -1290,6 +1511,23 @@ export default function AiMatchPage() {
     );
   }
 
+  function renderMeetupPanel(request) {
+    if (!accessProfile) return null;
+    if (!["ACCEPTED", "PROPOSED", "CONFIRMED"].includes(request.status)) return null;
+
+    return (
+      <div className="ai-match-meetup-box">
+        <div className="ai-match-meetup-box__head">
+          <strong>매치 성사</strong>
+          <span>관리자 조율</span>
+        </div>
+        <p className="ai-match-meetup-box__summary">
+          양쪽 연락처는 관리자에게만 공개됩니다. 관리자가 확인 후 시간과 장소를 안내합니다.
+        </p>
+      </div>
+    );
+  }
+
   function renderRequestsScreen() {
     if (!accessProfile) {
       return (
@@ -1336,13 +1574,7 @@ export default function AiMatchPage() {
               type="button"
               className="ai-match-secondary-button"
               onClick={() => {
-                setAccessProfile(null);
-                setAccessRequests([]);
-                setAccessSentRequests([]);
-                setProfiles([]);
-                setAccessNickname("");
-                setAccessPin("");
-                setRequesterNickname("");
+                clearAccessSession();
                 openAccessModal("requests");
               }}
             >
@@ -1390,6 +1622,7 @@ export default function AiMatchPage() {
                     {request.meetPlace}
                   </span>
                   <em>{request.message}</em>
+                  {renderMeetupPanel(request)}
                   {request.status === "PENDING" ? (
                     <div className="ai-match-request-actions">
                       <button
@@ -1438,6 +1671,7 @@ export default function AiMatchPage() {
                   {request.meetPlace}
                 </span>
                 <em>{request.message}</em>
+                {renderMeetupPanel(request)}
                 {request.status === "PENDING" ? (
                   <div className="ai-match-request-actions">
                     <button
@@ -1588,6 +1822,12 @@ export default function AiMatchPage() {
             >
               신청 취소
             </button>
+          ) : null}
+          {["ACCEPTED", "PROPOSED", "CONFIRMED"].includes(detailRequestStatus) ? (
+            <p className="ai-match-note">
+              <IconShield className="h-4 w-4" />
+              매치가 성사되면 관리자가 양쪽 연락처로 시간과 장소를 안내합니다.
+            </p>
           ) : null}
         </form>
       </div>

@@ -12303,6 +12303,47 @@ body,
   box-shadow: inset 0 0 0 1px rgba(237, 226, 255, 0.7);
 }
 
+.app-shell .ai-match-meetup-box {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.75rem;
+  border-radius: 0.95rem;
+  background: linear-gradient(180deg, rgba(249, 245, 255, 0.96), rgba(255, 249, 252, 0.92));
+  box-shadow: inset 0 0 0 1px rgba(226, 207, 255, 0.72);
+}
+
+.app-shell .ai-match-meetup-box__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.app-shell .ai-match-meetup-box__head strong {
+  color: #5b2fb8;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.app-shell .ai-match-meetup-box__head span,
+.app-shell .ai-match-meetup-box__summary,
+.app-shell .ai-match-meetup-box__confirmed {
+  color: #7c6a9b;
+  font-size: 0.72rem;
+  font-weight: 760;
+  line-height: 1.5;
+}
+
+.app-shell .ai-match-meetup-box__summary,
+.app-shell .ai-match-meetup-box__confirmed {
+  margin: 0;
+}
+
+.app-shell .ai-match-meetup-form {
+  display: grid;
+  gap: 0.5rem;
+}
+
 .app-shell .ai-match-request-history-head strong {
   color: #5630b6;
   font-size: 0.9rem;
@@ -15610,6 +15651,7 @@ html[data-contrast="high"] .app-shell .uni-page {
 }
 
 .app-shell .admin-console-hero__actions button,
+.app-shell .admin-console-hero__actions a,
 .app-shell .admin-console-alert-banner button,
 .app-shell .admin-console-action-row button,
 .app-shell .admin-console-mini-button {
@@ -15625,10 +15667,13 @@ html[data-contrast="high"] .app-shell .uni-page {
   box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04) !important;
   font-size: 0.76rem !important;
   font-weight: 860 !important;
+  text-decoration: none !important;
 }
 
 .app-shell .admin-console-hero__actions button:hover,
 .app-shell .admin-console-hero__actions button:active,
+.app-shell .admin-console-hero__actions a:hover,
+.app-shell .admin-console-hero__actions a:active,
 .app-shell .admin-console-alert-banner button:hover,
 .app-shell .admin-console-alert-banner button:active,
 .app-shell .admin-console-action-row button:hover,
@@ -15640,6 +15685,12 @@ html[data-contrast="high"] .app-shell .uni-page {
 }
 
 .app-shell .admin-console-hero__actions button {
+  gap: 0.38rem;
+  white-space: nowrap;
+  word-break: keep-all;
+}
+
+.app-shell .admin-console-hero__actions a {
   gap: 0.38rem;
   white-space: nowrap;
   word-break: keep-all;
@@ -16169,13 +16220,1034 @@ html[data-contrast="high"] .app-shell .uni-page {
   background: #fbfdff;
 }
 
+.app-shell .admin-console-panel--ai-match {
+  border-color: #c7d2fe !important;
+  background: linear-gradient(180deg, #f8fbff 0%, #ffffff 22%, #ffffff 100%) !important;
+}
+
+.app-shell .ai-match-admin-page {
+  gap: 0.86rem;
+  width: 100% !important;
+  max-width: 100% !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  align-items: stretch !important;
+  overflow-x: hidden !important;
+  background:
+    radial-gradient(circle at 14% 8%, rgba(20, 184, 166, 0.1), transparent 32%),
+    radial-gradient(circle at 92% 18%, rgba(244, 114, 182, 0.12), transparent 28%),
+    linear-gradient(180deg, #f7fbff 0%, #ffffff 58%, #fbfdff 100%) !important;
+}
+
+.app-shell .ai-match-admin-hero {
+  border-color: #d7e2f1 !important;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96) 0%, rgba(240, 253, 250, 0.9) 46%, rgba(255, 247, 237, 0.85) 100%) !important;
+  box-shadow: 0 16px 34px rgba(15, 23, 42, 0.07) !important;
+}
+
+.app-shell .ai-match-admin-page *,
+.app-shell .ai-match-admin-page *::before,
+.app-shell .ai-match-admin-page *::after {
+  box-sizing: border-box;
+}
+
+.app-shell .ai-match-admin-page .admin-console-panel,
+.app-shell .ai-match-admin-page .admin-console-hero {
+  min-width: 0;
+  border-radius: 1.05rem !important;
+}
+
+.app-shell .ai-match-admin-page .admin-console-hero__top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell .ai-match-admin-page .admin-console-hero__actions {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.app-shell .ai-match-admin-page .admin-console-hero__actions a,
+.app-shell .ai-match-admin-page .admin-console-hero__actions button {
+  width: 100%;
+  min-width: 0;
+  padding-inline: 0.48rem !important;
+  white-space: normal;
+  word-break: keep-all;
+}
+
+.app-shell .admin-ai-command-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.72rem;
+  padding: 0.86rem;
+  border: 1px solid rgba(125, 211, 252, 0.78);
+  border-radius: 1rem;
+  background:
+    linear-gradient(135deg, rgba(236, 254, 255, 0.98) 0%, rgba(255, 247, 252, 0.96) 100%);
+  box-shadow: 0 10px 24px rgba(14, 116, 144, 0.08);
+}
+
+.app-shell .admin-ai-command-card__mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.55rem;
+  height: 2.55rem;
+  border-radius: 0.85rem;
+  background: #ffffff;
+  color: #db2777;
+  box-shadow: inset 0 0 0 1px rgba(244, 114, 182, 0.18);
+}
+
+.app-shell .admin-ai-command-card strong {
+  color: #0f172a !important;
+  font-size: 0.94rem !important;
+  font-weight: 950 !important;
+  line-height: 1.25 !important;
+}
+
+.app-shell .admin-ai-command-card p {
+  margin: 0.2rem 0 0;
+  color: #64748b !important;
+  font-size: 0.74rem !important;
+  font-weight: 780 !important;
+  line-height: 1.45 !important;
+}
+
+.app-shell .admin-ai-match-kpi-grid,
+.app-shell .admin-ai-match-contact-grid,
+.app-shell .admin-ai-profile-grid {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.app-shell .admin-ai-match-kpi-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-shell .admin-ai-match-kpi-grid article {
+  position: relative;
+  display: grid;
+  gap: 0.24rem;
+  min-width: 0;
+  min-height: 6.1rem;
+  padding: 0.8rem;
+  overflow: hidden;
+  border: 1px solid #dbe7f5;
+  border-radius: 0.95rem;
+  background: #ffffff;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+}
+
+.app-shell .admin-ai-kpi-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 0.78rem;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.app-shell .admin-ai-kpi-card--matched .admin-ai-kpi-card__icon {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.app-shell .admin-ai-kpi-card--pending .admin-ai-kpi-card__icon {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+.app-shell .admin-ai-kpi-card--profile .admin-ai-kpi-card__icon {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+.app-shell .admin-ai-match-kpi-grid span,
+.app-shell .admin-ai-match-contact-grid span,
+.app-shell .admin-ai-profile-card span {
+  color: #64748b !important;
+  font-size: 0.72rem !important;
+  font-weight: 850 !important;
+}
+
+.app-shell .admin-ai-match-kpi-grid strong {
+  color: #0f172a !important;
+  font-size: 1.42rem !important;
+  font-weight: 950 !important;
+}
+
+.app-shell .admin-ai-match-kpi-grid small {
+  color: #64748b !important;
+  font-size: 0.7rem !important;
+  font-weight: 820 !important;
+}
+
+.app-shell .admin-ai-operations-strip {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.74rem;
+}
+
+.app-shell .admin-ai-operations-strip article {
+  display: grid;
+  gap: 0.28rem;
+  padding: 0.92rem;
+  border: 1px solid #dbe7f5;
+  border-radius: 1rem;
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.045);
+}
+
+.app-shell .admin-ai-operations-strip span {
+  color: #0f766e !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+}
+
+.app-shell .admin-ai-operations-strip strong {
+  color: #0f172a !important;
+  font-size: 1rem !important;
+  font-weight: 940 !important;
+}
+
+.app-shell .admin-ai-operations-strip small {
+  color: #64748b !important;
+  font-size: 0.76rem !important;
+  font-weight: 780 !important;
+  line-height: 1.45 !important;
+}
+
+.app-shell .admin-ai-match-list {
+  display: grid;
+  gap: 0.82rem;
+}
+
+.app-shell .admin-ai-match-card {
+  position: relative;
+  display: grid;
+  gap: 0.74rem;
+  min-width: 0;
+  padding: 0.92rem;
+  border: 1px solid #dbeafe !important;
+  border-radius: 1rem !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%) !important;
+  box-shadow: 0 12px 28px rgba(15, 23, 42, 0.055) !important;
+}
+
+.app-shell .admin-ai-match-card.is-completed {
+  border-color: #f9a8d4 !important;
+  background:
+    linear-gradient(180deg, #fff7fb 0%, #fff1f8 46%, #ffffff 100%) !important;
+  box-shadow:
+    0 0 0 1px rgba(244, 114, 182, 0.28),
+    0 16px 34px rgba(219, 39, 119, 0.12) !important;
+}
+
+.app-shell .admin-ai-match-card.is-failed {
+  border-color: #fed7aa !important;
+  background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%) !important;
+}
+
+.app-shell .admin-ai-match-card.is-complete-pulse {
+  animation: admin-ai-complete-card-pop 920ms ease-out both;
+}
+
+.app-shell .admin-ai-complete-burst {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.app-shell .admin-ai-complete-burst svg {
+  width: 4.6rem;
+  height: 4.6rem;
+  color: #ec4899;
+  fill: currentColor;
+  filter: drop-shadow(0 12px 20px rgba(219, 39, 119, 0.28));
+  animation: admin-ai-heart-burst 1150ms cubic-bezier(0.18, 0.88, 0.25, 1.08) both;
+}
+
+.app-shell .admin-ai-match-card__top {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.68rem;
+}
+
+.app-shell .admin-ai-match-pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+}
+
+.app-shell .admin-ai-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.65rem;
+  height: 2.65rem;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: #4338ca !important;
+  box-shadow: inset 0 0 0 1px rgba(191, 219, 254, 0.95);
+}
+
+.app-shell .admin-ai-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.app-shell .admin-ai-avatar em {
+  color: #4338ca;
+  font-size: 0.9rem !important;
+  font-style: normal;
+  font-weight: 950 !important;
+}
+
+.app-shell .admin-ai-match-pair svg {
+  color: #db2777;
+}
+
+.app-shell .admin-ai-match-card__top strong {
+  display: block;
+  color: #0f172a !important;
+  font-size: 0.96rem !important;
+  font-weight: 950 !important;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.28 !important;
+}
+
+.app-shell .admin-ai-match-card__top small {
+  color: #64748b !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+}
+
+.app-shell .admin-ai-match-card__top em {
+  grid-column: 1 / -1;
+  justify-self: start;
+  padding: 0.43rem 0.64rem;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #b45309;
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 930;
+  white-space: nowrap;
+}
+
+.app-shell .admin-ai-match-card.is-completed .admin-ai-match-card__top em {
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.app-shell .admin-ai-match-card.is-failed .admin-ai-match-card__top em {
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.app-shell .admin-ai-match-contact-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell .admin-ai-match-contact-grid a,
+.app-shell .admin-ai-profile-card__phone {
+  display: grid;
+  gap: 0.24rem;
+  min-width: 0;
+  padding: 0.76rem;
+  border: 1px solid #dbe7f5;
+  border-radius: 0.82rem;
+  background: #ffffff;
+  color: #0f172a !important;
+  text-decoration: none !important;
+}
+
+.app-shell .admin-ai-match-contact-grid strong,
+.app-shell .admin-ai-profile-card strong {
+  color: #0f172a !important;
+  font-size: 0.92rem !important;
+  font-weight: 930 !important;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-shell .admin-ai-match-contact-grid small,
+.app-shell .admin-ai-profile-card__phone {
+  color: #0f766e !important;
+  font-size: 0.8rem !important;
+  font-weight: 900 !important;
+  word-break: break-word;
+}
+
+.app-shell .admin-ai-danger-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.34rem;
+  min-height: 2.25rem;
+  width: 100%;
+  padding: 0 0.72rem;
+  border: 1px solid #fecaca;
+  border-radius: 0.78rem;
+  background: #fff7f7;
+  color: #b91c1c;
+  font-size: 0.73rem;
+  font-weight: 920;
+  text-decoration: none;
+}
+
+.app-shell .admin-ai-danger-action:not(:disabled):hover {
+  border-color: #fca5a5;
+  background: #fee2e2;
+}
+
+.app-shell .admin-ai-danger-action:disabled {
+  border-color: #e5e7eb;
+  background: #f8fafc;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.app-shell .admin-ai-match-photo-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.62rem;
+}
+
+.app-shell .admin-ai-match-photo-grid > div {
+  display: grid;
+  gap: 0.42rem;
+  min-width: 0;
+  padding: 0.68rem;
+  border: 1px solid #e7eef7;
+  border-radius: 0.86rem;
+  background: #ffffff;
+}
+
+.app-shell .admin-ai-match-photo-grid > div > strong {
+  color: #334155 !important;
+  font-size: 0.74rem !important;
+  font-weight: 920 !important;
+}
+
+.app-shell .admin-ai-image-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+}
+
+.app-shell .admin-ai-image-compare a {
+  position: relative;
+  display: block;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  overflow: hidden;
+  border: 1px solid #dbe7f5;
+  border-radius: 0.78rem;
+  background: #f8fafc;
+  color: #64748b !important;
+  text-decoration: none !important;
+}
+
+.app-shell .admin-ai-image-compare img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.app-shell .admin-ai-image-compare a > span {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #94a3b8 !important;
+  font-size: 0.72rem !important;
+  font-weight: 850 !important;
+}
+
+.app-shell .admin-ai-image-compare em {
+  position: absolute;
+  left: 0.42rem;
+  bottom: 0.42rem;
+  padding: 0.24rem 0.42rem;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #ffffff;
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.app-shell .admin-ai-match-note {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.68rem 0.72rem;
+  border-radius: 0.8rem;
+  background: #f8fafc;
+  color: #475569;
+}
+
+.app-shell .admin-ai-match-note svg {
+  color: #2563eb;
+}
+
+.app-shell .admin-ai-match-note span {
+  color: #1d4ed8 !important;
+  font-size: 0.74rem !important;
+  font-weight: 900 !important;
+  white-space: nowrap;
+}
+
+.app-shell .admin-ai-match-note p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #64748b !important;
+  font-size: 0.74rem !important;
+  font-weight: 780 !important;
+  line-height: 1.35 !important;
+}
+
+.app-shell .admin-ai-connection-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.46rem;
+}
+
+.app-shell .admin-ai-connection-controls button {
+  min-height: 2.35rem;
+  padding: 0 0.5rem;
+  border: 1px solid #dbe7f5;
+  border-radius: 0.78rem;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 900;
+  word-break: keep-all;
+}
+
+.app-shell .admin-ai-connection-controls button.is-active {
+  border-color: #7dd3fc;
+  background: #ecfeff;
+  color: #0369a1;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.86);
+}
+
+.app-shell .admin-ai-connection-controls button.is-completed.is-active {
+  border-color: #f9a8d4;
+  background: #fce7f3;
+  color: #be185d;
+}
+
+.app-shell .admin-ai-connection-controls button.is-failed.is-active {
+  border-color: #fdba74;
+  background: #ffedd5;
+  color: #c2410c;
+}
+
+.app-shell .admin-ai-connection-controls button:disabled {
+  opacity: 0.68;
+}
+
+@keyframes admin-ai-heart-burst {
+  0% {
+    opacity: 0;
+    transform: translateY(0.8rem) scale(0.35) rotate(-8deg);
+  }
+  22% {
+    opacity: 1;
+    transform: translateY(-0.1rem) scale(1.18) rotate(4deg);
+  }
+  58% {
+    opacity: 0.92;
+    transform: translateY(-0.35rem) scale(1) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-1.2rem) scale(1.55) rotate(8deg);
+  }
+}
+
+@keyframes admin-ai-complete-card-pop {
+  0% {
+    transform: scale(1);
+  }
+  32% {
+    transform: scale(1.018);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.app-shell .admin-ai-search-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 2.9rem;
+  padding: 0 0.86rem;
+  border: 1px solid #dbe7f5;
+  border-radius: 0.9rem;
+  background: #f8fbff;
+  color: #64748b;
+}
+
+.app-shell .admin-ai-search-field input {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #0f172a;
+  font-size: 0.84rem;
+  font-weight: 820;
+}
+
+.app-shell .admin-ai-search-field input::placeholder {
+  color: #94a3b8;
+}
+
+.app-shell .admin-ai-profile-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.app-shell .admin-ai-profile-card {
+  display: grid;
+  gap: 0.65rem;
+  min-width: 0;
+  padding: 0.92rem;
+  border: 1px solid #e1eaf5;
+  border-radius: 0.95rem;
+  background: #ffffff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.035);
+}
+
+.app-shell .admin-ai-profile-card__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: flex-start;
+  gap: 0.62rem;
+}
+
+.app-shell .admin-ai-profile-card__head em {
+  grid-column: 1 / -1;
+  justify-self: start;
+}
+
+.app-shell .admin-ai-profile-card__head > div {
+  display: grid;
+  gap: 0.18rem;
+  min-width: 0;
+}
+
+.app-shell .admin-ai-profile-card__head strong,
+.app-shell .admin-ai-profile-card__head span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.app-shell .admin-ai-profile-card__head em {
+  flex: 0 0 auto;
+  padding: 0.32rem 0.55rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.app-shell .admin-ai-profile-card__head em.is-active {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.app-shell .admin-ai-profile-card p {
+  margin: 0;
+  color: #475569 !important;
+  font-size: 0.78rem !important;
+  font-weight: 760 !important;
+  line-height: 1.45 !important;
+}
+
+.app-shell .admin-ai-profile-card__tags,
+.app-shell .admin-ai-profile-card__stats,
+.app-shell .admin-ai-request-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.42rem;
+}
+
+.app-shell .admin-ai-profile-card__tags span,
+.app-shell .admin-ai-profile-card__stats span,
+.app-shell .admin-ai-request-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.8rem;
+  padding: 0 0.58rem;
+  border-radius: 999px;
+  background: #f8fafc;
+  color: #475569 !important;
+  font-size: 0.7rem !important;
+  font-weight: 850 !important;
+}
+
+.app-shell .admin-ai-request-table {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.app-shell .admin-ai-status-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.46rem;
+}
+
+.app-shell .admin-ai-status-filter button {
+  min-height: 2.15rem;
+  padding: 0 0.76rem;
+  border: 1px solid #dbe7f5;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #64748b;
+  font-size: 0.74rem;
+  font-weight: 880;
+}
+
+.app-shell .admin-ai-status-filter button.is-active {
+  border-color: #7dd3fc;
+  background: #ecfeff;
+  color: #0369a1;
+}
+
+.app-shell .admin-ai-request-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: 0.72rem;
+  padding: 0.72rem 0.78rem;
+  border: 1px solid #e7eef7;
+  border-radius: 0.82rem;
+  background: #ffffff;
+}
+
+.app-shell .admin-ai-request-row__people {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.58rem;
+  min-width: 0;
+}
+
+.app-shell .admin-ai-request-row__people > div,
+.app-shell .admin-ai-request-row__meta {
+  display: grid;
+  gap: 0.22rem;
+  min-width: 0;
+}
+
+.app-shell .admin-ai-request-row__meta {
+  justify-items: start;
+}
+
+.app-shell .admin-ai-request-row strong {
+  color: #0f172a !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+  min-width: 0;
+  overflow-wrap: normal;
+  word-break: keep-all;
+}
+
+.app-shell .admin-ai-request-row small {
+  color: #64748b !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  word-break: keep-all;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page > * {
+  grid-column: 1 / -1 !important;
+}
+
+.app-shell .admin-ai-dashboard-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(17.5rem, 0.85fr);
+  align-items: start;
+  gap: 0.86rem;
+}
+
+.app-shell .admin-ai-dashboard-main {
+  grid-column: 1;
+  grid-row: 1;
+  display: grid;
+  gap: 0.86rem;
+  min-width: 0;
+}
+
+.app-shell .admin-ai-dashboard-side {
+  grid-column: 2;
+  grid-row: 1;
+  display: grid;
+  gap: 0.86rem;
+  min-width: 0;
+  align-self: start;
+}
+
+.app-shell .admin-ai-profile-card {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.48rem 0.72rem;
+  padding: 0.78rem !important;
+}
+
+.app-shell .admin-ai-profile-card.is-deleted {
+  background: #f8fafc !important;
+  opacity: 0.72;
+}
+
+.app-shell .admin-ai-profile-card__head {
+  grid-column: 1 / -1;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  align-items: center !important;
+}
+
+.app-shell .admin-ai-profile-card__head em {
+  grid-column: auto !important;
+  justify-self: end !important;
+}
+
+.app-shell .admin-ai-profile-card__head em:not(.is-active) {
+  background: #e2e8f0 !important;
+  color: #475569 !important;
+}
+
+.app-shell .admin-ai-profile-card p,
+.app-shell .admin-ai-profile-card__tags,
+.app-shell .admin-ai-profile-card__stats,
+.app-shell .admin-ai-profile-card__phone,
+.app-shell .admin-ai-profile-card__actions {
+  grid-column: 1 / -1;
+}
+
+.app-shell .admin-ai-profile-card p {
+  max-height: 2.9em;
+  overflow: hidden;
+}
+
+.app-shell .admin-ai-profile-card__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.7fr);
+  gap: 0.5rem;
+  align-items: start;
+}
+
+.app-shell .admin-ai-photo-disclosure {
+  min-width: 0;
+}
+
+.app-shell .admin-ai-photo-disclosure summary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.25rem;
+  width: 100%;
+  padding: 0 0.72rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.78rem;
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-size: 0.73rem;
+  font-weight: 920;
+  cursor: pointer;
+  list-style: none;
+}
+
+.app-shell .admin-ai-photo-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.app-shell .admin-ai-photo-disclosure[open] summary {
+  margin-bottom: 0.5rem;
+  background: #dbeafe;
+}
+
+.app-shell button.admin-ai-danger-action {
+  border-color: #fecaca !important;
+  background-color: #fff1f2 !important;
+  background-image: none !important;
+  color: #b91c1c !important;
+  box-shadow: none !important;
+}
+
+.app-shell button.admin-ai-danger-action:not(:disabled):hover {
+  border-color: #ef4444 !important;
+  background-color: #fee2e2 !important;
+  background-image: none !important;
+  color: #991b1b !important;
+}
+
+.app-shell button.admin-ai-danger-action:disabled {
+  border-color: #e5e7eb !important;
+  background-color: #f8fafc !important;
+  background-image: none !important;
+  color: #94a3b8 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-danger-action {
+  border-color: #fecaca !important;
+  background-color: #fff1f2 !important;
+  background-image: none !important;
+  color: #b91c1c !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-danger-action:not(:disabled):hover {
+  border-color: #ef4444 !important;
+  background-color: #fee2e2 !important;
+  background-image: none !important;
+  color: #991b1b !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-danger-action:disabled {
+  border-color: #e5e7eb !important;
+  background-color: #f8fafc !important;
+  background-image: none !important;
+  color: #94a3b8 !important;
+}
+
+@media (min-width: 900px) {
+  .app-shell .ai-match-admin-page {
+    width: min(100%, 68rem) !important;
+    max-width: 68rem !important;
+    margin-inline: auto !important;
+  }
+
+  .app-shell .ai-match-admin-page .admin-console-hero__top {
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.92fr);
+    align-items: start;
+  }
+
+  .app-shell .admin-ai-match-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .app-shell .admin-ai-match-kpi-grid article {
+    min-height: 5.25rem;
+  }
+
+  .app-shell .admin-ai-operations-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-shell .admin-ai-match-contact-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-shell .admin-ai-match-photo-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 899px) {
+  .app-shell .admin-ai-dashboard-grid,
+  .app-shell .admin-ai-dashboard-main,
+  .app-shell .admin-ai-dashboard-side {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .app-shell .admin-ai-dashboard-side {
+    order: 1;
+  }
+
+  .app-shell .admin-ai-dashboard-main {
+    order: 2;
+  }
+}
+
 @media (max-width: 420px) {
+  .app-shell .ai-match-admin-page {
+    padding: 0.72rem 0.72rem 5.4rem !important;
+  }
+
+  .app-shell .ai-match-admin-page .admin-console-hero,
+  .app-shell .ai-match-admin-page .admin-console-panel {
+    padding: 0.82rem !important;
+  }
+
+  .app-shell .ai-match-admin-page .admin-console-hero h1 {
+    font-size: 1.28rem !important;
+    line-height: 1.16 !important;
+  }
+
   .app-shell .admin-console-shortcut-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-shell .admin-ai-match-kpi-grid {
+    gap: 0.56rem;
+  }
+
+  .app-shell .admin-ai-operations-strip,
+  .app-shell .admin-ai-match-contact-grid,
+  .app-shell .admin-ai-request-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell .admin-ai-request-row__meta {
+    justify-items: start;
+  }
+
+  .app-shell .admin-ai-match-card__top {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .app-shell .admin-ai-match-card__top em {
+    grid-column: 1 / -1;
+    justify-self: start;
   }
 }
 
 @media (max-width: 360px) {
+  .app-shell .ai-match-admin-page .admin-console-hero__actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell .admin-ai-match-kpi-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell .admin-ai-connection-controls {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell .admin-ai-image-compare {
+    gap: 0.42rem;
+  }
+
   .app-shell .admin-console-hero__summary-grid,
   .app-shell .admin-console-action-strip {
     grid-template-columns: minmax(0, 1fr);
@@ -16195,6 +17267,12 @@ html[data-contrast="high"] .app-shell .uni-page {
   }
 
   .app-shell .admin-console-alert-banner {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell .admin-ai-match-kpi-grid,
+  .app-shell .admin-ai-match-contact-grid,
+  .app-shell .admin-ai-profile-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
@@ -17222,4 +18300,57 @@ html[data-contrast="high"] .app-shell .uni-page {
 .app-shell button.ai-match-tag-grid--filter .ai-match-tag-chip.is-selected:focus-visible {
   outline: 1px solid rgba(216, 180, 254, 0.8) !important;
   outline-offset: 1px;
+}
+
+/* Final override for AI match admin destructive actions over shared public button styles. */
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-danger-action,
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-danger-action:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]) {
+  border-color: #fecaca !important;
+  background: #fff1f2 !important;
+  background-image: none !important;
+  color: #b91c1c !important;
+  box-shadow: none !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-danger-action *,
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-danger-action:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]) * {
+  color: #b91c1c !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-danger-action:not(:disabled):hover {
+  border-color: #ef4444 !important;
+  background: #fee2e2 !important;
+  background-image: none !important;
+  color: #991b1b !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-danger-action:disabled,
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-danger-action:disabled * {
+  border-color: #e5e7eb !important;
+  background: #f8fafc !important;
+  background-image: none !important;
+  color: #94a3b8 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-connection-controls button.is-active.is-completed,
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-connection-controls button.is-active.is-completed:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]) {
+  border-color: #f9a8d4 !important;
+  background: #fce7f3 !important;
+  background-image: none !important;
+  color: #be185d !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.86) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-connection-controls button.is-active.is-failed,
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-connection-controls button.is-active.is-failed:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]) {
+  border-color: #fdba74 !important;
+  background: #ffedd5 !important;
+  background-image: none !important;
+  color: #c2410c !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.86) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-connection-controls button.is-active.is-completed *,
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-connection-controls button.is-active.is-failed * {
+  color: currentColor !important;
 }

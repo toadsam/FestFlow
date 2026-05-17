@@ -1,9 +1,14 @@
 package com.festflow.backend.service;
 
+import com.festflow.backend.dto.AiMatchAdminOverviewDto;
+import com.festflow.backend.dto.AiMatchAdminProfileDto;
+import com.festflow.backend.dto.AiMatchAdminRequestDto;
+import com.festflow.backend.dto.AiMatchConnectionStatusUpdateDto;
 import com.festflow.backend.dto.AiMatchProfileAccessRequestDto;
 import com.festflow.backend.dto.AiMatchProfileAccessResponseDto;
 import com.festflow.backend.dto.AiMatchProfileDeleteDto;
 import com.festflow.backend.dto.AiMatchImagePreviewDto;
+import com.festflow.backend.dto.AiMatchMeetupProposalDto;
 import com.festflow.backend.dto.AiMatchProfileResponseDto;
 import com.festflow.backend.dto.AiMatchProfileUpdateDto;
 import com.festflow.backend.dto.AiMatchRequestCreateDto;
@@ -19,7 +24,12 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
@@ -72,6 +82,7 @@ public class AiMatchService {
             String gender,
             String intro,
             String pin,
+            String phoneNumber,
             String meetPlace,
             boolean consent,
             MultipartFile file,
@@ -86,6 +97,7 @@ public class AiMatchService {
         String safeGender = trimRequired(gender, "gender", 20);
         String safeIntro = trimRequired(intro, "intro", 500);
         String safePin = trimRequired(pin, "pin", 20);
+        String safePhoneNumber = normalizePhoneNumber(phoneNumber, true);
         String safeMeetPlace = trimRequired(meetPlace, "meetPlace", 120);
         validatePin(safePin);
         ensureNicknameAvailable(safeNickname, null);
@@ -119,6 +131,7 @@ public class AiMatchService {
                 safeGender,
                 safeIntro,
                 passwordEncoder.encode(safePin),
+                safePhoneNumber,
                 safeMeetPlace,
                 safeOriginalImageUrl,
                 safeGeneratedImageUrl,
@@ -142,6 +155,56 @@ public class AiMatchService {
         );
     }
 
+    @Transactional(readOnly = true)
+    public AiMatchAdminOverviewDto getAdminOverview() {
+        List<AiMatchProfile> profiles = profileRepository.findAll().stream()
+                .sorted(Comparator.comparing(AiMatchProfile::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
+        List<AiMatchRequest> requests = requestRepository.findAllByOrderByCreatedAtDesc();
+        Map<Long, Long> receivedCounts = requests.stream()
+                .filter(request -> request.getProfile() != null && request.getProfile().getId() != null)
+                .collect(Collectors.groupingBy(request -> request.getProfile().getId(), Collectors.counting()));
+        Map<Long, Long> sentCounts = requests.stream()
+                .map(AiMatchRequest::getRequesterProfile)
+                .filter(profile -> profile != null && profile.getId() != null)
+                .collect(Collectors.groupingBy(AiMatchProfile::getId, Collectors.counting()));
+        Map<Long, Long> pendingReceivedCounts = requests.stream()
+                .filter(request -> "PENDING".equals(request.getStatus()))
+                .filter(request -> request.getProfile() != null && request.getProfile().getId() != null)
+                .collect(Collectors.groupingBy(request -> request.getProfile().getId(), Collectors.counting()));
+        Map<Long, Long> matchedCounts = requests.stream()
+                .filter(request -> isMatchedStatus(request.getStatus()))
+                .flatMap(request -> Stream.of(
+                        request.getProfile() == null ? null : request.getProfile().getId(),
+                        request.getRequesterProfile() == null ? null : request.getRequesterProfile().getId()
+                ))
+                .filter(id -> id != null)
+                .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
+
+        List<AiMatchAdminProfileDto> profileDtos = profiles.stream()
+                .map(profile -> toAdminProfileDto(
+                        profile,
+                        receivedCounts.getOrDefault(profile.getId(), 0L),
+                        sentCounts.getOrDefault(profile.getId(), 0L),
+                        pendingReceivedCounts.getOrDefault(profile.getId(), 0L),
+                        matchedCounts.getOrDefault(profile.getId(), 0L)
+                ))
+                .toList();
+        List<AiMatchAdminRequestDto> requestDtos = requests.stream()
+                .map(this::toAdminRequestDto)
+                .toList();
+
+        return new AiMatchAdminOverviewDto(
+                profiles.stream().filter(profile -> "ACTIVE".equals(profile.getStatus())).count(),
+                profiles.size(),
+                requests.size(),
+                requests.stream().filter(request -> "PENDING".equals(request.getStatus())).count(),
+                requests.stream().filter(request -> isMatchedStatus(request.getStatus())).count(),
+                profileDtos,
+                requestDtos
+        );
+    }
+
     @Transactional
     public AiMatchProfileResponseDto updateProfile(Long profileId, AiMatchProfileUpdateDto requestDto) {
         AiMatchProfile profile = authenticateProfile(requestDto.currentNickname(), requestDto.pin());
@@ -152,11 +215,24 @@ public class AiMatchService {
         String safeNickname = trimRequired(requestDto.nickname(), "nickname", 40);
         String safeGender = trimRequired(requestDto.gender(), "gender", 20);
         String safeIntro = trimRequired(requestDto.intro(), "intro", 500);
+        String safePhoneNumber = normalizePhoneNumber(requestDto.phoneNumber(), false);
         String safeMeetPlace = trimRequired(requestDto.meetPlace(), "meetPlace", 120);
         ensureNicknameAvailable(safeNickname, profileId);
 
-        profile.updateProfile(safeNickname, safeGender, safeIntro, safeMeetPlace);
+        profile.updateProfile(safeNickname, safeGender, safeIntro, safeMeetPlace, safePhoneNumber);
         return toProfileDto(profile);
+    }
+
+    @Transactional
+    public AiMatchAdminRequestDto updateConnectionStatus(Long requestId, AiMatchConnectionStatusUpdateDto requestDto) {
+        AiMatchRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "데이트 신청을 찾을 수 없습니다."));
+        if (!isMatchedStatus(request.getStatus())) {
+            throw new ResponseStatusException(CONFLICT, "성사된 매치만 연결 상태를 변경할 수 있습니다.");
+        }
+        String safeConnectionStatus = normalizeConnectionStatus(requestDto.connectionStatus());
+        request.updateConnectionStatus(safeConnectionStatus);
+        return toAdminRequestDto(request);
     }
 
     @Transactional
@@ -166,6 +242,16 @@ public class AiMatchService {
             throw new ResponseStatusException(UNAUTHORIZED, "Profile credentials do not match this profile.");
         }
         profile.deactivate();
+    }
+
+    @Transactional
+    public void deleteProfileByAdmin(Long profileId) {
+        AiMatchProfile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "AI match profile not found."));
+        profile.deactivate();
+        requestRepository.findAllByProfileIdOrRequesterProfileId(profileId, profileId).stream()
+                .filter(request -> "PENDING".equals(request.getStatus()))
+                .forEach(AiMatchRequest::cancel);
     }
 
     @Transactional
@@ -225,6 +311,40 @@ public class AiMatchService {
         return toRequestDto(request);
     }
 
+    @Transactional
+    public AiMatchRequestResponseDto proposeMeetup(Long requestId, AiMatchMeetupProposalDto requestDto) {
+        AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
+        AiMatchRequest request = getParticipatingRequest(requestId, profile);
+        ensureMeetupProposalAllowed(request);
+
+        String meetupPlace = trimRequired(requestDto.meetupPlace(), "meetPlace", 120);
+        LocalDateTime meetupAt = requestDto.meetupAt();
+        if (meetupAt == null) {
+            throw new ResponseStatusException(BAD_REQUEST, "만날 시간을 선택해 주세요.");
+        }
+        if (meetupAt.isBefore(LocalDateTime.now().minusMinutes(1))) {
+            throw new ResponseStatusException(BAD_REQUEST, "지나간 시간으로는 약속을 제안할 수 없습니다.");
+        }
+
+        request.proposeMeetup(meetupPlace, meetupAt, profile.getId(), profile.getNickname());
+        return toRequestDto(request);
+    }
+
+    @Transactional
+    public AiMatchRequestResponseDto confirmMeetup(Long requestId, AiMatchProfileAccessRequestDto requestDto) {
+        AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
+        AiMatchRequest request = getParticipatingRequest(requestId, profile);
+        if (!"PROPOSED".equals(request.getStatus())) {
+            throw new ResponseStatusException(CONFLICT, "확정할 약속 제안이 없습니다.");
+        }
+        if (request.getMeetupProposerProfileId() != null && request.getMeetupProposerProfileId().equals(profile.getId())) {
+            throw new ResponseStatusException(CONFLICT, "상대방이 제안한 약속만 확정할 수 있습니다.");
+        }
+
+        request.confirmMeetup();
+        return toRequestDto(request);
+    }
+
     private List<AiMatchProfileResponseDto> getDiscoverableProfiles(Long viewerProfileId) {
         return profileRepository.findAllByStatusOrderByCreatedAtDesc("ACTIVE").stream()
                 .filter(profile -> !profile.getId().equals(viewerProfileId))
@@ -241,6 +361,31 @@ public class AiMatchService {
                 profile.getMeetPlace(),
                 profile.getOriginalImageUrl(),
                 profile.getGeneratedImageUrl(),
+                profile.getCreatedAt()
+        );
+    }
+
+    private AiMatchAdminProfileDto toAdminProfileDto(
+            AiMatchProfile profile,
+            long receivedCount,
+            long sentCount,
+            long pendingReceivedCount,
+            long matchedCount
+    ) {
+        return new AiMatchAdminProfileDto(
+                profile.getId(),
+                profile.getNickname(),
+                profile.getGender(),
+                profile.getIntro(),
+                profile.getMeetPlace(),
+                profile.getPhoneNumber(),
+                profile.getOriginalImageUrl(),
+                profile.getGeneratedImageUrl(),
+                profile.getStatus(),
+                Math.toIntExact(receivedCount),
+                Math.toIntExact(sentCount),
+                Math.toIntExact(pendingReceivedCount),
+                Math.toIntExact(matchedCount),
                 profile.getCreatedAt()
         );
     }
@@ -273,23 +418,82 @@ public class AiMatchService {
     }
 
     private AiMatchRequestResponseDto toRequestDto(AiMatchRequest request) {
+        AiMatchProfile requesterProfile = request.getRequesterProfile();
         return new AiMatchRequestResponseDto(
                 request.getId(),
                 request.getProfile().getId(),
                 request.getProfile().getNickname(),
-                request.getRequesterProfile().getId(),
+                requesterProfile == null ? null : requesterProfile.getId(),
                 request.getRequesterNickname(),
                 request.getMeetPlace(),
                 request.getMessage(),
                 request.getStatus(),
+                request.getMeetupPlace(),
+                request.getMeetupAt(),
+                request.getMeetupProposerProfileId(),
+                request.getMeetupProposerNickname(),
                 request.getCreatedAt(),
                 request.getUpdatedAt()
         );
     }
 
+    private AiMatchAdminRequestDto toAdminRequestDto(AiMatchRequest request) {
+        AiMatchProfile profile = request.getProfile();
+        AiMatchProfile requesterProfile = request.getRequesterProfile();
+        return new AiMatchAdminRequestDto(
+                request.getId(),
+                profile == null ? null : profile.getId(),
+                profile == null ? "" : profile.getNickname(),
+                profile == null ? "" : profile.getPhoneNumber(),
+                profile == null ? "" : profile.getOriginalImageUrl(),
+                profile == null ? "" : profile.getGeneratedImageUrl(),
+                requesterProfile == null ? null : requesterProfile.getId(),
+                request.getRequesterNickname(),
+                requesterProfile == null ? "" : requesterProfile.getPhoneNumber(),
+                requesterProfile == null ? "" : requesterProfile.getOriginalImageUrl(),
+                requesterProfile == null ? "" : requesterProfile.getGeneratedImageUrl(),
+                request.getMeetPlace(),
+                request.getMessage(),
+                request.getStatus(),
+                request.getConnectionStatus(),
+                request.getCreatedAt(),
+                request.getUpdatedAt()
+        );
+    }
+
+    private boolean isMatchedStatus(String status) {
+        return "ACCEPTED".equals(status) || "PROPOSED".equals(status) || "CONFIRMED".equals(status);
+    }
+
+    private String normalizeConnectionStatus(String status) {
+        String normalized = status == null ? "" : status.trim().toUpperCase();
+        if ("WAITING".equals(normalized) || "COMPLETED".equals(normalized) || "FAILED".equals(normalized)) {
+            return normalized;
+        }
+        throw new ResponseStatusException(BAD_REQUEST, "연결 상태가 올바르지 않습니다.");
+    }
+
     private void ensurePendingRequest(AiMatchRequest request) {
         if (!"PENDING".equals(request.getStatus())) {
             throw new ResponseStatusException(CONFLICT, "이미 처리된 데이트 신청입니다.");
+        }
+    }
+
+    private AiMatchRequest getParticipatingRequest(Long requestId, AiMatchProfile profile) {
+        AiMatchRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "데이트 신청을 찾을 수 없습니다."));
+        AiMatchProfile requesterProfile = request.getRequesterProfile();
+        boolean isParticipant = request.getProfile().getId().equals(profile.getId())
+                || (requesterProfile != null && requesterProfile.getId().equals(profile.getId()));
+        if (!isParticipant) {
+            throw new ResponseStatusException(UNAUTHORIZED, "이 데이트 신청에 접근할 수 없습니다.");
+        }
+        return request;
+    }
+
+    private void ensureMeetupProposalAllowed(AiMatchRequest request) {
+        if (!"ACCEPTED".equals(request.getStatus()) && !"PROPOSED".equals(request.getStatus())) {
+            throw new ResponseStatusException(CONFLICT, "약속을 조율할 수 있는 상태가 아닙니다.");
         }
     }
 
@@ -313,6 +517,7 @@ public class AiMatchService {
             case "gender" -> "성별";
             case "intro" -> "자기소개";
             case "pin" -> "PIN";
+            case "phoneNumber" -> "전화번호";
             case "meetPlace" -> "만날 장소";
             case "requesterNickname" -> "신청자 닉네임";
             case "message" -> "메시지";
@@ -323,5 +528,23 @@ public class AiMatchService {
     private String trimOrNull(String value) {
         String trimmed = value == null ? "" : value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private String normalizePhoneNumber(String value, boolean required) {
+        String trimmed = value == null ? "" : value.trim();
+        if (trimmed.isEmpty()) {
+            if (required) {
+                throw new ResponseStatusException(BAD_REQUEST, "전화번호를 입력해 주세요.");
+            }
+            return null;
+        }
+        if (trimmed.length() > 30 || !trimmed.matches("[0-9+()\\-\\s]+")) {
+            throw new ResponseStatusException(BAD_REQUEST, "전화번호 형식이 올바르지 않습니다.");
+        }
+        String digitsOnly = trimmed.replaceAll("\\D", "");
+        if (digitsOnly.length() < 8 || digitsOnly.length() > 15) {
+            throw new ResponseStatusException(BAD_REQUEST, "전화번호 형식이 올바르지 않습니다.");
+        }
+        return trimmed;
     }
 }

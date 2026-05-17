@@ -13,6 +13,8 @@ public interface AiMatchRequestRepository extends JpaRepository<AiMatchRequest, 
 
     List<AiMatchRequest> findAllByRequesterProfileIdOrderByCreatedAtDesc(Long requesterProfileId);
 
+    List<AiMatchRequest> findAllByProfileIdOrRequesterProfileId(Long profileId, Long requesterProfileId);
+
     boolean existsByRequesterProfileIdAndProfileIdAndStatus(Long requesterProfileId, Long profileId, String status);
 
     Optional<AiMatchRequest> findByIdAndProfileId(Long id, Long profileId);

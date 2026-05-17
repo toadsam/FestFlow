@@ -5,6 +5,7 @@ public record AiMatchProfileUpdateDto(
         String nickname,
         String gender,
         String intro,
+        String phoneNumber,
         String meetPlace,
         String pin
 ) {

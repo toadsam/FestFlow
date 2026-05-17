@@ -7,6 +7,7 @@ import "./index.css";
 import "leaflet/dist/leaflet.css";
 
 const AiMatchPage = lazy(() => import("./pages/AiMatchPage"));
+const AiMatchAdminPage = lazy(() => import("./pages/AiMatchAdminPage"));
 
 function PageFallback() {
   return (
@@ -40,6 +41,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           <Route path="/" element={<App />}>
             <Route index element={<Navigate to="/ai-match" replace />} />
             <Route path="ai-match" element={lazyElement(AiMatchPage)} />
+            <Route path="ai-match/admin" element={lazyElement(AiMatchAdminPage)} />
             <Route path="*" element={<Navigate to="/ai-match" replace />} />
           </Route>
         </Routes>
