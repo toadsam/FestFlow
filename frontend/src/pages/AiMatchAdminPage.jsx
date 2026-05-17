@@ -128,7 +128,13 @@ export default function AiMatchAdminPage() {
   const [deleteBusyId, setDeleteBusyId] = useState(null);
   const [completePulseId, setCompletePulseId] = useState(null);
   const [profileQuery, setProfileQuery] = useState("");
+  const [selectedInterestFilters, setSelectedInterestFilters] = useState([]);
+  const [profileGenderFilter, setProfileGenderFilter] = useState("ALL");
+  const [profileMbtiFilter, setProfileMbtiFilter] = useState("ALL");
+  const [profileStatusFilter, setProfileStatusFilter] = useState("ALL");
   const [requestStatusFilter, setRequestStatusFilter] = useState("ALL");
+  const [expandedMatchIds, setExpandedMatchIds] = useState([]);
+  const [expandedProfileIds, setExpandedProfileIds] = useState([]);
   const overviewRefreshInFlightRef = useRef(false);
   const completePulseTimerRef = useRef(null);
 
@@ -144,12 +150,38 @@ export default function AiMatchAdminPage() {
     [matchedRequests],
   );
   const pendingRequests = useMemo(() => requests.filter((request) => request.status === "PENDING"), [requests]);
+  const profileFilterOptions = useMemo(() => {
+    const interestCounts = new Map();
+    const genders = new Set();
+    const mbtis = new Set();
+    profiles.forEach((profile) => {
+      const meta = parseProfileMeta(profile.intro);
+      if (profile.gender) genders.add(profile.gender);
+      if (meta.mbti) mbtis.add(meta.mbti);
+      meta.tags.forEach((tag) => {
+        interestCounts.set(tag, (interestCounts.get(tag) || 0) + 1);
+      });
+    });
+    return {
+      interests: [...interestCounts.entries()]
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+        .map(([tag, count]) => ({ tag, count })),
+      genders: [...genders].sort((a, b) => a.localeCompare(b)),
+      mbtis: [...mbtis].sort((a, b) => a.localeCompare(b)),
+    };
+  }, [profiles]);
+  const hasProfileFilters = Boolean(
+    profileQuery.trim()
+      || selectedInterestFilters.length
+      || profileGenderFilter !== "ALL"
+      || profileMbtiFilter !== "ALL"
+      || profileStatusFilter !== "ALL",
+  );
   const filteredProfiles = useMemo(() => {
     const query = profileQuery.trim().toLowerCase();
-    if (!query) return profiles;
     return profiles.filter((profile) => {
       const meta = parseProfileMeta(profile.intro);
-      return [
+      const searchableText = [
         profile.nickname,
         profile.gender,
         profile.phoneNumber,
@@ -160,10 +192,15 @@ export default function AiMatchAdminPage() {
       ]
         .filter(Boolean)
         .join(" ")
-        .toLowerCase()
-        .includes(query);
+        .toLowerCase();
+      if (query && !searchableText.includes(query)) return false;
+      if (profileGenderFilter !== "ALL" && profile.gender !== profileGenderFilter) return false;
+      if (profileMbtiFilter !== "ALL" && meta.mbti !== profileMbtiFilter) return false;
+      if (profileStatusFilter !== "ALL" && profile.status !== profileStatusFilter) return false;
+      if (selectedInterestFilters.length && !selectedInterestFilters.some((tag) => meta.tags.includes(tag))) return false;
+      return true;
     });
-  }, [profiles, profileQuery]);
+  }, [profiles, profileQuery, profileGenderFilter, profileMbtiFilter, profileStatusFilter, selectedInterestFilters]);
   const filteredRequests = useMemo(() => {
     if (requestStatusFilter === "ALL") return requests;
     if (requestStatusFilter === "MATCHED") return requests.filter((request) => isMatched(request.status));
@@ -304,6 +341,32 @@ export default function AiMatchAdminPage() {
     } finally {
       setDeleteBusyId(null);
     }
+  }
+
+  function toggleExpandedMatch(requestId) {
+    setExpandedMatchIds((prev) => (
+      prev.includes(requestId) ? prev.filter((id) => id !== requestId) : [...prev, requestId]
+    ));
+  }
+
+  function toggleExpandedProfile(profileId) {
+    setExpandedProfileIds((prev) => (
+      prev.includes(profileId) ? prev.filter((id) => id !== profileId) : [...prev, profileId]
+    ));
+  }
+
+  function toggleInterestFilter(tag) {
+    setSelectedInterestFilters((prev) => (
+      prev.includes(tag) ? prev.filter((item) => item !== tag) : [...prev, tag]
+    ));
+  }
+
+  function clearProfileFilters() {
+    setProfileQuery("");
+    setSelectedInterestFilters([]);
+    setProfileGenderFilter("ALL");
+    setProfileMbtiFilter("ALL");
+    setProfileStatusFilter("ALL");
   }
 
   if (!loggedIn) {
@@ -447,6 +510,7 @@ export default function AiMatchAdminPage() {
             const isCompleted = connectionStatus === "COMPLETED";
             const isFailed = connectionStatus === "FAILED";
             const isCompletePulse = completePulseId === request.id;
+            const isMatchExpanded = expandedMatchIds.includes(request.id);
             return (
             <div
               key={`matched-${request.id}`}
@@ -474,6 +538,20 @@ export default function AiMatchAdminPage() {
                 </div>
                 <em>{getConnectionStatusLabel(connectionStatus)}</em>
               </div>
+              <div className="admin-ai-compact-meta">
+                <span>{request.requesterPhoneNumber ? "신청자 연락처 있음" : "신청자 연락처 없음"}</span>
+                <span>{request.profilePhoneNumber ? "상대 연락처 있음" : "상대 연락처 없음"}</span>
+                <span>{request.meetPlace || "장소 미지정"}</span>
+              </div>
+              <button
+                type="button"
+                className="admin-ai-detail-toggle"
+                onClick={() => toggleExpandedMatch(request.id)}
+              >
+                {isMatchExpanded ? "상세 접기" : "상세 보기"}
+              </button>
+              {isMatchExpanded ? (
+                <div className="admin-ai-detail-panel">
               <div className="admin-ai-match-contact-grid">
                 <a className="admin-ai-contact-card" href={request.requesterPhoneNumber ? `tel:${request.requesterPhoneNumber}` : undefined}>
                   <span>신청자</span>
@@ -527,6 +605,8 @@ export default function AiMatchAdminPage() {
                 <span>{request.meetPlace || "장소 미지정"}</span>
                 <p>{request.message || "메시지 없음"}</p>
               </div>
+                </div>
+              ) : null}
               <div className="admin-ai-connection-controls">
                 {CONNECTION_STATUS_OPTIONS.map(([value, label]) => (
                   <button
@@ -614,11 +694,60 @@ export default function AiMatchAdminPage() {
             placeholder="닉네임, 전화번호, MBTI, 관심사 검색"
           />
         </label>
+        <div className="admin-ai-profile-filter-panel">
+          <div className="admin-ai-profile-filter-row">
+            <label>
+              <span>상태</span>
+              <select value={profileStatusFilter} onChange={(event) => setProfileStatusFilter(event.target.value)}>
+                <option value="ALL">전체</option>
+                <option value="ACTIVE">활성</option>
+                <option value="DELETED">삭제됨</option>
+              </select>
+            </label>
+            <label>
+              <span>성별</span>
+              <select value={profileGenderFilter} onChange={(event) => setProfileGenderFilter(event.target.value)}>
+                <option value="ALL">전체</option>
+                {profileFilterOptions.genders.map((gender) => (
+                  <option key={gender} value={gender}>{gender}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              <span>MBTI</span>
+              <select value={profileMbtiFilter} onChange={(event) => setProfileMbtiFilter(event.target.value)}>
+                <option value="ALL">전체</option>
+                {profileFilterOptions.mbtis.map((mbti) => (
+                  <option key={mbti} value={mbti}>{mbti}</option>
+                ))}
+              </select>
+            </label>
+            <button type="button" className="admin-ai-filter-clear" onClick={clearProfileFilters} disabled={!hasProfileFilters}>
+              초기화
+            </button>
+          </div>
+          <div className="admin-ai-interest-filter" aria-label="관심사 필터">
+            {profileFilterOptions.interests.length ? profileFilterOptions.interests.map(({ tag, count }) => (
+              <button
+                key={tag}
+                type="button"
+                className={selectedInterestFilters.includes(tag) ? "is-active" : ""}
+                onClick={() => toggleInterestFilter(tag)}
+              >
+                <span>{tag}</span>
+                <small>{count}</small>
+              </button>
+            )) : <p className="admin-console-hint">필터로 사용할 관심사가 없습니다.</p>}
+          </div>
+        </div>
         <div className="admin-ai-profile-grid">
           {filteredProfiles.length === 0 && <p className="admin-console-hint">표시할 AI 프로필이 없습니다.</p>}
           {filteredProfiles.map((profile) => {
             const meta = parseProfileMeta(profile.intro);
             const isDeletedProfile = profile.status !== "ACTIVE";
+            const isProfileExpanded = expandedProfileIds.includes(profile.id);
+            const visibleTags = meta.tags.slice(0, 3);
+            const hiddenTagCount = Math.max(meta.tags.length - visibleTags.length, 0);
             return (
               <article key={profile.id} className={`admin-ai-profile-card${isDeletedProfile ? " is-deleted" : ""}`}>
                 <div className="admin-ai-profile-card__head">
@@ -629,9 +758,9 @@ export default function AiMatchAdminPage() {
                   </div>
                   <em className={profile.status === "ACTIVE" ? "is-active" : ""}>{getProfileStatusLabel(profile.status)}</em>
                 </div>
-                <p>{meta.summary || "소개 없음"}</p>
-                <div className="admin-ai-profile-card__tags">
-                  {meta.tags.length ? meta.tags.map((tag) => <span key={`${profile.id}-${tag}`}>{tag}</span>) : <span>태그 없음</span>}
+                <div className="admin-ai-profile-card__compact-tags" aria-label="관심사">
+                  {visibleTags.length ? visibleTags.map((tag) => <span key={`${profile.id}-compact-${tag}`}>{tag}</span>) : <span>관심사 없음</span>}
+                  {hiddenTagCount ? <span>+{hiddenTagCount}</span> : null}
                 </div>
                 <div className="admin-ai-profile-card__stats">
                   <span>받은 {profile.receivedCount}</span>
@@ -643,14 +772,13 @@ export default function AiMatchAdminPage() {
                   {profile.phoneNumber || "전화번호 없음"}
                 </a>
                 <div className="admin-ai-profile-card__actions">
-                  <details className="admin-ai-photo-disclosure">
-                    <summary>사진 검수</summary>
-                    <AdminImageCompare
-                      originalImageUrl={profile.originalImageUrl}
-                      generatedImageUrl={profile.generatedImageUrl}
-                      name={profile.nickname}
-                    />
-                  </details>
+                  <button
+                    type="button"
+                    className="admin-ai-detail-toggle"
+                    onClick={() => toggleExpandedProfile(profile.id)}
+                  >
+                    {isProfileExpanded ? "상세 접기" : "상세 보기"}
+                  </button>
                   <button
                     type="button"
                     className="admin-ai-danger-action"
@@ -661,6 +789,22 @@ export default function AiMatchAdminPage() {
                     <span>{profile.status !== "ACTIVE" ? "삭제됨" : deleteBusyId === profile.id ? "삭제 중" : "관리자 삭제"}</span>
                   </button>
                 </div>
+                {isProfileExpanded ? (
+                  <div className="admin-ai-profile-detail">
+                    <p>{meta.summary || "소개 없음"}</p>
+                    <div className="admin-ai-profile-card__tags">
+                      {meta.tags.length ? meta.tags.map((tag) => <span key={`${profile.id}-${tag}`}>{tag}</span>) : <span>태그 없음</span>}
+                    </div>
+                    <div className="admin-ai-photo-review">
+                      <strong>사진 검수</strong>
+                      <AdminImageCompare
+                        originalImageUrl={profile.originalImageUrl}
+                        generatedImageUrl={profile.generatedImageUrl}
+                        name={profile.nickname}
+                      />
+                    </div>
+                  </div>
+                ) : null}
               </article>
             );
           })}

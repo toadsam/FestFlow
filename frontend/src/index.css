@@ -16560,6 +16560,60 @@ html[data-contrast="high"] .app-shell .uni-page {
   color: #c2410c;
 }
 
+.app-shell .admin-ai-compact-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.app-shell .admin-ai-compact-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.85rem;
+  padding: 0.24rem 0.58rem;
+  border: 1px solid #dbeafe;
+  border-radius: 999px;
+  background: #f8fbff;
+  color: #475569 !important;
+  font-size: 0.72rem !important;
+  font-weight: 850 !important;
+  line-height: 1.1 !important;
+}
+
+.app-shell .admin-ai-detail-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.35rem;
+  min-width: 0;
+  padding: 0 0.84rem;
+  border: 1px solid #bae6fd;
+  border-radius: 0.82rem;
+  background: #f0f9ff;
+  color: #075985;
+  font-size: 0.8rem;
+  font-weight: 920;
+  box-shadow: none;
+  cursor: pointer;
+}
+
+.app-shell .admin-ai-detail-toggle:not(:disabled):hover {
+  border-color: #7dd3fc;
+  background: #e0f2fe;
+}
+
+.app-shell .admin-ai-detail-panel,
+.app-shell .admin-ai-profile-detail {
+  display: grid;
+  gap: 0.68rem;
+  min-width: 0;
+  padding: 0.72rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: #ffffff;
+}
+
 .app-shell .admin-ai-match-contact-grid {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -16824,6 +16878,108 @@ html[data-contrast="high"] .app-shell .uni-page {
   color: #94a3b8;
 }
 
+.app-shell .admin-ai-profile-filter-panel {
+  display: grid;
+  gap: 0.72rem;
+  min-width: 0;
+  padding: 0.72rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 1rem;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.app-shell .admin-ai-profile-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 0.5rem;
+  align-items: end;
+}
+
+.app-shell .admin-ai-profile-filter-row label {
+  display: grid;
+  gap: 0.24rem;
+  min-width: 0;
+}
+
+.app-shell .admin-ai-profile-filter-row label > span {
+  color: #64748b !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+}
+
+.app-shell .admin-ai-profile-filter-row select {
+  width: 100%;
+  min-height: 2.35rem;
+  padding: 0 0.72rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.78rem;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 880;
+}
+
+.app-shell .admin-ai-filter-clear {
+  min-height: 2.35rem;
+  padding: 0 0.8rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 0.78rem;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.76rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.app-shell .admin-ai-filter-clear:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.app-shell .admin-ai-interest-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.app-shell .admin-ai-interest-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  min-height: 2rem;
+  max-width: 100%;
+  padding: 0.2rem 0.62rem;
+  border: 1px solid #d8b4fe;
+  border-radius: 999px;
+  background: #faf5ff;
+  color: #6d28d9;
+  font-size: 0.74rem;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.app-shell .admin-ai-interest-filter button.is-active {
+  border-color: #a855f7;
+  background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(168, 85, 247, 0.22);
+}
+
+.app-shell .admin-ai-interest-filter button small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.18rem;
+  height: 1.18rem;
+  padding: 0 0.24rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  color: currentColor;
+  font-size: 0.66rem;
+  font-weight: 950;
+}
+
 .app-shell .admin-ai-profile-grid {
   grid-template-columns: minmax(0, 1fr);
 }
@@ -17015,6 +17171,12 @@ html[data-contrast="high"] .app-shell .uni-page {
   align-self: start;
 }
 
+@media (min-width: 1100px) {
+  .app-shell .admin-ai-dashboard-main .admin-ai-profile-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  }
+}
+
 .app-shell .admin-ai-profile-card {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
@@ -17045,10 +17207,36 @@ html[data-contrast="high"] .app-shell .uni-page {
 
 .app-shell .admin-ai-profile-card p,
 .app-shell .admin-ai-profile-card__tags,
+.app-shell .admin-ai-profile-card__compact-tags,
 .app-shell .admin-ai-profile-card__stats,
 .app-shell .admin-ai-profile-card__phone,
 .app-shell .admin-ai-profile-card__actions {
   grid-column: 1 / -1;
+}
+
+.app-shell .admin-ai-profile-card__compact-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.34rem;
+  min-width: 0;
+}
+
+.app-shell .admin-ai-profile-card__compact-tags span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.55rem;
+  max-width: 100%;
+  padding: 0.16rem 0.52rem;
+  border: 1px solid #e9d5ff;
+  border-radius: 999px;
+  background: #faf5ff;
+  color: #6d28d9 !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  line-height: 1.1 !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-shell .admin-ai-profile-card p {
@@ -17061,6 +17249,36 @@ html[data-contrast="high"] .app-shell .uni-page {
   grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.7fr);
   gap: 0.5rem;
   align-items: start;
+}
+
+.app-shell .admin-ai-profile-card__phone {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.85rem;
+  padding: 0.22rem 0.62rem;
+  border-radius: 999px;
+  background: #f0fdfa;
+}
+
+.app-shell .admin-ai-profile-detail {
+  grid-column: 1 / -1;
+}
+
+.app-shell .admin-ai-profile-detail p {
+  max-height: none;
+}
+
+.app-shell .admin-ai-photo-review {
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.app-shell .admin-ai-photo-review > strong {
+  color: #334155 !important;
+  font-size: 0.78rem !important;
+  font-weight: 930 !important;
 }
 
 .app-shell .admin-ai-photo-disclosure {
@@ -17185,6 +17403,14 @@ html[data-contrast="high"] .app-shell .uni-page {
 
   .app-shell .admin-ai-dashboard-main {
     order: 2;
+  }
+
+  .app-shell .admin-ai-profile-filter-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-shell .admin-ai-filter-clear {
+    grid-column: 1 / -1;
   }
 }
 
@@ -18330,6 +18556,51 @@ html[data-contrast="high"] .app-shell .uni-page {
   background: #f8fafc !important;
   background-image: none !important;
   color: #94a3b8 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-detail-toggle,
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-detail-toggle:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]) {
+  border-color: #bae6fd !important;
+  background: #f0f9ff !important;
+  background-image: none !important;
+  color: #075985 !important;
+  box-shadow: none !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-detail-toggle:not(:disabled):hover {
+  border-color: #7dd3fc !important;
+  background: #e0f2fe !important;
+  color: #075985 !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-interest-filter button,
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-interest-filter button:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]) {
+  border-color: #d8b4fe !important;
+  background: #faf5ff !important;
+  background-image: none !important;
+  color: #6d28d9 !important;
+  box-shadow: none !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-interest-filter button.is-active,
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-interest-filter button.is-active:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]) {
+  border-color: #a855f7 !important;
+  background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 8px 18px rgba(168, 85, 247, 0.22) !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-interest-filter button.is-active * {
+  color: #ffffff !important;
+}
+
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-filter-clear,
+.app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page button.admin-ai-filter-clear:not(.quick-orbit-item):not(.radial-fab):not(.festival-hero-pick):not(.festival-situation-card):not(.app-primary-cta):not([type="submit"]) {
+  border-color: #e2e8f0 !important;
+  background: #f8fafc !important;
+  background-image: none !important;
+  color: #475569 !important;
+  box-shadow: none !important;
 }
 
 .app-shell[data-route-scope="public"] .cyber-page.ai-match-admin-page .admin-ai-connection-controls button.is-active.is-completed,
