@@ -66,25 +66,10 @@ const MBTI_OPTIONS = [
   "ENTJ",
 ];
 const STEP_ITEMS = [
-  { number: "01", title: "QR 스캔", copy: "부스 QR을 스캔해요" },
-  { number: "02", title: "사진 업로드", copy: "정면 사진을 올려요" },
-  { number: "03", title: "AI 변환", copy: "웹툰 스타일로 바꿔요" },
-  { number: "04", title: "소개 등록", copy: "설명을 적고 공개해요" },
+  { number: "01", title: "사진 업로드", copy: "정면 사진을 올려요" },
+  { number: "02", title: "AI 변환", copy: "웹툰 스타일로 바꿔요" },
+  { number: "03", title: "소개 등록", copy: "설명을 적고 공개해요" },
 ];
-const QR_PATTERN = [
-  "111111001111",
-  "100001001001",
-  "101101001111",
-  "101101000101",
-  "101101011101",
-  "100001010001",
-  "111111010111",
-  "000100111001",
-  "111011001101",
-  "101010111001",
-  "111110100111",
-  "100011001111",
-].join("");
 
 const ACTIVE_FILTER_TAG_STYLE = {
   borderColor: "#d8b4fe",
@@ -1018,7 +1003,7 @@ export default function AiMatchPage() {
       <div className="ai-match-flow">
         <section className="ai-match-hero-card">
           <div className="ai-match-hero-copy">
-            <p>QR을 스캔하고 AI 프로필을 만들어보세요!</p>
+            <p>AI 프로필을 만들고 축제에서 어울릴 사람을 찾아보세요!</p>
             <h2>AI 소개팅 부스</h2>
             <span>축제에서 같이 걸을 사람을 빠르게 찾는 현장 매칭</span>
           </div>
@@ -1030,21 +1015,8 @@ export default function AiMatchPage() {
           </div>
         </section>
 
-        <section className="ai-match-qr-panel">
-          <strong>QR을 스캔하세요</strong>
-          <div className="ai-match-qr-board" aria-hidden="true">
-            {QR_PATTERN.split("").map((cell, index) => (
-              <span key={`qr-${index}`} className={cell === "1" ? "is-filled" : ""} />
-            ))}
-          </div>
-          <small>
-            <IconShield className="h-4 w-4" />
-            안전한 연결로 보호됩니다.
-          </small>
-        </section>
-
         <section className="ai-match-step-card">
-          <h3>간단한 4단계로 등록 완료!</h3>
+          <h3>간단한 3단계로 등록 완료!</h3>
           <div className="ai-match-step-list">
             {STEP_ITEMS.map((item) => (
               <article key={item.number} className="ai-match-step-row">

@@ -41,15 +41,6 @@ export default function App() {
 
   return (
     <div className="app-shell festival-shell" data-route-scope={isOpsRoute ? "ops" : "public"}>
-      <div className="phone-status-bar" aria-hidden="true">
-        <span>9:41</span>
-        <span className="phone-status-icons">
-          <span />
-          <span />
-          <span />
-        </span>
-      </div>
-
       <main className="festival-main">
         <Outlet />
       </main>
