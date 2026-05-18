@@ -365,6 +365,33 @@ function getConvertingStatus(seconds) {
   };
 }
 
+function formatImagePreviewError(error) {
+  const message = `${error?.message || ""}`;
+  const lowerMessage = message.toLowerCase();
+  const rejectedPrefix = "AI_MATCH_PHOTO_REJECTED:";
+  const rejectedIndex = message.indexOf(rejectedPrefix);
+  if (rejectedIndex >= 0) {
+    const reason = message.slice(rejectedIndex + rejectedPrefix.length).replace(/\)+$/, "").trim();
+    return reason || "정면 얼굴이 잘 보이는 1인 실제 사진을 올려 주세요.";
+  }
+  if (message.includes("OpenAI 사용량 한도") || message.includes("결제 크레딧") || lowerMessage.includes("quota")) {
+    return "OpenAI 사용량 한도 또는 결제 크레딧이 부족해요. OpenAI 결제/Usage 한도를 확인해 주세요.";
+  }
+  if (message.includes("API 키") || lowerMessage.includes("api key")) {
+    return "OpenAI API 키가 올바르지 않거나 서버에 적용되지 않았어요. OPENAI_API_KEY 환경변수를 확인해 주세요.";
+  }
+  if (message.includes("모델 설정") || lowerMessage.includes("model")) {
+    return "OpenAI 모델 설정이 올바르지 않아요. OPENAI_MODEL 또는 OPENAI_IMAGE_MODEL 값을 확인해 주세요.";
+  }
+  if (message.includes("요청이 일시적으로 제한") || lowerMessage.includes("rate limit")) {
+    return "AI 요청이 일시적으로 많아 제한되었어요. 잠시 후 다시 시도해 주세요.";
+  }
+  if (message.includes("응답 시간이 초과") || lowerMessage.includes("timeout")) {
+    return "AI 변환 시간이 길어지고 있어요. 잠시 후 다시 시도해 주세요.";
+  }
+  return "AI 변환에 실패했어요. 잠시 후 다시 시도해 주세요. 계속 실패하면 다른 사진으로 한 번 더 시도해 주세요.";
+}
+
 export default function AiMatchPage() {
   const [activeScreen, setActiveScreen] = useState("intro");
   const [profiles, setProfiles] = useState([]);
@@ -745,7 +772,7 @@ export default function AiMatchPage() {
       setPreviewUrl(resolveApiAssetUrl(nextGeneratedImageUrl));
       setSuccessMessage("웹툰 스타일 이미지가 준비되었습니다. 설명을 입력하고 등록하세요.");
     } catch (error) {
-      setErrorMessage(error.message || "웹툰 이미지 변환에 실패했습니다.");
+      setErrorMessage(formatImagePreviewError(error));
     } finally {
       setConverting(false);
     }
