@@ -32,7 +32,12 @@ import {
   updateAiMatchProfile,
 } from "../api";
 
-const MEET_PLACES = ["중앙무대 앞", "푸드트럭 존", "종합 안내 데스크", "네온 포토 터널"];
+const MEET_PLACES = ["총학생회 부스"];
+const MEET_PLACE_MAP_TARGET = {
+  label: "총학생회 부스",
+  lat: 37.2828,
+  lng: 127.0444,
+};
 const SCREEN_COPY = {
   intro: "AI 소개팅 부스",
   register: "프로필 등록하기",
@@ -515,7 +520,7 @@ export default function AiMatchPage() {
 
   useEffect(() => {
     if (!selectedProfile) return;
-    setRequestPlace(selectedProfile.meetPlace || MEET_PLACES[0]);
+    setRequestPlace(MEET_PLACES[0]);
   }, [selectedProfile]);
 
   useEffect(() => {
@@ -582,6 +587,12 @@ export default function AiMatchPage() {
     setPeopleTagFilters((current) =>
       current.includes(tag) ? current.filter((item) => item !== tag) : [...current, tag],
     );
+  }
+
+  function openMeetPlaceMap() {
+    const { label, lat, lng } = MEET_PLACE_MAP_TARGET;
+    const url = `https://map.kakao.com/link/to/${encodeURIComponent(label)},${lat},${lng}`;
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   function getMeetupDraft(request) {
@@ -739,7 +750,7 @@ export default function AiMatchPage() {
     setGender(accessProfile.gender || "여성");
     setMbti(parsed.mbti || "");
     setIntro(parsed.summary || "");
-    setPlace(accessProfile.meetPlace || MEET_PLACES[0]);
+    setPlace(MEET_PLACES[0]);
     setSelectedTags(parsed.tags || []);
     setOriginalImageUrl(accessProfile.originalImageUrl || "");
     setGeneratedImageUrl(accessProfile.generatedImageUrl || "");
@@ -1583,10 +1594,21 @@ export default function AiMatchPage() {
       <div className="ai-match-meetup-box">
         <div className="ai-match-meetup-box__head">
           <strong>매치 성사</strong>
-          <span>관리자 조율</span>
+          <div className="ai-match-meetup-box__route">
+            <span>총학생회 부스</span>
+            <button
+              type="button"
+              className="ai-match-map-icon-button"
+              onClick={openMeetPlaceMap}
+              aria-label="총학생회 부스 카카오맵 길찾기"
+              title="카카오맵 길찾기"
+            >
+              <IconMapPin className="h-4 w-4" />
+            </button>
+          </div>
         </div>
         <p className="ai-match-meetup-box__summary">
-          양쪽 연락처는 관리자에게만 공개됩니다. 관리자가 확인 후 시간과 장소를 안내합니다.
+          관리자의 연락을 받은 뒤 총학생회 부스 앞으로 와 주세요. 양쪽 연락처는 관리자에게만 공개됩니다.
         </p>
       </div>
     );
@@ -1683,7 +1705,7 @@ export default function AiMatchPage() {
                   <p>{request.requesterNickname}님이 데이트 신청을 보냈어요.</p>
                   <span>
                     <IconMapPin className="h-4 w-4" />
-                    {request.meetPlace}
+                    {["ACCEPTED", "PROPOSED", "CONFIRMED"].includes(request.status) ? MEET_PLACES[0] : request.meetPlace}
                   </span>
                   <em>{request.message}</em>
                   {renderMeetupPanel(request)}
@@ -1732,7 +1754,7 @@ export default function AiMatchPage() {
                 <p>{request.profileNickname}님에게 보낸 데이트 신청입니다.</p>
                 <span>
                   <IconMapPin className="h-4 w-4" />
-                  {request.meetPlace}
+                  {["ACCEPTED", "PROPOSED", "CONFIRMED"].includes(request.status) ? MEET_PLACES[0] : request.meetPlace}
                 </span>
                 <em>{request.message}</em>
                 {renderMeetupPanel(request)}

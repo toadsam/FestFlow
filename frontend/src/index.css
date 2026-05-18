@@ -11828,6 +11828,25 @@ body,
   font-weight: 880;
 }
 
+.app-shell .ai-match-map-icon-button {
+  display: inline-grid;
+  width: 2.05rem;
+  height: 2.05rem;
+  min-height: 0 !important;
+  place-items: center;
+  border: 1px solid rgba(194, 163, 255, 0.92);
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(250, 245, 255, 0.94));
+  color: #6d28d9;
+  box-shadow: 0 8px 16px rgba(124, 58, 237, 0.12);
+  cursor: pointer;
+}
+
+.app-shell .ai-match-map-icon-button:hover {
+  border-color: rgba(168, 85, 247, 0.9);
+  background: linear-gradient(180deg, #ffffff, #f5f3ff);
+}
+
 .app-shell .ai-match-field input,
 .app-shell .ai-match-field select,
 .app-shell .ai-match-field textarea {
@@ -12491,6 +12510,20 @@ body,
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+}
+
+.app-shell .ai-match-meetup-box__route {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.app-shell .ai-match-meetup-box__route .ai-match-map-icon-button {
+  width: 1.85rem;
+  height: 1.85rem;
+  flex: 0 0 auto;
 }
 
 .app-shell .ai-match-meetup-box__head strong {
