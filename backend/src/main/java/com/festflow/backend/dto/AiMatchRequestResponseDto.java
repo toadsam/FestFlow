@@ -11,6 +11,7 @@ public record AiMatchRequestResponseDto(
         String meetPlace,
         String message,
         String status,
+        String statusReason,
         String meetupPlace,
         LocalDateTime meetupAt,
         Long meetupProposerProfileId,

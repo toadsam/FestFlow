@@ -141,27 +141,31 @@ public class AiMatchService {
         return toProfileDto(saved);
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AiMatchProfileAccessResponseDto accessProfile(AiMatchProfileAccessRequestDto requestDto) {
         AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
+        List<AiMatchRequest> receivedRequests = requestRepository.findAllByProfileIdOrderByCreatedAtDesc(profile.getId());
+        List<AiMatchRequest> sentRequests = requestRepository.findAllByRequesterProfileIdOrderByCreatedAtDesc(profile.getId());
+        closeRequestsWithInactiveParticipants(Stream.concat(receivedRequests.stream(), sentRequests.stream()).toList());
         return new AiMatchProfileAccessResponseDto(
                 toProfileDto(profile),
-                requestRepository.findAllByProfileIdOrderByCreatedAtDesc(profile.getId()).stream()
+                receivedRequests.stream()
                         .map(this::toRequestDto)
                         .toList(),
-                requestRepository.findAllByRequesterProfileIdOrderByCreatedAtDesc(profile.getId()).stream()
+                sentRequests.stream()
                         .map(this::toRequestDto)
                         .toList(),
                 getDiscoverableProfiles(profile.getId())
         );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AiMatchAdminOverviewDto getAdminOverview() {
         List<AiMatchProfile> profiles = profileRepository.findAll().stream()
                 .sorted(Comparator.comparing(AiMatchProfile::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .toList();
         List<AiMatchRequest> requests = requestRepository.findAllByOrderByCreatedAtDesc();
+        closeRequestsWithInactiveParticipants(requests);
         Map<Long, Long> receivedCounts = requests.stream()
                 .filter(request -> request.getProfile() != null && request.getProfile().getId() != null)
                 .collect(Collectors.groupingBy(request -> request.getProfile().getId(), Collectors.counting()));
@@ -228,6 +232,7 @@ public class AiMatchService {
     public AiMatchAdminRequestDto updateConnectionStatus(Long requestId, AiMatchConnectionStatusUpdateDto requestDto) {
         AiMatchRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "데이트 신청을 찾을 수 없습니다."));
+        ensureRequestParticipantsActive(request);
         if (!isMatchedStatus(request.getStatus())) {
             throw new ResponseStatusException(CONFLICT, "성사된 매치만 연결 상태를 변경할 수 있습니다.");
         }
@@ -240,6 +245,7 @@ public class AiMatchService {
     public AiMatchAdminRequestDto updateAdminNote(Long requestId, AiMatchAdminNoteUpdateDto requestDto) {
         AiMatchRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "데이트 신청을 찾을 수 없습니다."));
+        ensureRequestParticipantsActive(request);
         if (!isMatchedStatus(request.getStatus())) {
             throw new ResponseStatusException(CONFLICT, "성사된 매치만 관리자 메모를 남길 수 있습니다.");
         }
@@ -255,6 +261,7 @@ public class AiMatchService {
             throw new ResponseStatusException(UNAUTHORIZED, "Profile credentials do not match this profile.");
         }
         profile.deactivate();
+        closeRequestsForDeletedProfile(profileId);
     }
 
     @Transactional
@@ -262,9 +269,7 @@ public class AiMatchService {
         AiMatchProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "AI match profile not found."));
         profile.deactivate();
-        requestRepository.findAllByProfileIdOrRequesterProfileId(profileId, profileId).stream()
-                .filter(request -> "PENDING".equals(request.getStatus()))
-                .forEach(AiMatchRequest::cancel);
+        closeRequestsForDeletedProfile(profileId);
     }
 
     @Transactional
@@ -299,6 +304,7 @@ public class AiMatchService {
         AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
         AiMatchRequest request = requestRepository.findByIdAndProfileId(requestId, profile.getId())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "데이트 신청을 찾을 수 없습니다."));
+        ensureRequestParticipantsActive(request);
         ensurePendingRequest(request);
         request.accept();
         return toRequestDto(request);
@@ -309,6 +315,7 @@ public class AiMatchService {
         AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
         AiMatchRequest request = requestRepository.findByIdAndProfileId(requestId, profile.getId())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "데이트 신청을 찾을 수 없습니다."));
+        ensureRequestParticipantsActive(request);
         ensurePendingRequest(request);
         request.reject();
         return toRequestDto(request);
@@ -319,6 +326,10 @@ public class AiMatchService {
         AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
         AiMatchRequest request = requestRepository.findByIdAndRequesterProfileId(requestId, profile.getId())
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "보낸 데이트 신청을 찾을 수 없습니다."));
+        if (!isRequestBetweenActiveProfiles(request)) {
+            cancelRequestIfOpen(request);
+            return toRequestDto(request);
+        }
         ensurePendingRequest(request);
         request.cancel();
         return toRequestDto(request);
@@ -328,6 +339,7 @@ public class AiMatchService {
     public AiMatchRequestResponseDto proposeMeetup(Long requestId, AiMatchMeetupProposalDto requestDto) {
         AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
         AiMatchRequest request = getParticipatingRequest(requestId, profile);
+        ensureRequestParticipantsActive(request);
         ensureMeetupProposalAllowed(request);
 
         String meetupPlace = trimRequired(requestDto.meetupPlace(), "meetPlace", 120);
@@ -347,6 +359,7 @@ public class AiMatchService {
     public AiMatchRequestResponseDto confirmMeetup(Long requestId, AiMatchProfileAccessRequestDto requestDto) {
         AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
         AiMatchRequest request = getParticipatingRequest(requestId, profile);
+        ensureRequestParticipantsActive(request);
         if (!"PROPOSED".equals(request.getStatus())) {
             throw new ResponseStatusException(CONFLICT, "확정할 약속 제안이 없습니다.");
         }
@@ -363,6 +376,42 @@ public class AiMatchService {
                 .filter(profile -> !profile.getId().equals(viewerProfileId))
                 .map(this::toProfileDto)
                 .toList();
+    }
+
+    private void closeRequestsForDeletedProfile(Long profileId) {
+        closeRequestsWithInactiveParticipants(requestRepository.findAllByProfileIdOrRequesterProfileId(profileId, profileId));
+    }
+
+    private void closeRequestsWithInactiveParticipants(List<AiMatchRequest> requests) {
+        requests.stream()
+                .filter(request -> !isRequestBetweenActiveProfiles(request))
+                .forEach(this::cancelRequestIfOpen);
+    }
+
+    private void cancelRequestIfOpen(AiMatchRequest request) {
+        if (!"CANCELED".equals(request.getStatus()) && !"REJECTED".equals(request.getStatus())) {
+            request.cancelForProfileDeleted();
+            return;
+        }
+        if ("CANCELED".equals(request.getStatus()) && request.getStatusReason().isBlank()) {
+            request.cancelForProfileDeleted();
+        }
+    }
+
+    private boolean isRequestBetweenActiveProfiles(AiMatchRequest request) {
+        AiMatchProfile targetProfile = request.getProfile();
+        AiMatchProfile requesterProfile = request.getRequesterProfile();
+        return targetProfile != null
+                && requesterProfile != null
+                && "ACTIVE".equals(targetProfile.getStatus())
+                && "ACTIVE".equals(requesterProfile.getStatus());
+    }
+
+    private void ensureRequestParticipantsActive(AiMatchRequest request) {
+        if (!isRequestBetweenActiveProfiles(request)) {
+            cancelRequestIfOpen(request);
+            throw new ResponseStatusException(CONFLICT, "The other profile has been deleted.");
+        }
     }
 
     private AiMatchProfileResponseDto toProfileDto(AiMatchProfile profile) {
@@ -441,6 +490,7 @@ public class AiMatchService {
                 request.getMeetPlace(),
                 request.getMessage(),
                 request.getStatus(),
+                request.getStatusReason(),
                 request.getMeetupPlace(),
                 request.getMeetupAt(),
                 request.getMeetupProposerProfileId(),

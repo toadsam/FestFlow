@@ -94,6 +94,7 @@ const REQUEST_STATUS_LABELS = {
   REJECTED: "거절",
   CANCELED: "취소됨",
 };
+const PROFILE_DELETED_STATUS_REASON = "PROFILE_DELETED";
 const RECEIVED_NOTICE_STATUSES = new Set(["PENDING", "CANCELED"]);
 const SENT_NOTICE_STATUSES = new Set(["ACCEPTED", "REJECTED", "PROPOSED", "CONFIRMED"]);
 
@@ -214,11 +215,19 @@ function formatRequestTime(createdAt) {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
-function getRequestStatusLabel(status) {
+function isProfileDeletedRequest(request) {
+  return request?.status === "CANCELED" && request?.statusReason === PROFILE_DELETED_STATUS_REASON;
+}
+
+function getRequestStatusLabel(status, statusReason = "") {
+  if (status === "CANCELED" && statusReason === PROFILE_DELETED_STATUS_REASON) {
+    return "상대 계정 삭제";
+  }
   return REQUEST_STATUS_LABELS[status] || status || "대기중";
 }
 
-function getRequestStatusTone(status) {
+function getRequestStatusTone(status, statusReason = "") {
+  if (status === "CANCELED" && statusReason === PROFILE_DELETED_STATUS_REASON) return "danger";
   if (status === "ACCEPTED") return "success";
   if (status === "CONFIRMED") return "success";
   if (status === "PROPOSED") return "pending";
@@ -255,6 +264,7 @@ function createRequestSnapshot(receivedRequests = [], sentRequests = []) {
         request.id,
         {
           status: request.status,
+          statusReason: request.statusReason,
           nickname: request.requesterNickname,
         },
       ]),
@@ -264,6 +274,7 @@ function createRequestSnapshot(receivedRequests = [], sentRequests = []) {
         request.id,
         {
           status: request.status,
+          statusReason: request.statusReason,
           nickname: request.profileNickname,
         },
       ]),
@@ -272,23 +283,25 @@ function createRequestSnapshot(receivedRequests = [], sentRequests = []) {
 }
 
 function getRequestNoticeKey(type, request) {
-  return `${type}:${request.id}:${request.status || "PENDING"}`;
+  return `${type}:${request.id}:${request.status || "PENDING"}:${request.statusReason || ""}`;
 }
 
 function getSentStatusNotice(request) {
   const name = request.profileNickname || "상대";
+  if (isProfileDeletedRequest(request)) return "상대가 계정을 삭제했습니다.";
   if (request.status === "ACCEPTED") return `${name}님이 데이트 신청을 수락했어요.`;
   if (request.status === "REJECTED") return `${name}님이 데이트 신청을 거절했어요.`;
   if (request.status === "PROPOSED") return `${name}님과의 만남이 관리자 조율 중이에요.`;
   if (request.status === "CONFIRMED") return `${name}님과의 만남 안내가 확정됐어요.`;
   if (request.status === "CANCELED") return `${name}님에게 보낸 신청이 취소됐어요.`;
-  return `${name}님과의 신청 상태가 ${getRequestStatusLabel(request.status)}(으)로 바뀌었어요.`;
+  return `${name}님과의 신청 상태가 ${getRequestStatusLabel(request.status, request.statusReason)}(으)로 바뀌었어요.`;
 }
 
 function getReceivedStatusNotice(request) {
   const name = request.requesterNickname || "상대";
+  if (isProfileDeletedRequest(request)) return "상대가 계정을 삭제했습니다.";
   if (request.status === "CANCELED") return `${name}님이 데이트 신청을 취소했어요.`;
-  return `${name}님의 신청 상태가 ${getRequestStatusLabel(request.status)}(으)로 바뀌었어요.`;
+  return `${name}님의 신청 상태가 ${getRequestStatusLabel(request.status, request.statusReason)}(으)로 바뀌었어요.`;
 }
 
 function buildCurrentRequestNotices(nextReceivedRequests, nextSentRequests) {
@@ -298,7 +311,7 @@ function buildCurrentRequestNotices(nextReceivedRequests, nextSentRequests) {
       .map((request) => ({
         key: getRequestNoticeKey("received", request),
         tab: "received",
-        title: request.status === "CANCELED" ? "신청 취소됨" : "새 데이트 신청",
+        title: isProfileDeletedRequest(request) ? "상대 계정 삭제" : request.status === "CANCELED" ? "신청 취소됨" : "새 데이트 신청",
         message:
           request.status === "CANCELED"
             ? getReceivedStatusNotice(request)
@@ -330,11 +343,11 @@ function collectRequestNotifications(previousSnapshot, nextReceivedRequests, nex
       });
       return;
     }
-    if (previous.status !== request.status) {
+    if (previous.status !== request.status || previous.statusReason !== request.statusReason) {
       notices.push({
         key: getRequestNoticeKey("received", request),
         tab: "received",
-        title: request.status === "CANCELED" ? "신청 취소됨" : "신청 상태 변경",
+        title: isProfileDeletedRequest(request) ? "상대 계정 삭제" : request.status === "CANCELED" ? "신청 취소됨" : "신청 상태 변경",
         message: getReceivedStatusNotice(request),
       });
     }
@@ -342,7 +355,7 @@ function collectRequestNotifications(previousSnapshot, nextReceivedRequests, nex
 
   nextSentRequests.forEach((request) => {
     const previous = previousSnapshot.sent.get(request.id);
-    if (previous && previous.status !== request.status) {
+    if (previous && (previous.status !== request.status || previous.statusReason !== request.statusReason)) {
       notices.push({
         key: getRequestNoticeKey("sent", request),
         tab: "sent",
@@ -588,6 +601,8 @@ export default function AiMatchPage() {
   const requestSnapshotRef = useRef(null);
   const liveNoticeTimeoutRef = useRef(null);
   const selectedProfileRef = useRef(null);
+  const accessDialogRef = useRef(null);
+  const accessNicknameInputRef = useRef(null);
   const noticeStorageKeyRef = useRef("");
   const shownNoticeKeysRef = useRef(new Set());
   const seenNoticeKeysRef = useRef(new Set());
@@ -670,6 +685,23 @@ export default function AiMatchPage() {
     },
     [],
   );
+
+  useEffect(() => {
+    if (!accessModalOpen) return undefined;
+
+    const frameId = window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: document.documentElement.scrollHeight,
+        behavior: "smooth",
+      });
+      accessDialogRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      window.setTimeout(() => {
+        accessNicknameInputRef.current?.focus({ preventScroll: true });
+      }, 220);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [accessModalOpen]);
 
   useEffect(() => {
     if (activeScreen === "requests") {
@@ -1822,7 +1854,7 @@ export default function AiMatchPage() {
               const hasExtraTags = profile.tags.length > 3;
               const visibleTags = isTagsExpanded || !hasExtraTags ? profile.tags : profile.tags.slice(0, 2);
               const sentRequest = latestSentRequestMap.get(profile.id);
-              const requestStatusLabel = sentRequest ? getRequestStatusLabel(sentRequest.status) : "";
+              const requestStatusLabel = sentRequest ? getRequestStatusLabel(sentRequest.status, sentRequest.statusReason) : "";
               return (
                 <article key={profile.id} className={`ai-match-person-card ai-match-person-card--${profile.tone}`}>
                   <button
@@ -1857,7 +1889,7 @@ export default function AiMatchPage() {
                       <div className="ai-match-person-footer">
                         <div className="ai-match-inline-tags">
                           {shouldShowPeopleRequestStatus(sentRequest?.status) ? (
-                            <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(sentRequest.status)}`}>
+                            <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(sentRequest.status, sentRequest.statusReason)}`}>
                               신청 {requestStatusLabel}
                             </span>
                           ) : null}
@@ -2079,11 +2111,11 @@ export default function AiMatchPage() {
                     <small>{formatRequestTime(request.createdAt)}</small>
                   </div>
                   <div className="ai-match-request-history-status">
-                    <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(request.status)}`}>
-                      {getRequestStatusLabel(request.status)}
+                    <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(request.status, request.statusReason)}`}>
+                      {getRequestStatusLabel(request.status, request.statusReason)}
                     </span>
                   </div>
-                  <p>{request.requesterNickname}님이 데이트 신청을 보냈어요.</p>
+                  <p>{isProfileDeletedRequest(request) ? "상대가 계정을 삭제했습니다." : `${request.requesterNickname}님이 데이트 신청을 보냈어요.`}</p>
                   <span>
                     <IconMapPin className="h-4 w-4" />
                     {["ACCEPTED", "PROPOSED", "CONFIRMED"].includes(request.status) ? MEET_PLACES[0] : request.meetPlace}
@@ -2128,11 +2160,11 @@ export default function AiMatchPage() {
                   <small>{formatRequestTime(request.createdAt)}</small>
                 </div>
                 <div className="ai-match-request-history-status">
-                  <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(request.status)}`}>
-                    {getRequestStatusLabel(request.status)}
+                  <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(request.status, request.statusReason)}`}>
+                    {getRequestStatusLabel(request.status, request.statusReason)}
                   </span>
                 </div>
-                <p>{request.profileNickname}님에게 보낸 데이트 신청입니다.</p>
+                <p>{isProfileDeletedRequest(request) ? "상대가 계정을 삭제했습니다." : `${request.profileNickname}님에게 보낸 데이트 신청입니다.`}</p>
                 <span>
                   <IconMapPin className="h-4 w-4" />
                   {["ACCEPTED", "PROPOSED", "CONFIRMED"].includes(request.status) ? MEET_PLACES[0] : request.meetPlace}
@@ -2193,8 +2225,8 @@ export default function AiMatchPage() {
           <p>{selectedDetailProfile.summary}</p>
           <div className="ai-match-inline-tags">
             {shouldShowPeopleRequestStatus(selectedDetailRequest?.status) ? (
-              <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(selectedDetailRequest.status)}`}>
-                신청 {getRequestStatusLabel(selectedDetailRequest.status)}
+              <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(selectedDetailRequest.status, selectedDetailRequest.statusReason)}`}>
+                신청 {getRequestStatusLabel(selectedDetailRequest.status, selectedDetailRequest.statusReason)}
               </span>
             ) : null}
             {selectedDetailProfile.tags.map((tag) => (
@@ -2431,7 +2463,7 @@ export default function AiMatchPage() {
 
       {accessModalOpen ? (
         <div className="ai-match-modal" role="dialog" aria-modal="true" aria-labelledby="ai-match-access-title">
-          <form className="ai-match-dialog" onSubmit={handleAccessSubmit}>
+          <form ref={accessDialogRef} className="ai-match-dialog" onSubmit={handleAccessSubmit}>
             <button type="button" className="ai-match-close" onClick={closeAccessModal}>
               닫기
             </button>
@@ -2444,6 +2476,7 @@ export default function AiMatchPage() {
                 <span>닉네임</span>
               </div>
               <input
+                ref={accessNicknameInputRef}
                 value={accessNickname}
                 maxLength={12}
                 onChange={(event) => setAccessNickname(event.target.value)}

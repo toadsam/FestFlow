@@ -49,6 +49,9 @@ public class AiMatchRequest {
     @Column(length = 20)
     private String status;
 
+    @Column(length = 40)
+    private String statusReason;
+
     @Column(length = 30)
     private String connectionStatus;
 
@@ -125,6 +128,10 @@ public class AiMatchRequest {
         return status == null ? "PENDING" : status;
     }
 
+    public String getStatusReason() {
+        return statusReason == null ? "" : statusReason;
+    }
+
     public String getConnectionStatus() {
         if (!isMatchedStatus()) {
             return "";
@@ -158,6 +165,7 @@ public class AiMatchRequest {
 
     public void accept() {
         this.status = "ACCEPTED";
+        this.statusReason = null;
         if (this.connectionStatus == null) {
             this.connectionStatus = "WAITING";
         }
@@ -166,16 +174,25 @@ public class AiMatchRequest {
 
     public void reject() {
         this.status = "REJECTED";
+        this.statusReason = null;
         this.updatedAt = LocalDateTime.now();
     }
 
     public void cancel() {
         this.status = "CANCELED";
+        this.statusReason = "USER_CANCELED";
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void cancelForProfileDeleted() {
+        this.status = "CANCELED";
+        this.statusReason = "PROFILE_DELETED";
         this.updatedAt = LocalDateTime.now();
     }
 
     public void proposeMeetup(String meetupPlace, LocalDateTime meetupAt, Long proposerProfileId, String proposerNickname) {
         this.status = "PROPOSED";
+        this.statusReason = null;
         if (this.connectionStatus == null) {
             this.connectionStatus = "WAITING";
         }
@@ -188,6 +205,7 @@ public class AiMatchRequest {
 
     public void confirmMeetup() {
         this.status = "CONFIRMED";
+        this.statusReason = null;
         if (this.connectionStatus == null) {
             this.connectionStatus = "COMPLETED";
         }
