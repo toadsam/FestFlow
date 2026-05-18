@@ -245,6 +245,115 @@ function buildLatestSentRequestMap(sentRequests) {
   }, new Map());
 }
 
+function createRequestSnapshot(receivedRequests = [], sentRequests = []) {
+  return {
+    received: new Map(
+      receivedRequests.map((request) => [
+        request.id,
+        {
+          status: request.status,
+          nickname: request.requesterNickname,
+        },
+      ]),
+    ),
+    sent: new Map(
+      sentRequests.map((request) => [
+        request.id,
+        {
+          status: request.status,
+          nickname: request.profileNickname,
+        },
+      ]),
+    ),
+  };
+}
+
+function getSentStatusNotice(request) {
+  const name = request.profileNickname || "상대";
+  if (request.status === "ACCEPTED") return `${name}님이 데이트 신청을 수락했어요.`;
+  if (request.status === "REJECTED") return `${name}님이 데이트 신청을 거절했어요.`;
+  if (request.status === "PROPOSED") return `${name}님과의 만남이 관리자 조율 중이에요.`;
+  if (request.status === "CONFIRMED") return `${name}님과의 만남 안내가 확정됐어요.`;
+  if (request.status === "CANCELED") return `${name}님에게 보낸 신청이 취소됐어요.`;
+  return `${name}님과의 신청 상태가 ${getRequestStatusLabel(request.status)}(으)로 바뀌었어요.`;
+}
+
+function getReceivedStatusNotice(request) {
+  const name = request.requesterNickname || "상대";
+  if (request.status === "CANCELED") return `${name}님이 데이트 신청을 취소했어요.`;
+  return `${name}님의 신청 상태가 ${getRequestStatusLabel(request.status)}(으)로 바뀌었어요.`;
+}
+
+function collectRequestNotifications(previousSnapshot, nextReceivedRequests, nextSentRequests) {
+  if (!previousSnapshot) return [];
+
+  const notices = [];
+  nextReceivedRequests.forEach((request) => {
+    const previous = previousSnapshot.received.get(request.id);
+    if (!previous) {
+      notices.push({
+        tab: "received",
+        message: `${request.requesterNickname || "누군가"}님이 데이트 신청을 보냈어요.`,
+      });
+      return;
+    }
+    if (previous.status !== request.status) {
+      notices.push({
+        tab: "received",
+        message: getReceivedStatusNotice(request),
+      });
+    }
+  });
+
+  nextSentRequests.forEach((request) => {
+    const previous = previousSnapshot.sent.get(request.id);
+    if (previous && previous.status !== request.status) {
+      notices.push({
+        tab: "sent",
+        message: getSentStatusNotice(request),
+      });
+    }
+  });
+
+  return notices;
+}
+
+function collectLoginNotifications(nextReceivedRequests, nextSentRequests) {
+  const pendingReceived = nextReceivedRequests.filter((request) => request.status === "PENDING");
+  if (pendingReceived.length) {
+    const firstRequest = pendingReceived[0];
+    return [
+      {
+        tab: "received",
+        title: "새 데이트 신청",
+        message:
+          pendingReceived.length === 1
+            ? `${firstRequest.requesterNickname || "상대"}님이 데이트 신청을 보냈어요.`
+            : `확인할 데이트 신청이 ${pendingReceived.length}건 있어요.`,
+      },
+    ];
+  }
+
+  const answeredSent = nextSentRequests.filter((request) =>
+    ["ACCEPTED", "REJECTED", "PROPOSED", "CONFIRMED"].includes(request.status),
+  );
+  if (answeredSent.length) {
+    const firstRequest = answeredSent[0];
+    return [
+      {
+        tab: "sent",
+        title: "신청 응답 도착",
+        message:
+          answeredSent.length === 1
+            ? getSentStatusNotice(firstRequest)
+            : `보낸 신청 중 확인할 응답이 ${answeredSent.length}건 있어요.`,
+      },
+    ];
+  }
+
+  return [];
+}
+
 function normalizeDateTimeLocalValue(dateTime) {
   if (!dateTime) return "";
   const date = new Date(dateTime);
@@ -436,6 +545,8 @@ export default function AiMatchPage() {
   const [peopleMbtiFilter, setPeopleMbtiFilter] = useState("");
   const [favoriteProfileIds, setFavoriteProfileIds] = useState([]);
   const [expandedTagProfileIds, setExpandedTagProfileIds] = useState([]);
+  const [liveNotice, setLiveNotice] = useState(null);
+  const [unreadRequestCount, setUnreadRequestCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
@@ -444,6 +555,8 @@ export default function AiMatchPage() {
   const [accessAttempted, setAccessAttempted] = useState(false);
   const accessSessionSeqRef = useRef(0);
   const accessRefreshInFlightRef = useRef(false);
+  const requestSnapshotRef = useRef(null);
+  const liveNoticeTimeoutRef = useRef(null);
 
   const isEditingProfile = editingProfileId !== null;
   const normalizedNickname = nickname.trim().toLowerCase();
@@ -508,6 +621,21 @@ export default function AiMatchPage() {
     setLoading(false);
   }, []);
 
+  useEffect(
+    () => () => {
+      if (liveNoticeTimeoutRef.current) {
+        window.clearTimeout(liveNoticeTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (activeScreen === "requests") {
+      setUnreadRequestCount(0);
+    }
+  }, [activeScreen]);
+
   useEffect(() => {
     if (!converting) return undefined;
 
@@ -531,7 +659,7 @@ export default function AiMatchPage() {
         return;
       }
       accessRefreshInFlightRef.current = true;
-      loadAccessProfile(accessNickname, accessPin, activeScreen, { closeModal: false })
+      loadAccessProfile(accessNickname, accessPin, activeScreen, { closeModal: false, notify: true })
         .catch((error) => {
           if (isAccessExpiredError(error)) {
             clearAccessSession();
@@ -640,6 +768,9 @@ export default function AiMatchPage() {
     setRequestMessage("");
     setRequestPlace(MEET_PLACES[0]);
     setMeetupDrafts({});
+    setLiveNotice(null);
+    setUnreadRequestCount(0);
+    requestSnapshotRef.current = null;
     if (resetForm) {
       resetRegistrationForm();
     }
@@ -655,7 +786,45 @@ export default function AiMatchPage() {
     setErrorMessage(error.message || fallbackMessage);
   }
 
-  async function loadAccessProfile(nextNickname, nextPin, nextScreen = "requests", { closeModal = true } = {}) {
+  function showLiveNotice(notices) {
+    if (!notices.length) return;
+    const [firstNotice] = notices;
+    const message =
+      notices.length > 1
+        ? `${firstNotice.message} 외 ${notices.length - 1}건의 새 알림이 있어요.`
+        : firstNotice.message;
+
+    setLiveNotice({
+      id: `${Date.now()}-${notices.length}`,
+      tab: firstNotice.tab,
+      title: firstNotice.title || "새 알림 도착",
+      message,
+    });
+    if (activeScreen !== "requests") {
+      setUnreadRequestCount((current) => Math.min(99, current + notices.length));
+    }
+    if (liveNoticeTimeoutRef.current) {
+      window.clearTimeout(liveNoticeTimeoutRef.current);
+    }
+    liveNoticeTimeoutRef.current = window.setTimeout(() => {
+      setLiveNotice(null);
+    }, 12000);
+  }
+
+  function openLiveNoticeTarget(tab = "received") {
+    setLiveNotice(null);
+    setUnreadRequestCount(0);
+    setSelectedProfile(null);
+    setRequestTab(tab === "sent" ? "sent" : "received");
+    setActiveScreen("requests");
+  }
+
+  async function loadAccessProfile(
+    nextNickname,
+    nextPin,
+    nextScreen = "requests",
+    { closeModal = true, notify = false, announceSummary = false } = {},
+  ) {
     const sessionSeq = accessSessionSeqRef.current;
     const response = await accessAiMatchProfile(nextNickname, nextPin);
     if (sessionSeq !== accessSessionSeqRef.current) {
@@ -667,9 +836,15 @@ export default function AiMatchPage() {
       : Array.isArray(response.requests)
         ? response.requests
         : [];
+    const nextSentRequests = Array.isArray(response.sentRequests) ? response.sentRequests : [];
+    const requestNotices = notify
+      ? collectRequestNotifications(requestSnapshotRef.current, nextReceivedRequests, nextSentRequests)
+      : [];
+    const loginNotices = announceSummary ? collectLoginNotifications(nextReceivedRequests, nextSentRequests) : [];
+    requestSnapshotRef.current = createRequestSnapshot(nextReceivedRequests, nextSentRequests);
     setAccessProfile(response.profile || null);
     setAccessRequests(nextReceivedRequests);
-    setAccessSentRequests(Array.isArray(response.sentRequests) ? response.sentRequests : []);
+    setAccessSentRequests(nextSentRequests);
     setProfiles(nextProfiles);
     setAccessNickname(nextNickname);
     setAccessPin(nextPin);
@@ -681,6 +856,7 @@ export default function AiMatchPage() {
     if (closeModal) {
       setAccessModalOpen(false);
     }
+    showLiveNotice(loginNotices.length ? loginNotices : requestNotices);
     return response;
   }
 
@@ -700,7 +876,9 @@ export default function AiMatchPage() {
     setErrorMessage("");
     setSuccessMessage("");
     try {
-      await loadAccessProfile(accessNickname.trim(), accessPin.trim(), accessTargetScreen);
+      await loadAccessProfile(accessNickname.trim(), accessPin.trim(), accessTargetScreen, {
+        announceSummary: true,
+      });
       setSuccessMessage("신청함 잠금이 해제되었습니다.");
     } catch (error) {
       setErrorMessage(error.message || "프로필 인증에 실패했습니다.");
@@ -961,7 +1139,7 @@ export default function AiMatchPage() {
     setLoading(true);
     setErrorMessage("");
     try {
-      await loadAccessProfile(accessNickname, accessPin, "requests");
+      await loadAccessProfile(accessNickname, accessPin, "requests", { notify: true });
     } catch (error) {
       if (isAccessExpiredError(error)) {
         clearAccessSession();
@@ -1066,6 +1244,32 @@ export default function AiMatchPage() {
     } finally {
       setSubmitting(false);
     }
+  }
+
+  function renderLiveNotice() {
+    if (!liveNotice) return null;
+    return (
+      <div className="ai-match-live-notice" role="alert" aria-live="assertive">
+        <span className="ai-match-live-notice__icon" aria-hidden="true">
+          <IconHeartFilled className="h-4 w-4" />
+        </span>
+        <div className="ai-match-live-notice__body">
+          <strong>{liveNotice.title || "새 알림 도착"}</strong>
+          <p>{liveNotice.message}</p>
+        </div>
+        <button type="button" className="ai-match-live-notice__primary" onClick={() => openLiveNoticeTarget(liveNotice.tab)}>
+          신청함 보기
+        </button>
+        <button
+          type="button"
+          className="ai-match-live-notice__close"
+          onClick={() => setLiveNotice(null)}
+          aria-label="알림 닫기"
+        >
+          <IconX className="h-4 w-4" />
+        </button>
+      </div>
+    );
   }
 
   function renderIntroScreen() {
@@ -1950,6 +2154,8 @@ export default function AiMatchPage() {
           </p>
         ) : null}
 
+        {renderLiveNotice()}
+
         {renderDetailScreen()}
       </section>
     );
@@ -1985,6 +2191,8 @@ export default function AiMatchPage() {
         </p>
       ) : null}
 
+      {renderLiveNotice()}
+
       {activeScreen === "intro" ? renderIntroScreen() : null}
       {activeScreen === "register" ? renderRegisterScreen() : null}
       {activeScreen === "people" ? renderPeopleScreen() : null}
@@ -2011,6 +2219,8 @@ export default function AiMatchPage() {
                   }
                   if (item.id === "requests") {
                     if (accessProfile) {
+                      setLiveNotice(null);
+                      setUnreadRequestCount(0);
                       setActiveScreen("requests");
                     } else {
                       openAccessModal("requests");
@@ -2020,7 +2230,12 @@ export default function AiMatchPage() {
                   setActiveScreen(item.id);
                 }}
               >
-                <Icon className="h-5 w-5" />
+                <span className="ai-match-bottom-tab-icon">
+                  <Icon className="h-5 w-5" />
+                  {item.id === "requests" && unreadRequestCount > 0 ? (
+                    <strong className="ai-match-nav-badge">{unreadRequestCount > 9 ? "9+" : unreadRequestCount}</strong>
+                  ) : null}
+                </span>
                 <span>{item.label}</span>
               </button>
             );
