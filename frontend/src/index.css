@@ -11026,6 +11026,7 @@ body,
 }
 
 .app-shell .ai-match-redesigned--people,
+.app-shell .ai-match-redesigned--intro.ai-match-redesigned--signed-in,
 .app-shell .ai-match-redesigned--requests,
 .app-shell .ai-match-redesigned--my,
 .app-shell .ai-match-redesigned--register {
@@ -12851,7 +12852,7 @@ body,
   bottom: calc(env(safe-area-inset-bottom, 0px) + 0.72rem);
   z-index: 1200;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.3rem;
   padding: 0.42rem;
   border: 1px solid rgba(255, 255, 255, 0.9);

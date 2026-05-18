@@ -47,7 +47,6 @@ const SCREEN_COPY = {
 };
 const NAV_ITEMS = [
   { id: "intro", label: "처음", icon: IconHome },
-  { id: "people", label: "사람들", icon: IconUsers },
   { id: "requests", label: "신청함", icon: IconClipboard },
   { id: "my", label: "MY", icon: IconSettings },
   { id: "register", label: "등록하기", icon: IconSparkles },
@@ -648,6 +647,12 @@ export default function AiMatchPage() {
   const selectedDetailRequest = selectedProfile ? latestSentRequestMap.get(selectedProfile.id) : null;
   const meetupTimeOptions = buildMeetupTimeOptions();
   const convertingStatus = getConvertingStatus(convertSeconds);
+  const activeScreenTitle = activeScreen === "intro" && accessProfile ? SCREEN_COPY.people : SCREEN_COPY[activeScreen];
+  const shouldShowBottomNav =
+    activeScreen === "register" ||
+    activeScreen === "requests" ||
+    activeScreen === "my" ||
+    (activeScreen === "intro" && Boolean(accessProfile));
 
   async function loadData() {
     setLoading(false);
@@ -913,14 +918,14 @@ export default function AiMatchPage() {
   }
 
   function getAccessModalTitle() {
-    if (accessTargetScreen === "people") return "로그인";
+    if (accessTargetScreen === "people" || accessTargetScreen === "intro") return "로그인";
     if (accessTargetScreen === "my") return "MY 잠금 해제";
     return "신청함 잠금 해제";
   }
 
   function getAccessSubmitLabel() {
     if (accessSubmitting) return "확인 중...";
-    if (accessTargetScreen === "people") return "로그인";
+    if (accessTargetScreen === "people" || accessTargetScreen === "intro") return "로그인";
     if (accessTargetScreen === "my") return "MY 열기";
     return "신청함 열기";
   }
@@ -931,6 +936,7 @@ export default function AiMatchPage() {
     nextScreen = "requests",
     { closeModal = true, notify = false, announceSummary = false } = {},
   ) {
+    const resolvedNextScreen = nextScreen === "people" ? "intro" : nextScreen;
     const sessionSeq = accessSessionSeqRef.current;
     const response = await accessAiMatchProfile(nextNickname, nextPin);
     if (sessionSeq !== accessSessionSeqRef.current) {
@@ -950,7 +956,7 @@ export default function AiMatchPage() {
       : [];
     const loginNotices = announceSummary ? collectLoginNotifications(nextReceivedRequests, nextSentRequests) : [];
     requestSnapshotRef.current = createRequestSnapshot(nextReceivedRequests, nextSentRequests);
-    updateUnreadRequestCount(currentNotices, nextScreen);
+    updateUnreadRequestCount(currentNotices, resolvedNextScreen);
     setAccessProfile(response.profile || null);
     setAccessRequests(nextReceivedRequests);
     setAccessSentRequests(nextSentRequests);
@@ -962,7 +968,7 @@ export default function AiMatchPage() {
     if (currentSelectedProfile) {
       setActiveSelectedProfile(nextProfiles.find((profile) => profile.id === currentSelectedProfile.id) || null);
     }
-    setActiveScreen(nextScreen);
+    setActiveScreen(resolvedNextScreen);
     if (closeModal) {
       setAccessModalOpen(false);
     }
@@ -1175,10 +1181,10 @@ export default function AiMatchPage() {
         setAccessPin(createdPin);
         setRequesterNickname(createdNickname);
         resetRegistrationForm();
-        setActiveScreen("people");
+        setActiveScreen("intro");
         try {
-          await loadAccessProfile(createdNickname, createdPin, "people");
-          setSuccessMessage("AI 프로필이 등록되었습니다. 등록된 사람들 화면에서 바로 확인해 보세요.");
+          await loadAccessProfile(createdNickname, createdPin, "intro");
+          setSuccessMessage("AI 프로필이 등록되었습니다. 처음 화면에서 바로 확인해 보세요.");
         } catch (accessError) {
           setSuccessMessage("AI 프로필은 등록되었습니다. 목록 갱신이 늦으면 신청함에서 닉네임과 PIN으로 다시 입장해 주세요.");
         }
@@ -1195,7 +1201,7 @@ export default function AiMatchPage() {
     if (!selectedProfile) return;
     if (!accessProfile) {
       setErrorMessage("등록한 닉네임과 PIN으로 먼저 입장해 주세요.");
-      openAccessModal("people");
+      openAccessModal("intro");
       return;
     }
 
@@ -1388,6 +1394,10 @@ export default function AiMatchPage() {
   }
 
   function renderIntroScreen() {
+    if (accessProfile) {
+      return renderPeopleScreen();
+    }
+
     return (
       <div className="ai-match-flow">
         <section className="ai-match-hero-card">
@@ -1433,7 +1443,7 @@ export default function AiMatchPage() {
         <button
           type="button"
           className="ai-match-secondary-button"
-          onClick={() => openAccessModal("people")}
+          onClick={() => openAccessModal("intro")}
         >
           로그인
         </button>
@@ -1730,7 +1740,7 @@ export default function AiMatchPage() {
           <section className="ai-match-empty-card">
             <strong>등록된 사람 목록은 닉네임과 PIN 인증 후 볼 수 있습니다.</strong>
             <p>프로필을 등록한 닉네임과 PIN을 입력하면 다른 참가자 목록과 데이트 신청 화면이 열립니다.</p>
-            <button type="button" className="ai-match-secondary-button" onClick={() => openAccessModal("people")}>
+            <button type="button" className="ai-match-secondary-button" onClick={() => openAccessModal("intro")}>
               닉네임 + PIN으로 입장
             </button>
           </section>
@@ -1893,7 +1903,7 @@ export default function AiMatchPage() {
         ) : (
           <section className="ai-match-empty-card">
             <strong>{loading ? "프로필을 불러오는 중입니다." : "아직 등록된 프로필이 없습니다."}</strong>
-            <p>{loading ? "잠시만 기다려 주세요." : "첫 번째 프로필을 등록하고 사람들 탭을 채워보세요."}</p>
+            <p>{loading ? "잠시만 기다려 주세요." : "첫 번째 프로필을 등록하고 처음 화면을 채워보세요."}</p>
             {!loading ? (
               <button type="button" className="ai-match-secondary-button" onClick={() => setActiveScreen("register")}>
                 프로필 등록하러 가기
@@ -2006,7 +2016,8 @@ export default function AiMatchPage() {
               className="ai-match-secondary-button"
               onClick={() => {
                 clearAccessSession();
-                openAccessModal("my");
+                setActiveScreen("intro");
+                openAccessModal("intro");
               }}
             >
               다른 닉네임으로 로그인
@@ -2147,7 +2158,7 @@ export default function AiMatchPage() {
         ) : (
           <section className="ai-match-empty-card">
             <strong>아직 보낸 요청이 없습니다.</strong>
-            <p>등록된 사람들에서 마음에 드는 상대에게 먼저 신청해 보세요.</p>
+            <p>처음 화면에서 마음에 드는 상대에게 먼저 신청해 보세요.</p>
           </section>
         )}
       </div>
@@ -2329,7 +2340,10 @@ export default function AiMatchPage() {
   }
 
   return (
-    <section className={`uni-page ai-match-page ai-match-redesigned ai-match-redesigned--${activeScreen}`} data-i18n-skip>
+    <section
+      className={`uni-page ai-match-page ai-match-redesigned ai-match-redesigned--${activeScreen}${accessProfile ? " ai-match-redesigned--signed-in" : ""}`}
+      data-i18n-skip
+    >
       <header className="ai-match-topbar">
         {activeScreen === "intro" ? (
           <span className="ai-match-topbar-spacer" aria-hidden="true" />
@@ -2339,7 +2353,7 @@ export default function AiMatchPage() {
           </button>
         )}
 
-        <h1>{SCREEN_COPY[activeScreen]}</h1>
+        <h1>{activeScreenTitle}</h1>
 
         {activeScreen === "requests" ? (
           <button type="button" aria-label="새로고침" onClick={handleRequestsRefresh} disabled={loading || accessSubmitting}>
@@ -2360,11 +2374,10 @@ export default function AiMatchPage() {
 
       {activeScreen === "intro" ? renderIntroScreen() : null}
       {activeScreen === "register" ? renderRegisterScreen() : null}
-      {activeScreen === "people" ? renderPeopleScreen() : null}
       {activeScreen === "requests" ? renderRequestsScreen() : null}
       {activeScreen === "my" ? renderMyScreen() : null}
 
-      {["people", "requests", "my", "register"].includes(activeScreen) ? (
+      {shouldShowBottomNav ? (
         <nav className="ai-match-bottom-nav" aria-label="AI 소개팅 화면 전환">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
@@ -2375,12 +2388,8 @@ export default function AiMatchPage() {
                 type="button"
                 className={`ai-match-bottom-tab${isActive ? " is-active" : ""}`}
                 onClick={() => {
-                  if (item.id === "people") {
-                    if (accessProfile) {
-                      setActiveScreen("people");
-                    } else {
-                      openAccessModal("people");
-                    }
+                  if (item.id === "intro") {
+                    setActiveScreen("intro");
                     return;
                   }
                   if (item.id === "requests") {
