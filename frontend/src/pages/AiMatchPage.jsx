@@ -2017,10 +2017,9 @@ export default function AiMatchPage() {
               onClick={() => {
                 clearAccessSession();
                 setActiveScreen("intro");
-                openAccessModal("intro");
               }}
             >
-              다른 닉네임으로 로그인
+              로그아웃
             </button>
           </div>
         </section>
