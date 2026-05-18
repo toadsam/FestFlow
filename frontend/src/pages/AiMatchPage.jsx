@@ -334,6 +334,37 @@ function matchesDiscoveryFilters(profile, searchQuery, mbtiFilter, tagFilters) {
   return haystack.includes(normalizedQuery);
 }
 
+const CONVERTING_STEPS = ["사진 분석", "웹툰 변환", "품질 정리"];
+
+function getConvertingStatus(seconds) {
+  if (seconds >= 45) {
+    return {
+      stepIndex: 2,
+      title: "이미지 품질을 정리하는 중이에요",
+      copy: "요청이 많아 조금 더 걸리고 있어요. 새로고침하지 말고 기다려 주세요.",
+    };
+  }
+  if (seconds >= 25) {
+    return {
+      stepIndex: 2,
+      title: "거의 다 됐어요",
+      copy: "웹툰 이미지의 선과 색감을 정리하고 있어요.",
+    };
+  }
+  if (seconds >= 10) {
+    return {
+      stepIndex: 1,
+      title: "웹툰 스타일로 변환하고 있어요",
+      copy: "보통 20~60초 정도 걸려요. 잠시만 기다려 주세요.",
+    };
+  }
+  return {
+    stepIndex: 0,
+    title: "사진을 분석하고 있어요",
+    copy: "얼굴과 조명을 확인한 뒤 웹툰 스타일로 바꿔요.",
+  };
+}
+
 export default function AiMatchPage() {
   const [activeScreen, setActiveScreen] = useState("intro");
   const [profiles, setProfiles] = useState([]);
@@ -435,6 +466,7 @@ export default function AiMatchPage() {
     : null;
   const selectedDetailRequest = selectedProfile ? latestSentRequestMap.get(selectedProfile.id) : null;
   const meetupTimeOptions = buildMeetupTimeOptions();
+  const convertingStatus = getConvertingStatus(convertSeconds);
 
   async function loadData() {
     setLoading(false);
@@ -1110,6 +1142,32 @@ export default function AiMatchPage() {
               ) : null}
             </div>
           </div>
+
+          {converting ? (
+            <div className="ai-match-converting-panel" role="status" aria-live="polite">
+              <div className="ai-match-converting-panel__top">
+                <span className="ai-match-converting-pulse" aria-hidden="true" />
+                <div>
+                  <strong>{convertingStatus.title}</strong>
+                  <p>{convertingStatus.copy}</p>
+                </div>
+              </div>
+              <div className="ai-match-converting-progress" aria-hidden="true">
+                <span />
+              </div>
+              <div className="ai-match-converting-steps" aria-label="AI 변환 진행 단계">
+                {CONVERTING_STEPS.map((step, index) => (
+                  <span
+                    key={step}
+                    className={index <= convertingStatus.stepIndex ? "is-active" : ""}
+                  >
+                    {step}
+                  </span>
+                ))}
+              </div>
+              <small>{convertSeconds}초 경과 · 완료까지 보통 20~60초 정도 걸립니다.</small>
+            </div>
+          ) : null}
 
           <label className={`ai-match-upload-button${converting ? " is-disabled" : ""}`}>
             {converting ? "변환 중..." : generatedImageUrl ? "다른 사진 올리기" : "사진 업로드"}
