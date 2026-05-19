@@ -118,7 +118,7 @@ public class AiImageGenerationService {
         body.add(imageFieldName, new FileSystemResource(originalPath));
         body.add("prompt", buildWebtoonPrompt(nickname, intro));
         body.add("size", "1024x1536");
-        body.add("quality", "medium");
+        body.add("quality", "high");
         body.add("input_fidelity", "high");
         body.add("output_format", "png");
         body.add("n", "1");

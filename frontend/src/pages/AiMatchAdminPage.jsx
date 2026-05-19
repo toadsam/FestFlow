@@ -400,7 +400,7 @@ export default function AiMatchAdminPage() {
 
   async function handleAdminDeleteProfile(profileId, nickname) {
     if (!profileId) return;
-    const ok = window.confirm(`${nickname || "이 프로필"}을 관리자 권한으로 삭제할까요?\n삭제하면 사용자 화면에서 사라지고 PIN 로그인이 막힙니다.`);
+    const ok = window.confirm(`${nickname || "이 프로필"}을 관리자 권한으로 삭제할까요?\n삭제하면 사용자 화면에서 사라지고 비밀번호 로그인이 막힙니다.`);
     if (!ok) return;
 
     setDeleteBusyId(profileId);

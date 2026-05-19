@@ -10389,7 +10389,7 @@ body,
 
 .app-shell .reservation-table-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.55rem;
 }
 
@@ -11026,6 +11026,7 @@ body,
 }
 
 .app-shell .ai-match-redesigned--people,
+.app-shell .ai-match-redesigned--intro.ai-match-redesigned--signed-in,
 .app-shell .ai-match-redesigned--requests,
 .app-shell .ai-match-redesigned--my,
 .app-shell .ai-match-redesigned--register {
@@ -11097,7 +11098,19 @@ body,
 }
 
 .app-shell .ai-match-topbar-favorite {
-  color: #ff4fa3 !important;
+  color: #111827 !important;
+}
+
+.app-shell .ai-match-topbar-favorite--active {
+  color: #ef233c !important;
+  background: rgba(255, 241, 242, 0.96) !important;
+  border-color: rgba(239, 35, 60, 0.28) !important;
+  box-shadow: 0 14px 28px rgba(239, 35, 60, 0.18) !important;
+}
+
+.app-shell .ai-match-topbar-favorite--active svg {
+  fill: #ef233c;
+  stroke: #ef233c;
 }
 
 .app-shell .ai-match-banner {
@@ -11625,6 +11638,199 @@ body,
     inset 0 0 0 1px rgba(255, 255, 255, 0.9);
 }
 
+.app-shell .ai-match-phone-gate-card {
+  position: relative;
+  overflow: hidden;
+  border-color: rgba(45, 212, 191, 0.42);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(248, 253, 255, 0.94)),
+    #ffffff;
+}
+
+.app-shell .ai-match-phone-gate-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 0.28rem;
+  background: linear-gradient(90deg, #14b8a6, #38bdf8, #a855f7);
+}
+
+.app-shell .ai-match-phone-privacy {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.68rem;
+  align-items: start;
+  padding: 0.82rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, rgba(236, 254, 255, 0.88), rgba(250, 245, 255, 0.9));
+  box-shadow: inset 0 0 0 1px rgba(125, 211, 252, 0.38);
+}
+
+.app-shell .ai-match-phone-privacy svg {
+  color: #0f766e;
+  margin-top: 0.12rem;
+}
+
+.app-shell .ai-match-phone-privacy strong {
+  display: block;
+  color: #0f172a;
+  font-size: 0.86rem;
+  font-weight: 940;
+}
+
+.app-shell .ai-match-phone-privacy p {
+  margin: 0.25rem 0 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 760;
+  line-height: 1.55;
+}
+
+.app-shell .ai-match-ai-usage-meter {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.12rem 0.7rem;
+  align-items: center;
+  padding: 0.9rem 0.95rem;
+  border-radius: 1.05rem;
+  background:
+    radial-gradient(circle at right top, rgba(255, 79, 163, 0.18), transparent 36%),
+    linear-gradient(135deg, rgba(250, 245, 255, 0.98), rgba(236, 254, 255, 0.94));
+  box-shadow:
+    inset 0 0 0 1px rgba(196, 181, 253, 0.62),
+    0 12px 24px rgba(124, 58, 237, 0.1);
+}
+
+.app-shell .ai-match-ai-usage-meter span {
+  color: #5b2fb8;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.app-shell .ai-match-ai-usage-meter strong {
+  grid-row: span 2;
+  color: #7c3aed;
+  font-size: 1.35rem;
+  font-weight: 980;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.app-shell .ai-match-ai-usage-meter small {
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.app-shell .ai-match-ai-usage-meter.is-success {
+  background:
+    radial-gradient(circle at right top, rgba(16, 185, 129, 0.18), transparent 38%),
+    linear-gradient(135deg, rgba(236, 253, 245, 0.98), rgba(240, 253, 250, 0.94));
+  box-shadow:
+    inset 0 0 0 1px rgba(52, 211, 153, 0.5),
+    0 12px 24px rgba(16, 185, 129, 0.1);
+}
+
+.app-shell .ai-match-ai-usage-meter.is-success span,
+.app-shell .ai-match-ai-usage-meter.is-success strong {
+  color: #047857;
+}
+
+.app-shell .ai-match-ai-usage-meter.is-error {
+  background:
+    radial-gradient(circle at right top, rgba(244, 63, 94, 0.18), transparent 38%),
+    linear-gradient(135deg, rgba(255, 241, 242, 0.98), rgba(255, 247, 237, 0.94));
+  box-shadow:
+    inset 0 0 0 1px rgba(251, 113, 133, 0.45),
+    0 12px 24px rgba(244, 63, 94, 0.08);
+}
+
+.app-shell .ai-match-ai-usage-meter.is-error span,
+.app-shell .ai-match-ai-usage-meter.is-error strong {
+  color: #be123c;
+}
+
+.app-shell .ai-match-phone-rules {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.48rem;
+}
+
+.app-shell .ai-match-phone-rules span {
+  display: grid;
+  min-height: 2.35rem;
+  place-items: center;
+  padding: 0.58rem 0.72rem;
+  border-radius: 0.9rem;
+  background: rgba(255, 255, 255, 0.82);
+  color: #5b2fb8;
+  font-size: 0.68rem;
+  font-weight: 860;
+  line-height: 1.42;
+  text-align: center;
+  word-break: keep-all;
+  box-shadow: inset 0 0 0 1px rgba(216, 180, 254, 0.48);
+}
+
+.app-shell .ai-match-phone-status {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.68rem 0.78rem;
+  border-radius: 0.92rem;
+  background: rgba(255, 241, 242, 0.86);
+  color: #be123c;
+  box-shadow: inset 0 0 0 1px rgba(251, 113, 133, 0.32);
+}
+
+.app-shell .ai-match-phone-status.is-success {
+  background: rgba(236, 253, 245, 0.9);
+  color: #047857;
+  box-shadow: inset 0 0 0 1px rgba(52, 211, 153, 0.36);
+}
+
+.app-shell .ai-match-phone-status strong {
+  font-size: 0.78rem;
+  font-weight: 940;
+}
+
+.app-shell .ai-match-phone-status span {
+  font-size: 0.7rem;
+  font-weight: 760;
+  line-height: 1.45;
+}
+
+.app-shell .ai-match-phone-check-button {
+  margin-top: 0.05rem;
+}
+
+.app-shell .ai-match-phone-locked-card {
+  justify-items: center;
+  gap: 0.45rem;
+  padding: 1.3rem 1rem;
+  text-align: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(245, 250, 255, 0.92)),
+    #ffffff;
+}
+
+.app-shell .ai-match-phone-locked-card svg {
+  color: #8b5cf6;
+}
+
+.app-shell .ai-match-phone-locked-card strong {
+  color: #111827;
+  font-size: 0.9rem;
+  font-weight: 940;
+}
+
+.app-shell .ai-match-phone-locked-card p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 760;
+  line-height: 1.45;
+}
+
 .app-shell .ai-match-section-head,
 .app-shell .ai-match-field-head,
 .app-shell .ai-match-list-meta,
@@ -12068,9 +12274,17 @@ body,
   line-height: 1.35;
 }
 
+.app-shell .ai-match-field-hint {
+  display: block;
+  color: #6b7a90;
+  font-size: 0.7rem;
+  font-weight: 740;
+  line-height: 1.38;
+}
+
 .app-shell .ai-match-gender-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.55rem;
 }
 
@@ -12203,6 +12417,23 @@ body,
   display: flex;
   flex-wrap: wrap;
   gap: 0.55rem;
+}
+
+.app-shell .ai-match-profile-filter-field {
+  margin-bottom: 0.05rem;
+}
+
+.app-shell .ai-match-filter-bar--inside {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.35rem, 1fr));
+  gap: 0.45rem;
+}
+
+.app-shell .ai-match-filter-bar--inside .ai-match-filter-chip {
+  width: 100%;
+  min-height: 2.15rem;
+  justify-content: center;
+  padding: 0 0.55rem;
 }
 
 .app-shell .ai-match-discovery-card {
@@ -12558,14 +12789,27 @@ body,
   position: absolute;
   top: 0.68rem;
   right: 0.68rem;
+  z-index: 6;
   display: grid;
   width: 1.9rem;
   height: 1.9rem;
   place-items: center;
+  pointer-events: auto;
   border-radius: 999px;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 241, 248, 0.96));
-  color: #ff4fa3;
+  color: #111827;
   box-shadow: 0 10px 22px rgba(255, 79, 163, 0.16);
+}
+
+.app-shell .ai-match-favorite-button--active {
+  background: linear-gradient(180deg, rgba(255, 245, 246, 0.99), rgba(255, 230, 233, 0.98));
+  color: #ef233c;
+  box-shadow: 0 12px 24px rgba(239, 35, 60, 0.2);
+}
+
+.app-shell .ai-match-favorite-button--active svg {
+  fill: #ef233c;
+  stroke: #ef233c;
 }
 
 .app-shell button.ai-match-request-button:not(.quick-orbit-item):not(.radial-fab) {
@@ -12851,7 +13095,7 @@ body,
   bottom: calc(env(safe-area-inset-bottom, 0px) + 0.72rem);
   z-index: 1200;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.3rem;
   padding: 0.42rem;
   border: 1px solid rgba(255, 255, 255, 0.9);
@@ -19054,8 +19298,82 @@ html[data-contrast="high"] .app-shell .uni-page {
   color: #16a34a;
 }
 
+/* Final override for AI match registration controls over shared button styles. */
+.app-shell button.ai-match-segment-button.is-active,
+.app-shell button.ai-match-segment-button[aria-pressed="true"],
+.app-shell button.ai-match-segment-button.is-active:hover,
+.app-shell button.ai-match-segment-button[aria-pressed="true"]:hover,
+.app-shell button.ai-match-segment-button.is-active:active,
+.app-shell button.ai-match-segment-button[aria-pressed="true"]:active {
+  filter: none !important;
+  transform: translateY(-1px) !important;
+}
+
+.app-shell button.ai-match-segment-button--blue.is-active,
+.app-shell button.ai-match-segment-button--blue[aria-pressed="true"],
+.app-shell button.ai-match-segment-button--blue.is-active:hover,
+.app-shell button.ai-match-segment-button--blue[aria-pressed="true"]:hover,
+.app-shell button.ai-match-segment-button--blue.is-active:active,
+.app-shell button.ai-match-segment-button--blue[aria-pressed="true"]:active {
+  border-color: #4f7cff !important;
+  background: linear-gradient(180deg, rgba(239, 246, 255, 0.99), rgba(219, 234, 254, 0.98)) !important;
+  color: #1d4ed8 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(79, 124, 255, 0.22),
+    0 0 0 2px rgba(96, 165, 250, 0.22),
+    0 10px 22px rgba(79, 124, 255, 0.16) !important;
+}
+
+.app-shell button.ai-match-segment-button--pink.is-active,
+.app-shell button.ai-match-segment-button--pink[aria-pressed="true"],
+.app-shell button.ai-match-segment-button--pink.is-active:hover,
+.app-shell button.ai-match-segment-button--pink[aria-pressed="true"]:hover,
+.app-shell button.ai-match-segment-button--pink.is-active:active,
+.app-shell button.ai-match-segment-button--pink[aria-pressed="true"]:active {
+  border-color: #ff6cab !important;
+  background: linear-gradient(180deg, rgba(255, 245, 250, 0.99), rgba(255, 228, 241, 0.98)) !important;
+  color: #db2777 !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 108, 171, 0.22),
+    0 0 0 2px rgba(244, 114, 182, 0.22),
+    0 10px 22px rgba(255, 108, 171, 0.14) !important;
+}
+
+.app-shell button.ai-match-segment-button.is-active *,
+.app-shell button.ai-match-segment-button[aria-pressed="true"] * {
+  color: inherit !important;
+}
+
+.app-shell .ai-match-tag-grid--register button.ai-match-tag-chip.is-selected,
+.app-shell .ai-match-tag-grid--register button.ai-match-tag-chip[aria-pressed="true"],
+.app-shell .ai-match-tag-grid--register button.ai-match-tag-chip.is-selected:hover,
+.app-shell .ai-match-tag-grid--register button.ai-match-tag-chip[aria-pressed="true"]:hover,
+.app-shell .ai-match-tag-grid--register button.ai-match-tag-chip.is-selected:active,
+.app-shell .ai-match-tag-grid--register button.ai-match-tag-chip[aria-pressed="true"]:active {
+  border-color: #d8b4fe !important;
+  background: linear-gradient(180deg, rgba(253, 244, 255, 0.99), rgba(250, 245, 255, 0.97)) !important;
+  color: #64748b !important;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.92),
+    0 0 0 2px rgba(216, 180, 254, 0.35),
+    0 10px 22px rgba(216, 180, 254, 0.24) !important;
+  filter: none !important;
+  transform: translateY(-1px) !important;
+}
+
+.app-shell .ai-match-tag-grid--register button.ai-match-tag-chip.is-selected *,
+.app-shell .ai-match-tag-grid--register button.ai-match-tag-chip[aria-pressed="true"] * {
+  color: #64748b !important;
+}
+
+.app-shell .ai-match-tag-grid--register button.ai-match-tag-chip.is-selected:focus-visible,
+.app-shell .ai-match-tag-grid--register button.ai-match-tag-chip[aria-pressed="true"]:focus-visible {
+  outline: 1px solid rgba(216, 180, 254, 0.86) !important;
+  outline-offset: 2px;
+}
+
 /* Final override for AI match discovery tag filters over shared button pressed styles. */
-.app-shell button.ai-match-tag-chip[aria-pressed="true"] {
+.app-shell .ai-match-tag-grid--filter button.ai-match-tag-chip[aria-pressed="true"] {
   border-color: #d8b4fe !important;
   background: linear-gradient(180deg, rgba(253, 244, 255, 0.98), rgba(250, 245, 255, 0.96)) !important;
   color: #64748b !important;
@@ -19065,12 +19383,12 @@ html[data-contrast="high"] .app-shell .uni-page {
   filter: none !important;
 }
 
-.app-shell button.ai-match-tag-chip[aria-pressed="true"] * {
+.app-shell .ai-match-tag-grid--filter button.ai-match-tag-chip[aria-pressed="true"] * {
   color: #64748b !important;
 }
 
-.app-shell button.ai-match-tag-chip[aria-pressed="true"]:hover,
-.app-shell button.ai-match-tag-chip[aria-pressed="true"]:active {
+.app-shell .ai-match-tag-grid--filter button.ai-match-tag-chip[aria-pressed="true"]:hover,
+.app-shell .ai-match-tag-grid--filter button.ai-match-tag-chip[aria-pressed="true"]:active {
   border-color: #d8b4fe !important;
   background: linear-gradient(180deg, rgba(253, 244, 255, 0.98), rgba(250, 245, 255, 0.96)) !important;
   color: #64748b !important;
@@ -19081,7 +19399,7 @@ html[data-contrast="high"] .app-shell .uni-page {
   filter: none !important;
 }
 
-.app-shell button.ai-match-tag-chip[aria-pressed="true"]:focus-visible {
+.app-shell .ai-match-tag-grid--filter button.ai-match-tag-chip[aria-pressed="true"]:focus-visible {
   outline: 1px solid rgba(216, 180, 254, 0.8) !important;
   outline-offset: 1px;
 }

@@ -977,9 +977,16 @@ export async function fetchAiMatchProfiles() {
   return parseJson(response, "AI 프로필 목록을 불러오지 못했습니다.");
 }
 
-export async function createAiMatchImagePreview(file) {
+export async function checkAiMatchPhoneNumber(phoneNumber) {
+  const params = new URLSearchParams({ phoneNumber: phoneNumber || "" });
+  const response = await fetch(`${API_BASE}/ai-match/phone-check?${params.toString()}`);
+  return parseJson(response, "전화번호 확인에 실패했습니다.");
+}
+
+export async function createAiMatchImagePreview(file, phoneNumber) {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("phoneNumber", phoneNumber || "");
 
   const response = await fetchWithTimeout(`${API_BASE}/ai-match/image-preview`, {
     method: "POST",
@@ -1058,6 +1065,15 @@ export async function createAiMatchRequest(profileId, payload) {
     }),
   });
   return parseJson(response, "데이트 신청에 실패했습니다.");
+}
+
+export async function toggleAiMatchFavorite(profileId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/${profileId}/favorite`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "좋아요 처리에 실패했습니다.");
 }
 
 export async function acceptAiMatchRequest(requestId, nickname, pin) {

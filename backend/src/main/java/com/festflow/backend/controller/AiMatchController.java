@@ -3,14 +3,17 @@ package com.festflow.backend.controller;
 import com.festflow.backend.dto.AiMatchProfileAccessRequestDto;
 import com.festflow.backend.dto.AiMatchProfileAccessResponseDto;
 import com.festflow.backend.dto.AiMatchProfileDeleteDto;
+import com.festflow.backend.dto.AiMatchFavoriteResponseDto;
 import com.festflow.backend.dto.AiMatchImagePreviewDto;
 import com.festflow.backend.dto.AiMatchMeetupProposalDto;
+import com.festflow.backend.dto.AiMatchPhoneCheckDto;
 import com.festflow.backend.dto.AiMatchProfileResponseDto;
 import com.festflow.backend.dto.AiMatchProfileUpdateDto;
 import com.festflow.backend.dto.AiMatchRequestCreateDto;
 import com.festflow.backend.dto.AiMatchRequestResponseDto;
 import com.festflow.backend.service.AiMatchService;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,11 +34,19 @@ public class AiMatchController {
         this.aiMatchService = aiMatchService;
     }
 
+    @GetMapping("/phone-check")
+    public AiMatchPhoneCheckDto checkPhoneNumber(
+            @RequestParam("phoneNumber") String phoneNumber
+    ) {
+        return aiMatchService.checkPhoneNumber(phoneNumber);
+    }
+
     @PostMapping(value = "/image-preview", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public AiMatchImagePreviewDto createImagePreview(
-            @RequestParam("file") MultipartFile file
+            @RequestParam("file") MultipartFile file,
+            @RequestParam("phoneNumber") String phoneNumber
     ) throws IOException {
-        return aiMatchService.createImagePreview(file);
+        return aiMatchService.createImagePreview(file, phoneNumber);
     }
 
     @PostMapping(value = "/profiles", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -76,7 +87,7 @@ public class AiMatchController {
     public AiMatchProfileResponseDto updateProfile(
             @PathVariable Long profileId,
             @RequestBody AiMatchProfileUpdateDto requestDto
-    ) {
+    ) throws IOException {
         return aiMatchService.updateProfile(profileId, requestDto);
     }
 
@@ -94,6 +105,14 @@ public class AiMatchController {
             @RequestBody AiMatchRequestCreateDto requestDto
     ) {
         return aiMatchService.createRequest(profileId, requestDto);
+    }
+
+    @PostMapping("/profiles/{profileId}/favorite")
+    public AiMatchFavoriteResponseDto toggleFavorite(
+            @PathVariable Long profileId,
+            @RequestBody AiMatchProfileAccessRequestDto requestDto
+    ) {
+        return aiMatchService.toggleFavorite(profileId, requestDto);
     }
 
     @PostMapping("/requests/{requestId}/accept")

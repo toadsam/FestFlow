@@ -130,13 +130,27 @@ public class AiMatchProfile {
         return createdAt;
     }
 
-    public void updateProfile(String nickname, String gender, String intro, String meetPlace, String phoneNumber) {
+    public void updateProfile(
+            String nickname,
+            String gender,
+            String intro,
+            String meetPlace,
+            String phoneNumber,
+            String originalImageUrl,
+            String generatedImageUrl
+    ) {
         this.nickname = nickname;
         this.gender = gender;
         this.intro = intro;
         this.meetPlace = meetPlace;
         if (phoneNumber != null) {
             this.phoneNumber = phoneNumber;
+        }
+        if (originalImageUrl != null) {
+            this.originalImageUrl = originalImageUrl;
+        }
+        if (generatedImageUrl != null) {
+            this.generatedImageUrl = generatedImageUrl;
         }
     }
 
