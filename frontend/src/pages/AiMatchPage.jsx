@@ -763,7 +763,7 @@ export default function AiMatchPage() {
       loadAccessProfile(accessNickname, accessPin, activeScreen, { closeModal: false, notify: true })
         .catch((error) => {
           if (isAccessExpiredError(error)) {
-            clearAccessSession();
+            clearAccessSession({ resetForm: true });
             setActiveScreen("intro");
             setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 PIN으로 다시 입장해 주세요.");
           }
@@ -905,7 +905,7 @@ export default function AiMatchPage() {
 
   function showAuthenticatedActionError(error, fallbackMessage) {
     if (isAccessExpiredError(error)) {
-      clearAccessSession();
+      clearAccessSession({ resetForm: true });
       setActiveScreen("intro");
       setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 PIN으로 다시 입장해 주세요.");
       return;
@@ -1135,6 +1135,14 @@ export default function AiMatchPage() {
     setGeneratedImageUrl("");
     setConsent(false);
     setConvertSeconds(0);
+  }
+
+  function startNewRegistration() {
+    resetRegistrationForm();
+    setActiveSelectedProfile(null);
+    setErrorMessage("");
+    setSuccessMessage("");
+    setActiveScreen("register");
   }
 
   function startEditingProfile() {
@@ -1481,7 +1489,7 @@ export default function AiMatchPage() {
       await loadAccessProfile(accessNickname, accessPin, "requests", { notify: true });
     } catch (error) {
       if (isAccessExpiredError(error)) {
-        clearAccessSession();
+        clearAccessSession({ resetForm: true });
         setActiveScreen("intro");
         setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 PIN으로 다시 입장해 주세요.");
       } else {
@@ -1650,7 +1658,7 @@ export default function AiMatchPage() {
         <button
           type="button"
           className="ai-match-primary-button ai-match-primary-button--hero"
-          onClick={() => setActiveScreen("register")}
+          onClick={startNewRegistration}
         >
           <span className="ai-match-primary-button__icon">
             <IconHeart className="h-4 w-4" />
@@ -2194,7 +2202,7 @@ export default function AiMatchPage() {
             <strong>{loading ? "프로필을 불러오는 중입니다." : activeFilter === "좋아요" ? "좋아요한 프로필이 없습니다." : "아직 등록된 프로필이 없습니다."}</strong>
             <p>{loading ? "잠시만 기다려 주세요." : activeFilter === "좋아요" ? "하트를 누른 프로필만 여기에서 모아볼 수 있어요." : "첫 번째 프로필을 등록하고 처음 화면을 채워보세요."}</p>
             {!loading ? (
-              <button type="button" className="ai-match-secondary-button" onClick={() => setActiveScreen("register")}>
+              <button type="button" className="ai-match-secondary-button" onClick={startNewRegistration}>
                 프로필 등록하러 가기
               </button>
             ) : null}
@@ -2304,7 +2312,7 @@ export default function AiMatchPage() {
               type="button"
               className="ai-match-secondary-button"
               onClick={() => {
-                clearAccessSession();
+                clearAccessSession({ resetForm: true });
                 setActiveScreen("intro");
               }}
             >
