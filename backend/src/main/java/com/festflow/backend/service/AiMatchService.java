@@ -696,6 +696,7 @@ public class AiMatchService {
                 request.getMeetPlace(),
                 request.getMessage(),
                 request.getStatus(),
+                request.getStatusReason(),
                 request.getConnectionStatus(),
                 request.getAdminNote(),
                 request.getCreatedAt(),

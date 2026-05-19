@@ -67,6 +67,27 @@ function isMatched(status) {
   return ["ACCEPTED", "PROPOSED", "CONFIRMED"].includes(status);
 }
 
+function displayName(value, fallback) {
+  const safeValue = `${value || ""}`.trim();
+  return safeValue || fallback;
+}
+
+function getRequestDecisionLabel(request) {
+  if (request.status === "PENDING") return "상대 응답 대기";
+  if (isMatched(request.status)) return "상대가 수락";
+  if (request.status === "REJECTED") return "상대가 거절";
+  if (request.status === "CANCELED" && request.statusReason === "PROFILE_DELETED") return "삭제로 자동 취소";
+  if (request.status === "CANCELED") return "신청자가 취소";
+  return getStatusLabel(request.status);
+}
+
+function getRequestDecisionTone(request) {
+  if (isMatched(request.status)) return "accepted";
+  if (request.status === "REJECTED") return "rejected";
+  if (request.status === "CANCELED") return "canceled";
+  return "pending";
+}
+
 function parseProfileMeta(intro) {
   const source = `${intro || ""}`;
   const mbtiMatch = source.match(/\bMBTI\s*:\s*([A-Za-z]{4})\b/i);
@@ -251,7 +272,9 @@ export default function AiMatchAdminPage() {
         request.meetPlace,
         request.message,
         request.status,
+        request.statusReason,
         getStatusLabel(request.status),
+        getRequestDecisionLabel(request),
         request.connectionStatus,
         getConnectionStatusLabel(request.connectionStatus || "WAITING"),
         request.adminNote,
@@ -805,23 +828,47 @@ export default function AiMatchAdminPage() {
         </div>
         <div className="admin-ai-request-table">
           {filteredRequests.length === 0 && <p className="admin-console-hint">표시할 신청 기록이 없습니다.</p>}
-          {filteredRequests.map((request) => (
-            <div key={request.id} className="admin-ai-request-row">
-              <div className="admin-ai-request-row__people">
-                <AvatarThumb imageUrl={request.requesterImageUrl} name={request.requesterNickname} />
-                <div>
-                  <strong>{request.requesterNickname} → {request.profileNickname}</strong>
-                  <small>{request.createdAt?.replace("T", " ").slice(5, 16) || "-"}</small>
+          {filteredRequests.map((request) => {
+            const requesterName = displayName(request.requesterNickname, "삭제된 신청자");
+            const profileName = displayName(request.profileNickname, "삭제된 상대");
+            const decisionTone = getRequestDecisionTone(request);
+            const decisionLabel = getRequestDecisionLabel(request);
+            return (
+              <div key={request.id} className={`admin-ai-request-row is-${decisionTone}`}>
+                <div className="admin-ai-request-row__people">
+                  <div className="admin-ai-request-person">
+                    <AvatarThumb imageUrl={request.requesterImageUrl} name={requesterName} />
+                    <div>
+                      <small>신청자</small>
+                      <strong>{requesterName}</strong>
+                      <em>{request.requesterPhoneNumber || "전화번호 없음"}</em>
+                    </div>
+                  </div>
+                  <span className="admin-ai-request-arrow" aria-hidden="true">→</span>
+                  <div className="admin-ai-request-person">
+                    <AvatarThumb imageUrl={request.profileImageUrl} name={profileName} />
+                    <div>
+                      <small>받은 사람</small>
+                      <strong>{profileName}</strong>
+                      <em>{request.profilePhoneNumber || "전화번호 없음"}</em>
+                    </div>
+                  </div>
+                </div>
+                <div className="admin-ai-request-row__meta">
+                  <span className={`admin-ai-request-state is-${decisionTone}`}>{decisionLabel}</span>
+                  <span>{getStatusLabel(request.status)}</span>
+                  {isMatched(request.status) ? <span>{getConnectionStatusLabel(request.connectionStatus || "WAITING")}</span> : null}
+                  {request.adminNote ? <span>메모 있음</span> : null}
+                  <small>신청 {request.createdAt?.replace("T", " ").slice(5, 16) || "-"}</small>
+                  <small>변경 {request.updatedAt?.replace("T", " ").slice(5, 16) || "-"}</small>
+                </div>
+                <div className="admin-ai-request-row__message">
+                  <span>{request.meetPlace || "장소 없음"}</span>
+                  <p>{request.message || "메시지 없음"}</p>
                 </div>
               </div>
-              <div className="admin-ai-request-row__meta">
-                <span>{getStatusLabel(request.status)}</span>
-                {isMatched(request.status) ? <span>{getConnectionStatusLabel(request.connectionStatus || "WAITING")}</span> : null}
-                {request.adminNote ? <span>메모 있음</span> : null}
-                <small>{request.meetPlace || "장소 없음"}</small>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </article>
       </aside>
