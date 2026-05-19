@@ -12409,6 +12409,23 @@ body,
   gap: 0.55rem;
 }
 
+.app-shell .ai-match-profile-filter-field {
+  margin-bottom: 0.05rem;
+}
+
+.app-shell .ai-match-filter-bar--inside {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(5.35rem, 1fr));
+  gap: 0.45rem;
+}
+
+.app-shell .ai-match-filter-bar--inside .ai-match-filter-chip {
+  width: 100%;
+  min-height: 2.15rem;
+  justify-content: center;
+  padding: 0 0.55rem;
+}
+
 .app-shell .ai-match-discovery-card {
   display: grid;
   gap: 0.85rem;

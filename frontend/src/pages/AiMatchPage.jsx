@@ -2043,21 +2043,27 @@ export default function AiMatchPage() {
 
     return (
       <div className="ai-match-flow">
-        <section className="ai-match-filter-bar">
-          {PROFILE_FILTERS.map((filter) => (
-            <button
-              key={filter}
-              type="button"
-              className={`ai-match-filter-chip ai-match-filter-chip--${getFilterTone(filter)}${activeFilter === filter ? " is-active" : ""}`}
-              style={activeFilter === filter ? ACTIVE_FILTER_TAG_STYLE : undefined}
-              onClick={() => setActiveFilter(filter)}
-            >
-              {filter}
-            </button>
-          ))}
-        </section>
-
         <section className="ai-match-discovery-card">
+          <div className="ai-match-field ai-match-field--compact ai-match-profile-filter-field">
+            <div className="ai-match-field-head">
+              <span>프로필 필터</span>
+            </div>
+            <div className="ai-match-filter-bar ai-match-filter-bar--inside">
+              {PROFILE_FILTERS.map((filter) => (
+                <button
+                  key={filter}
+                  type="button"
+                  className={`ai-match-filter-chip ai-match-filter-chip--${getFilterTone(filter)}${activeFilter === filter ? " is-active" : ""}`}
+                  style={activeFilter === filter ? ACTIVE_FILTER_TAG_STYLE : undefined}
+                  aria-pressed={activeFilter === filter}
+                  onClick={() => setActiveFilter(filter)}
+                >
+                  {filter}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <label className="search-field ai-match-search-field">
             <IconSearch className="h-4 w-4" />
             <input
