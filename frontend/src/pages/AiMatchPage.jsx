@@ -98,6 +98,8 @@ const REQUEST_STATUS_LABELS = {
 const PROFILE_DELETED_STATUS_REASON = "PROFILE_DELETED";
 const RECEIVED_NOTICE_STATUSES = new Set(["PENDING", "CANCELED"]);
 const SENT_NOTICE_STATUSES = new Set(["ACCEPTED", "REJECTED", "PROPOSED", "CONFIRMED"]);
+const ACCESS_SESSION_STORAGE_KEY = "ai-match-access-session";
+const RESTORABLE_ACCESS_SCREENS = new Set(["intro", "requests", "my"]);
 
 function cleanTagValue(tag) {
   return `${tag || ""}`.replace(/^#/, "").trim().slice(0, 8);
@@ -404,6 +406,50 @@ function writeNoticeKeySets(storageKey, shownKeys, seenKeys) {
   }
 }
 
+function getRestorableAccessScreen(screen) {
+  return RESTORABLE_ACCESS_SCREENS.has(screen) ? screen : "intro";
+}
+
+function readAccessSession() {
+  if (typeof window === "undefined") return null;
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(ACCESS_SESSION_STORAGE_KEY) || "null");
+    if (!saved?.nickname || !saved?.pin) return null;
+    return {
+      nickname: `${saved.nickname}`.trim(),
+      pin: `${saved.pin}`.trim(),
+      screen: getRestorableAccessScreen(saved.screen),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeAccessSession(nickname, pin, screen) {
+  if (typeof window === "undefined" || !nickname || !pin) return;
+  try {
+    window.sessionStorage.setItem(
+      ACCESS_SESSION_STORAGE_KEY,
+      JSON.stringify({
+        nickname,
+        pin,
+        screen: getRestorableAccessScreen(screen),
+      }),
+    );
+  } catch {
+    // Session restore is best-effort; blocked storage should not break the app.
+  }
+}
+
+function clearStoredAccessSession() {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(ACCESS_SESSION_STORAGE_KEY);
+  } catch {
+    // Ignore storage failures.
+  }
+}
+
 function normalizeDateTimeLocalValue(dateTime) {
   if (!dateTime) return "";
   const date = new Date(dateTime);
@@ -619,6 +665,7 @@ export default function AiMatchPage() {
   const [registerAttempted, setRegisterAttempted] = useState(false);
   const [accessAttempted, setAccessAttempted] = useState(false);
   const accessSessionSeqRef = useRef(0);
+  const accessSessionRestoredRef = useRef(false);
   const accessRefreshInFlightRef = useRef(false);
   const requestSnapshotRef = useRef(null);
   const liveNoticeTimeoutRef = useRef(null);
@@ -704,6 +751,29 @@ export default function AiMatchPage() {
   useEffect(() => {
     setLoading(false);
   }, []);
+
+  useEffect(() => {
+    if (accessSessionRestoredRef.current) return;
+    accessSessionRestoredRef.current = true;
+    const savedSession = readAccessSession();
+    if (!savedSession) return;
+
+    setAccessSubmitting(true);
+    setErrorMessage("");
+    loadAccessProfile(savedSession.nickname, savedSession.pin, savedSession.screen, { closeModal: false })
+      .catch(() => {
+        clearAccessSession({ resetForm: true });
+        setActiveScreen("intro");
+      })
+      .finally(() => {
+        setAccessSubmitting(false);
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!accessProfile || !accessNickname || !accessPin) return;
+    writeAccessSession(accessNickname, accessPin, activeScreen);
+  }, [accessProfile, accessNickname, accessPin, activeScreen]);
 
   useEffect(
     () => () => {
@@ -877,6 +947,7 @@ export default function AiMatchPage() {
 
   function clearAccessSession({ resetForm = false } = {}) {
     accessSessionSeqRef.current += 1;
+    clearStoredAccessSession();
     setAccessProfile(null);
     setAccessRequests([]);
     setAccessSentRequests([]);
@@ -1060,6 +1131,7 @@ export default function AiMatchPage() {
     setAccessPhoneNumber(response.phoneNumber || "");
     setAccessPhoneUsage(response.phoneUsage || null);
     setRequesterNickname(response.profile?.nickname || nextNickname);
+    writeAccessSession(nextNickname, nextPin, resolvedNextScreen);
     const currentSelectedProfile = selectedProfileRef.current;
     if (currentSelectedProfile) {
       setActiveSelectedProfile(nextProfiles.find((profile) => profile.id === currentSelectedProfile.id) || null);
