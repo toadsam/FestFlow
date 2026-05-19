@@ -85,7 +85,7 @@ const ACTIVE_FILTER_TAG_STYLE = {
   boxShadow: "inset 0 0 0 1px rgba(255, 255, 255, 0.92), 0 10px 22px rgba(216, 180, 254, 0.22)",
   filter: "none",
 };
-const PIN_INPUT_PATTERN = /^\d{0,6}$/;
+const PASSWORD_INPUT_PATTERN = /^\S{0,10}$/;
 const PHONE_INPUT_PATTERN = /^[0-9+()\-\s]{0,30}$/;
 const REQUEST_STATUS_LABELS = {
   PENDING: "대기중",
@@ -688,7 +688,7 @@ export default function AiMatchPage() {
       ),
   );
   const pinMismatch = !isEditingProfile && pin.length > 0 && pinConfirm.length > 0 && pin !== pinConfirm;
-  const pinInvalid = !isEditingProfile && pin.length > 0 && !/^\d{4,6}$/.test(pin);
+  const pinInvalid = !isEditingProfile && pin.length > 0 && (pin.length < 4 || pin.length > 10 || /\s/.test(pin));
   const phoneDigits = phoneNumber.replace(/\D/g, "");
   const phoneNumberKey = getPhoneNumberKey(phoneNumber);
   const phoneMissing = !isEditingProfile && !phoneNumber.trim();
@@ -704,6 +704,7 @@ export default function AiMatchPage() {
   const consentMissing = !consent;
   const accessNicknameMissing = !accessNickname.trim();
   const accessPinMissing = !accessPin.trim();
+  const accessPinInvalid = accessPin.length > 0 && (accessPin.length < 4 || accessPin.length > 10 || /\s/.test(accessPin));
   const canRegister = Boolean(
     !nicknameMissing &&
       !introMissing &&
@@ -714,7 +715,7 @@ export default function AiMatchPage() {
       !hasDuplicateNickname &&
       phoneVerifiedForCurrentNumber &&
       (!phoneMissing && !phoneInvalid) &&
-      (isEditingProfile || (/^\d{4,6}$/.test(pin) && pin === pinConfirm)),
+      (isEditingProfile || (pin.length >= 4 && pin.length <= 10 && !/\s/.test(pin) && pin === pinConfirm)),
   );
   const registerSubmitDisabled = !canRegister;
   const bannerText = errorMessage
@@ -835,7 +836,7 @@ export default function AiMatchPage() {
           if (isAccessExpiredError(error)) {
             clearAccessSession({ resetForm: true });
             setActiveScreen("intro");
-            setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 PIN으로 다시 입장해 주세요.");
+            setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 비밀번호로 다시 입장해 주세요.");
           }
         })
         .finally(() => {
@@ -978,7 +979,7 @@ export default function AiMatchPage() {
     if (isAccessExpiredError(error)) {
       clearAccessSession({ resetForm: true });
       setActiveScreen("intro");
-      setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 PIN으로 다시 입장해 주세요.");
+      setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 비밀번호로 다시 입장해 주세요.");
       return;
     }
     const rawMessage = error?.message || "";
@@ -1152,7 +1153,11 @@ export default function AiMatchPage() {
       return;
     }
     if (!accessPin.trim()) {
-      setErrorMessage("PIN을 입력해 주세요.");
+      setErrorMessage("비밀번호를 입력해 주세요.");
+      return;
+    }
+    if (accessPinInvalid) {
+      setErrorMessage("비밀번호는 4~10자여야 합니다.");
       return;
     }
 
@@ -1400,19 +1405,19 @@ export default function AiMatchPage() {
       return;
     }
     if (!isEditingProfile && pinMissing) {
-      setErrorMessage("PIN을 입력해 주세요.");
+      setErrorMessage("비밀번호를 입력해 주세요.");
       return;
     }
     if (!isEditingProfile && pinInvalid) {
-      setErrorMessage("PIN은 4~6자리 숫자여야 합니다.");
+      setErrorMessage("비밀번호는 4~10자여야 합니다.");
       return;
     }
     if (!isEditingProfile && pinConfirmMissing) {
-      setErrorMessage("PIN 확인을 입력해 주세요.");
+      setErrorMessage("비밀번호 확인을 입력해 주세요.");
       return;
     }
     if (!isEditingProfile && pinMismatch) {
-      setErrorMessage("PIN이 서로 일치하지 않습니다.");
+      setErrorMessage("비밀번호가 서로 일치하지 않습니다.");
       return;
     }
     if (phoneMissing) {
@@ -1484,7 +1489,7 @@ export default function AiMatchPage() {
           await loadAccessProfile(createdNickname, createdPin, "intro");
           setSuccessMessage("AI 프로필이 등록되었습니다. 처음 화면에서 바로 확인해 보세요.");
         } catch (accessError) {
-          setSuccessMessage("AI 프로필은 등록되었습니다. 목록 갱신이 늦으면 신청함에서 닉네임과 PIN으로 다시 입장해 주세요.");
+          setSuccessMessage("AI 프로필은 등록되었습니다. 목록 갱신이 늦으면 신청함에서 닉네임과 비밀번호로 다시 입장해 주세요.");
         }
       }
     } catch (error) {
@@ -1498,7 +1503,7 @@ export default function AiMatchPage() {
     event.preventDefault();
     if (!selectedProfile) return;
     if (!accessProfile) {
-      setErrorMessage("등록한 닉네임과 PIN으로 먼저 입장해 주세요.");
+      setErrorMessage("등록한 닉네임과 비밀번호로 먼저 입장해 주세요.");
       openAccessModal("intro");
       return;
     }
@@ -1563,7 +1568,7 @@ export default function AiMatchPage() {
       if (isAccessExpiredError(error)) {
         clearAccessSession({ resetForm: true });
         setActiveScreen("intro");
-        setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 PIN으로 다시 입장해 주세요.");
+        setErrorMessage("프로필이 삭제되었거나 인증이 만료되었습니다. 닉네임과 비밀번호로 다시 입장해 주세요.");
       } else {
         setErrorMessage(error.message || "신청함을 새로고침하지 못했습니다.");
       }
@@ -1763,7 +1768,7 @@ export default function AiMatchPage() {
               <h2>내 프로필 수정</h2>
               <span>{accessProfile?.nickname}</span>
             </div>
-            <p className="ai-match-note">신청함에서 인증된 PIN으로 수정이 진행됩니다.</p>
+            <p className="ai-match-note">신청함에서 인증된 비밀번호로 수정이 진행됩니다.</p>
           </section>
         ) : null}
 
@@ -1933,7 +1938,7 @@ export default function AiMatchPage() {
               value={nickname}
               maxLength={12}
               onChange={(event) => setNickname(event.target.value)}
-              placeholder="예) 햇살같은하루"
+              placeholder="예) 공대카리나"
             />
           </label>
 
@@ -1941,42 +1946,43 @@ export default function AiMatchPage() {
             <>
               <label className="ai-match-field">
                 <div className="ai-match-field-head">
-                  <span>4. PIN</span>
-                  <small>4~6자리 숫자</small>
+                  <span>4. 비밀번호</span>
+                  <small>4~10자</small>
                 </div>
-                {pinMissing ? <small className="ai-match-field-error">PIN을 입력해 주세요.</small> : null}
-                {pinInvalid ? <small className="ai-match-field-error">PIN은 4~6자리 숫자여야 합니다.</small> : null}
+                <small className="ai-match-field-hint">보안을 위해 생일, 전화번호처럼 쉽게 맞힐 수 있는 숫자는 피해주세요.</small>
+                {pinMissing ? <small className="ai-match-field-error">비밀번호를 입력해 주세요.</small> : null}
+                {pinInvalid ? <small className="ai-match-field-error">비밀번호는 4~10자여야 합니다.</small> : null}
                 <input
+                  type="password"
                   value={pin}
-                  inputMode="numeric"
-                  maxLength={6}
+                  maxLength={10}
                   onChange={(event) => {
-                    const nextValue = event.target.value.replace(/\D/g, "");
-                    if (PIN_INPUT_PATTERN.test(nextValue)) {
+                    const nextValue = event.target.value;
+                    if (PASSWORD_INPUT_PATTERN.test(nextValue)) {
                       setPin(nextValue);
                     }
                   }}
-                  placeholder="예) 1234"
+                  placeholder="예) run24me"
                 />
               </label>
 
               <label className="ai-match-field">
                 <div className="ai-match-field-head">
-                  <span>5. PIN 확인</span>
+                  <span>5. 비밀번호 확인</span>
                 </div>
-                {pinConfirmMissing ? <small className="ai-match-field-error">PIN 확인을 입력해 주세요.</small> : null}
-                {pinMismatch ? <small className="ai-match-field-error">PIN이 서로 일치하지 않습니다.</small> : null}
+                {pinConfirmMissing ? <small className="ai-match-field-error">비밀번호 확인을 입력해 주세요.</small> : null}
+                {pinMismatch ? <small className="ai-match-field-error">비밀번호가 서로 일치하지 않습니다.</small> : null}
                 <input
+                  type="password"
                   value={pinConfirm}
-                  inputMode="numeric"
-                  maxLength={6}
+                  maxLength={10}
                   onChange={(event) => {
-                    const nextValue = event.target.value.replace(/\D/g, "");
-                    if (PIN_INPUT_PATTERN.test(nextValue)) {
+                    const nextValue = event.target.value;
+                    if (PASSWORD_INPUT_PATTERN.test(nextValue)) {
                       setPinConfirm(nextValue);
                     }
                   }}
-                  placeholder="PIN을 다시 입력해주세요"
+                  placeholder="비밀번호를 다시 입력해주세요"
                 />
               </label>
             </>
@@ -2056,7 +2062,7 @@ export default function AiMatchPage() {
               value={intro}
               maxLength={120}
               onChange={(event) => setIntro(event.target.value)}
-              placeholder="나를 간단히 소개해주세요. 예) 웃음이 많고 공원 산책을 좋아해요!"
+              placeholder="나를 간단히 소개해주세요. 예) 키는 작지만 러닝 뛰는 걸 좋아해요!"
             />
           </label>
 
@@ -2103,10 +2109,10 @@ export default function AiMatchPage() {
       return (
         <div className="ai-match-flow">
           <section className="ai-match-empty-card">
-            <strong>등록된 사람 목록은 닉네임과 PIN 인증 후 볼 수 있습니다.</strong>
-            <p>프로필을 등록한 닉네임과 PIN을 입력하면 다른 참가자 목록과 데이트 신청 화면이 열립니다.</p>
+            <strong>등록된 사람 목록은 닉네임과 비밀번호 인증 후 볼 수 있습니다.</strong>
+            <p>프로필을 등록한 닉네임과 비밀번호를 입력하면 다른 참가자 목록과 데이트 신청 화면이 열립니다.</p>
             <button type="button" className="ai-match-secondary-button" onClick={() => openAccessModal("intro")}>
-              닉네임 + PIN으로 입장
+              닉네임 + 비밀번호로 입장
             </button>
           </section>
         </div>
@@ -2324,10 +2330,10 @@ export default function AiMatchPage() {
       return (
         <div className="ai-match-flow">
           <section className="ai-match-empty-card">
-            <strong>MY는 PIN으로 잠금되어 있습니다.</strong>
-            <p>프로필을 등록한 닉네임과 PIN을 입력하면 내 프로필을 관리할 수 있어요.</p>
+            <strong>MY는 비밀번호로 잠금되어 있습니다.</strong>
+            <p>프로필을 등록한 닉네임과 비밀번호를 입력하면 내 프로필을 관리할 수 있어요.</p>
             <button type="button" className="ai-match-secondary-button" onClick={() => openAccessModal("my")}>
-              닉네임 + PIN으로 열기
+              닉네임 + 비밀번호로 열기
             </button>
           </section>
         </div>
@@ -2408,8 +2414,8 @@ export default function AiMatchPage() {
       return (
         <div className="ai-match-flow">
           <section className="ai-match-empty-card">
-            <strong>신청함은 PIN으로 잠금되어 있습니다.</strong>
-            <p>프로필을 등록한 닉네임과 PIN을 입력하면 받은 요청과 보낸 요청을 확인할 수 있어요.</p>
+            <strong>신청함은 비밀번호로 잠금되어 있습니다.</strong>
+            <p>프로필을 등록한 닉네임과 비밀번호를 입력하면 받은 요청과 보낸 요청을 확인할 수 있어요.</p>
             <button type="button" className="ai-match-secondary-button" onClick={() => openAccessModal("requests")}>
               신청함 잠금 해제
             </button>
@@ -2810,7 +2816,7 @@ export default function AiMatchPage() {
             </button>
             <div className="ai-match-section-head">
               <h2 id="ai-match-access-title">{getAccessModalTitle()}</h2>
-              <span>닉네임 + PIN</span>
+              <span>닉네임 + 비밀번호</span>
             </div>
             <label className="ai-match-field">
               <div className="ai-match-field-head">
@@ -2827,22 +2833,23 @@ export default function AiMatchPage() {
             </label>
             <label className="ai-match-field">
               <div className="ai-match-field-head">
-                <span>PIN</span>
-                <small>4~6자리 숫자</small>
+                <span>비밀번호</span>
+                <small>4~10자</small>
               </div>
               <input
+                type="password"
                 value={accessPin}
-                inputMode="numeric"
-                maxLength={6}
+                maxLength={10}
                 onChange={(event) => {
-                  const nextValue = event.target.value.replace(/\D/g, "");
-                  if (PIN_INPUT_PATTERN.test(nextValue)) {
+                  const nextValue = event.target.value;
+                  if (PASSWORD_INPUT_PATTERN.test(nextValue)) {
                     setAccessPin(nextValue);
                   }
                 }}
-                placeholder="예) 1234"
+                placeholder="예) 364657434"
               />
-              {accessAttempted && accessPinMissing ? <small className="ai-match-field-error">PIN을 입력해 주세요.</small> : null}
+              {accessAttempted && accessPinMissing ? <small className="ai-match-field-error">비밀번호를 입력해 주세요.</small> : null}
+              {accessAttempted && accessPinInvalid ? <small className="ai-match-field-error">비밀번호는 4~10자여야 합니다.</small> : null}
             </label>
             <button type="submit" className="ai-match-primary-button ai-match-primary-button--sheet" disabled={accessSubmitting}>
               <span className="ai-match-primary-button__label">

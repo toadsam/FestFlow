@@ -11759,14 +11759,16 @@ body,
 .app-shell .ai-match-phone-rules span {
   display: grid;
   min-height: 2.35rem;
-  align-items: center;
-  padding: 0.58rem 0.68rem;
+  place-items: center;
+  padding: 0.58rem 0.72rem;
   border-radius: 0.9rem;
   background: rgba(255, 255, 255, 0.82);
   color: #5b2fb8;
   font-size: 0.68rem;
   font-weight: 860;
-  line-height: 1.35;
+  line-height: 1.42;
+  text-align: center;
+  word-break: keep-all;
   box-shadow: inset 0 0 0 1px rgba(216, 180, 254, 0.48);
 }
 
@@ -12270,6 +12272,14 @@ body,
   font-size: 0.72rem;
   font-weight: 780;
   line-height: 1.35;
+}
+
+.app-shell .ai-match-field-hint {
+  display: block;
+  color: #6b7a90;
+  font-size: 0.7rem;
+  font-weight: 740;
+  line-height: 1.38;
 }
 
 .app-shell .ai-match-gender-grid {

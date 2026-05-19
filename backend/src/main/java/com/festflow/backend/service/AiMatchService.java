@@ -627,9 +627,9 @@ public class AiMatchService {
         String safePin = trimRequired(pin, "pin", 20);
         validatePin(safePin);
         AiMatchProfile profile = profileRepository.findByNicknameIgnoreCaseAndStatus(safeNickname, "ACTIVE")
-                .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "닉네임 또는 PIN이 올바르지 않습니다."));
+                .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "닉네임 또는 비밀번호가 올바르지 않습니다."));
         if (profile.getPinHash() == null || !passwordEncoder.matches(safePin, profile.getPinHash())) {
-            throw new ResponseStatusException(UNAUTHORIZED, "닉네임 또는 PIN이 올바르지 않습니다.");
+            throw new ResponseStatusException(UNAUTHORIZED, "닉네임 또는 비밀번호가 올바르지 않습니다.");
         }
         return profile;
     }
@@ -644,8 +644,8 @@ public class AiMatchService {
     }
 
     private void validatePin(String pin) {
-        if (!pin.matches("\\d{4,6}")) {
-            throw new ResponseStatusException(BAD_REQUEST, "PIN은 4~6자리 숫자여야 합니다.");
+        if (pin.length() < 4 || pin.length() > 10 || pin.matches(".*\\s.*")) {
+            throw new ResponseStatusException(BAD_REQUEST, "비밀번호는 4~10자여야 합니다.");
         }
     }
 
@@ -758,7 +758,7 @@ public class AiMatchService {
             case "nickname" -> "닉네임";
             case "gender" -> "성별";
             case "intro" -> "자기소개";
-            case "pin" -> "PIN";
+            case "pin" -> "비밀번호";
             case "phoneNumber" -> "전화번호";
             case "meetPlace" -> "만날 장소";
             case "requesterNickname" -> "신청자 닉네임";
