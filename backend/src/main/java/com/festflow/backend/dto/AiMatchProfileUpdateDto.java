@@ -7,6 +7,8 @@ public record AiMatchProfileUpdateDto(
         String intro,
         String phoneNumber,
         String meetPlace,
+        String originalImageUrl,
+        String generatedImageUrl,
         String pin
 ) {
 }

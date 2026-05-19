@@ -5,17 +5,23 @@ import com.festflow.backend.dto.AiMatchAdminNoteUpdateDto;
 import com.festflow.backend.dto.AiMatchAdminProfileDto;
 import com.festflow.backend.dto.AiMatchAdminRequestDto;
 import com.festflow.backend.dto.AiMatchConnectionStatusUpdateDto;
+import com.festflow.backend.dto.AiMatchFavoriteResponseDto;
 import com.festflow.backend.dto.AiMatchProfileAccessRequestDto;
 import com.festflow.backend.dto.AiMatchProfileAccessResponseDto;
 import com.festflow.backend.dto.AiMatchProfileDeleteDto;
 import com.festflow.backend.dto.AiMatchImagePreviewDto;
 import com.festflow.backend.dto.AiMatchMeetupProposalDto;
+import com.festflow.backend.dto.AiMatchPhoneCheckDto;
 import com.festflow.backend.dto.AiMatchProfileResponseDto;
 import com.festflow.backend.dto.AiMatchProfileUpdateDto;
 import com.festflow.backend.dto.AiMatchRequestCreateDto;
 import com.festflow.backend.dto.AiMatchRequestResponseDto;
+import com.festflow.backend.entity.AiMatchFavorite;
+import com.festflow.backend.entity.AiMatchPhoneUsage;
 import com.festflow.backend.entity.AiMatchProfile;
 import com.festflow.backend.entity.AiMatchRequest;
+import com.festflow.backend.repository.AiMatchFavoriteRepository;
+import com.festflow.backend.repository.AiMatchPhoneUsageRepository;
 import com.festflow.backend.repository.AiMatchProfileRepository;
 import com.festflow.backend.repository.AiMatchRequestRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -40,8 +46,12 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 @Service
 public class AiMatchService {
 
+    private static final int MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE = 2;
+
     private final AiMatchProfileRepository profileRepository;
     private final AiMatchRequestRepository requestRepository;
+    private final AiMatchFavoriteRepository favoriteRepository;
+    private final AiMatchPhoneUsageRepository phoneUsageRepository;
     private final UploadStorageService uploadStorageService;
     private final AiImageGenerationService aiImageGenerationService;
     private final PasswordEncoder passwordEncoder;
@@ -49,32 +59,102 @@ public class AiMatchService {
     public AiMatchService(
             AiMatchProfileRepository profileRepository,
             AiMatchRequestRepository requestRepository,
+            AiMatchFavoriteRepository favoriteRepository,
+            AiMatchPhoneUsageRepository phoneUsageRepository,
             UploadStorageService uploadStorageService,
             AiImageGenerationService aiImageGenerationService,
             PasswordEncoder passwordEncoder
     ) {
         this.profileRepository = profileRepository;
         this.requestRepository = requestRepository;
+        this.favoriteRepository = favoriteRepository;
+        this.phoneUsageRepository = phoneUsageRepository;
         this.uploadStorageService = uploadStorageService;
         this.aiImageGenerationService = aiImageGenerationService;
         this.passwordEncoder = passwordEncoder;
     }
 
+    @Transactional(readOnly = true)
+    public AiMatchPhoneCheckDto checkPhoneNumber(String phoneNumber) {
+        String phoneNumberKey = normalizePhoneNumberKey(phoneNumber, true);
+        AiMatchPhoneUsage phoneUsage = phoneUsageRepository.findByPhoneNumber(phoneNumberKey).orElse(null);
+        int usedCount = phoneUsage == null ? 0 : phoneUsage.getSuccessfulImageConversionCount();
+        int remainingCount = Math.max(0, MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE - usedCount);
+
+        if (phoneUsage != null && phoneUsage.isBlocked()) {
+            return new AiMatchPhoneCheckDto(
+                    phoneNumberKey,
+                    false,
+                    usedCount,
+                    remainingCount,
+                    "삭제된 프로필의 전화번호는 다시 가입할 수 없습니다."
+            );
+        }
+        if (isPhoneNumberDeleted(phoneNumberKey)) {
+            return new AiMatchPhoneCheckDto(
+                    phoneNumberKey,
+                    false,
+                    usedCount,
+                    remainingCount,
+                    "삭제된 프로필의 전화번호는 다시 가입할 수 없습니다."
+            );
+        }
+        if (isPhoneNumberInUse(phoneNumberKey, null)) {
+            return new AiMatchPhoneCheckDto(
+                    phoneNumberKey,
+                    false,
+                    usedCount,
+                    remainingCount,
+                    "이미 등록된 전화번호입니다."
+            );
+        }
+        if (remainingCount <= 0) {
+            return new AiMatchPhoneCheckDto(
+                    phoneNumberKey,
+                    false,
+                    usedCount,
+                    0,
+                    "이 전화번호는 AI 이미지 변환 가능 횟수를 모두 사용했습니다."
+            );
+        }
+        return new AiMatchPhoneCheckDto(
+                phoneNumberKey,
+                true,
+                usedCount,
+                remainingCount,
+                "사용 가능한 전화번호입니다. AI 변환 " + remainingCount + "회 남았습니다."
+        );
+    }
+
     @Transactional
-    public AiMatchImagePreviewDto createImagePreview(MultipartFile file) throws IOException {
+    public AiMatchImagePreviewDto createImagePreview(MultipartFile file, String phoneNumber) throws IOException {
         if (!aiImageGenerationService.isConfigured()) {
             throw new ResponseStatusException(
                     BAD_REQUEST,
                     "OPENAI_API_KEY is required for webtoon image conversion."
             );
         }
+        String safePhoneNumberKey = normalizePhoneNumberKey(phoneNumber, true);
+        AiMatchPhoneUsage phoneUsage = getOrCreatePhoneUsageForUpdate(safePhoneNumberKey);
+        ensurePhoneNumberNotDeleted(safePhoneNumberKey);
+        ensurePhoneCanGenerateImage(phoneUsage);
+
         String originalImageUrl = uploadStorageService.saveImage(file, "ai-profile-original");
         String generatedImageUrl = aiImageGenerationService.generateFestivalProfileImage(
                 originalImageUrl,
                 "",
                 ""
         );
-        return new AiMatchImagePreviewDto(originalImageUrl, generatedImageUrl);
+        phoneUsage.recordSuccessfulImageConversion();
+        int usedCount = phoneUsage.getSuccessfulImageConversionCount();
+        int remainingCount = Math.max(0, MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE - usedCount);
+        return new AiMatchImagePreviewDto(
+                originalImageUrl,
+                generatedImageUrl,
+                usedCount,
+                remainingCount,
+                "AI 변환이 완료되었습니다. " + remainingCount + "회 남았습니다."
+        );
     }
 
     @Transactional
@@ -95,11 +175,16 @@ public class AiMatchService {
         }
 
         String safeNickname = trimRequired(nickname, "nickname", 40);
-        String safeGender = trimRequired(gender, "gender", 20);
+        String safeGender = normalizeGender(gender);
         String safeIntro = trimRequired(intro, "intro", 500);
         String safePin = trimRequired(pin, "pin", 20);
         String safePhoneNumber = normalizePhoneNumber(phoneNumber, true);
+        String safePhoneNumberKey = normalizePhoneNumberKey(safePhoneNumber, true);
         String safeMeetPlace = trimRequired(meetPlace, "meetPlace", 120);
+        AiMatchPhoneUsage phoneUsage = getOrCreatePhoneUsageForUpdate(safePhoneNumberKey);
+        ensurePhoneNumberNotDeleted(safePhoneNumberKey);
+        ensurePhoneCanRegister(phoneUsage);
+        ensurePhoneNumberAvailable(safePhoneNumberKey, null);
         validatePin(safePin);
         ensureNicknameAvailable(safeNickname, null);
         if (!aiImageGenerationService.isConfigured()) {
@@ -119,12 +204,14 @@ public class AiMatchService {
                 uploadStorageService.resolveUploadUrl(safeOriginalImageUrl);
             }
         } else {
+            ensurePhoneCanGenerateImage(phoneUsage);
             safeOriginalImageUrl = uploadStorageService.saveImage(file, "ai-profile-original");
             safeGeneratedImageUrl = aiImageGenerationService.generateFestivalProfileImage(
                     safeOriginalImageUrl,
                     safeNickname,
                     safeIntro
             );
+            phoneUsage.recordSuccessfulImageConversion();
         }
 
         AiMatchProfile saved = profileRepository.save(new AiMatchProfile(
@@ -149,13 +236,16 @@ public class AiMatchService {
         closeRequestsWithInactiveParticipants(Stream.concat(receivedRequests.stream(), sentRequests.stream()).toList());
         return new AiMatchProfileAccessResponseDto(
                 toProfileDto(profile),
+                profile.getPhoneNumber(),
+                toPhoneUsageDto(profile),
                 receivedRequests.stream()
                         .map(this::toRequestDto)
                         .toList(),
                 sentRequests.stream()
                         .map(this::toRequestDto)
                         .toList(),
-                getDiscoverableProfiles(profile.getId())
+                getDiscoverableProfiles(profile.getId()),
+                favoriteRepository.findActiveProfileIdsByRequesterProfileId(profile.getId())
         );
     }
 
@@ -211,20 +301,46 @@ public class AiMatchService {
     }
 
     @Transactional
-    public AiMatchProfileResponseDto updateProfile(Long profileId, AiMatchProfileUpdateDto requestDto) {
+    public AiMatchProfileResponseDto updateProfile(Long profileId, AiMatchProfileUpdateDto requestDto) throws IOException {
         AiMatchProfile profile = authenticateProfile(requestDto.currentNickname(), requestDto.pin());
         if (!profile.getId().equals(profileId)) {
             throw new ResponseStatusException(UNAUTHORIZED, "Profile credentials do not match this profile.");
         }
 
         String safeNickname = trimRequired(requestDto.nickname(), "nickname", 40);
-        String safeGender = trimRequired(requestDto.gender(), "gender", 20);
+        String safeGender = normalizeGender(requestDto.gender());
         String safeIntro = trimRequired(requestDto.intro(), "intro", 500);
         String safePhoneNumber = normalizePhoneNumber(requestDto.phoneNumber(), false);
         String safeMeetPlace = trimRequired(requestDto.meetPlace(), "meetPlace", 120);
+        String safeOriginalImageUrl = trimOrNull(requestDto.originalImageUrl());
+        String safeGeneratedImageUrl = trimOrNull(requestDto.generatedImageUrl());
+        if (safePhoneNumber != null) {
+            String requestedPhoneNumberKey = normalizePhoneNumberKey(safePhoneNumber, true);
+            String currentPhoneNumberKey = phoneNumberKeyFromStored(profile.getPhoneNumber());
+            if (currentPhoneNumberKey != null && !currentPhoneNumberKey.equals(requestedPhoneNumberKey)) {
+                throw new ResponseStatusException(CONFLICT, "AI 과사용 방지를 위해 전화번호는 가입 후 변경할 수 없습니다.");
+            }
+            ensurePhoneNumberNotDeleted(requestedPhoneNumberKey);
+            ensurePhoneCanRegister(getOrCreatePhoneUsageForUpdate(requestedPhoneNumberKey));
+            ensurePhoneNumberAvailable(requestedPhoneNumberKey, profileId);
+        }
+        if (safeGeneratedImageUrl != null) {
+            uploadStorageService.resolveUploadUrl(safeGeneratedImageUrl);
+        }
+        if (safeOriginalImageUrl != null) {
+            uploadStorageService.resolveUploadUrl(safeOriginalImageUrl);
+        }
         ensureNicknameAvailable(safeNickname, profileId);
 
-        profile.updateProfile(safeNickname, safeGender, safeIntro, safeMeetPlace, safePhoneNumber);
+        profile.updateProfile(
+                safeNickname,
+                safeGender,
+                safeIntro,
+                safeMeetPlace,
+                safePhoneNumber,
+                safeOriginalImageUrl,
+                safeGeneratedImageUrl
+        );
         return toProfileDto(profile);
     }
 
@@ -261,6 +377,8 @@ public class AiMatchService {
             throw new ResponseStatusException(UNAUTHORIZED, "Profile credentials do not match this profile.");
         }
         profile.deactivate();
+        favoriteRepository.deleteAllByRequesterProfileIdOrProfileId(profileId, profileId);
+        blockPhoneNumber(profile.getPhoneNumber());
         closeRequestsForDeletedProfile(profileId);
     }
 
@@ -269,7 +387,39 @@ public class AiMatchService {
         AiMatchProfile profile = profileRepository.findById(profileId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "AI match profile not found."));
         profile.deactivate();
+        favoriteRepository.deleteAllByRequesterProfileIdOrProfileId(profileId, profileId);
+        blockPhoneNumber(profile.getPhoneNumber());
         closeRequestsForDeletedProfile(profileId);
+    }
+
+    @Transactional
+    public AiMatchFavoriteResponseDto toggleFavorite(Long profileId, AiMatchProfileAccessRequestDto requestDto) {
+        AiMatchProfile requesterProfile = authenticateProfile(requestDto.nickname(), requestDto.pin());
+        AiMatchProfile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "AI match profile not found."));
+        if (!"ACTIVE".equals(profile.getStatus())) {
+            throw new ResponseStatusException(NOT_FOUND, "존재하지 않는 프로필입니다.");
+        }
+        if (requesterProfile.getId().equals(profile.getId())) {
+            throw new ResponseStatusException(BAD_REQUEST, "자기 자신은 좋아요할 수 없습니다.");
+        }
+
+        boolean favorite = favoriteRepository
+                .findByRequesterProfileIdAndProfileId(requesterProfile.getId(), profile.getId())
+                .map(existing -> {
+                    favoriteRepository.delete(existing);
+                    return false;
+                })
+                .orElseGet(() -> {
+                    favoriteRepository.save(new AiMatchFavorite(requesterProfile, profile));
+                    return true;
+                });
+
+        return new AiMatchFavoriteResponseDto(
+                profile.getId(),
+                favorite,
+                favoriteRepository.findActiveProfileIdsByRequesterProfileId(requesterProfile.getId())
+        );
     }
 
     @Transactional
@@ -427,6 +577,26 @@ public class AiMatchService {
         );
     }
 
+    private AiMatchPhoneCheckDto toPhoneUsageDto(AiMatchProfile profile) {
+        String phoneNumberKey = phoneNumberKeyFromStored(profile.getPhoneNumber());
+        AiMatchPhoneUsage phoneUsage = phoneNumberKey == null
+                ? null
+                : phoneUsageRepository.findByPhoneNumber(phoneNumberKey).orElse(null);
+        int usedCount = phoneUsage == null ? 0 : phoneUsage.getSuccessfulImageConversionCount();
+        int remainingCount = Math.max(0, MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE - usedCount);
+        boolean available = (phoneUsage == null || !phoneUsage.isBlocked()) && remainingCount > 0;
+        String message = available
+                ? "AI 변환 " + remainingCount + "회 남았습니다."
+                : "이 전화번호는 AI 이미지 변환 가능 횟수를 모두 사용했습니다.";
+        return new AiMatchPhoneCheckDto(
+                phoneNumberKey == null ? "" : phoneNumberKey,
+                available,
+                usedCount,
+                remainingCount,
+                message
+        );
+    }
+
     private AiMatchAdminProfileDto toAdminProfileDto(
             AiMatchProfile profile,
             long receivedCount,
@@ -477,6 +647,14 @@ public class AiMatchService {
         if (!pin.matches("\\d{4,6}")) {
             throw new ResponseStatusException(BAD_REQUEST, "PIN은 4~6자리 숫자여야 합니다.");
         }
+    }
+
+    private String normalizeGender(String gender) {
+        String safeGender = trimRequired(gender, "gender", 20);
+        if ("남성".equals(safeGender) || "여성".equals(safeGender)) {
+            return safeGender;
+        }
+        throw new ResponseStatusException(BAD_REQUEST, "성별은 남자 또는 여자만 선택할 수 있습니다.");
     }
 
     private AiMatchRequestResponseDto toRequestDto(AiMatchRequest request) {
@@ -600,6 +778,78 @@ public class AiMatchService {
             throw new ResponseStatusException(BAD_REQUEST, "입력값은 최대 " + maxLength + "자 이하로 입력해 주세요.");
         }
         return trimmed;
+    }
+
+    private AiMatchPhoneUsage getOrCreatePhoneUsageForUpdate(String phoneNumberKey) {
+        return phoneUsageRepository.findByPhoneNumberForUpdate(phoneNumberKey)
+                .orElseGet(() -> phoneUsageRepository.saveAndFlush(new AiMatchPhoneUsage(phoneNumberKey)));
+    }
+
+    private void ensurePhoneCanRegister(AiMatchPhoneUsage phoneUsage) {
+        if (phoneUsage.isBlocked()) {
+            throw new ResponseStatusException(CONFLICT, "삭제된 프로필의 전화번호는 다시 가입할 수 없습니다.");
+        }
+    }
+
+    private void ensurePhoneCanGenerateImage(AiMatchPhoneUsage phoneUsage) {
+        ensurePhoneCanRegister(phoneUsage);
+        if (phoneUsage.getSuccessfulImageConversionCount() >= MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE) {
+            throw new ResponseStatusException(CONFLICT, "이 전화번호는 AI 이미지 변환 가능 횟수를 모두 사용했습니다.");
+        }
+    }
+
+    private void ensurePhoneNumberNotDeleted(String phoneNumberKey) {
+        if (isPhoneNumberDeleted(phoneNumberKey)) {
+            throw new ResponseStatusException(CONFLICT, "삭제된 프로필의 전화번호는 다시 가입할 수 없습니다.");
+        }
+    }
+
+    private void blockPhoneNumber(String phoneNumber) {
+        String phoneNumberKey = phoneNumberKeyFromStored(phoneNumber);
+        if (phoneNumberKey == null) {
+            return;
+        }
+        getOrCreatePhoneUsageForUpdate(phoneNumberKey).block();
+    }
+
+    private void ensurePhoneNumberAvailable(String phoneNumberKey, Long profileId) {
+        if (isPhoneNumberInUse(phoneNumberKey, profileId)) {
+            throw new ResponseStatusException(CONFLICT, "이미 사용 중인 전화번호입니다.");
+        }
+    }
+
+    private boolean isPhoneNumberInUse(String phoneNumberKey, Long profileId) {
+        return profileRepository.findAllByStatusOrderByCreatedAtDesc("ACTIVE").stream()
+                .filter(profile -> profileId == null || !profile.getId().equals(profileId))
+                .map(profile -> phoneNumberKeyFromStored(profile.getPhoneNumber()))
+                .anyMatch(phoneNumberKey::equals);
+    }
+
+    private boolean isPhoneNumberDeleted(String phoneNumberKey) {
+        return profileRepository.findAll().stream()
+                .filter(profile -> "DELETED".equals(profile.getStatus()))
+                .map(profile -> phoneNumberKeyFromStored(profile.getPhoneNumber()))
+                .anyMatch(phoneNumberKey::equals);
+    }
+
+    private String normalizePhoneNumberKey(String value, boolean required) {
+        String normalized = normalizePhoneNumber(value, required);
+        if (normalized == null) {
+            return null;
+        }
+        return canonicalPhoneNumberKey(normalized.replaceAll("\\D", ""));
+    }
+
+    private String phoneNumberKeyFromStored(String value) {
+        String digitsOnly = value == null ? "" : value.replaceAll("\\D", "");
+        return digitsOnly.isBlank() ? null : canonicalPhoneNumberKey(digitsOnly);
+    }
+
+    private String canonicalPhoneNumberKey(String digitsOnly) {
+        if (digitsOnly.startsWith("82") && digitsOnly.length() >= 10) {
+            return "0" + digitsOnly.substring(2);
+        }
+        return digitsOnly;
     }
 
     private String normalizePhoneNumber(String value, boolean required) {
