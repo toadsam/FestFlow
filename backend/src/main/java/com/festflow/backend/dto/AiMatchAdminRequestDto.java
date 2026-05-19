@@ -17,6 +17,7 @@ public record AiMatchAdminRequestDto(
         String meetPlace,
         String message,
         String status,
+        String statusReason,
         String connectionStatus,
         String adminNote,
         LocalDateTime createdAt,

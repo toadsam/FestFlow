@@ -24,9 +24,12 @@ import com.festflow.backend.repository.AiMatchFavoriteRepository;
 import com.festflow.backend.repository.AiMatchPhoneUsageRepository;
 import com.festflow.backend.repository.AiMatchProfileRepository;
 import com.festflow.backend.repository.AiMatchRequestRepository;
+import com.festflow.backend.service.notification.AiMatchSmsNotifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
@@ -54,6 +57,7 @@ public class AiMatchService {
     private final AiMatchPhoneUsageRepository phoneUsageRepository;
     private final UploadStorageService uploadStorageService;
     private final AiImageGenerationService aiImageGenerationService;
+    private final AiMatchSmsNotifier aiMatchSmsNotifier;
     private final PasswordEncoder passwordEncoder;
 
     public AiMatchService(
@@ -63,6 +67,7 @@ public class AiMatchService {
             AiMatchPhoneUsageRepository phoneUsageRepository,
             UploadStorageService uploadStorageService,
             AiImageGenerationService aiImageGenerationService,
+            AiMatchSmsNotifier aiMatchSmsNotifier,
             PasswordEncoder passwordEncoder
     ) {
         this.profileRepository = profileRepository;
@@ -71,6 +76,7 @@ public class AiMatchService {
         this.phoneUsageRepository = phoneUsageRepository;
         this.uploadStorageService = uploadStorageService;
         this.aiImageGenerationService = aiImageGenerationService;
+        this.aiMatchSmsNotifier = aiMatchSmsNotifier;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -446,6 +452,8 @@ public class AiMatchService {
                 meetPlace,
                 message
         ));
+        String targetPhoneNumber = profile.getPhoneNumber();
+        afterCommit(() -> aiMatchSmsNotifier.notifyRequestCreated(targetPhoneNumber));
         return toRequestDto(saved);
     }
 
@@ -457,6 +465,9 @@ public class AiMatchService {
         ensureRequestParticipantsActive(request);
         ensurePendingRequest(request);
         request.accept();
+        AiMatchProfile requesterProfile = request.getRequesterProfile();
+        String requesterPhoneNumber = requesterProfile == null ? "" : requesterProfile.getPhoneNumber();
+        afterCommit(() -> aiMatchSmsNotifier.notifyRequestAccepted(requesterPhoneNumber));
         return toRequestDto(request);
     }
 
@@ -696,6 +707,7 @@ public class AiMatchService {
                 request.getMeetPlace(),
                 request.getMessage(),
                 request.getStatus(),
+                request.getStatusReason(),
                 request.getConnectionStatus(),
                 request.getAdminNote(),
                 request.getCreatedAt(),
@@ -705,6 +717,19 @@ public class AiMatchService {
 
     private boolean isMatchedStatus(String status) {
         return "ACCEPTED".equals(status) || "PROPOSED".equals(status) || "CONFIRMED".equals(status);
+    }
+
+    private void afterCommit(Runnable task) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    task.run();
+                }
+            });
+            return;
+        }
+        task.run();
     }
 
     private String normalizeConnectionStatus(String status) {
