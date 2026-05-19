@@ -1927,6 +1927,7 @@ export default function AiMatchPage() {
                   key={item}
                   type="button"
                   className={`ai-match-segment-button ai-match-segment-button--${getGenderButtonTone(item)}${gender === item ? " is-active" : ""}`}
+                  aria-pressed={gender === item}
                   onClick={() => setGender(item)}
                 >
                   {getProfileGenderLabel(item)}
@@ -1955,7 +1956,7 @@ export default function AiMatchPage() {
               <span>{isEditingProfile ? "5. 관심사 태그" : "8. 관심사 태그"}</span>
               <small>{selectedTags.length}/6 선택</small>
             </div>
-            <div className="ai-match-tag-grid">
+            <div className="ai-match-tag-grid ai-match-tag-grid--register">
               {REGISTRATION_TAGS.map((tag) => {
                 const isSelected = selectedTags.includes(tag);
                 return (
