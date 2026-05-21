@@ -409,18 +409,23 @@ public class AiMatchService {
         List<Long> targetProfileIds = targetProfiles.stream()
                 .map(AiMatchProfile::getId)
                 .toList();
+        List<String> imageUrls = targetProfiles.stream()
+                .flatMap(profile -> Stream.of(profile.getOriginalImageUrl(), profile.getGeneratedImageUrl()))
+                .filter(url -> url != null && !url.isBlank())
+                .distinct()
+                .toList();
 
         long deletedFavorites = targetProfileIds.isEmpty()
                 ? 0
-                : favoriteRepository.deleteAllByRequesterProfileIdInOrProfileIdIn(targetProfileIds, targetProfileIds);
+                : favoriteRepository.deleteAllReferencingProfileIds(targetProfileIds);
         long deletedRequests = targetProfileIds.isEmpty()
                 ? 0
-                : requestRepository.deleteAllByProfileIdInOrRequesterProfileIdIn(targetProfileIds, targetProfileIds);
+                : requestRepository.deleteAllReferencingProfileIds(targetProfileIds);
         if (!targetProfileIds.isEmpty()) {
             profileRepository.deleteAllByIdInBatch(targetProfileIds);
         }
         long deletedPhoneUsage = phoneUsageRepository.deleteByPhoneNumber(phoneNumberKey);
-        ImageFileDeleteResult imageFileDeleteResult = deleteProfileImageFiles(targetProfiles);
+        ImageFileDeleteResult imageFileDeleteResult = deleteProfileImageFiles(imageUrls);
 
         return new AiMatchAdminPhonePurgeResponseDto(
                 phoneNumberKey,
@@ -578,12 +583,7 @@ public class AiMatchService {
         closeRequestsWithInactiveParticipants(requestRepository.findAllByProfileIdOrRequesterProfileId(profileId, profileId));
     }
 
-    private ImageFileDeleteResult deleteProfileImageFiles(List<AiMatchProfile> profiles) {
-        List<String> imageUrls = profiles.stream()
-                .flatMap(profile -> Stream.of(profile.getOriginalImageUrl(), profile.getGeneratedImageUrl()))
-                .filter(url -> url != null && !url.isBlank())
-                .distinct()
-                .toList();
+    private ImageFileDeleteResult deleteProfileImageFiles(List<String> imageUrls) {
         int deletedCount = 0;
         int failedCount = 0;
         for (String imageUrl : imageUrls) {

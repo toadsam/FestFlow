@@ -2,6 +2,9 @@ package com.festflow.backend.repository;
 
 import com.festflow.backend.entity.AiMatchRequest;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,5 +24,12 @@ public interface AiMatchRequestRepository extends JpaRepository<AiMatchRequest, 
 
     Optional<AiMatchRequest> findByIdAndRequesterProfileId(Long id, Long requesterProfileId);
 
-    long deleteAllByProfileIdInOrRequesterProfileIdIn(List<Long> profileIds, List<Long> requesterProfileIds);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            delete from ai_match_requests
+            where profile_id in (:profileIds)
+               or requester_profile_id in (:profileIds)
+               or meetup_proposer_profile_id in (:profileIds)
+            """, nativeQuery = true)
+    int deleteAllReferencingProfileIds(@Param("profileIds") List<Long> profileIds);
 }
