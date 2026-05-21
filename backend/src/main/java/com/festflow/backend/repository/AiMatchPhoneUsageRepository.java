@@ -12,6 +12,8 @@ import java.util.Optional;
 public interface AiMatchPhoneUsageRepository extends JpaRepository<AiMatchPhoneUsage, Long> {
     Optional<AiMatchPhoneUsage> findByPhoneNumber(String phoneNumber);
 
+    long deleteByPhoneNumber(String phoneNumber);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select usage from AiMatchPhoneUsage usage where usage.phoneNumber = :phoneNumber")
     Optional<AiMatchPhoneUsage> findByPhoneNumberForUpdate(@Param("phoneNumber") String phoneNumber);

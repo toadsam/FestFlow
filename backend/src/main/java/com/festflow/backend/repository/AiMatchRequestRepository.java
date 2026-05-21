@@ -20,4 +20,6 @@ public interface AiMatchRequestRepository extends JpaRepository<AiMatchRequest, 
     Optional<AiMatchRequest> findByIdAndProfileId(Long id, Long profileId);
 
     Optional<AiMatchRequest> findByIdAndRequesterProfileId(Long id, Long requesterProfileId);
+
+    long deleteAllByProfileIdInOrRequesterProfileIdIn(List<Long> profileIds, List<Long> requesterProfileIds);
 }

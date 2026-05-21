@@ -416,6 +416,15 @@ export async function deleteAdminAiMatchProfile(profileId) {
   }
 }
 
+export async function purgeAdminAiMatchPhone(phoneNumber) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/phone-purge`, {
+    method: "POST",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ phoneNumber }),
+  });
+  return parseJson(response, "전화번호 완전 삭제에 실패했습니다.");
+}
+
 export async function updateAdminStaff(id, payload) {
   const response = await fetch(`${API_BASE}/admin/staff/${id}`, {
     method: "PUT",

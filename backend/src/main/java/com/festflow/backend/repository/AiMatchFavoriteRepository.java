@@ -22,4 +22,6 @@ public interface AiMatchFavoriteRepository extends JpaRepository<AiMatchFavorite
     List<Long> findActiveProfileIdsByRequesterProfileId(@Param("requesterProfileId") Long requesterProfileId);
 
     void deleteAllByRequesterProfileIdOrProfileId(Long requesterProfileId, Long profileId);
+
+    long deleteAllByRequesterProfileIdInOrProfileIdIn(List<Long> requesterProfileIds, List<Long> profileIds);
 }

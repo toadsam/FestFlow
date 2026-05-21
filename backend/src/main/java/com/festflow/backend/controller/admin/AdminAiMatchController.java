@@ -2,12 +2,16 @@ package com.festflow.backend.controller.admin;
 
 import com.festflow.backend.dto.AiMatchAdminOverviewDto;
 import com.festflow.backend.dto.AiMatchAdminNoteUpdateDto;
+import com.festflow.backend.dto.AiMatchAdminPhonePurgeRequestDto;
+import com.festflow.backend.dto.AiMatchAdminPhonePurgeResponseDto;
 import com.festflow.backend.dto.AiMatchAdminRequestDto;
 import com.festflow.backend.dto.AiMatchConnectionStatusUpdateDto;
 import com.festflow.backend.service.AiMatchService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -47,5 +51,12 @@ public class AdminAiMatchController {
     @DeleteMapping("/profiles/{profileId}")
     public void deleteProfile(@PathVariable Long profileId) {
         aiMatchService.deleteProfileByAdmin(profileId);
+    }
+
+    @PostMapping("/phone-purge")
+    public AiMatchAdminPhonePurgeResponseDto purgeByPhoneNumber(
+            @Valid @RequestBody AiMatchAdminPhonePurgeRequestDto requestDto
+    ) {
+        return aiMatchService.purgeByPhoneNumber(requestDto);
     }
 }

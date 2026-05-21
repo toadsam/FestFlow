@@ -11,6 +11,7 @@ import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
@@ -137,6 +138,19 @@ public class UploadStorageService {
         );
     }
 
+    public boolean deleteUploadUrl(String imageUrl) throws IOException {
+        String value = imageUrl == null ? "" : imageUrl.trim();
+        if (value.isBlank()) {
+            return false;
+        }
+        String key = extractObjectKey(value);
+        if (s3Enabled) {
+            deleteS3Object(key);
+            return true;
+        }
+        return Files.deleteIfExists(resolveLocalTarget(key));
+    }
+
     private Path resolveLocalTarget(String key) {
         Path target = uploadPath.resolve(key).normalize();
         if (!target.startsWith(uploadPath)) {
@@ -158,6 +172,19 @@ public class UploadStorageService {
             );
         } catch (S3Exception ex) {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "S3 image upload failed.", ex);
+        }
+    }
+
+    private void deleteS3Object(String key) {
+        try {
+            s3Client.deleteObject(
+                    DeleteObjectRequest.builder()
+                            .bucket(s3Bucket)
+                            .key(key)
+                            .build()
+            );
+        } catch (S3Exception ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "S3 image delete failed.", ex);
         }
     }
 
