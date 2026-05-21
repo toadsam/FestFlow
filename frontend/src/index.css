@@ -11019,7 +11019,7 @@ body,
 .app-shell .ai-match-redesigned {
   position: relative;
   gap: 0.9rem !important;
-  padding-bottom: 1.4rem;
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 7.7rem);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.92)),
     linear-gradient(135deg, #fde7f3 0%, #f7f1ff 44%, #fff6f9 100%);
@@ -11029,7 +11029,9 @@ body,
 .app-shell .ai-match-redesigned--intro.ai-match-redesigned--signed-in,
 .app-shell .ai-match-redesigned--requests,
 .app-shell .ai-match-redesigned--my,
-.app-shell .ai-match-redesigned--register {
+.app-shell .ai-match-redesigned--register,
+.app-shell .ai-match-redesigned--inquiry,
+.app-shell .ai-match-redesigned--detail {
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 7.7rem);
 }
 
@@ -12241,6 +12243,34 @@ body,
   font-weight: 850;
 }
 
+.app-shell .ai-match-contact-list {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.app-shell .ai-match-contact-list article {
+  display: grid;
+  gap: 0.22rem;
+  padding: 0.72rem;
+  border-radius: 0.95rem;
+  background: rgba(248, 250, 252, 0.9);
+  box-shadow: inset 0 0 0 1px rgba(226, 232, 240, 0.86);
+}
+
+.app-shell .ai-match-contact-list strong {
+  color: #5630b6;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.app-shell .ai-match-contact-list p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.72rem;
+  font-weight: 740;
+  line-height: 1.45;
+}
+
 .app-shell .ai-match-field input,
 .app-shell .ai-match-field select,
 .app-shell .ai-match-field textarea {
@@ -13147,13 +13177,13 @@ body,
 }
 
 .app-shell .ai-match-bottom-nav {
-  position: fixed;
-  left: max(0.85rem, calc((100vw - 430px) / 2 + 0.85rem));
-  right: max(0.85rem, calc((100vw - 430px) / 2 + 0.85rem));
-  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.72rem);
-  z-index: 1200;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  position: fixed !important;
+  left: max(0.85rem, calc((100vw - 430px) / 2 + 0.85rem)) !important;
+  right: max(0.85rem, calc((100vw - 430px) / 2 + 0.85rem)) !important;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 0.72rem) !important;
+  z-index: 2147483000 !important;
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   gap: 0.3rem;
   padding: 0.42rem;
   border: 1px solid rgba(255, 255, 255, 0.9);
@@ -13161,6 +13191,9 @@ body,
   background: rgba(255, 255, 255, 0.88);
   box-shadow: 0 20px 38px rgba(157, 86, 209, 0.16);
   backdrop-filter: blur(12px);
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 .app-shell .ai-match-bottom-tab {
