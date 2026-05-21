@@ -4,6 +4,7 @@ import {
   deleteAdminAiMatchProfile,
   fetchAdminAiMatchOverview,
   loginAdmin,
+  purgeAdminAiMatchPhone,
   resolveApiAssetUrl,
   updateAdminAiMatchConnectionStatus,
   updateAdminAiMatchRequestNote,
@@ -160,6 +161,8 @@ export default function AiMatchAdminPage() {
   const [expandedMatchIds, setExpandedMatchIds] = useState([]);
   const [expandedProfileIds, setExpandedProfileIds] = useState([]);
   const [noteDrafts, setNoteDrafts] = useState({});
+  const [purgePhoneNumber, setPurgePhoneNumber] = useState("");
+  const [purgeBusy, setPurgeBusy] = useState(false);
   const overviewRefreshInFlightRef = useRef(false);
   const completePulseTimerRef = useRef(null);
 
@@ -439,6 +442,46 @@ export default function AiMatchAdminPage() {
     }
   }
 
+  async function handlePhonePurge(event) {
+    event.preventDefault();
+    const phoneNumber = purgePhoneNumber.trim();
+    if (!phoneNumber) {
+      setMessage("완전 삭제할 전화번호를 입력해 주세요.");
+      return;
+    }
+    const ok = window.confirm(
+      `${phoneNumber} 번호의 AI 소개팅 기록을 완전히 삭제할까요?\n프로필, 신청, 좋아요, AI 사진 변환 횟수 기록, 업로드 이미지 파일이 삭제되며 같은 번호로 다시 가입할 수 있습니다.`,
+    );
+    if (!ok) return;
+
+    setPurgeBusy(true);
+    setMessage("전화번호 기록을 완전 삭제하는 중입니다.");
+    try {
+      const result = await purgeAdminAiMatchPhone(phoneNumber);
+      setPurgePhoneNumber("");
+      await loadOverview({ force: true });
+      const deletedTotal =
+        result.deletedProfileCount +
+        result.deletedRequestCount +
+        result.deletedFavoriteCount +
+        result.deletedPhoneUsageCount +
+        result.deletedImageFileCount;
+      if (deletedTotal === 0) {
+        const emptyMessage = `${phoneNumber} 번호의 삭제할 기록이 없습니다.`;
+        window.alert(emptyMessage);
+        setMessage(emptyMessage);
+        return;
+      }
+      const successMessage = `${phoneNumber} 번호를 삭제했습니다.\n프로필 ${result.deletedProfileCount}개, 신청 ${result.deletedRequestCount}개, 좋아요 ${result.deletedFavoriteCount}개, 전화번호 기록 ${result.deletedPhoneUsageCount}개, 이미지 파일 ${result.deletedImageFileCount}개 삭제${result.failedImageFileDeleteCount ? `, 이미지 파일 ${result.failedImageFileDeleteCount}개 실패` : ""}`;
+      window.alert(successMessage);
+      setMessage(successMessage.replaceAll("\n", " "));
+    } catch (error) {
+      setMessage(adminErrorMessage(error));
+    } finally {
+      setPurgeBusy(false);
+    }
+  }
+
   function toggleExpandedMatch(requestId) {
     setExpandedMatchIds((prev) => (
       prev.includes(requestId) ? prev.filter((id) => id !== requestId) : [...prev, requestId]
@@ -587,6 +630,26 @@ export default function AiMatchAdminPage() {
           <strong>{pendingRequests.length ? `${pendingRequests.length}건 응답 대기` : "대기 없음"}</strong>
           <small>참가자 수락/거절에 따라 자동으로 상태가 바뀝니다.</small>
         </article>
+      </section>
+
+      <section className="admin-ai-phone-purge-card" aria-label="AI 소개팅 전화번호 완전 삭제">
+        <div>
+          <span>위험 작업</span>
+          <strong>전화번호 완전 삭제</strong>
+          <p>입력한 전화번호의 프로필, 신청 기록, 좋아요, AI 사진 변환 횟수 기록과 업로드 이미지 파일을 삭제합니다. 삭제 후 같은 번호로 다시 회원가입하고 AI 변환을 사용할 수 있습니다.</p>
+        </div>
+        <form onSubmit={handlePhonePurge}>
+          <input
+            value={purgePhoneNumber}
+            onChange={(event) => setPurgePhoneNumber(event.target.value)}
+            placeholder="010-1234-5678"
+            inputMode="tel"
+            disabled={purgeBusy}
+          />
+          <button type="submit" disabled={purgeBusy || !purgePhoneNumber.trim()}>
+            {purgeBusy ? "삭제 중" : "완전 삭제"}
+          </button>
+        </form>
       </section>
 
       <section className="admin-ai-stat-panel" aria-label="간단 통계">

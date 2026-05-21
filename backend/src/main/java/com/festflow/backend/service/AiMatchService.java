@@ -2,6 +2,8 @@ package com.festflow.backend.service;
 
 import com.festflow.backend.dto.AiMatchAdminOverviewDto;
 import com.festflow.backend.dto.AiMatchAdminNoteUpdateDto;
+import com.festflow.backend.dto.AiMatchAdminPhonePurgeRequestDto;
+import com.festflow.backend.dto.AiMatchAdminPhonePurgeResponseDto;
 import com.festflow.backend.dto.AiMatchAdminProfileDto;
 import com.festflow.backend.dto.AiMatchAdminRequestDto;
 import com.festflow.backend.dto.AiMatchConnectionStatusUpdateDto;
@@ -399,6 +401,39 @@ public class AiMatchService {
     }
 
     @Transactional
+    public AiMatchAdminPhonePurgeResponseDto purgeByPhoneNumber(AiMatchAdminPhonePurgeRequestDto requestDto) {
+        String phoneNumberKey = normalizePhoneNumberKey(requestDto.phoneNumber(), true);
+        List<AiMatchProfile> targetProfiles = profileRepository.findAll().stream()
+                .filter(profile -> phoneNumberKey.equals(phoneNumberKeyFromStored(profile.getPhoneNumber())))
+                .toList();
+        List<Long> targetProfileIds = targetProfiles.stream()
+                .map(AiMatchProfile::getId)
+                .toList();
+
+        long deletedFavorites = targetProfileIds.isEmpty()
+                ? 0
+                : favoriteRepository.deleteAllByRequesterProfileIdInOrProfileIdIn(targetProfileIds, targetProfileIds);
+        long deletedRequests = targetProfileIds.isEmpty()
+                ? 0
+                : requestRepository.deleteAllByProfileIdInOrRequesterProfileIdIn(targetProfileIds, targetProfileIds);
+        if (!targetProfileIds.isEmpty()) {
+            profileRepository.deleteAllByIdInBatch(targetProfileIds);
+        }
+        long deletedPhoneUsage = phoneUsageRepository.deleteByPhoneNumber(phoneNumberKey);
+        ImageFileDeleteResult imageFileDeleteResult = deleteProfileImageFiles(targetProfiles);
+
+        return new AiMatchAdminPhonePurgeResponseDto(
+                phoneNumberKey,
+                targetProfileIds.size(),
+                Math.toIntExact(deletedRequests),
+                Math.toIntExact(deletedFavorites),
+                Math.toIntExact(deletedPhoneUsage),
+                imageFileDeleteResult.deletedCount(),
+                imageFileDeleteResult.failedCount()
+        );
+    }
+
+    @Transactional
     public AiMatchFavoriteResponseDto toggleFavorite(Long profileId, AiMatchProfileAccessRequestDto requestDto) {
         AiMatchProfile requesterProfile = authenticateProfile(requestDto.nickname(), requestDto.pin());
         AiMatchProfile profile = profileRepository.findById(profileId)
@@ -541,6 +576,26 @@ public class AiMatchService {
 
     private void closeRequestsForDeletedProfile(Long profileId) {
         closeRequestsWithInactiveParticipants(requestRepository.findAllByProfileIdOrRequesterProfileId(profileId, profileId));
+    }
+
+    private ImageFileDeleteResult deleteProfileImageFiles(List<AiMatchProfile> profiles) {
+        List<String> imageUrls = profiles.stream()
+                .flatMap(profile -> Stream.of(profile.getOriginalImageUrl(), profile.getGeneratedImageUrl()))
+                .filter(url -> url != null && !url.isBlank())
+                .distinct()
+                .toList();
+        int deletedCount = 0;
+        int failedCount = 0;
+        for (String imageUrl : imageUrls) {
+            try {
+                if (uploadStorageService.deleteUploadUrl(imageUrl)) {
+                    deletedCount += 1;
+                }
+            } catch (Exception ignored) {
+                failedCount += 1;
+            }
+        }
+        return new ImageFileDeleteResult(deletedCount, failedCount);
     }
 
     private void closeRequestsWithInactiveParticipants(List<AiMatchRequest> requests) {
@@ -898,5 +953,8 @@ public class AiMatchService {
             throw new ResponseStatusException(BAD_REQUEST, "전화번호 형식이 올바르지 않습니다.");
         }
         return trimmed;
+    }
+
+    private record ImageFileDeleteResult(int deletedCount, int failedCount) {
     }
 }

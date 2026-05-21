@@ -17183,6 +17183,74 @@ html[data-contrast="high"] .app-shell .uni-page {
   line-height: 1.45 !important;
 }
 
+.app-shell .admin-ai-phone-purge-card {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0.95rem;
+  border: 1px solid rgba(251, 113, 133, 0.42);
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #fff1f2, #ffffff);
+  box-shadow: 0 12px 28px rgba(225, 29, 72, 0.07);
+}
+
+.app-shell .admin-ai-phone-purge-card > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.app-shell .admin-ai-phone-purge-card span {
+  color: #be123c !important;
+  font-size: 0.72rem !important;
+  font-weight: 920 !important;
+}
+
+.app-shell .admin-ai-phone-purge-card strong {
+  color: #0f172a !important;
+  font-size: 1rem !important;
+  font-weight: 940 !important;
+}
+
+.app-shell .admin-ai-phone-purge-card p {
+  margin: 0;
+  color: #64748b !important;
+  font-size: 0.76rem !important;
+  font-weight: 760 !important;
+  line-height: 1.45 !important;
+}
+
+.app-shell .admin-ai-phone-purge-card form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.55rem;
+}
+
+.app-shell .admin-ai-phone-purge-card input {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: 0 0.82rem !important;
+  border: 1px solid rgba(251, 113, 133, 0.42) !important;
+  border-radius: 0.8rem !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-size: 0.82rem !important;
+  font-weight: 780 !important;
+}
+
+.app-shell .admin-ai-phone-purge-card button {
+  min-height: 2.75rem;
+  padding: 0 0.9rem !important;
+  border: 1px solid rgba(190, 18, 60, 0.18) !important;
+  border-radius: 0.8rem !important;
+  background: #e11d48 !important;
+  color: #ffffff !important;
+  font-size: 0.78rem !important;
+  font-weight: 900 !important;
+}
+
+.app-shell .admin-ai-phone-purge-card button:disabled {
+  opacity: 0.55;
+}
+
 .app-shell .admin-ai-stat-panel {
   display: grid;
   gap: 0.72rem;
