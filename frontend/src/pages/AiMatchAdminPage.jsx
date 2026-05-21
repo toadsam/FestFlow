@@ -460,9 +460,21 @@ export default function AiMatchAdminPage() {
       const result = await purgeAdminAiMatchPhone(phoneNumber);
       setPurgePhoneNumber("");
       await loadOverview({ force: true });
-      setMessage(
-        `완전 삭제 완료: 프로필 ${result.deletedProfileCount}개, 신청 ${result.deletedRequestCount}개, 좋아요 ${result.deletedFavoriteCount}개, 전화번호 기록 ${result.deletedPhoneUsageCount}개, 이미지 파일 ${result.deletedImageFileCount}개 삭제${result.failedImageFileDeleteCount ? `, 이미지 파일 ${result.failedImageFileDeleteCount}개 실패` : ""}`,
-      );
+      const deletedTotal =
+        result.deletedProfileCount +
+        result.deletedRequestCount +
+        result.deletedFavoriteCount +
+        result.deletedPhoneUsageCount +
+        result.deletedImageFileCount;
+      if (deletedTotal === 0) {
+        const emptyMessage = `${phoneNumber} 번호의 삭제할 기록이 없습니다.`;
+        window.alert(emptyMessage);
+        setMessage(emptyMessage);
+        return;
+      }
+      const successMessage = `${phoneNumber} 번호를 삭제했습니다.\n프로필 ${result.deletedProfileCount}개, 신청 ${result.deletedRequestCount}개, 좋아요 ${result.deletedFavoriteCount}개, 전화번호 기록 ${result.deletedPhoneUsageCount}개, 이미지 파일 ${result.deletedImageFileCount}개 삭제${result.failedImageFileDeleteCount ? `, 이미지 파일 ${result.failedImageFileDeleteCount}개 실패` : ""}`;
+      window.alert(successMessage);
+      setMessage(successMessage.replaceAll("\n", " "));
     } catch (error) {
       setMessage(adminErrorMessage(error));
     } finally {
