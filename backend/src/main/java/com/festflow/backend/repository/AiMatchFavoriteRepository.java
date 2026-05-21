@@ -2,6 +2,7 @@ package com.festflow.backend.repository;
 
 import com.festflow.backend.entity.AiMatchFavorite;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -23,5 +24,11 @@ public interface AiMatchFavoriteRepository extends JpaRepository<AiMatchFavorite
 
     void deleteAllByRequesterProfileIdOrProfileId(Long requesterProfileId, Long profileId);
 
-    long deleteAllByRequesterProfileIdInOrProfileIdIn(List<Long> requesterProfileIds, List<Long> profileIds);
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query(value = """
+            delete from ai_match_favorites
+            where requester_profile_id in (:profileIds)
+               or favorite_profile_id in (:profileIds)
+            """, nativeQuery = true)
+    int deleteAllReferencingProfileIds(@Param("profileIds") List<Long> profileIds);
 }
