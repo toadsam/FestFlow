@@ -669,13 +669,18 @@ public class AiMatchService {
     }
 
     private AiMatchRequestResponseDto toRequestDto(AiMatchRequest request) {
+        AiMatchProfile profile = request.getProfile();
         AiMatchProfile requesterProfile = request.getRequesterProfile();
         return new AiMatchRequestResponseDto(
                 request.getId(),
-                request.getProfile().getId(),
-                request.getProfile().getNickname(),
+                profile == null ? null : profile.getId(),
+                profile == null ? "" : profile.getNickname(),
+                profile == null ? "" : profile.getOriginalImageUrl(),
+                profile == null ? "" : profile.getGeneratedImageUrl(),
                 requesterProfile == null ? null : requesterProfile.getId(),
                 request.getRequesterNickname(),
+                requesterProfile == null ? "" : requesterProfile.getOriginalImageUrl(),
+                requesterProfile == null ? "" : requesterProfile.getGeneratedImageUrl(),
                 request.getMeetPlace(),
                 request.getMessage(),
                 request.getStatus(),

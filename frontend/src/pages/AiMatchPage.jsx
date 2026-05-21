@@ -249,6 +249,29 @@ function canSendRequest(status) {
   return !status || status === "REJECTED" || status === "CANCELED";
 }
 
+function RequestFaceThumb({ imageUrl, name, onClick }) {
+  const resolvedUrl = resolveApiAssetUrl(imageUrl || "");
+  const initial = `${name || "?"}`.slice(0, 1);
+  const content = resolvedUrl ? <img src={resolvedUrl} alt="" /> : <em>{initial}</em>;
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className="ai-match-request-history-avatar ai-match-request-history-avatar--button"
+        aria-label={`${name || "profile"} detail`}
+        onClick={onClick}
+      >
+        {content}
+      </button>
+    );
+  }
+  return (
+    <span className="ai-match-request-history-avatar" aria-label={name || "프로필"}>
+      {content}
+    </span>
+  );
+}
+
 function shouldShowPeopleRequestStatus(status) {
   return Boolean(status && status !== "PENDING" && status !== "CANCELED");
 }
@@ -1180,6 +1203,17 @@ export default function AiMatchPage() {
     setActiveSelectedProfile(profile);
     setSuccessMessage("");
     setErrorMessage("");
+  }
+
+  function findRequestProfile(request, direction) {
+    const targetProfileId = direction === "received" ? request.requesterProfileId : request.profileId;
+    return profiles.find((profile) => profile.id === targetProfileId) || null;
+  }
+
+  function openRequestProfile(request, direction) {
+    const requestProfile = findRequestProfile(request, direction);
+    if (!requestProfile) return;
+    openProfile(requestProfile);
   }
 
   function closeDetail() {
@@ -2457,7 +2491,18 @@ export default function AiMatchPage() {
               {accessRequests.map((request) => (
                 <article key={request.id} className="ai-match-request-history-card">
                   <div className="ai-match-request-history-head">
-                    <strong>{request.requesterNickname}</strong>
+                    <div className="ai-match-request-history-person">
+                      <RequestFaceThumb
+                        imageUrl={request.requesterImageUrl || request.requesterOriginalImageUrl}
+                        name={request.requesterNickname}
+                        onClick={
+                          findRequestProfile(request, "received")
+                            ? () => openRequestProfile(request, "received")
+                            : undefined
+                        }
+                      />
+                      <strong>{request.requesterNickname}</strong>
+                    </div>
                     <small>{formatRequestTime(request.createdAt)}</small>
                   </div>
                   <div className="ai-match-request-history-status">
@@ -2506,7 +2551,18 @@ export default function AiMatchPage() {
             {accessSentRequests.map((request) => (
               <article key={request.id} className="ai-match-request-history-card">
                 <div className="ai-match-request-history-head">
-                  <strong>{request.profileNickname}</strong>
+                  <div className="ai-match-request-history-person">
+                    <RequestFaceThumb
+                      imageUrl={request.profileImageUrl || request.profileOriginalImageUrl}
+                      name={request.profileNickname}
+                      onClick={
+                        findRequestProfile(request, "sent")
+                          ? () => openRequestProfile(request, "sent")
+                          : undefined
+                      }
+                    />
+                    <strong>{request.profileNickname}</strong>
+                  </div>
                   <small>{formatRequestTime(request.createdAt)}</small>
                 </div>
                 <div className="ai-match-request-history-status">
