@@ -3,6 +3,7 @@ import {
   IconArrowLeft,
   IconCamera,
   IconChevronRight,
+  IconChat,
   IconClipboard,
   IconHeart,
   IconHeartFilled,
@@ -46,11 +47,13 @@ const SCREEN_COPY = {
   people: "등록된 사람들",
   requests: "데이트 신청 현황",
   my: "MY",
+  inquiry: "문의",
 };
 const NAV_ITEMS = [
   { id: "intro", label: "처음", icon: IconHome },
   { id: "requests", label: "신청함", icon: IconClipboard },
-  { id: "my", label: "MY", icon: IconSettings },
+  { id: "my", label: "MY", icon: IconUsers },
+  { id: "inquiry", label: "문의", icon: IconChat },
 ];
 const PROFILE_FILTERS = ["전체", "남자", "여자", "신청 가능", "좋아요"];
 const REGISTRATION_TAGS = ["운동", "음악", "영화", "여행", "맛집", "독서", "게임", "보드게임", "사진", "공연", "기타"];
@@ -247,6 +250,29 @@ function getRequestStatusTone(status, statusReason = "") {
 
 function canSendRequest(status) {
   return !status || status === "REJECTED" || status === "CANCELED";
+}
+
+function RequestFaceThumb({ imageUrl, name, onClick }) {
+  const resolvedUrl = resolveApiAssetUrl(imageUrl || "");
+  const initial = `${name || "?"}`.slice(0, 1);
+  const content = resolvedUrl ? <img src={resolvedUrl} alt="" /> : <em>{initial}</em>;
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        className="ai-match-request-history-avatar ai-match-request-history-avatar--button"
+        aria-label={`${name || "profile"} detail`}
+        onClick={onClick}
+      >
+        {content}
+      </button>
+    );
+  }
+  return (
+    <span className="ai-match-request-history-avatar" aria-label={name || "프로필"}>
+      {content}
+    </span>
+  );
 }
 
 function shouldShowPeopleRequestStatus(status) {
@@ -739,11 +765,6 @@ export default function AiMatchPage() {
   const meetupTimeOptions = buildMeetupTimeOptions();
   const convertingStatus = getConvertingStatus(convertSeconds);
   const activeScreenTitle = activeScreen === "intro" && accessProfile ? SCREEN_COPY.people : SCREEN_COPY[activeScreen];
-  const shouldShowBottomNav =
-    activeScreen === "register" ||
-    activeScreen === "requests" ||
-    activeScreen === "my" ||
-    (activeScreen === "intro" && Boolean(accessProfile));
 
   async function loadData() {
     setLoading(false);
@@ -1180,6 +1201,17 @@ export default function AiMatchPage() {
     setActiveSelectedProfile(profile);
     setSuccessMessage("");
     setErrorMessage("");
+  }
+
+  function findRequestProfile(request, direction) {
+    const targetProfileId = direction === "received" ? request.requesterProfileId : request.profileId;
+    return profiles.find((profile) => profile.id === targetProfileId) || null;
+  }
+
+  function openRequestProfile(request, direction) {
+    const requestProfile = findRequestProfile(request, direction);
+    if (!requestProfile) return;
+    openProfile(requestProfile);
   }
 
   function closeDetail() {
@@ -2409,6 +2441,44 @@ export default function AiMatchPage() {
     );
   }
 
+  function renderInquiryScreen() {
+    return (
+      <div className="ai-match-flow">
+        <section className="ai-match-request-summary">
+          <strong>문의</strong>
+          <p>AI 소개팅 이용 중 오류가 있거나 궁금한 점이 있다면 소통개발국장 정재훈에게 편하게 문의해 주세요. 아직 개발 경험이 많지 않아 부족한 부분이 있을 수 있지만, 확인하는 대로 최대한 빠르게 개선하겠습니다.</p>
+          <span>소통개발국장 정재훈 010-6428-6247</span>
+        </section>
+
+        <section className="ai-match-section-card">
+          <div className="ai-match-section-head">
+            <h2>문의 전에 확인해 주세요</h2>
+            <span>AI 소개팅</span>
+          </div>
+          <div className="ai-match-contact-list">
+            <article>
+              <strong>신청/수락/거절 상태</strong>
+              <p>신청함에서 받은 신청과 보낸 신청 상태를 먼저 확인해 주세요.</p>
+            </article>
+            <article>
+              <strong>사진 또는 프로필 문제</strong>
+              <p>MY에서 프로필 사진과 소개를 수정할 수 있습니다.</p>
+            </article>
+            <article>
+              <strong>삭제와 개인정보 문의</strong>
+              <p>MY의 프로필 삭제를 사용하거나 현장 운영 부스에 닉네임을 알려 주세요.</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="ai-match-safety-card">
+          <IconShield className="h-5 w-5" />
+          <p>연락처와 원본 사진은 매칭 운영 확인 용도로만 사용되며, 다른 참가자에게 공개되지 않습니다.</p>
+        </section>
+      </div>
+    );
+  }
+
   function renderRequestsScreen() {
     if (!accessProfile) {
       return (
@@ -2457,7 +2527,18 @@ export default function AiMatchPage() {
               {accessRequests.map((request) => (
                 <article key={request.id} className="ai-match-request-history-card">
                   <div className="ai-match-request-history-head">
-                    <strong>{request.requesterNickname}</strong>
+                    <div className="ai-match-request-history-person">
+                      <RequestFaceThumb
+                        imageUrl={request.requesterImageUrl || request.requesterOriginalImageUrl}
+                        name={request.requesterNickname}
+                        onClick={
+                          findRequestProfile(request, "received")
+                            ? () => openRequestProfile(request, "received")
+                            : undefined
+                        }
+                      />
+                      <strong>{request.requesterNickname}</strong>
+                    </div>
                     <small>{formatRequestTime(request.createdAt)}</small>
                   </div>
                   <div className="ai-match-request-history-status">
@@ -2506,7 +2587,18 @@ export default function AiMatchPage() {
             {accessSentRequests.map((request) => (
               <article key={request.id} className="ai-match-request-history-card">
                 <div className="ai-match-request-history-head">
-                  <strong>{request.profileNickname}</strong>
+                  <div className="ai-match-request-history-person">
+                    <RequestFaceThumb
+                      imageUrl={request.profileImageUrl || request.profileOriginalImageUrl}
+                      name={request.profileNickname}
+                      onClick={
+                        findRequestProfile(request, "sent")
+                          ? () => openRequestProfile(request, "sent")
+                          : undefined
+                      }
+                    />
+                    <strong>{request.profileNickname}</strong>
+                  </div>
                   <small>{formatRequestTime(request.createdAt)}</small>
                 </div>
                 <div className="ai-match-request-history-status">
@@ -2683,6 +2775,60 @@ export default function AiMatchPage() {
     );
   }
 
+  function handleBottomNavSelect(itemId) {
+    setActiveSelectedProfile(null);
+    if (itemId === "intro") {
+      setActiveScreen("intro");
+      return;
+    }
+    if (itemId === "requests") {
+      if (accessProfile) {
+        setLiveNotice(null);
+        markRequestNoticesSeen();
+        setActiveScreen("requests");
+      } else {
+        openAccessModal("requests");
+      }
+      return;
+    }
+    if (itemId === "my") {
+      if (accessProfile) {
+        setActiveScreen("my");
+      } else {
+        openAccessModal("my");
+      }
+      return;
+    }
+    setActiveScreen(itemId);
+  }
+
+  function renderBottomNav() {
+    return (
+      <nav className="ai-match-bottom-nav" aria-label="AI 소개팅 화면 전환">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const isActive = activeScreen === item.id;
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`ai-match-bottom-tab${isActive ? " is-active" : ""}`}
+              onClick={() => handleBottomNavSelect(item.id)}
+            >
+              <span className="ai-match-bottom-tab-icon">
+                <Icon className="h-5 w-5" />
+                {item.id === "requests" && unreadRequestCount > 0 ? (
+                  <strong className="ai-match-nav-badge">{unreadRequestCount > 9 ? "9+" : unreadRequestCount}</strong>
+                ) : null}
+              </span>
+              <span>{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+    );
+  }
+
   if (isDetailScreen) {
     return (
       <section className="uni-page ai-match-page ai-match-redesigned ai-match-redesigned--detail" data-i18n-skip>
@@ -2717,6 +2863,8 @@ export default function AiMatchPage() {
         {renderLiveNotice()}
 
         {renderDetailScreen()}
+
+        {renderBottomNav()}
       </section>
     );
   }
@@ -2758,55 +2906,9 @@ export default function AiMatchPage() {
       {activeScreen === "register" ? renderRegisterScreen() : null}
       {activeScreen === "requests" ? renderRequestsScreen() : null}
       {activeScreen === "my" ? renderMyScreen() : null}
+      {activeScreen === "inquiry" ? renderInquiryScreen() : null}
 
-      {shouldShowBottomNav ? (
-        <nav className="ai-match-bottom-nav" aria-label="AI 소개팅 화면 전환">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeScreen === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                className={`ai-match-bottom-tab${isActive ? " is-active" : ""}`}
-                onClick={() => {
-                  if (item.id === "intro") {
-                    setActiveScreen("intro");
-                    return;
-                  }
-                  if (item.id === "requests") {
-                    if (accessProfile) {
-                      setLiveNotice(null);
-                      markRequestNoticesSeen();
-                      setActiveScreen("requests");
-                    } else {
-                      openAccessModal("requests");
-                    }
-                    return;
-                  }
-                  if (item.id === "my") {
-                    if (accessProfile) {
-                      setActiveScreen("my");
-                    } else {
-                      openAccessModal("my");
-                    }
-                    return;
-                  }
-                  setActiveScreen(item.id);
-                }}
-              >
-                <span className="ai-match-bottom-tab-icon">
-                  <Icon className="h-5 w-5" />
-                  {item.id === "requests" && unreadRequestCount > 0 ? (
-                    <strong className="ai-match-nav-badge">{unreadRequestCount > 9 ? "9+" : unreadRequestCount}</strong>
-                  ) : null}
-                </span>
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-      ) : null}
+      {renderBottomNav()}
 
       {accessModalOpen ? (
         <div className="ai-match-modal" role="dialog" aria-modal="true" aria-labelledby="ai-match-access-title">
