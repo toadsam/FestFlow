@@ -142,7 +142,7 @@ function AdminImageCompare({ originalImageUrl, generatedImageUrl, name }) {
 export default function AiMatchAdminPage() {
   const [loggedIn, setLoggedIn] = useState(isLoggedIn());
   const [adminName, setAdminName] = useState(getAdminName());
-  const [loginForm, setLoginForm] = useState({ username: "admin", password: "1234" });
+  const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
   const [overview, setOverview] = useState(null);
   const [message, setMessage] = useState("");
