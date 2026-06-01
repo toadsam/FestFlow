@@ -2,6 +2,7 @@ package com.festflow.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.festflow.backend.dto.AiFestivalGuideDto;
 import com.festflow.backend.dto.AiAssistRequestDto;
 import com.festflow.backend.dto.AiAssistResponseDto;
 import com.festflow.backend.dto.BoothResponseDto;
@@ -35,6 +36,7 @@ public class OpsAiService {
     private final NoticeService noticeService;
     private final LostItemService lostItemService;
     private final StaffService staffService;
+    private final AiCongestionService aiCongestionService;
     private final ObjectMapper objectMapper;
     private final RestClient restClient;
     private final String apiKey;
@@ -46,6 +48,7 @@ public class OpsAiService {
             NoticeService noticeService,
             LostItemService lostItemService,
             StaffService staffService,
+            AiCongestionService aiCongestionService,
             ObjectMapper objectMapper,
             RestClient.Builder restClientBuilder,
             @Value("${app.openai.api-key:}") String apiKey,
@@ -56,6 +59,7 @@ public class OpsAiService {
         this.noticeService = noticeService;
         this.lostItemService = lostItemService;
         this.staffService = staffService;
+        this.aiCongestionService = aiCongestionService;
         this.objectMapper = objectMapper;
         this.restClient = restClientBuilder
                 .baseUrl("https://api.openai.com")
@@ -69,6 +73,9 @@ public class OpsAiService {
         OpsSnapshot snapshot = snapshot();
         List<String> highlights = masterHighlights(snapshot);
         List<String> actions = masterActions(snapshot);
+        AiFestivalGuideDto aiGuide = safeGuide();
+        highlights.addAll(aiGuide.operatorAlerts().stream().limit(3).toList());
+        actions.addAll(aiGuide.userActions().stream().limit(2).map(action -> "AI 추천 기반 현장 조치: " + action).toList());
         String fallback = String.join("\n", highlights);
         String summary = generateText(
                 "운영 총괄용 현재 상황 브리핑을 한국어로 5줄 이하로 작성하세요. 위험도와 즉시 할 일을 먼저 말하세요.",
@@ -179,6 +186,23 @@ public class OpsAiService {
                 null,
                 "MEDIUM"
         );
+    }
+
+    private AiFestivalGuideDto safeGuide() {
+        try {
+            return aiCongestionService.guide();
+        } catch (Exception ex) {
+            return new AiFestivalGuideDto(
+                    LocalDateTime.now(),
+                    "AI 혼잡 판단을 불러오지 못했습니다.",
+                    "기본 운영 데이터만 사용합니다.",
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of(),
+                    List.of()
+            );
+        }
     }
 
     private SimpleClientHttpRequestFactory requestFactory() {

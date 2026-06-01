@@ -355,6 +355,21 @@ export async function fetchAnalyticsDashboard(minutes = 15) {
   return parseJson(response, "실시간 혼잡도 데이터를 불러오지 못했습니다.");
 }
 
+export async function fetchAiFestivalGuide() {
+  const response = await fetch(`${API_BASE}/ai/guide`);
+  return parseJson(response, "AI 축제 가이드를 불러오지 못했습니다.");
+}
+
+export async function fetchAiCongestionPredictions() {
+  const response = await fetch(`${API_BASE}/ai/congestion/predictions`);
+  return parseJson(response, "AI 혼잡도 예측을 불러오지 못했습니다.");
+}
+
+export async function fetchAiDecisionLogs() {
+  const response = await fetch(`${API_BASE}/ai/decisions`);
+  return parseJson(response, "AI 판단 이력을 불러오지 못했습니다.");
+}
+
 export function createCongestionStream() {
   return new EventSource(`${API_BASE}/stream/congestion`);
 }

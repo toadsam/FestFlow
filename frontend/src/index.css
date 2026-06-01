@@ -14090,6 +14090,180 @@ html[data-contrast="high"] .app-shell .uni-page {
   box-shadow: 0 10px 26px rgba(7, 26, 61, 0.07) !important;
 }
 
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card {
+  display: grid !important;
+  gap: 0.75rem !important;
+  margin: 0 !important;
+  padding: 0.95rem !important;
+  border: 1px solid #dbeafe !important;
+  border-radius: 1rem !important;
+  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%) !important;
+  box-shadow: 0 10px 26px rgba(37, 99, 235, 0.08) !important;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__hero {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+  background: #eff6ff;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__hero strong {
+  color: #1d4ed8 !important;
+  font-size: 0.9rem !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__hero p,
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__actions p {
+  margin: 0 !important;
+  color: #475569 !important;
+  font-size: 0.75rem !important;
+  font-weight: 750 !important;
+  line-height: 1.5 !important;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__actions {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__prompt-row {
+  display: flex;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding-bottom: 0.1rem;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__prompt,
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__evidence button,
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__evidence span {
+  flex: 0 0 auto;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  background: #ffffff;
+  color: #1d4ed8;
+  font-size: 0.68rem;
+  font-weight: 850;
+  line-height: 1;
+  padding: 0.48rem 0.62rem;
+  white-space: nowrap;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__ask {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__ask input {
+  min-width: 0;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.7rem;
+  background: #ffffff;
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.64rem 0.7rem;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__ask button {
+  border: 0;
+  border-radius: 0.7rem;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 900;
+  padding: 0 0.85rem;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__ask button:disabled,
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__prompt:disabled {
+  opacity: 0.55;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__answer {
+  display: grid;
+  gap: 0.42rem;
+  border: 1px solid #dbeafe;
+  border-radius: 0.85rem;
+  background: #ffffff;
+  padding: 0.75rem;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__answer small {
+  color: #2563eb;
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__answer p {
+  margin: 0;
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 780;
+  line-height: 1.55;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__evidence {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__grid {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__item {
+  display: grid;
+  gap: 0.18rem;
+  min-height: 3.3rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #bae6fd;
+  border-radius: 0.75rem;
+  background: #ecfeff;
+  text-align: left;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__item strong {
+  overflow: hidden;
+  color: #083344 !important;
+  font-size: 0.82rem !important;
+  font-weight: 900 !important;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__item span {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__item em {
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #0369a1;
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 800;
+  padding: 0.22rem 0.38rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell[data-route-scope="public"] .reference-home-page .ai-guide-card__item small {
+  color: #0e7490 !important;
+  font-size: 0.69rem !important;
+  font-weight: 850 !important;
+}
+
 .app-shell[data-route-scope="public"] .reference-home-page .uni-section-head h2,
 .app-shell[data-route-scope="public"] .reference-home-page .crowd-summary-card h2 {
   font-size: 0.94rem !important;

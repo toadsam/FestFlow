@@ -2,6 +2,8 @@ package com.festflow.backend.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.festflow.backend.dto.AiBoothRecommendationDto;
+import com.festflow.backend.dto.AiFestivalGuideDto;
 import com.festflow.backend.dto.BoothResponseDto;
 import com.festflow.backend.dto.ChatEvidenceDto;
 import com.festflow.backend.dto.ChatResponseDto;
@@ -45,6 +47,7 @@ public class ChatService {
     private final EventService eventService;
     private final LostItemService lostItemService;
     private final NoticeService noticeService;
+    private final AiCongestionService aiCongestionService;
     private final ObjectMapper objectMapper;
     private final RestClient restClient;
     private final String apiKey;
@@ -55,6 +58,7 @@ public class ChatService {
             EventService eventService,
             LostItemService lostItemService,
             NoticeService noticeService,
+            AiCongestionService aiCongestionService,
             ObjectMapper objectMapper,
             RestClient.Builder restClientBuilder,
             @Value("${app.openai.api-key:}") String apiKey,
@@ -64,6 +68,7 @@ public class ChatService {
         this.eventService = eventService;
         this.lostItemService = lostItemService;
         this.noticeService = noticeService;
+        this.aiCongestionService = aiCongestionService;
         this.objectMapper = objectMapper;
         this.restClient = restClientBuilder
                 .baseUrl("https://api.openai.com")
@@ -203,6 +208,10 @@ public class ChatService {
             }
         }
 
+        if (wantsCongestion || wantsBooths) {
+            addAiRecommendationEvidence(candidates);
+        }
+
         if (wantsKnowledge || candidates.isEmpty()) {
             addNoticeEvidence(candidates, normalizedQuestion, terms);
             addStaticKnowledgeEvidence(candidates, normalizedQuestion, terms);
@@ -220,6 +229,38 @@ public class ChatService {
         }
 
         return new RetrievalResult(evidence, warnings);
+    }
+
+    private void addAiRecommendationEvidence(List<EvidenceCandidate> candidates) {
+        try {
+            AiFestivalGuideDto guide = aiCongestionService.guide();
+            guide.recommendedNow().stream()
+                    .limit(3)
+                    .forEach(item -> candidates.add(new EvidenceCandidate(
+                            8,
+                            new ChatEvidenceDto(
+                                    "ai_recommendation",
+                                    item.boothId(),
+                                    item.boothName(),
+                                    "AI 추천: " + item.riskLevel() + " " + item.riskScore() + "점 / " + String.join(", ", item.reasons().stream().limit(3).toList()),
+                                    null
+                            )
+                    )));
+            guide.avoidNow().stream()
+                    .limit(2)
+                    .forEach(item -> candidates.add(new EvidenceCandidate(
+                            6,
+                            new ChatEvidenceDto(
+                                    "ai_warning",
+                                    item.boothId(),
+                                    item.boothName(),
+                                    "AI 주의: " + item.riskLevel() + " " + item.riskScore() + "점 / " + String.join(", ", item.reasons().stream().limit(3).toList()),
+                                    null
+                            )
+                    )));
+        } catch (Exception ex) {
+            // AI guide evidence is optional; the chatbot can still answer from raw festival data.
+        }
     }
 
     private boolean wantsBooths(String question) {

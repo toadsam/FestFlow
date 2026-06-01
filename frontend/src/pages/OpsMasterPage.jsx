@@ -659,9 +659,31 @@ export default function OpsMasterPage() {
                   {aiPanel.recommendedActions?.length > 0 && (
                     <div className="mt-2 space-y-1">
                       {aiPanel.recommendedActions.slice(0, 3).map((item) => (
-                        <p key={item} className="text-[11px] font-semibold text-cyan-900">
-                          조치: {item}
-                        </p>
+                        <div key={item} className="rounded-lg border border-cyan-100 bg-cyan-50 px-2 py-1.5">
+                          <p className="text-[11px] font-semibold text-cyan-900">
+                            조치: {item}
+                          </p>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleAiNoticeDraft("congestion")}
+                              disabled={aiBusy}
+                              className="rounded-md bg-cyan-700 px-2 py-1 text-[10px] font-extrabold text-white disabled:opacity-60"
+                            >
+                              공지 초안
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setAiPanel((prev) => ({
+                                ...prev,
+                                summary: `${prev?.summary || ""}\n\n검토 메모: ${item}`,
+                              }))}
+                              className="rounded-md border border-cyan-200 bg-white px-2 py-1 text-[10px] font-extrabold text-cyan-800"
+                            >
+                              검토 메모
+                            </button>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}

@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createCongestionStream,
+  fetchAiCongestionPredictions,
+  fetchAiDecisionLogs,
   fetchAnalyticsDashboard,
 } from "../api";
 import { IconChart, IconRefresh } from "../components/UxIcons";
@@ -174,12 +176,18 @@ function TrendChart({ points }) {
 
 export default function AnalyticsPage() {
   const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD);
+  const [aiPredictions, setAiPredictions] = useState([]);
+  const [aiDecisionLogs, setAiDecisionLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
   const load = useCallback(async () => {
     try {
-      const nextDashboard = await fetchAnalyticsDashboard(15);
+      const [nextDashboard, nextPredictions, nextDecisionLogs] = await Promise.all([
+        fetchAnalyticsDashboard(15),
+        fetchAiCongestionPredictions().catch(() => []),
+        fetchAiDecisionLogs().catch(() => []),
+      ]);
       setDashboard({
         ...EMPTY_DASHBOARD,
         ...nextDashboard,
@@ -191,6 +199,8 @@ export default function AnalyticsPage() {
         zones: Array.isArray(nextDashboard?.zones) ? nextDashboard.zones : [],
         trend: Array.isArray(nextDashboard?.trend) ? nextDashboard.trend : [],
       });
+      setAiPredictions(Array.isArray(nextPredictions) ? nextPredictions : []);
+      setAiDecisionLogs(Array.isArray(nextDecisionLogs) ? nextDecisionLogs : []);
       setMessage("");
     } catch (error) {
       setMessage(error.message || "실시간 혼잡도 데이터를 불러오지 못했습니다.");
@@ -254,6 +264,58 @@ export default function AnalyticsPage() {
           </em>
         </div>
         <Gauge percent={dashboard.overview.percent} />
+      </section>
+
+      <section className="uni-card">
+        <div className="analytics-section-head">
+          <h2>AI 30분 혼잡 예측</h2>
+          <span>예약·체크인·GPS·공연 영향 반영</span>
+        </div>
+        <div className="grid gap-2">
+          {aiPredictions.slice(0, 4).map((item) => (
+            <article key={item.boothId} className="rounded-lg border border-slate-200 bg-white px-3 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <strong className="text-sm text-slate-900">{item.boothName}</strong>
+                <span className="text-xs font-bold text-cyan-700">{item.riskLevel} · {item.riskScore}점</span>
+              </div>
+              <p className="mt-1 text-xs font-semibold text-slate-600">
+                현재 {item.currentLevel} → 30분 뒤 {item.predictedLevel}
+              </p>
+              <small className="mt-1 block text-xs text-slate-500">
+                {(item.reasons || []).slice(0, 2).join(" · ")}
+              </small>
+            </article>
+          ))}
+          {!aiPredictions.length && (
+            <p className="app-inline-note">AI 예측 데이터를 수집하는 중입니다.</p>
+          )}
+        </div>
+      </section>
+
+      <section className="uni-card">
+        <div className="analytics-section-head">
+          <h2>AI 판단 이력</h2>
+          <span>추천과 경보가 만들어진 근거</span>
+        </div>
+        <div className="grid gap-2">
+          {aiDecisionLogs.slice(0, 3).map((log, index) => (
+            <article key={`${log.createdAt}-${index}`} className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <strong className="text-sm text-blue-950">{log.title}</strong>
+                <span className="text-[11px] font-extrabold text-blue-700">{log.type}</span>
+              </div>
+              <p className="mt-1 text-xs font-semibold leading-relaxed text-slate-700">{log.summary}</p>
+              {(log.reasons || []).length > 0 && (
+                <small className="mt-1 block text-xs text-blue-800">
+                  {(log.reasons || []).slice(0, 3).join(" · ")}
+                </small>
+              )}
+            </article>
+          ))}
+          {!aiDecisionLogs.length && (
+            <p className="app-inline-note">AI 판단 로그가 아직 없습니다. 홈의 AI 가이드를 열면 기록됩니다.</p>
+          )}
+        </div>
       </section>
 
       {!hasMeasurements && (
