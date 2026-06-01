@@ -89,6 +89,7 @@ public class DataInitializer {
             }
             seedMissingDemoBooths(boothRepository, seedScenarioBooths(now));
             seedMissingDemoBooths(boothRepository, seedMoreScenarioBooths(now));
+            normalizeCorruptedDemoBooths(boothRepository, now);
 
             if (eventRepository.count() == 0) {
                 eventRepository.saveAll(seedEvents(now));
@@ -263,6 +264,68 @@ public class DataInitializer {
                 boothRepository.save(booth);
             }
         }
+    }
+
+    private void normalizeCorruptedDemoBooths(BoothRepository boothRepository, LocalDateTime now) {
+        List<Booth> corruptedBooths = boothRepository.findAll().stream()
+                .filter(booth -> isUnreadableText(booth.getName()) || isUnreadableText(booth.getDescription()))
+                .toList();
+        if (corruptedBooths.isEmpty()) {
+            return;
+        }
+        for (Booth booth : corruptedBooths) {
+            String category = booth.getCategory() == null ? "" : booth.getCategory();
+            String liveMessage = isUnreadableText(booth.getLiveStatusMessage())
+                    ? "샘플 데이터 복구 완료, 정상 운영 중"
+                    : booth.getLiveStatusMessage();
+            booth.update(
+                    replacementBoothName(category, booth.getDisplayOrder()),
+                    booth.getLatitude(),
+                    booth.getLongitude(),
+                    replacementBoothDescription(category),
+                    booth.getDisplayOrder(),
+                    booth.getImageUrl(),
+                    booth.getEstimatedWaitMinutes(),
+                    booth.getRemainingStock(),
+                    liveMessage,
+                    now
+            );
+        }
+        boothRepository.saveAll(corruptedBooths);
+    }
+
+    private boolean isUnreadableText(String value) {
+        if (value == null) {
+            return false;
+        }
+        String trimmed = value.trim();
+        return trimmed.matches("\\?{2,}") || trimmed.contains("????");
+    }
+
+    private String replacementBoothName(String category, Integer displayOrder) {
+        if (category.contains("주점")) {
+            return "캠퍼스 야간주점";
+        }
+        if (category.contains("푸드") || category.contains("음식")) {
+            return "캠퍼스 푸드부스";
+        }
+        if (category.contains("체험")) {
+            return "캠퍼스 체험부스";
+        }
+        return "축제 부스 " + (displayOrder == null ? "" : displayOrder);
+    }
+
+    private String replacementBoothDescription(String category) {
+        if (category.contains("주점")) {
+            return "축제 야간 시간대에 운영되는 주점 부스입니다.";
+        }
+        if (category.contains("푸드") || category.contains("음식")) {
+            return "빠르게 식사와 간식을 이용할 수 있는 먹거리 부스입니다.";
+        }
+        if (category.contains("체험")) {
+            return "방문객이 짧게 참여할 수 있는 체험형 부스입니다.";
+        }
+        return "축제 현장에서 운영 중인 샘플 부스입니다.";
     }
 
     private Booth booth(String name, double latitude, double longitude, String description, Integer displayOrder,

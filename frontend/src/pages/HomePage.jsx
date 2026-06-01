@@ -53,6 +53,17 @@ function cardTone(index) {
   return ["mint", "violet", "amber"][index] || "mint";
 }
 
+function cleanBrokenText(value, fallback = "추천 부스") {
+  if (typeof value !== "string") return value;
+  return value.replace(/\?{2,}/g, fallback);
+}
+
+function compactText(value, maxLength = 90) {
+  const text = cleanBrokenText(value || "");
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).trim()}...`;
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [booths, setBooths] = useState([]);
@@ -258,8 +269,8 @@ export default function HomePage() {
             <button type="button" onClick={() => navigate("/analytics")}>예측 보기</button>
           </div>
           <div className="ai-guide-card__hero">
-            <strong>{aiGuide.headline}</strong>
-            <p>{aiGuide.summary}</p>
+            <strong>{compactText(aiGuide.headline, 42)}</strong>
+            <p>{compactText(aiGuide.summary, 82)}</p>
           </div>
           <div className="ai-guide-card__prompt-row">
             {AI_HOME_PROMPTS.map((prompt) => (
@@ -293,13 +304,13 @@ export default function HomePage() {
           </form>
           {aiAnswer && (
             <div className="ai-guide-card__answer">
-              <small>{aiAnswer.question}</small>
-              <p>{aiAnswer.answer}</p>
+              <small>{cleanBrokenText(aiAnswer.question, "질문")}</small>
+              <p>{compactText(aiAnswer.answer, 118)}</p>
               {aiAnswer.evidence.length > 0 && (
                 <div className="ai-guide-card__evidence">
-                  {aiAnswer.evidence.slice(0, 3).map((item, index) => {
+                  {aiAnswer.evidence.slice(0, 2).map((item, index) => {
                     const path = evidencePath(item);
-                    const label = item.label || item.reason || "AI 근거";
+                    const label = cleanBrokenText(item.label || item.reason || "AI 근거");
                     if (!path) {
                       return <span key={`${item.type}-${item.id || index}`}>{label}</span>;
                     }
@@ -315,33 +326,6 @@ export default function HomePage() {
                   })}
                 </div>
               )}
-            </div>
-          )}
-          <div className="ai-guide-card__actions">
-            {(aiGuide.userActions || []).slice(0, 3).map((action) => (
-              <p key={action}>{action}</p>
-            ))}
-          </div>
-          {aiGuide.recommendedNow?.length > 0 && (
-            <div className="ai-guide-card__grid">
-              {aiGuide.recommendedNow.slice(0, 3).map((item) => (
-                <button
-                  key={item.boothId}
-                  type="button"
-                  className="ai-guide-card__item"
-                  onClick={() => navigate(`/booths/${item.boothId}`)}
-                >
-                  <strong>{item.boothName}</strong>
-                  {item.reasons?.length > 0 && (
-                    <span>
-                      {item.reasons.slice(0, 2).map((reason) => (
-                        <em key={reason}>{reason}</em>
-                      ))}
-                    </span>
-                  )}
-                  <small>위험도 {item.riskScore}점 · 30분 뒤 {item.predictedLevel}</small>
-                </button>
-              ))}
             </div>
           )}
         </section>
