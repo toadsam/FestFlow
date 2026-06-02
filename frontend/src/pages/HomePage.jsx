@@ -23,6 +23,10 @@ import {
 } from "../data/festivalUiData";
 
 const EVENT_RECOMMEND_IMAGE = "/images/og-festflow.png";
+const DEFAULT_AI_GUIDE = {
+  headline: "지금은 대기 짧은 부스부터 둘러보는 코스를 추천합니다.",
+  summary: "혼잡도, 공연 시간, 부스 대기 정보를 기준으로 지금 움직이기 좋은 동선을 골라드릴게요.",
+};
 const AI_HOME_PROMPTS = [
   "지금 어디 가면 좋아?",
   "안 붐비는 음식 부스 추천해줘",
@@ -190,6 +194,7 @@ export default function HomePage() {
     const max = Math.max(1, ...traffic.map((item) => Number(item.count) || 0));
     return Math.min(99, Math.max(1, Math.round((latest / max) * 100)));
   }, [traffic]);
+  const visibleAiGuide = aiGuide || DEFAULT_AI_GUIDE;
 
   async function handleAiAsk(question = aiQuestion) {
     const nextQuestion = question.trim();
@@ -230,7 +235,8 @@ export default function HomePage() {
       <header
         className="home-hero-card"
         style={{
-          backgroundImage: `linear-gradient(180deg, rgba(7,26,61,0.15), rgba(7,26,61,0.98)), url(/images/og-festflow.png)`,
+          backgroundImage:
+            "radial-gradient(circle at 78% 42%, rgba(139, 92, 246, 0.25), transparent 5.8rem), radial-gradient(circle at 50% 62%, rgba(37, 87, 255, 0.14), transparent 6.2rem), linear-gradient(145deg, #ffffff 0%, #f4f0ff 58%, #eef8ff 100%)",
         }}
       >
         <div className="home-hero-top">
@@ -262,74 +268,72 @@ export default function HomePage() {
 
       {message && <p className="app-inline-note">{message}</p>}
 
-      {aiGuide && (
-        <section className="uni-card ai-guide-card">
-          <div className="uni-section-head">
-            <h2>AI 축제 가이드</h2>
-            <button type="button" onClick={() => navigate("/analytics")}>예측 보기</button>
-          </div>
-          <div className="ai-guide-card__hero">
-            <strong>{compactText(aiGuide.headline, 42)}</strong>
-            <p>{compactText(aiGuide.summary, 82)}</p>
-          </div>
-          <div className="ai-guide-card__prompt-row">
-            {AI_HOME_PROMPTS.map((prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                className="ai-guide-card__prompt"
-                onClick={() => handleAiAsk(prompt)}
-                disabled={aiAskLoading}
-              >
-                {prompt}
-              </button>
-            ))}
-          </div>
-          <form
-            className="ai-guide-card__ask"
-            onSubmit={(event) => {
-              event.preventDefault();
-              handleAiAsk();
-            }}
-          >
-            <input
-              value={aiQuestion}
-              onChange={(event) => setAiQuestion(event.target.value)}
-              placeholder="AI에게 축제 동선을 물어보세요"
+      <section className="uni-card ai-guide-card">
+        <div className="uni-section-head">
+          <h2>AI 축제 가이드</h2>
+          <button type="button" onClick={() => navigate("/analytics")}>예측 보기</button>
+        </div>
+        <div className="ai-guide-card__hero">
+          <strong>{compactText(visibleAiGuide.headline, 42)}</strong>
+          <p>{compactText(visibleAiGuide.summary, 82)}</p>
+        </div>
+        <div className="ai-guide-card__prompt-row">
+          {AI_HOME_PROMPTS.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              className="ai-guide-card__prompt"
+              onClick={() => handleAiAsk(prompt)}
               disabled={aiAskLoading}
-            />
-            <button type="submit" disabled={aiAskLoading || !aiQuestion.trim()}>
-              {aiAskLoading ? "분석 중" : "질문"}
+            >
+              {prompt}
             </button>
-          </form>
-          {aiAnswer && (
-            <div className="ai-guide-card__answer">
-              <small>{cleanBrokenText(aiAnswer.question, "질문")}</small>
-              <p>{compactText(aiAnswer.answer, 118)}</p>
-              {aiAnswer.evidence.length > 0 && (
-                <div className="ai-guide-card__evidence">
-                  {aiAnswer.evidence.slice(0, 2).map((item, index) => {
-                    const path = evidencePath(item);
-                    const label = cleanBrokenText(item.label || item.reason || "AI 근거");
-                    if (!path) {
-                      return <span key={`${item.type}-${item.id || index}`}>{label}</span>;
-                    }
-                    return (
-                      <button
-                        key={`${item.type}-${item.id || index}`}
-                        type="button"
-                        onClick={() => navigate(path)}
-                      >
-                        {label}
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-        </section>
-      )}
+          ))}
+        </div>
+        <form
+          className="ai-guide-card__ask"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleAiAsk();
+          }}
+        >
+          <input
+            value={aiQuestion}
+            onChange={(event) => setAiQuestion(event.target.value)}
+            placeholder="AI에게 축제 동선을 물어보세요"
+            disabled={aiAskLoading}
+          />
+          <button type="submit" disabled={aiAskLoading || !aiQuestion.trim()}>
+            {aiAskLoading ? "분석 중" : "질문"}
+          </button>
+        </form>
+        {aiAnswer && (
+          <div className="ai-guide-card__answer">
+            <small>{cleanBrokenText(aiAnswer.question, "질문")}</small>
+            <p>{compactText(aiAnswer.answer, 118)}</p>
+            {aiAnswer.evidence.length > 0 && (
+              <div className="ai-guide-card__evidence">
+                {aiAnswer.evidence.slice(0, 2).map((item, index) => {
+                  const path = evidencePath(item);
+                  const label = cleanBrokenText(item.label || item.reason || "AI 근거");
+                  if (!path) {
+                    return <span key={`${item.type}-${item.id || index}`}>{label}</span>;
+                  }
+                  return (
+                    <button
+                      key={`${item.type}-${item.id || index}`}
+                      type="button"
+                      onClick={() => navigate(path)}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="uni-section">
         <div className="uni-section-head">

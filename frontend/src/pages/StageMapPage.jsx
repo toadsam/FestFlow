@@ -26,6 +26,7 @@ const FALLBACK_COORD_OFFSETS = [
 ];
 const CAMPUS_RADIUS_METERS = 2500;
 const SEARCH_RESULT_MAX_ZOOM = 17;
+const DEFAULT_VISIBLE_MAP_PINS = 18;
 
 function normalize(value) {
   return `${value || ""}`.toLowerCase();
@@ -329,7 +330,11 @@ export default function StageMapPage() {
       })),
     [filteredBooths],
   );
-  const mapPoints = useMemo(() => mapBooths.map((item) => item.point), [mapBooths]);
+  const visibleMapBooths = useMemo(() => {
+    if (query.trim()) return mapBooths;
+    return mapBooths.slice(0, DEFAULT_VISIBLE_MAP_PINS);
+  }, [mapBooths, query]);
+  const mapPoints = useMemo(() => visibleMapBooths.map((item) => item.point), [visibleMapBooths]);
 
   async function handleLocate() {
     if (!navigator.geolocation) {
@@ -407,7 +412,7 @@ export default function StageMapPage() {
             maxNativeZoom={19}
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          {mapBooths.slice(0, 40).map(({ booth, index, point }) => {
+          {visibleMapBooths.map(({ booth, index, point }) => {
             return (
               <Marker
                 key={booth.id || `${booth.name}-${index}`}
