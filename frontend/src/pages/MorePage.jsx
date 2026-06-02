@@ -16,16 +16,8 @@ import {
 const aiHubCards = [
   {
     to: "/chat",
-    title: "AI 축제 가이드",
-    caption: "지금 가기 좋은 곳과 동선을 추천해요.",
-    action: "추천받기",
-    icon: IconSparkles,
-    tone: "blue",
-  },
-  {
-    to: "/chat",
     title: "AI 챗봇",
-    caption: "공연, 부스, 편의시설을 바로 물어보세요.",
+    caption: "공연, 부스, 동선과 편의시설을 바로 물어보세요.",
     action: "대화하기",
     icon: IconChat,
     tone: "mint",

@@ -14797,6 +14797,7 @@ html[data-contrast="high"] .app-shell .uni-page {
 .app-shell .events-reference-date-tabs,
 .app-shell .events-reference-filter-tabs {
   display: flex;
+  align-items: center;
   gap: 0.45rem;
   max-width: 100%;
   overflow-x: auto;
@@ -14812,7 +14813,10 @@ html[data-contrast="high"] .app-shell .uni-page {
 .app-shell .events-reference-date-tabs button,
 .app-shell .events-reference-filter-tabs button {
   flex: 0 0 auto;
+  box-sizing: border-box !important;
+  height: 2.35rem !important;
   min-height: 2rem;
+  max-height: 2.35rem !important;
   padding: 0 0.78rem !important;
   border: 1px solid #e5ecf6 !important;
   border-radius: 999px !important;
@@ -14821,13 +14825,28 @@ html[data-contrast="high"] .app-shell .uni-page {
   box-shadow: none !important;
   font-size: 0.72rem !important;
   font-weight: 850 !important;
+  line-height: 1 !important;
+  transform: none !important;
 }
 
 .app-shell .events-reference-date-tabs button.active,
 .app-shell .events-reference-filter-tabs button.active {
-  border-color: #2563eb !important;
-  background: #2563eb !important;
-  color: #ffffff !important;
+  border-color: #c9d5ff !important;
+  background: #eef3ff !important;
+  color: #2557ff !important;
+  box-shadow: 0 8px 18px rgba(37, 87, 255, 0.12) !important;
+}
+
+.app-shell .events-reference-date-tabs button.active:active,
+.app-shell .events-reference-filter-tabs button.active:active {
+  border-color: #b8c7ff !important;
+  background: #e4ebff !important;
+  color: #1d4ed8 !important;
+}
+
+.app-shell .events-reference-page button:active {
+  transform: none !important;
+  filter: none !important;
 }
 
 .app-shell .events-reference-hero-card {
