@@ -107,19 +107,24 @@ function categoryMatches(booth, activeCategory) {
 }
 
 function mapStatus(booth) {
-  const rawWait = booth?.estimatedWaitMinutes ?? booth?.wait;
-  const wait =
-    rawWait == null || rawWait === ""
-      ? Number.NaN
-      : Number(String(rawWait).replace(/[^0-9]/g, ""));
+  return statusFromWaitLabel(boothWait(booth), booth?.congestion);
+}
+
+function statusFromWaitLabel(waitLabel, fallbackLabel) {
+  const wait = Number(String(waitLabel || "").replace(/[^0-9]/g, ""));
+  let label = "보통";
+
   if (Number.isFinite(wait)) {
-    if (wait >= 25) return { label: "혼잡", tone: "danger", color: "#ef4444" };
-    if (wait >= 10) return { label: "보통", tone: "warning", color: "#f59e0b" };
-    return { label: "여유", tone: "good", color: "#22c55e" };
+    if (wait >= 25) label = "혼잡";
+    else if (wait >= 10) label = "보통";
+    else label = "여유";
+  } else if (fallbackLabel) {
+    label = fallbackLabel;
   }
-  if (booth?.congestion === "여유") return { label: "여유", tone: "good", color: "#22c55e" };
-  if (booth?.congestion === "혼잡") return { label: "혼잡", tone: "danger", color: "#ef4444" };
-  return { label: booth?.congestion || "보통", tone: "warning", color: "#f59e0b" };
+
+  if (label.includes("혼잡")) return { label, tone: "danger", color: "#ef4444" };
+  if (label.includes("여유") || label.includes("한산")) return { label, tone: "good", color: "#22c55e" };
+  return { label, tone: "warning", color: "#f59e0b" };
 }
 
 function pinTone(booth, index) {
@@ -495,26 +500,37 @@ export default function StageMapPage() {
           <h2>내 주변 부스</h2>
           <span>{filteredBooths.length}곳</span>
         </div>
-        <div className="booth-mini-list">
-          {filteredBooths.map((booth, index) => (
-            <button
-              key={booth.id || booth.name}
-              type="button"
-              className="booth-mini-row"
-              onClick={() => navigate(`/booths/${booth.id || 1}`)}
-            >
-              <span className={`map-list-icon map-list-icon--${pinTone({ ...booth, category: listIconCategory(booth, index) }, index)}`}>
-                <CategoryIcon category={listIconCategory(booth, index)} className="h-4 w-4" />
-              </span>
-              <span className="booth-mini-main">
-                <strong>{booth.name}</strong>
-                <small>{boothDistance(booth, index)} · 대기 {boothWait(booth)}</small>
-              </span>
-              <span className={`map-status-pill map-status-pill--${mapStatus(booth).tone}`}>
-                {mapStatus(booth).label}
-              </span>
-            </button>
-          ))}
+        <div className="booth-mini-list" data-i18n-skip>
+          {filteredBooths.map((booth, index) => {
+            const waitLabel = boothWait(booth);
+            const status = statusFromWaitLabel(waitLabel, booth?.congestion);
+            const iconCategory = listIconCategory(booth, index);
+
+            return (
+              <button
+                key={booth.id || booth.name}
+                type="button"
+                className="booth-mini-row"
+                onClick={() => navigate(`/booths/${booth.id || 1}`)}
+              >
+                <span className={`map-list-icon map-list-icon--${pinTone({ ...booth, category: iconCategory }, index)}`}>
+                  <CategoryIcon category={iconCategory} className="h-4 w-4" />
+                </span>
+                <span className="booth-mini-main">
+                  <strong>{booth.name}</strong>
+                  <small>{boothDistance(booth, index)} · 대기 {waitLabel}</small>
+                </span>
+                <span
+                  className={`map-status-pill map-status-pill--${status.tone}`}
+                  data-label={status.label}
+                  data-status={status.tone}
+                  data-i18n-skip
+                >
+                  {status.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
 
