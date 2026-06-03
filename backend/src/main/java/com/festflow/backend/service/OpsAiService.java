@@ -169,21 +169,35 @@ public class OpsAiService {
     public AiAssistResponseDto staffLostItemAssist(String staffToken, AiAssistRequestDto requestDto) {
         staffService.authenticateByToken(staffToken);
         String prompt = safe(requestDto.prompt(), "");
+        if (prompt.isBlank()) {
+            return new AiAssistResponseDto(
+                    "AI 분실물 검색",
+                    "찾을 물건의 색상, 종류, 위치 같은 단어를 입력해 주세요.",
+                    List.of(),
+                    List.of("예: 검은 지갑", "예: 에어팟 학생회관", "예: 파란 카드지갑"),
+                    null,
+                    null,
+                    null,
+                    "LOW"
+            );
+        }
         List<LostItemResponseDto> matches = lostItemMatches(prompt).stream().limit(5).toList();
         List<String> highlights = matches.stream()
                 .map(item -> item.title() + " · " + item.category() + " · " + item.foundLocation() + " · " + item.statusLabel())
                 .toList();
-        String context = "방문객 설명: " + prompt + "\n후보:\n" + String.join("\n", highlights);
+        String context = "검색어: " + prompt + "\n매칭된 분실물:\n" + String.join("\n", highlights);
         String summary = generateText(
-                "스태프가 방문객에게 안내할 분실물 응대 문구를 한국어로 짧게 작성하세요. 연락처는 말하지 말고 후보 확인 절차를 안내하세요.",
+                "스태프용 분실물 검색 결과를 한국어로 짧게 요약하세요. 매칭된 항목만 언급하고, 연락처는 말하지 마세요. 후보가 있으면 추가로 확인할 질문 1개를 제안하세요.",
                 context,
-                highlights.isEmpty() ? "비슷한 분실물을 찾지 못했습니다. 색상, 물품 종류, 잃어버린 위치를 더 확인해 주세요." : "유사 후보가 있습니다. 분실물 센터에서 사진과 상세 설명을 확인해 주세요."
+                highlights.isEmpty() ? "검색어와 관련된 분실물이 없습니다. 색상, 물품 종류, 잃어버린 위치를 바꿔 다시 검색해 주세요." : "검색어와 관련된 분실물 후보만 표시했습니다."
         );
         return new AiAssistResponseDto(
-                "분실물 응대 AI",
+                "AI 분실물 검색",
                 summary,
                 highlights,
-                List.of("물품 특징 추가 확인", "사진/상세 설명 대조", "소유자 확인 절차 진행"),
+                matches.isEmpty()
+                        ? List.of("다른 키워드로 다시 검색", "색상/장소/물품 종류 추가 입력")
+                        : List.of("사진/상세 설명 대조", "방문객에게 고유 특징 추가 확인", "분실물 상세 탭에서 상태 확인"),
                 null,
                 null,
                 null,

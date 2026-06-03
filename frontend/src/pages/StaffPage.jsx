@@ -314,6 +314,7 @@ export default function StaffPage() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiText, setAiText] = useState("");
   const [aiResult, setAiResult] = useState(null);
+  const [aiLostQuery, setAiLostQuery] = useState("");
   const [translateForm, setTranslateForm] = useState(EMPTY_TRANSLATE_FORM);
   const [translateBusy, setTranslateBusy] = useState(false);
   const [translateResult, setTranslateResult] = useState(null);
@@ -699,7 +700,7 @@ export default function StaffPage() {
         type === "zone"
           ? await fetchStaffAiZoneSummary(staffToken)
           : type === "lost"
-            ? await createStaffAiLostItemAssist("분실물 센터 응대 문구를 작성해줘.", staffToken)
+            ? await createStaffAiLostItemAssist(aiLostQuery.trim(), staffToken)
             : await fetchStaffAiFieldChecklist(staffToken);
       const normalized = normalizeAiAssist(result);
       setAiResult(normalized);
@@ -1033,15 +1034,32 @@ export default function StaffPage() {
             <IconMapPin className="h-5 w-5" />
             <strong>AI 구역 요약</strong>
           </button>
-          <button type="button" onClick={() => runAi("lost")} disabled={aiBusy}>
+          <button type="button" onClick={() => runAi("lost")} disabled={aiBusy || !aiLostQuery.trim()}>
             <IconBox className="h-5 w-5" />
-            <strong>분실물 응대</strong>
+            <strong>분실물 검색</strong>
           </button>
           <button type="button" onClick={() => runAi("checklist")} disabled={aiBusy}>
             <IconChat className="h-5 w-5" />
             <strong>현장 체크리스트</strong>
           </button>
         </div>
+        <form
+          className="staff-ai-lost-search"
+          onSubmit={(event) => {
+            event.preventDefault();
+            runAi("lost");
+          }}
+        >
+          <input
+            value={aiLostQuery}
+            onChange={(event) => setAiLostQuery(event.target.value)}
+            placeholder="분실물 키워드 입력 예: 검은 지갑, 에어팟, 학생회관"
+            disabled={aiBusy}
+          />
+          <button type="submit" disabled={aiBusy || !aiLostQuery.trim()}>
+            검색
+          </button>
+        </form>
         {aiResult ? (
           <article className="staff-reference-ai-result staff-reference-ai-card">
             <strong>{aiResult.title}</strong>
