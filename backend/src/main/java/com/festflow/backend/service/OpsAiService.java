@@ -601,7 +601,7 @@ public class OpsAiService {
         List<String> highlights = new ArrayList<>();
         for (int i = 0; i < matches.size(); i++) {
             LostItemResponseDto item = matches.get(i);
-            highlights.add((i + 1) + "순위 후보: " + value(item.title())
+            highlights.add("lost-item:" + item.id() + "|" + (i + 1) + "순위 후보: " + value(item.title())
                     + " · 일치한 근거: " + lostItemMatchedEvidence(prompt, item)
                     + " · 애매한 부분: " + lostItemUnclearPoint(prompt, item)
                     + " · 추가 확인 질문: " + lostItemFollowUpQuestion(item));

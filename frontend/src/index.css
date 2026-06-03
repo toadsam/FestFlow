@@ -19126,6 +19126,12 @@ html[data-contrast="high"] .app-shell .uni-page {
 .app-shell .staff-reference-tools button:nth-child(2) svg { color: #16a34a; }
 .app-shell .staff-reference-tools button:nth-child(3) svg { color: #7c3aed; }
 
+.app-shell .staff-reference-tools button.active {
+  border-color: #93c5fd !important;
+  background: #eff6ff !important;
+  box-shadow: 0 0 0 3px rgba(147, 197, 253, 0.22) !important;
+}
+
 .app-shell .staff-reference-tools strong {
   color: #071a3d !important;
   font-size: 0.68rem !important;
@@ -19227,7 +19233,8 @@ html[data-contrast="high"] .app-shell .uni-page {
   gap: 0.44rem;
 }
 
-.app-shell .staff-reference-ai-card--match span {
+.app-shell .staff-reference-ai-card--match span,
+.app-shell .staff-reference-ai-card--match .staff-ai-match-candidate {
   display: block;
   width: 100%;
   padding: 0.58rem 0.62rem;
@@ -19238,7 +19245,17 @@ html[data-contrast="high"] .app-shell .uni-page {
   font-size: 0.68rem !important;
   font-weight: 760 !important;
   line-height: 1.45 !important;
+  text-align: left;
   white-space: normal;
+}
+
+.app-shell .staff-reference-ai-card--match .staff-ai-match-candidate {
+  cursor: pointer;
+}
+
+.app-shell .staff-reference-ai-card--match .staff-ai-match-candidate:hover {
+  border-color: #60a5fa;
+  background: #f8fbff;
 }
 
 .app-shell .staff-reference-ai-card li {
