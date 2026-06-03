@@ -121,20 +121,18 @@ public class OpsAiService {
     public AiAssistResponseDto staffZoneSummary(String staffToken) {
         StaffMemberResponseDto me = staffService.authenticateByToken(staffToken);
         List<StaffMemberResponseDto> staff = staffService.bootstrap(staffToken).staff();
-        List<EventResponseDto> events = upcomingEvents().stream().limit(3).toList();
-        List<NoticeResponseDto> notices = noticeService.getActiveNotices().stream().limit(3).toList();
-        List<LostItemResponseDto> lostItems = activeLostItems().stream().limit(5).toList();
-        String context = staffOpsContext(me, staff, events, notices, lostItems);
+        List<StaffMemberResponseDto> nearbyStaff = nearbyStaff(me, staff);
+        String context = nearbyStaffContext(me, nearbyStaff);
         String summary = generateText(
-                "스태프 본인에게 보여줄 현장 구역 요약을 한국어로 4줄 이하로 작성하세요. 부스 대기, 재고, 예약은 말하지 마세요. 줄관리, 무대관리, 동선, 안전, 공지, 분실물 대응 중심으로 바로 해야 할 행동을 포함하세요.",
+                "스태프 본인에게 보여줄 AI 협업 판단을 한국어로 4줄 이하로 작성하세요. 누가 지원 요청에 가장 적절한지, 누구는 호출을 보류해야 하는지, 내가 지금 해야 할 행동, 바로 쓸 짧은 무전 문구를 포함하세요. 부스, 재고, 대기시간, 공연, 분실물은 언급하지 마세요.",
                 context,
-                staffOpsFallback(me, staff, events, notices, lostItems)
+                nearbyStaffFallback(me, nearbyStaff)
         );
         return new AiAssistResponseDto(
-                "내 구역 AI 요약",
+                "AI 협업 판단",
                 summary,
-                staffOpsHighlights(me, staff, events, notices, lostItems),
-                staffOpsActions(me, staff, events, notices, lostItems),
+                nearbyStaffHighlights(me, nearbyStaff),
+                nearbyStaffActions(me, nearbyStaff),
                 null,
                 null,
                 null,
@@ -423,6 +421,156 @@ public class OpsAiService {
                         Comparator.nullsLast(Comparator.reverseOrder())
                 ))
                 .toList();
+    }
+
+    private List<StaffMemberResponseDto> nearbyStaff(StaffMemberResponseDto me, List<StaffMemberResponseDto> staff) {
+        boolean hasMyLocation = hasStaffLocation(me);
+        return staff.stream()
+                .filter(member -> !String.valueOf(member.staffNo()).equals(String.valueOf(me.staffNo())))
+                .sorted((left, right) -> {
+                    if (hasMyLocation) {
+                        double leftDistance = hasStaffLocation(left) ? distanceMeters(me.latitude(), me.longitude(), left.latitude(), left.longitude()) : Double.MAX_VALUE;
+                        double rightDistance = hasStaffLocation(right) ? distanceMeters(me.latitude(), me.longitude(), right.latitude(), right.longitude()) : Double.MAX_VALUE;
+                        int compared = Double.compare(leftDistance, rightDistance);
+                        if (compared != 0) return compared;
+                    }
+                    boolean leftSameTeam = safe(left.team(), "").equals(safe(me.team(), ""));
+                    boolean rightSameTeam = safe(right.team(), "").equals(safe(me.team(), ""));
+                    if (leftSameTeam != rightSameTeam) return leftSameTeam ? -1 : 1;
+                    return Comparator.comparing(
+                            StaffMemberResponseDto::lastUpdatedAt,
+                            Comparator.nullsLast(Comparator.reverseOrder())
+                    ).compare(left, right);
+                })
+                .limit(5)
+                .toList();
+    }
+
+    private String nearbyStaffContext(StaffMemberResponseDto me, List<StaffMemberResponseDto> nearbyStaff) {
+        StaffMemberResponseDto support = bestSupportCandidate(nearbyStaff);
+        StaffMemberResponseDto hold = callHoldCandidate(nearbyStaff);
+        return "나: " + me.name() + " / " + me.team() + " / " + me.statusLabel() + " / 업무 " + safe(me.currentTask(), "미입력")
+                + "\n내 위치 공유: " + (hasStaffLocation(me) ? "켜짐" : "꺼짐 또는 미확인")
+                + "\n협업 판단 기준: 대기중과 가까운 스태프를 우선 추천하고, 긴급/이동중/이미 맡은 일이 뚜렷한 스태프는 호출 보류로 판단"
+                + "\n추천 지원 후보: " + (support == null ? "없음" : support.name() + " / " + support.statusLabel() + " / " + safe(support.currentTask(), "업무 미입력") + " / " + staffDistanceLabel(me, support))
+                + "\n호출 보류 후보: " + (hold == null ? "없음" : hold.name() + " / " + hold.statusLabel() + " / " + safe(hold.currentTask(), "업무 미입력") + " / " + staffDistanceLabel(me, hold))
+                + "\n주변 스태프: " + nearbyStaff.stream().map(member ->
+                        member.name()
+                                + " / " + member.team()
+                                + " / 상태 " + member.statusLabel()
+                                + " / 업무 " + safe(member.currentTask(), "미입력")
+                                + " / 거리 " + staffDistanceLabel(me, member)
+                                + " / 업데이트 " + value(member.lastUpdatedAt())
+                ).toList();
+    }
+
+    private String nearbyStaffFallback(StaffMemberResponseDto me, List<StaffMemberResponseDto> nearbyStaff) {
+        if (nearbyStaff.isEmpty()) return "주변에서 확인되는 스태프가 없습니다. 위치 공유 상태와 팀 연락망을 먼저 확인하세요.";
+        StaffMemberResponseDto support = bestSupportCandidate(nearbyStaff);
+        StaffMemberResponseDto hold = callHoldCandidate(nearbyStaff);
+        if (support == null) {
+            return "지금 바로 호출하기 좋은 대기 인원이 보이지 않습니다. 현재 위치를 유지하고 팀장에게 지원 가능 인원을 확인하세요.";
+        }
+        return support.name() + "님이 " + support.statusLabel() + " 상태라 지원 요청 후보입니다."
+                + (hold == null ? "" : " " + hold.name() + "님은 " + hold.statusLabel() + " 상태라 호출을 보류하세요.")
+                + " 무전 문구: " + radioMessage(me, support);
+    }
+
+    private List<String> nearbyStaffHighlights(StaffMemberResponseDto me, List<StaffMemberResponseDto> nearbyStaff) {
+        List<String> result = new ArrayList<>();
+        result.add("내 상태: " + me.statusLabel() + " · " + safe(me.currentTask(), "업무 미입력"));
+        if (nearbyStaff.isEmpty()) {
+            result.add("주변 스태프: 확인 없음");
+            return result;
+        }
+        StaffMemberResponseDto support = bestSupportCandidate(nearbyStaff);
+        StaffMemberResponseDto hold = callHoldCandidate(nearbyStaff);
+        if (support != null) result.add("지원 요청 추천: " + support.name() + " · " + support.statusLabel() + " · " + staffDistanceLabel(me, support));
+        if (hold != null) result.add("호출 보류: " + hold.name() + " · " + hold.statusLabel() + " · " + safe(hold.currentTask(), "업무 미입력"));
+        long sameTaskCount = nearbyStaff.stream()
+                .filter(member -> !safe(me.currentTask(), "").isBlank())
+                .filter(member -> safe(member.currentTask(), "").equalsIgnoreCase(safe(me.currentTask(), "")))
+                .count();
+        if (sameTaskCount > 0) result.add("역할 겹침 가능: 내 업무와 같은 주변 스태프 " + sameTaskCount + "명");
+        nearbyStaff.stream().limit(3).forEach(member -> result.add(member.name()
+                + " · " + member.statusLabel()
+                + " · " + safe(member.currentTask(), "업무 미입력")
+                + " · " + staffDistanceLabel(me, member)));
+        return result;
+    }
+
+    private List<String> nearbyStaffActions(StaffMemberResponseDto me, List<StaffMemberResponseDto> nearbyStaff) {
+        List<String> actions = new ArrayList<>();
+        StaffMemberResponseDto support = bestSupportCandidate(nearbyStaff);
+        StaffMemberResponseDto hold = callHoldCandidate(nearbyStaff);
+        if (support != null) {
+            actions.add("지원 요청 추천: " + support.name() + "님에게 " + safe(me.currentTask(), "현재 업무") + " 지원을 요청하세요.");
+        }
+        if (hold != null) {
+            actions.add("호출 보류: " + hold.name() + "님은 " + hold.statusLabel() + " 상태라 지금은 부르지 않는 편이 좋습니다.");
+        }
+        nearbyStaff.stream()
+                .filter(member -> "URGENT".equals(member.status()))
+                .findFirst()
+                .ifPresent(member -> actions.add(member.name() + "님이 긴급 상태입니다. 위치와 메모를 먼저 확인하세요."));
+        nearbyStaff.stream()
+                .filter(member -> "MOVING".equals(member.status()))
+                .findFirst()
+                .ifPresent(member -> actions.add(member.name() + "님은 이동중입니다. 도착 전까지 현재 위치를 유지하세요."));
+        if (support != null) actions.add("무전 문구: " + radioMessage(me, support));
+        if (actions.isEmpty()) actions.add("주변에 바로 호출할 인원이 없습니다. 현재 업무를 유지하고 위치 공유를 확인하세요.");
+        return actions.stream().limit(4).toList();
+    }
+
+    private StaffMemberResponseDto bestSupportCandidate(List<StaffMemberResponseDto> nearbyStaff) {
+        return nearbyStaff.stream()
+                .filter(member -> !"URGENT".equals(member.status()))
+                .filter(member -> !"MOVING".equals(member.status()))
+                .min(Comparator.comparingInt(this::supportPriority))
+                .orElse(null);
+    }
+
+    private int supportPriority(StaffMemberResponseDto member) {
+        if ("STANDBY".equals(member.status())) return 0;
+        if ("ON_DUTY".equals(member.status())) return 1;
+        return 2;
+    }
+
+    private StaffMemberResponseDto callHoldCandidate(List<StaffMemberResponseDto> nearbyStaff) {
+        return nearbyStaff.stream()
+                .filter(member -> "URGENT".equals(member.status()) || "MOVING".equals(member.status()))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private String radioMessage(StaffMemberResponseDto me, StaffMemberResponseDto support) {
+        return support.name() + "님, " + safe(me.currentTask(), "현재 위치") + " 지원 가능하시면 합류 부탁드립니다.";
+    }
+
+    private boolean hasStaffLocation(StaffMemberResponseDto member) {
+        if (member == null || !Boolean.TRUE.equals(member.locationSharingEnabled())) return false;
+        return member.latitude() != null
+                && member.longitude() != null
+                && Math.abs(member.latitude()) <= 90
+                && Math.abs(member.longitude()) <= 180
+                && !(member.latitude() == 0 && member.longitude() == 0);
+    }
+
+    private String staffDistanceLabel(StaffMemberResponseDto me, StaffMemberResponseDto member) {
+        if (!hasStaffLocation(me) || !hasStaffLocation(member)) return "위치 미공유";
+        double meters = distanceMeters(me.latitude(), me.longitude(), member.latitude(), member.longitude());
+        if (meters < 1000) return Math.round(meters) + "m";
+        return String.format("%.1fkm", meters / 1000.0);
+    }
+
+    private double distanceMeters(double lat1, double lon1, double lat2, double lon2) {
+        double earthRadiusMeters = 6371000.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return earthRadiusMeters * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     private String staffOpsContext(

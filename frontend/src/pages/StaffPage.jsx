@@ -923,7 +923,7 @@ export default function StaffPage() {
       <header className="staff-reference-topbar">
         <h1>스태프</h1>
         <div>
-          <button type="button" aria-label="AI 구역 요약" onClick={() => runAi("zone")} disabled={aiBusy}>
+          <button type="button" aria-label="AI 협업 판단" onClick={() => runAi("zone")} disabled={aiBusy}>
             <IconAlert className="h-5 w-5" />
           </button>
           <button type="button" aria-label="새로고침" onClick={() => load()} disabled={loading}>
@@ -1063,7 +1063,7 @@ export default function StaffPage() {
         <div className="staff-reference-tools">
           <button type="button" onClick={() => runAi("zone")} disabled={aiBusy}>
             <IconMapPin className="h-5 w-5" />
-            <strong>AI 구역 요약</strong>
+            <strong>AI 협업 판단</strong>
           </button>
           <button
             type="button"
