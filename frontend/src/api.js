@@ -705,6 +705,17 @@ export async function createStaffAiReplyDraft(prompt, staffToken) {
   return parseJson(response, "응대 문구를 생성하지 못했습니다.");
 }
 
+export async function fetchStaffAiFieldChecklist(staffToken) {
+  const response = await fetch(`${API_BASE}/staff/ai/field-checklist`, {
+    method: "POST",
+    headers: staffToken
+      ? { "Content-Type": "application/json", "X-Staff-Token": staffToken }
+      : { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "field-checklist" }),
+  });
+  return parseJson(response, "AI 현장 체크리스트를 생성하지 못했습니다.");
+}
+
 export async function fetchStageCrowd(minutes = 10) {
   const response = await fetch(
     `${API_BASE}/analytics/stage-crowd?minutes=${minutes}`,

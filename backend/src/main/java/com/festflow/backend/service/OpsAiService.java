@@ -120,24 +120,49 @@ public class OpsAiService {
 
     public AiAssistResponseDto staffZoneSummary(String staffToken) {
         StaffMemberResponseDto me = staffService.authenticateByToken(staffToken);
-        BoothResponseDto booth = assignedBooth(me);
-        CongestionResponseDto congestion = booth != null ? safeCongestion(booth.id()) : null;
+        List<StaffMemberResponseDto> staff = staffService.bootstrap(staffToken).staff();
+        List<EventResponseDto> events = upcomingEvents().stream().limit(3).toList();
         List<NoticeResponseDto> notices = noticeService.getActiveNotices().stream().limit(3).toList();
-        String context = staffContext(me, booth, congestion, notices);
+        List<LostItemResponseDto> lostItems = activeLostItems().stream().limit(5).toList();
+        String context = staffOpsContext(me, staff, events, notices, lostItems);
         String summary = generateText(
-                "스태프 본인에게 보여줄 담당 구역 요약을 한국어로 4줄 이하로 작성하세요. 바로 해야 할 행동을 포함하세요.",
+                "스태프 본인에게 보여줄 현장 구역 요약을 한국어로 4줄 이하로 작성하세요. 부스 대기, 재고, 예약은 말하지 마세요. 줄관리, 무대관리, 동선, 안전, 공지, 분실물 대응 중심으로 바로 해야 할 행동을 포함하세요.",
                 context,
-                staffFallback(me, booth, congestion)
+                staffOpsFallback(me, staff, events, notices, lostItems)
         );
         return new AiAssistResponseDto(
                 "내 구역 AI 요약",
                 summary,
-                staffHighlights(me, booth, congestion, notices),
-                staffActions(me, booth, congestion),
+                staffOpsHighlights(me, staff, events, notices, lostItems),
+                staffOpsActions(me, staff, events, notices, lostItems),
                 null,
                 null,
                 null,
-                booth != null ? "HIGH" : "MEDIUM"
+                "HIGH"
+        );
+    }
+
+    public AiAssistResponseDto staffFieldChecklist(String staffToken) {
+        StaffMemberResponseDto me = staffService.authenticateByToken(staffToken);
+        List<StaffMemberResponseDto> staff = staffService.bootstrap(staffToken).staff();
+        List<EventResponseDto> events = upcomingEvents().stream().limit(5).toList();
+        List<NoticeResponseDto> notices = noticeService.getActiveNotices().stream().limit(5).toList();
+        List<LostItemResponseDto> lostItems = activeLostItems().stream().limit(8).toList();
+        List<String> actions = staffOpsActions(me, staff, events, notices, lostItems);
+        String summary = generateText(
+                "스태프용 현장 체크리스트를 한국어로 작성하세요. 부스 운영 업무는 제외하고 줄관리, 무대관리, 통로 확보, 안전 확인, 공지 전달, 분실물 확인을 우선순위로 정리하세요. 결과는 짧은 한 문단으로 작성하세요.",
+                staffOpsContext(me, staff, events, notices, lostItems),
+                "현재 업무와 공지, 공연 일정, 분실물 상태를 확인해 우선순위대로 처리하세요."
+        );
+        return new AiAssistResponseDto(
+                "AI 현장 체크리스트",
+                summary,
+                staffOpsHighlights(me, staff, events, notices, lostItems),
+                actions,
+                null,
+                null,
+                null,
+                "HIGH"
         );
     }
 
@@ -369,6 +394,115 @@ public class OpsAiService {
         } catch (Exception ex) {
             return null;
         }
+    }
+
+    private List<EventResponseDto> upcomingEvents() {
+        LocalDateTime now = LocalDateTime.now();
+        return eventService.getAllEvents().stream()
+                .filter(event -> event.startTime() != null)
+                .filter(event -> event.endTime() == null || !event.endTime().isBefore(now.minusMinutes(10)))
+                .sorted(Comparator.comparing(EventResponseDto::startTime))
+                .toList();
+    }
+
+    private List<LostItemResponseDto> activeLostItems() {
+        return lostItemService.getAll(true).stream()
+                .filter(item -> !"RETURNED".equalsIgnoreCase(safe(item.status(), "")))
+                .sorted(Comparator.comparing(
+                        LostItemResponseDto::updatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
+                .toList();
+    }
+
+    private String staffOpsContext(
+            StaffMemberResponseDto me,
+            List<StaffMemberResponseDto> staff,
+            List<EventResponseDto> events,
+            List<NoticeResponseDto> notices,
+            List<LostItemResponseDto> lostItems
+    ) {
+        long urgentStaff = staff.stream().filter(member -> "URGENT".equals(member.status())).count();
+        return "스태프: " + me.name() + " / " + me.team() + " / 상태 " + me.statusLabel()
+                + "\n현재 업무: " + safe(me.currentTask(), "미입력")
+                + "\n메모: " + safe(me.currentNote(), "미입력")
+                + "\n위치 공유: " + (Boolean.TRUE.equals(me.locationSharingEnabled()) ? "켜짐" : "꺼짐")
+                + "\n긴급 상태 스태프 수: " + urgentStaff
+                + "\n다가오는 공연: " + events.stream().limit(5).map(event -> event.title() + " / " + event.startTime() + " / " + safe(event.status(), "-")).toList()
+                + "\n활성 공지: " + notices.stream().limit(5).map(NoticeResponseDto::title).toList()
+                + "\n미처리 분실물: " + lostItems.stream().limit(8).map(item -> item.title() + " / " + item.statusLabel() + " / " + item.foundLocation()).toList();
+    }
+
+    private String staffOpsFallback(
+            StaffMemberResponseDto me,
+            List<StaffMemberResponseDto> staff,
+            List<EventResponseDto> events,
+            List<NoticeResponseDto> notices,
+            List<LostItemResponseDto> lostItems
+    ) {
+        List<String> actions = staffOpsActions(me, staff, events, notices, lostItems);
+        return safe(me.currentTask(), "현재 맡은 구역") + " 기준으로 " + String.join(" ", actions.stream().limit(2).toList());
+    }
+
+    private List<String> staffOpsHighlights(
+            StaffMemberResponseDto me,
+            List<StaffMemberResponseDto> staff,
+            List<EventResponseDto> events,
+            List<NoticeResponseDto> notices,
+            List<LostItemResponseDto> lostItems
+    ) {
+        List<String> result = new ArrayList<>();
+        result.add("상태: " + me.statusLabel());
+        result.add("현재 업무: " + safe(me.currentTask(), "미입력"));
+        events.stream().findFirst().ifPresent(event -> result.add("다가오는 공연: " + event.title()));
+        if (!notices.isEmpty()) result.add("중요 공지: " + notices.get(0).title());
+        long urgentStaff = staff.stream().filter(member -> "URGENT".equals(member.status())).count();
+        if (urgentStaff > 0) result.add("긴급 상태 스태프 " + urgentStaff + "명");
+        if (!lostItems.isEmpty()) result.add("확인할 분실물 " + lostItems.size() + "건");
+        return result;
+    }
+
+    private List<String> staffOpsActions(
+            StaffMemberResponseDto me,
+            List<StaffMemberResponseDto> staff,
+            List<EventResponseDto> events,
+            List<NoticeResponseDto> notices,
+            List<LostItemResponseDto> lostItems
+    ) {
+        List<String> actions = new ArrayList<>();
+        String task = safe(me.currentTask(), "").toLowerCase();
+        if (task.contains("줄") || task.contains("대기")) {
+            actions.add("줄 끝 지점과 통로 막힘 여부를 먼저 확인하세요.");
+        }
+        if (task.contains("무대") || task.contains("공연")) {
+            actions.add("무대 앞 통로와 입장 동선을 확보하세요.");
+        }
+        if (task.contains("입구") || task.contains("동선") || task.contains("안내")) {
+            actions.add("방문객 이동 방향과 우회 동선을 짧게 안내하세요.");
+        }
+        events.stream()
+                .filter(event -> event.startTime() != null)
+                .filter(event -> {
+                    long minutes = Duration.between(LocalDateTime.now(), event.startTime()).toMinutes();
+                    return minutes >= -5 && minutes <= 30;
+                })
+                .findFirst()
+                .ifPresent(event -> actions.add(event.title() + " 전후로 무대 주변 혼잡과 통로 확보를 확인하세요."));
+        if (!notices.isEmpty()) {
+            actions.add("활성 공지 내용을 방문객 안내에 반영하세요.");
+        }
+        long ownerClaimed = lostItems.stream().filter(item -> "OWNER_CLAIMED".equals(item.status())).count();
+        if (ownerClaimed > 0) {
+            actions.add("소유자 확인 요청 분실물 " + ownerClaimed + "건을 우선 확인하세요.");
+        }
+        long urgentStaff = staff.stream().filter(member -> "URGENT".equals(member.status())).count();
+        if (urgentStaff > 0) {
+            actions.add("긴급 상태 스태프 위치를 확인하고 필요하면 지원을 요청하세요.");
+        }
+        if (actions.isEmpty()) {
+            actions.add("현재 업무 위치를 유지하고, 공지와 분실물 문의를 수시로 확인하세요.");
+        }
+        return actions.stream().limit(5).toList();
     }
 
     private String staffContext(StaffMemberResponseDto me, BoothResponseDto booth, CongestionResponseDto congestion, List<NoticeResponseDto> notices) {

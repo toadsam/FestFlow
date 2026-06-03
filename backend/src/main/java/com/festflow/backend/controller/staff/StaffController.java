@@ -70,6 +70,13 @@ public class StaffController {
         return opsAiService.staffLostItemAssist(staffToken, requestDto);
     }
 
+    @PostMapping("/ai/field-checklist")
+    public AiAssistResponseDto aiFieldChecklist(
+            @RequestHeader(value = "X-Staff-Token", required = false) String staffToken
+    ) {
+        return opsAiService.staffFieldChecklist(staffToken);
+    }
+
     @PostMapping("/ai/reply-draft")
     public AiAssistResponseDto aiReplyDraft(
             @RequestHeader(value = "X-Staff-Token", required = false) String staffToken,

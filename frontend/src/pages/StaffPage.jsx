@@ -13,7 +13,7 @@ import {
   createLostItem,
   createLostItemStream,
   createStaffAiLostItemAssist,
-  createStaffAiReplyDraft,
+  fetchStaffAiFieldChecklist,
   createStaffStream,
   fetchLostItems,
   fetchStaffAiZoneSummary,
@@ -700,7 +700,7 @@ export default function StaffPage() {
           ? await fetchStaffAiZoneSummary(staffToken)
           : type === "lost"
             ? await createStaffAiLostItemAssist("분실물 센터 응대 문구를 작성해줘.", staffToken)
-            : await createStaffAiReplyDraft("축제 방문객에게 친절한 안내 답변을 작성해줘.", staffToken);
+            : await fetchStaffAiFieldChecklist(staffToken);
       const normalized = normalizeAiAssist(result);
       setAiResult(normalized);
       setAiText(normalized?.summary || "AI 응답을 생성했습니다.");
@@ -1037,9 +1037,9 @@ export default function StaffPage() {
             <IconBox className="h-5 w-5" />
             <strong>분실물 응대</strong>
           </button>
-          <button type="button" onClick={() => runAi("reply")} disabled={aiBusy}>
+          <button type="button" onClick={() => runAi("checklist")} disabled={aiBusy}>
             <IconChat className="h-5 w-5" />
-            <strong>응대 문구</strong>
+            <strong>현장 체크리스트</strong>
           </button>
         </div>
         {aiResult ? (
