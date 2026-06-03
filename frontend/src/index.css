@@ -19222,6 +19222,25 @@ html[data-contrast="high"] .app-shell .uni-page {
   font-weight: 860 !important;
 }
 
+.app-shell .staff-reference-ai-card--match div {
+  display: grid;
+  gap: 0.44rem;
+}
+
+.app-shell .staff-reference-ai-card--match span {
+  display: block;
+  width: 100%;
+  padding: 0.58rem 0.62rem;
+  border: 1px solid rgba(191, 219, 254, 0.9);
+  border-radius: 0.62rem;
+  background: #ffffff;
+  color: #1e293b !important;
+  font-size: 0.68rem !important;
+  font-weight: 760 !important;
+  line-height: 1.45 !important;
+  white-space: normal;
+}
+
 .app-shell .staff-reference-ai-card li {
   margin-left: 1rem;
   color: #334155 !important;

@@ -171,33 +171,29 @@ public class OpsAiService {
         String prompt = safe(requestDto.prompt(), "");
         if (prompt.isBlank()) {
             return new AiAssistResponseDto(
-                    "AI 분실물 검색",
-                    "찾을 물건의 색상, 종류, 위치 같은 단어를 입력해 주세요.",
+                    "AI 분실물 매칭",
+                    "방문객이 말한 분실물 설명을 입력하면, 등록된 분실물 후보와 비교해 가능성이 높은 항목과 확인 질문을 정리합니다.",
                     List.of(),
-                    List.of("예: 검은 지갑", "예: 에어팟 학생회관", "예: 파란 카드지갑"),
+                    List.of("예: 검은색 반지갑을 학생회관 근처에서 잃어버렸어요", "예: 에어팟 케이스에 파란 스티커가 붙어 있어요"),
                     null,
                     null,
                     null,
                     "LOW"
             );
         }
-        List<LostItemResponseDto> matches = lostItemMatches(prompt).stream().limit(5).toList();
-        List<String> highlights = matches.stream()
-                .map(item -> item.title() + " · " + item.category() + " · " + item.foundLocation() + " · " + item.statusLabel())
-                .toList();
-        String context = "검색어: " + prompt + "\n매칭된 분실물:\n" + String.join("\n", highlights);
+        List<LostItemResponseDto> matches = lostItemMatches(prompt).stream().limit(3).toList();
+        List<String> highlights = lostItemMatchHighlights(prompt, matches);
+        String context = lostItemMatchContext(prompt, matches);
         String summary = generateText(
-                "스태프용 분실물 검색 결과를 한국어로 짧게 요약하세요. 매칭된 항목만 언급하고, 연락처는 말하지 마세요. 후보가 있으면 추가로 확인할 질문 1개를 제안하세요.",
+                "스태프용 AI 분실물 매칭 결과를 한국어로 짧게 작성하세요. 방문객 설명과 후보를 비교해 가장 가능성 높은 후보, 일치한 근거, 애매한 부분을 설명하세요. 연락처는 말하지 말고, 바로 인계하지 말라는 확인 절차를 포함하세요.",
                 context,
-                highlights.isEmpty() ? "검색어와 관련된 분실물이 없습니다. 색상, 물품 종류, 잃어버린 위치를 바꿔 다시 검색해 주세요." : "검색어와 관련된 분실물 후보만 표시했습니다."
+                lostItemMatchFallback(prompt, matches)
         );
         return new AiAssistResponseDto(
-                "AI 분실물 검색",
+                "AI 분실물 매칭",
                 summary,
                 highlights,
-                matches.isEmpty()
-                        ? List.of("다른 키워드로 다시 검색", "색상/장소/물품 종류 추가 입력")
-                        : List.of("사진/상세 설명 대조", "방문객에게 고유 특징 추가 확인", "분실물 상세 탭에서 상태 확인"),
+                lostItemMatchActions(matches),
                 null,
                 null,
                 null,
@@ -555,11 +551,114 @@ public class OpsAiService {
     }
 
     private List<LostItemResponseDto> lostItemMatches(String prompt) {
-        Set<String> terms = new LinkedHashSet<>(List.of(safe(prompt, "").toLowerCase().split("[^\\p{IsAlphabetic}\\p{IsDigit}가-힣]+")));
+        Set<String> terms = lostItemSearchTerms(prompt);
         return lostItemService.getAll(true).stream()
                 .filter(item -> scoreLostItem(item, terms) > 0)
                 .sorted(Comparator.comparingInt((LostItemResponseDto item) -> scoreLostItem(item, terms)).reversed())
                 .toList();
+    }
+
+    private Set<String> lostItemSearchTerms(String prompt) {
+        Set<String> terms = new LinkedHashSet<>(List.of(safe(prompt, "").toLowerCase().split("[^\\p{IsAlphabetic}\\p{IsDigit}가-힣]+")));
+        if (terms.stream().anyMatch(term -> term.contains("검정") || term.contains("검은") || term.contains("블랙"))) {
+            terms.addAll(List.of("검정", "검은", "검은색", "블랙", "black"));
+        }
+        if (terms.stream().anyMatch(term -> term.contains("흰") || term.contains("하양") || term.contains("화이트"))) {
+            terms.addAll(List.of("흰색", "하얀", "하양", "화이트", "white"));
+        }
+        if (terms.stream().anyMatch(term -> term.contains("지갑"))) {
+            terms.addAll(List.of("지갑", "반지갑", "카드지갑"));
+        }
+        if (terms.stream().anyMatch(term -> term.contains("에어팟") || term.contains("airpod"))) {
+            terms.addAll(List.of("에어팟", "airpod", "airpods", "이어폰"));
+        }
+        return terms;
+    }
+
+    private String lostItemMatchContext(String prompt, List<LostItemResponseDto> matches) {
+        StringBuilder builder = new StringBuilder();
+        builder.append("방문객 설명: ").append(prompt).append("\n등록된 후보:\n");
+        if (matches.isEmpty()) {
+            builder.append("매칭된 후보 없음");
+            return builder.toString();
+        }
+        for (int i = 0; i < matches.size(); i++) {
+            LostItemResponseDto item = matches.get(i);
+            builder.append(i + 1)
+                    .append(". ")
+                    .append(item.title())
+                    .append(" / 종류: ").append(value(item.category()))
+                    .append(" / 발견 위치: ").append(value(item.foundLocation()))
+                    .append(" / 상태: ").append(value(item.statusLabel()))
+                    .append(" / 설명: ").append(value(item.description()))
+                    .append("\n");
+        }
+        return builder.toString();
+    }
+
+    private List<String> lostItemMatchHighlights(String prompt, List<LostItemResponseDto> matches) {
+        if (matches.isEmpty()) return List.of("가능성 높은 후보 없음 · 현재 등록된 분실물과 설명이 충분히 겹치지 않습니다.");
+        List<String> highlights = new ArrayList<>();
+        for (int i = 0; i < matches.size(); i++) {
+            LostItemResponseDto item = matches.get(i);
+            highlights.add((i + 1) + "순위 후보: " + value(item.title())
+                    + " · 일치한 근거: " + lostItemMatchedEvidence(prompt, item)
+                    + " · 애매한 부분: " + lostItemUnclearPoint(prompt, item)
+                    + " · 추가 확인 질문: " + lostItemFollowUpQuestion(item));
+        }
+        return highlights;
+    }
+
+    private String lostItemMatchedEvidence(String prompt, LostItemResponseDto item) {
+        Set<String> terms = lostItemSearchTerms(prompt);
+        List<String> matched = new ArrayList<>();
+        String title = safe(item.title(), "").toLowerCase();
+        String description = safe(item.description(), "").toLowerCase();
+        String category = safe(item.category(), "").toLowerCase();
+        String location = safe(item.foundLocation(), "").toLowerCase();
+        for (String term : terms) {
+            if (term == null || term.length() < 2) continue;
+            if (title.contains(term) || category.contains(term)) matched.add("물품/종류");
+            else if (location.contains(term)) matched.add("위치");
+            else if (description.contains(term)) matched.add("상세 설명");
+        }
+        if (matched.isEmpty()) return "방문객 설명과 일부 표현이 유사합니다.";
+        return String.join(", ", matched.stream().distinct().limit(3).toList()) + " 정보가 겹칩니다.";
+    }
+
+    private String lostItemUnclearPoint(String prompt, LostItemResponseDto item) {
+        String target = (safe(item.title(), "") + " " + safe(item.description(), "") + " " + safe(item.category(), "") + " " + safe(item.foundLocation(), "")).toLowerCase();
+        Set<String> terms = lostItemSearchTerms(prompt);
+        List<String> missing = terms.stream()
+                .filter(term -> term != null && term.length() >= 2 && !target.contains(term))
+                .limit(3)
+                .toList();
+        if (missing.isEmpty()) return "현재 설명만으로는 고유 특징 확인이 필요합니다.";
+        return "등록 정보에서 " + String.join(", ", missing) + " 단서는 바로 확인되지 않습니다.";
+    }
+
+    private String lostItemFollowUpQuestion(LostItemResponseDto item) {
+        String category = safe(item.category(), "").toLowerCase();
+        String title = safe(item.title(), "").toLowerCase();
+        if (category.contains("지갑") || title.contains("지갑")) return "지갑 안에 있던 카드, 학생증, 브랜드 같은 고유 특징을 말해줄 수 있나요?";
+        if (category.contains("전자") || title.contains("에어팟") || title.contains("이어폰")) return "케이스 색상, 스티커, 기기 이름처럼 본인만 알 수 있는 특징이 있나요?";
+        if (category.contains("카드") || title.contains("카드")) return "카드 색상이나 카드사, 이름 일부를 확인할 수 있나요?";
+        return "색상, 훼손 흔적, 부착물처럼 본인만 알 수 있는 특징이 있나요?";
+    }
+
+    private String lostItemMatchFallback(String prompt, List<LostItemResponseDto> matches) {
+        if (matches.isEmpty()) {
+            return "등록된 분실물 중 방문객 설명과 강하게 겹치는 후보가 없습니다. 색상, 물품 종류, 마지막으로 본 위치를 더 물어보고 신규 분실 접수로 남겨 주세요.";
+        }
+        LostItemResponseDto top = matches.get(0);
+        return "가장 먼저 확인할 후보는 '" + top.title() + "'입니다. 방문객 설명과 겹치는 정보가 있지만 바로 인계하지 말고 사진, 상세 설명, 고유 특징을 추가로 확인하세요.";
+    }
+
+    private List<String> lostItemMatchActions(List<LostItemResponseDto> matches) {
+        if (matches.isEmpty()) {
+            return List.of("색상/종류/마지막 위치를 더 물어보기", "다른 표현으로 다시 매칭하기", "후보가 계속 없으면 신규 분실 접수 등록");
+        }
+        return List.of("1순위 후보 사진과 상세 설명 대조", "고유 특징이 2개 이상 맞는지 확인", "확인이 부족하면 소유자 확인 중으로 보류", "분실물 상세 탭에서 상태 확인");
     }
 
     private int scoreLostItem(LostItemResponseDto item, Set<String> terms) {

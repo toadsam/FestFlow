@@ -1036,7 +1036,7 @@ export default function StaffPage() {
           </button>
           <button type="button" onClick={() => runAi("lost")} disabled={aiBusy || !aiLostQuery.trim()}>
             <IconBox className="h-5 w-5" />
-            <strong>분실물 검색</strong>
+            <strong>AI 분실물 매칭</strong>
           </button>
           <button type="button" onClick={() => runAi("checklist")} disabled={aiBusy}>
             <IconChat className="h-5 w-5" />
@@ -1053,15 +1053,15 @@ export default function StaffPage() {
           <input
             value={aiLostQuery}
             onChange={(event) => setAiLostQuery(event.target.value)}
-            placeholder="분실물 키워드 입력 예: 검은 지갑, 에어팟, 학생회관"
+            placeholder="방문객 설명 입력 예: 검은색 반지갑을 학생회관 근처에서 잃어버렸어요"
             disabled={aiBusy}
           />
           <button type="submit" disabled={aiBusy || !aiLostQuery.trim()}>
-            검색
+            매칭
           </button>
         </form>
         {aiResult ? (
-          <article className="staff-reference-ai-result staff-reference-ai-card">
+          <article className={aiResult.title.includes("분실물 매칭") ? "staff-reference-ai-result staff-reference-ai-card staff-reference-ai-card--match" : "staff-reference-ai-result staff-reference-ai-card"}>
             <strong>{aiResult.title}</strong>
             {aiResult.summary && <p>{aiResult.summary}</p>}
             {aiResult.highlights.length > 0 && (
