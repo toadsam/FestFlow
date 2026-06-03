@@ -122,7 +122,7 @@ export async function askChat(question) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question }),
-  });
+  }, 9000);
   return parseJson(response, "챗봇 응답을 가져오지 못했습니다.");
 }
 
@@ -368,6 +368,11 @@ export async function fetchAiCongestionPredictions() {
 export async function fetchAiDecisionLogs() {
   const response = await fetch(`${API_BASE}/ai/decisions`);
   return parseJson(response, "AI 판단 이력을 불러오지 못했습니다.");
+}
+
+export async function fetchAiVisitorGuide(scope, timeoutMs = 15000) {
+  const response = await fetchWithTimeout(`${API_BASE}/ai/visitor-guide/${scope}`, {}, timeoutMs);
+  return parseJson(response, "AI 방문 가이드를 불러오지 못했습니다.");
 }
 
 export function createCongestionStream() {

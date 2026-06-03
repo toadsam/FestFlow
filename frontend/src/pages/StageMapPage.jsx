@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import { CircleMarker, MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { useLocation, useNavigate } from "react-router-dom";
-import { createBoothStream, fetchBooths, sendGps } from "../api";
+import { createBoothStream, fetchAiVisitorGuide, fetchBooths, sendGps } from "../api";
 import {
   IconBox,
   IconMapPin,
@@ -27,6 +27,8 @@ const FALLBACK_COORD_OFFSETS = [
 const CAMPUS_RADIUS_METERS = 2500;
 const SEARCH_RESULT_MAX_ZOOM = 17;
 const DEFAULT_VISIBLE_MAP_PINS = 18;
+const BOOTH_REFRESH_INTERVAL_MS = 3000;
+const AI_GUIDE_REFRESH_INTERVAL_MS = 12000;
 
 function normalize(value) {
   return `${value || ""}`.toLowerCase();
@@ -125,6 +127,45 @@ function statusFromWaitLabel(waitLabel, fallbackLabel) {
   if (label.includes("혼잡")) return { label, tone: "danger", color: "#ef4444" };
   if (label.includes("여유") || label.includes("한산")) return { label, tone: "good", color: "#22c55e" };
   return { label, tone: "warning", color: "#f59e0b" };
+}
+
+function waitMinutes(booth) {
+  const value = Number(booth?.estimatedWaitMinutes ?? booth?.wait);
+  return Number.isFinite(value) ? value : 999;
+}
+
+function findBoothByActionTarget(booths, action) {
+  const target = normalize(action?.target).replace(/\s+/g, "");
+  if (!target) return null;
+  return booths.find((booth) => {
+    const name = normalize(booth?.name).replace(/\s+/g, "");
+    return name && (target.includes(name) || name.includes(target));
+  }) || null;
+}
+
+function buildLiveGuideActions(booths) {
+  const sorted = booths
+    .filter((booth) => booth?.id)
+    .sort((a, b) => waitMinutes(a) - waitMinutes(b));
+  const good = sorted[0];
+  const busy = sorted[sorted.length - 1];
+
+  return [
+    good && {
+      title: "지금 가기 좋은 부스",
+      target: good.name,
+      description: `대기 ${boothWait(good)} 기준이에요.`,
+      tone: "good",
+      booth: good,
+    },
+    busy && busy.id !== good?.id && {
+      title: "잠시 피할 부스",
+      target: busy.name,
+      description: `대기 ${boothWait(busy)}이라 나중에 가는 편이 좋아요.`,
+      tone: "danger",
+      booth: busy,
+    },
+  ].filter(Boolean);
 }
 
 function pinTone(booth, index) {
@@ -261,6 +302,7 @@ export default function StageMapPage() {
   const [query, setQuery] = useState(() => new URLSearchParams(location.search).get("query") || "");
   const [searchOpen, setSearchOpen] = useState(() => Boolean(new URLSearchParams(location.search).get("query")));
   const [geoMessage, setGeoMessage] = useState("");
+  const [aiGuide, setAiGuide] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(null);
 
@@ -274,16 +316,31 @@ export default function StageMapPage() {
     let mounted = true;
     setLoading(true);
 
-    fetchBooths()
-      .then((data) => {
+    async function loadBooths({ initial = false } = {}) {
+      if (initial) setLoading(true);
+      try {
+        const data = await fetchBooths();
         if (mounted) setBooths(data || []);
-      })
-      .catch(() => {
-        if (mounted) setBooths([]);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+      } catch {
+        if (mounted && initial) setBooths([]);
+      } finally {
+        if (mounted && initial) setLoading(false);
+      }
+    }
+
+    async function loadAiGuide() {
+      try {
+        const data = await fetchAiVisitorGuide("stage-map", 5000);
+        if (mounted) setAiGuide(data);
+      } catch {
+        if (mounted) setAiGuide(null);
+      }
+    }
+
+    loadBooths({ initial: true });
+    loadAiGuide();
+    const boothRefreshTimer = window.setInterval(loadBooths, BOOTH_REFRESH_INTERVAL_MS);
+    const aiGuideRefreshTimer = window.setInterval(loadAiGuide, AI_GUIDE_REFRESH_INTERVAL_MS);
 
     let stream = null;
     try {
@@ -302,6 +359,8 @@ export default function StageMapPage() {
 
     return () => {
       mounted = false;
+      window.clearInterval(boothRefreshTimer);
+      window.clearInterval(aiGuideRefreshTimer);
       stream?.close();
     };
   }, []);
@@ -340,6 +399,16 @@ export default function StageMapPage() {
     return mapBooths.slice(0, DEFAULT_VISIBLE_MAP_PINS);
   }, [mapBooths, query]);
   const mapPoints = useMemo(() => visibleMapBooths.map((item) => item.point), [visibleMapBooths]);
+  const aiGuideActions = useMemo(() => {
+    const apiActions = Array.isArray(aiGuide?.actions)
+      ? aiGuide.actions.slice(0, 2).map((action) => ({
+        ...action,
+        booth: findBoothByActionTarget(source, action),
+      }))
+      : [];
+    const liveActions = buildLiveGuideActions(source);
+    return apiActions.length ? apiActions : liveActions;
+  }, [aiGuide, source]);
 
   async function handleLocate() {
     if (!navigator.geolocation) {
@@ -469,6 +538,30 @@ export default function StageMapPage() {
       </section>
 
       {geoMessage && <p className="app-inline-note">{geoMessage}</p>}
+
+      {(aiGuide || aiGuideActions.length > 0) && (
+        <section className="map-ai-guide-card" aria-label="AI 주변 부스 추천">
+          <span>{aiGuide?.generated ? "OpenAI 주변 추천" : "AI 데이터 추천"}</span>
+          <strong>{aiGuide?.summary || "가까운 부스 중 가기 좋은 곳을 정리하고 있어요."}</strong>
+          <div className="map-ai-guide-actions">
+            {aiGuideActions.map((action) => (
+              <button
+                key={`${action.title}-${action.target}`}
+                type="button"
+                className={`map-ai-guide-action map-ai-guide-action--${action.tone || "info"}`}
+                onClick={() => {
+                  if (action.booth?.id) navigate(`/booths/${action.booth.id}`);
+                }}
+                disabled={!action.booth?.id}
+              >
+                <small>{action.title}</small>
+                <b>{action.target}</b>
+                <p>{action.description}</p>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="uni-section">
         <div className="uni-section-head">

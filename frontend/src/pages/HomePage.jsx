@@ -74,6 +74,7 @@ export default function HomePage() {
   const [events, setEvents] = useState([]);
   const [traffic, setTraffic] = useState([]);
   const [aiGuide, setAiGuide] = useState(null);
+  const [aiGuideLoading, setAiGuideLoading] = useState(true);
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiAnswer, setAiAnswer] = useState(null);
   const [aiAskLoading, setAiAskLoading] = useState(false);
@@ -83,19 +84,28 @@ export default function HomePage() {
     let mounted = true;
 
     Promise.allSettled([
-      fetchAiFestivalGuide(),
       fetchBooths(),
       fetchEvents(),
       fetchTrafficHourly(),
-    ]).then(([aiResult, boothResult, eventResult, trafficResult]) => {
+    ]).then(([boothResult, eventResult, trafficResult]) => {
       if (!mounted) return;
-      if (aiResult.status === "fulfilled") setAiGuide(aiResult.value || null);
       if (boothResult.status === "fulfilled") setBooths(boothResult.value || []);
       if (eventResult.status === "fulfilled") setEvents(eventResult.value || []);
       if (trafficResult.status === "fulfilled") setTraffic(trafficResult.value || []);
       const failed = [boothResult, eventResult].some((item) => item.status === "rejected");
       setMessage(failed ? "일부 실시간 정보는 기본 안내로 표시 중입니다." : "");
     });
+
+    fetchAiFestivalGuide()
+      .then((data) => {
+        if (mounted) setAiGuide(data || null);
+      })
+      .catch(() => {
+        if (mounted) setAiGuide(null);
+      })
+      .finally(() => {
+        if (mounted) setAiGuideLoading(false);
+      });
 
     const streams = [];
     try {
@@ -202,18 +212,26 @@ export default function HomePage() {
 
     setAiAskLoading(true);
     setAiQuestion("");
+    setAiAnswer({
+      question: nextQuestion,
+      answer: "AI가 축제 데이터를 확인하면서 답변을 만드는 중입니다.",
+      evidence: [],
+      pending: true,
+    });
     try {
       const result = await askChat(nextQuestion);
       setAiAnswer({
         question: nextQuestion,
         answer: result.answer,
         evidence: Array.isArray(result.evidence) ? result.evidence : [],
+        pending: false,
       });
     } catch (error) {
       setAiAnswer({
         question: nextQuestion,
         answer: error.message || "AI 답변을 불러오지 못했습니다.",
         evidence: [],
+        pending: false,
       });
     } finally {
       setAiAskLoading(false);
@@ -276,6 +294,7 @@ export default function HomePage() {
         <div className="ai-guide-card__hero">
           <strong>{compactText(visibleAiGuide.headline, 42)}</strong>
           <p>{compactText(visibleAiGuide.summary, 82)}</p>
+          {aiGuideLoading && <span className="ai-guide-card__thinking">AI 가이드 생성 중</span>}
         </div>
         <div className="ai-guide-card__prompt-row">
           {AI_HOME_PROMPTS.map((prompt) => (
@@ -304,12 +323,13 @@ export default function HomePage() {
             disabled={aiAskLoading}
           />
           <button type="submit" disabled={aiAskLoading || !aiQuestion.trim()}>
-            {aiAskLoading ? "분석 중" : "질문"}
+            {aiAskLoading ? "AI 생성 중" : "질문"}
           </button>
         </form>
         {aiAnswer && (
-          <div className="ai-guide-card__answer">
+          <div className={`ai-guide-card__answer${aiAnswer.pending ? " ai-guide-card__answer--pending" : ""}`}>
             <small>{cleanBrokenText(aiAnswer.question, "질문")}</small>
+            {aiAnswer.pending && <span className="ai-guide-card__thinking">AI 답변 생성 중</span>}
             <p>{compactText(aiAnswer.answer, 118)}</p>
             {aiAnswer.evidence.length > 0 && (
               <div className="ai-guide-card__evidence">

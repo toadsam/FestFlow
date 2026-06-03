@@ -3,6 +3,7 @@ import {
   createCongestionStream,
   fetchAiCongestionPredictions,
   fetchAiDecisionLogs,
+  fetchAiVisitorGuide,
   fetchAnalyticsDashboard,
 } from "../api";
 import { IconChart, IconMapPin, IconRefresh, IconSparkles } from "../components/UxIcons";
@@ -206,15 +207,17 @@ export default function AnalyticsPage() {
   const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD);
   const [aiPredictions, setAiPredictions] = useState([]);
   const [aiDecisionLogs, setAiDecisionLogs] = useState([]);
+  const [aiVisitorGuide, setAiVisitorGuide] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ includeVisitorGuide = false } = {}) => {
     try {
-      const [nextDashboard, nextPredictions, nextDecisionLogs] = await Promise.all([
+      const [nextDashboard, nextPredictions, nextDecisionLogs, nextVisitorGuide] = await Promise.all([
         fetchAnalyticsDashboard(15),
         fetchAiCongestionPredictions().catch(() => []),
         fetchAiDecisionLogs().catch(() => []),
+        includeVisitorGuide ? fetchAiVisitorGuide("analytics").catch(() => null) : Promise.resolve(null),
       ]);
       setDashboard({
         ...EMPTY_DASHBOARD,
@@ -229,6 +232,7 @@ export default function AnalyticsPage() {
       });
       setAiPredictions(Array.isArray(nextPredictions) ? nextPredictions : []);
       setAiDecisionLogs(Array.isArray(nextDecisionLogs) ? nextDecisionLogs : []);
+      if (nextVisitorGuide) setAiVisitorGuide(nextVisitorGuide);
       setMessage("");
     } catch (error) {
       setMessage(error.message || "실시간 혼잡도 데이터를 불러오지 못했습니다.");
@@ -238,7 +242,7 @@ export default function AnalyticsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    load({ includeVisitorGuide: true });
 
     let stream = null;
     try {
@@ -276,7 +280,14 @@ export default function AnalyticsPage() {
         name: zoneDisplayName(secondBusyZone),
         copy: `${Math.max(10, Math.min(30, Math.round(clampPercent(secondBusyZone.percent) / 4)))}분 뒤 완화 여부 확인`,
       };
-  const actionCards = [
+  const aiGuideActions = Array.isArray(aiVisitorGuide?.actions) ? aiVisitorGuide.actions : [];
+  const actionCards = aiGuideActions.length >= 3 ? aiGuideActions.slice(0, 3).map((action) => ({
+    title: action.title || "AI 추천",
+    name: action.target || "추천 장소",
+    value: action.description || "지금 확인해보세요.",
+    copy: aiVisitorGuide?.generated ? "OpenAI 실시간 해석" : "데이터 기반 추천",
+    tone: ["danger", "good", "wait"].includes(action.tone) ? action.tone : "wait",
+  })) : [
     {
       title: "지금 피할 곳",
       name: zoneDisplayName(busiestZone),
@@ -299,7 +310,10 @@ export default function AnalyticsPage() {
       tone: "wait",
     },
   ];
-  const summaryLines = [
+  const aiGuideBullets = Array.isArray(aiVisitorGuide?.bullets)
+    ? aiVisitorGuide.bullets.filter(Boolean).slice(0, 3)
+    : [];
+  const summaryLines = aiGuideBullets.length ? aiGuideBullets : [
     `지금은 ${zoneDisplayName(busiestZone)}${secondBusyZone ? `와 ${zoneDisplayName(secondBusyZone)}` : ""}이 붐비고 있어요.`,
     `${zoneDisplayName(calmZone)}은 비교적 여유로워요.`,
     aiPredictions[0]
@@ -328,7 +342,7 @@ export default function AnalyticsPage() {
             event.currentTarget.closest(".analytics-ai-hero")?.classList.add("analytics-ai-hero--no-image");
           }}
         />
-        <button type="button" aria-label="혼잡도 새로고침" onClick={load} disabled={loading}>
+        <button type="button" aria-label="혼잡도 새로고침" onClick={() => load({ includeVisitorGuide: true })} disabled={loading}>
           <IconRefresh className="h-5 w-5" />
         </button>
       </header>

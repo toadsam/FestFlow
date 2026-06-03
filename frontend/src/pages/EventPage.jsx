@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { createEventStream, fetchEvents } from "../api";
+import { createEventStream, fetchAiVisitorGuide, fetchEvents } from "../api";
 import { IconCalendar, IconMusic } from "../components/UxIcons";
 import { FESTIVAL_IMAGE, fallbackEvents, formatTime } from "../data/festivalUiData";
 
@@ -111,6 +111,7 @@ export default function EventPage() {
   const [selectedDate, setSelectedDate] = useState("featured");
   const [stageFilter, setStageFilter] = useState("전체");
   const [reminders, setReminders] = useState(() => readReminders());
+  const [aiGuide, setAiGuide] = useState(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -121,6 +122,13 @@ export default function EventPage() {
       })
       .catch((error) => {
         if (mounted) setMessage(error.message);
+      });
+    fetchAiVisitorGuide("events")
+      .then((data) => {
+        if (mounted) setAiGuide(data);
+      })
+      .catch(() => {
+        if (mounted) setAiGuide(null);
       });
 
     let stream = null;
@@ -173,6 +181,10 @@ export default function EventPage() {
     ? dayEvents
     : dayEvents.filter((event, index) => displayStage(event, index) === stageFilter);
   const heroEvent = dayEvents[0] || sortedEvents[0];
+  const aiGuideBullets = Array.isArray(aiGuide?.bullets)
+    ? aiGuide.bullets.filter(Boolean).slice(0, 3)
+    : [];
+  const aiRecommendedAction = Array.isArray(aiGuide?.actions) ? aiGuide.actions[0] : null;
 
   function selectDate(date) {
     setSelectedDate(date);
@@ -202,6 +214,20 @@ export default function EventPage() {
         </button>
       </header>
 
+      {aiGuide && (
+        <section className="events-ai-guide-card" aria-label="AI 공연 요약">
+          <span>{aiGuide.generated ? "OpenAI 실시간 추천" : "AI 데이터 추천"}</span>
+          <strong>{aiGuide.summary || "지금 보기 좋은 공연을 AI가 정리하고 있어요."}</strong>
+          {aiGuideBullets.length > 0 && (
+            <ul>
+              {aiGuideBullets.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
       <div className="events-reference-date-tabs">
         {dateOptions.map((date) => (
           <button
@@ -221,6 +247,11 @@ export default function EventPage() {
             <span>{eventStatus(heroEvent, 0)}</span>
             <h2>{displayTitle(heroEvent, 0)}</h2>
             <p>{formatTime(heroEvent.startTime)} · {displayStage(heroEvent, 0)}</p>
+            {aiRecommendedAction && (
+              <p className="events-reference-ai-copy">
+                {aiRecommendedAction.target} · {aiRecommendedAction.description}
+              </p>
+            )}
             <button type="button" onClick={() => toggleReminder(heroEvent.id || heroEvent.title)}>
               알림 받기
             </button>

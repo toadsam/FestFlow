@@ -93,7 +93,7 @@ public class ChatService {
                     "model", model,
                     "instructions", buildInstructions(),
                     "input", buildInput(question, retrieval),
-                    "max_output_tokens", 450
+                    "max_output_tokens", 220
             );
 
             String response = restClient.post()
@@ -124,8 +124,8 @@ public class ChatService {
 
     private SimpleClientHttpRequestFactory requestFactory() {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(5));
-        factory.setReadTimeout(Duration.ofSeconds(20));
+        factory.setConnectTimeout(Duration.ofSeconds(3));
+        factory.setReadTimeout(Duration.ofSeconds(8));
         return factory;
     }
 
@@ -242,7 +242,7 @@ public class ChatService {
                                     "ai_recommendation",
                                     item.boothId(),
                                     item.boothName(),
-                                    "AI 추천: " + item.riskLevel() + " " + item.riskScore() + "점 / " + String.join(", ", item.reasons().stream().limit(3).toList()),
+                                    aiRecommendationReason(item, false),
                                     null
                             )
                     )));
@@ -254,13 +254,37 @@ public class ChatService {
                                     "ai_warning",
                                     item.boothId(),
                                     item.boothName(),
-                                    "AI 주의: " + item.riskLevel() + " " + item.riskScore() + "점 / " + String.join(", ", item.reasons().stream().limit(3).toList()),
+                                    aiRecommendationReason(item, true),
                                     null
                             )
                     )));
         } catch (Exception ex) {
             // AI guide evidence is optional; the chatbot can still answer from raw festival data.
         }
+    }
+
+    private String aiRecommendationReason(AiBoothRecommendationDto item, boolean avoid) {
+        List<String> parts = new ArrayList<>();
+        if (avoid) {
+            parts.add("지금은 잠시 피하는 편이 좋습니다");
+        } else {
+            parts.add("지금 방문하기 좋은 후보입니다");
+        }
+        parts.add("주변 감지 인원 " + Math.max(0, item.currentCrowdCount()) + "명");
+        if (item.waitMinutes() != null) {
+            parts.add("예상 대기 " + Math.max(0, item.waitMinutes()) + "분");
+        }
+        if (item.availableSeats() != null) {
+            parts.add(item.availableSeats() > 0
+                    ? "예약 가능 좌석 " + item.availableSeats() + "석"
+                    : "예약 가능 좌석 없음");
+        }
+        if (item.remainingStock() != null) {
+            parts.add(item.remainingStock() > 10
+                    ? "재고 여유"
+                    : "재고가 적어질 수 있음");
+        }
+        return String.join(", ", parts);
     }
 
     private boolean wantsBooths(String question) {
@@ -469,17 +493,16 @@ public class ChatService {
 
     private String buildFallbackAnswer(String question, RetrievalResult retrieval) {
         if (retrieval.evidence().isEmpty()) {
-            return "현재 질문과 직접 연결되는 축제 데이터를 찾지 못했어요. 부스, 공연, 혼잡도, 분실물처럼 앱에 등록된 정보로 다시 물어봐 주세요.";
+            return "지금 질문과 바로 연결되는 축제 데이터를 찾지 못했어요. 부스, 공연, 대기 시간, 예약 가능 여부처럼 구체적으로 다시 물어봐 주세요.";
         }
         ChatEvidenceDto top = retrieval.evidence().get(0);
         return switch (top.type()) {
-            case "booth" -> top.label() + "를 먼저 확인해 보세요. 근거는 " + top.reason() + "입니다.";
-            case "event" -> top.label() + " 일정이 가장 관련 있어 보여요. 근거는 " + top.reason() + "입니다.";
-            case "lost_item" -> top.label() + " 분실물 항목이 질문과 가까워 보여요. 근거는 " + top.reason() + "입니다.";
-            default -> "가장 관련 있는 근거는 " + top.label() + "입니다. " + top.reason();
+            case "booth" -> top.label() + "부터 확인해 보세요. " + top.reason() + "라서 지금 움직이기 좋습니다.";
+            case "event" -> top.label() + " 일정을 먼저 확인해 보세요. " + top.reason();
+            case "lost_item" -> top.label() + " 항목이 질문과 가장 가까워 보여요. " + top.reason();
+            default -> top.label() + " 정보가 가장 관련 있어요. " + top.reason();
         };
     }
-
     private String buildInstructions() {
         return """
                 You are FestFlow's production festival AI assistant.
@@ -491,6 +514,9 @@ public class ChatService {
                 Use short action-first answers.
                 Prefer this structure: 추천/답변, 이유, 다음 행동.
                 Keep the answer under 5 Korean lines when possible.
+                Do not mention internal scores or labels such as riskScore, LOW, MEDIUM, HIGH, RISK, or BUSY.
+                Explain with visitor-facing facts: nearby people, wait time, available seats, stock, event timing, and whether it is easy to visit now.
+                Answer in this order: recommendation, reason, next action.
                 """;
     }
 
