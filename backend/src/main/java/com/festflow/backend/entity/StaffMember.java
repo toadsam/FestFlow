@@ -8,6 +8,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 
@@ -50,7 +51,7 @@ public class StaffMember {
     @Column
     private Double longitude;
 
-    @Column(nullable = false)
+    @ColumnDefault("true")
     private Boolean locationSharingEnabled = true;
 
     @Column(nullable = false)
@@ -82,6 +83,7 @@ public class StaffMember {
         this.assignedBoothId = assignedBoothId;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.locationSharingEnabled = true;
         this.lastUpdatedAt = lastUpdatedAt;
     }
 
@@ -167,7 +169,7 @@ public class StaffMember {
     }
 
     public Boolean getLocationSharingEnabled() {
-        return locationSharingEnabled;
+        return locationSharingEnabled == null ? true : locationSharingEnabled;
     }
 
     public void setLocationSharingEnabled(Boolean locationSharingEnabled) {

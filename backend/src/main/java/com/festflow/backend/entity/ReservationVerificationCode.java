@@ -6,6 +6,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 
@@ -29,8 +30,8 @@ public class ReservationVerificationCode {
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
-    @Column(nullable = false)
-    private int failedAttempts;
+    @ColumnDefault("0")
+    private Integer failedAttempts = 0;
 
     private LocalDateTime usedAt;
 
@@ -58,8 +59,8 @@ public class ReservationVerificationCode {
     }
 
     public int incrementFailedAttempts() {
-        this.failedAttempts += 1;
-        return this.failedAttempts;
+        this.failedAttempts = getFailedAttempts() + 1;
+        return getFailedAttempts();
     }
 
     public String getCode() {
@@ -79,6 +80,6 @@ public class ReservationVerificationCode {
     }
 
     public int getFailedAttempts() {
-        return failedAttempts;
+        return failedAttempts == null ? 0 : failedAttempts;
     }
 }
