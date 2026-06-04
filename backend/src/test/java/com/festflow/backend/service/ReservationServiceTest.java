@@ -166,8 +166,8 @@ class ReservationServiceTest {
 
         var released = reservationService.releaseTable(1L, 10L);
 
-        assertThat(released.status()).isEqualTo(ReservationStatus.CANCELLED);
-        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELLED);
+        assertThat(released.status()).isEqualTo(ReservationStatus.CANCELED);
+        assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELED);
         assertThat(table.getAvailableSeats()).isEqualTo(4);
         verify(boothReservationTableRepository).save(table);
         verify(streamService).publishReservations(released);

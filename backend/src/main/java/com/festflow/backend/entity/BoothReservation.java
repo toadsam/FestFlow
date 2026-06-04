@@ -79,7 +79,7 @@ public class BoothReservation {
     }
 
     public void markCancelled(LocalDateTime cancelledAt) {
-        this.status = ReservationStatus.CANCELLED;
+        this.status = ReservationStatus.CANCELED;
         this.expiredAt = cancelledAt;
     }
 
