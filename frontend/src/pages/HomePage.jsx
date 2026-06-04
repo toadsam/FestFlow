@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  askChat,
   createBoothStream,
   createEventStream,
+  fetchAiFestivalGuide,
   fetchBooths,
   fetchEvents,
   fetchTrafficHourly,
@@ -21,6 +23,15 @@ import {
 } from "../data/festivalUiData";
 
 const EVENT_RECOMMEND_IMAGE = "/images/og-festflow.png";
+const DEFAULT_AI_GUIDE = {
+  headline: "지금은 대기 짧은 부스부터 둘러보는 코스를 추천합니다.",
+  summary: "혼잡도, 공연 시간, 부스 대기 정보를 기준으로 지금 움직이기 좋은 동선을 골라드릴게요.",
+};
+const AI_HOME_PROMPTS = [
+  "지금 어디 가면 좋아?",
+  "안 붐비는 음식 부스 추천해줘",
+  "공연 전에 들를 부스 추천해줘",
+];
 
 function reservationLabel(booth) {
   if (booth?.reservationEnabled === false) return "현장 이용";
@@ -46,11 +57,27 @@ function cardTone(index) {
   return ["mint", "violet", "amber"][index] || "mint";
 }
 
+function cleanBrokenText(value, fallback = "추천 부스") {
+  if (typeof value !== "string") return value;
+  return value.replace(/\?{2,}/g, fallback);
+}
+
+function compactText(value, maxLength = 90) {
+  const text = cleanBrokenText(value || "");
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength).trim()}...`;
+}
+
 export default function HomePage() {
   const navigate = useNavigate();
   const [booths, setBooths] = useState([]);
   const [events, setEvents] = useState([]);
   const [traffic, setTraffic] = useState([]);
+  const [aiGuide, setAiGuide] = useState(null);
+  const [aiGuideLoading, setAiGuideLoading] = useState(true);
+  const [aiQuestion, setAiQuestion] = useState("");
+  const [aiAnswer, setAiAnswer] = useState(null);
+  const [aiAskLoading, setAiAskLoading] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
@@ -68,6 +95,17 @@ export default function HomePage() {
       const failed = [boothResult, eventResult].some((item) => item.status === "rejected");
       setMessage(failed ? "일부 실시간 정보는 기본 안내로 표시 중입니다." : "");
     });
+
+    fetchAiFestivalGuide()
+      .then((data) => {
+        if (mounted) setAiGuide(data || null);
+      })
+      .catch(() => {
+        if (mounted) setAiGuide(null);
+      })
+      .finally(() => {
+        if (mounted) setAiGuideLoading(false);
+      });
 
     const streams = [];
     try {
@@ -166,13 +204,57 @@ export default function HomePage() {
     const max = Math.max(1, ...traffic.map((item) => Number(item.count) || 0));
     return Math.min(99, Math.max(1, Math.round((latest / max) * 100)));
   }, [traffic]);
+  const visibleAiGuide = aiGuide || DEFAULT_AI_GUIDE;
+
+  async function handleAiAsk(question = aiQuestion) {
+    const nextQuestion = question.trim();
+    if (!nextQuestion || aiAskLoading) return;
+
+    setAiAskLoading(true);
+    setAiQuestion("");
+    setAiAnswer({
+      question: nextQuestion,
+      answer: "AI가 축제 데이터를 확인하면서 답변을 만드는 중입니다.",
+      evidence: [],
+      pending: true,
+    });
+    try {
+      const result = await askChat(nextQuestion);
+      setAiAnswer({
+        question: nextQuestion,
+        answer: result.answer,
+        evidence: Array.isArray(result.evidence) ? result.evidence : [],
+        pending: false,
+      });
+    } catch (error) {
+      setAiAnswer({
+        question: nextQuestion,
+        answer: error.message || "AI 답변을 불러오지 못했습니다.",
+        evidence: [],
+        pending: false,
+      });
+    } finally {
+      setAiAskLoading(false);
+    }
+  }
+
+  function evidencePath(item) {
+    if (!item?.id) return null;
+    if (item.type === "booth" || item.type === "ai_recommendation" || item.type === "ai_warning") {
+      return `/booths/${item.id}`;
+    }
+    if (item.type === "event") return "/events";
+    if (item.type === "lost_item") return "/lost-found";
+    return null;
+  }
 
   return (
     <section className="uni-page uni-home-page reference-home-page">
       <header
         className="home-hero-card"
         style={{
-          backgroundImage: `linear-gradient(180deg, rgba(7,26,61,0.15), rgba(7,26,61,0.98)), url(/images/og-festflow.png)`,
+          backgroundImage:
+            "radial-gradient(circle at 78% 42%, rgba(139, 92, 246, 0.25), transparent 5.8rem), radial-gradient(circle at 50% 62%, rgba(37, 87, 255, 0.14), transparent 6.2rem), linear-gradient(145deg, #ffffff 0%, #f4f0ff 58%, #eef8ff 100%)",
         }}
       >
         <div className="home-hero-top">
@@ -203,6 +285,75 @@ export default function HomePage() {
       </header>
 
       {message && <p className="app-inline-note">{message}</p>}
+
+      <section className="uni-card ai-guide-card">
+        <div className="uni-section-head">
+          <h2>AI 축제 가이드</h2>
+          <button type="button" onClick={() => navigate("/analytics")}>예측 보기</button>
+        </div>
+        <div className="ai-guide-card__hero">
+          <strong>{compactText(visibleAiGuide.headline, 42)}</strong>
+          <p>{compactText(visibleAiGuide.summary, 82)}</p>
+          {aiGuideLoading && <span className="ai-guide-card__thinking">AI 가이드 생성 중</span>}
+        </div>
+        <div className="ai-guide-card__prompt-row">
+          {AI_HOME_PROMPTS.map((prompt) => (
+            <button
+              key={prompt}
+              type="button"
+              className="ai-guide-card__prompt"
+              onClick={() => handleAiAsk(prompt)}
+              disabled={aiAskLoading}
+            >
+              {prompt}
+            </button>
+          ))}
+        </div>
+        <form
+          className="ai-guide-card__ask"
+          onSubmit={(event) => {
+            event.preventDefault();
+            handleAiAsk();
+          }}
+        >
+          <input
+            value={aiQuestion}
+            onChange={(event) => setAiQuestion(event.target.value)}
+            placeholder="AI에게 축제 동선을 물어보세요"
+            disabled={aiAskLoading}
+          />
+          <button type="submit" disabled={aiAskLoading || !aiQuestion.trim()}>
+            {aiAskLoading ? "AI 생성 중" : "질문"}
+          </button>
+        </form>
+        {aiAnswer && (
+          <div className={`ai-guide-card__answer${aiAnswer.pending ? " ai-guide-card__answer--pending" : ""}`}>
+            <small>{cleanBrokenText(aiAnswer.question, "질문")}</small>
+            {aiAnswer.pending && <span className="ai-guide-card__thinking">AI 답변 생성 중</span>}
+            <p>{compactText(aiAnswer.answer, 118)}</p>
+            {aiAnswer.evidence.length > 0 && (
+              <div className="ai-guide-card__evidence">
+                {aiAnswer.evidence.slice(0, 2).map((item, index) => {
+                  const path = evidencePath(item);
+                  const label = cleanBrokenText(item.label || item.reason || "AI 근거");
+                  if (!path) {
+                    return <span key={`${item.type}-${item.id || index}`}>{label}</span>;
+                  }
+                  return (
+                    <button
+                      key={`${item.type}-${item.id || index}`}
+                      type="button"
+                      onClick={() => navigate(path)}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+      </section>
 
       <section className="uni-section">
         <div className="uni-section-head">

@@ -34,6 +34,8 @@ const confidenceLabels = {
 };
 
 const evidenceTypeMeta = {
+  ai_recommendation: { label: "AI 추천", icon: IconChart },
+  ai_warning: { label: "AI 주의", icon: IconUsers },
   booth: { label: "부스", icon: IconBox },
   event: { label: "공연", icon: IconMusic },
   lost_item: { label: "분실물", icon: IconMapPin },
@@ -144,6 +146,8 @@ export default function ChatPage() {
 
     switch (item.type) {
       case "booth":
+      case "ai_recommendation":
+      case "ai_warning":
         return { label: "부스 보기", onClick: () => navigate(`/booths/${item.id}`) };
       case "event":
         return { label: "공연 보기", onClick: () => navigate("/events") };

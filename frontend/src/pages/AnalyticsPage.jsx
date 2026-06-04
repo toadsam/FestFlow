@@ -1,16 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   createCongestionStream,
+  fetchAiCongestionPredictions,
+  fetchAiDecisionLogs,
+  fetchAiVisitorGuide,
   fetchAnalyticsDashboard,
 } from "../api";
-import { IconChart, IconRefresh } from "../components/UxIcons";
-
-const LEVEL_META = {
-  LOW: { label: "한산", tone: "calm" },
-  NORMAL: { label: "보통", tone: "normal" },
-  BUSY: { label: "혼잡", tone: "busy" },
-  PACKED: { label: "매우 혼잡", tone: "packed" },
-};
+import { IconChart, IconMapPin, IconRefresh, IconSparkles } from "../components/UxIcons";
 
 const ZONE_LABELS = {
   "ajou-square": "아주광장",
@@ -20,6 +16,14 @@ const ZONE_LABELS = {
   "seongho-hall": "성호관 주변",
   "rear-gate": "후문 거리",
 };
+const FALLBACK_GUIDE_ZONES = [
+  { zoneKey: "main-stage", zoneName: "중앙무대", percent: 85, level: "PACKED", deltaPercent: 10 },
+  { zoneKey: "food-truck", zoneName: "푸드트럭 존", percent: 72, level: "BUSY", deltaPercent: 8 },
+  { zoneKey: "field-booth", zoneName: "운동장 부스", percent: 30, level: "LOW", deltaPercent: -4 },
+  { zoneKey: "lawn-square", zoneName: "잔디광장", percent: 38, level: "NORMAL", deltaPercent: -3 },
+  { zoneKey: "student-hall", zoneName: "학생회관", percent: 58, level: "NORMAL", deltaPercent: 2 },
+  { zoneKey: "guide-desk", zoneName: "종합 안내 데스크", percent: 24, level: "LOW", deltaPercent: -1 },
+];
 
 const EMPTY_DASHBOARD = {
   updatedAt: null,
@@ -46,8 +50,33 @@ function clampPercent(value) {
   return Math.min(100, Math.max(0, Math.round(Number(value) || 0)));
 }
 
-function levelMeta(level) {
-  return LEVEL_META[level] || LEVEL_META.LOW;
+function percentMeta(percent) {
+  const value = clampPercent(percent);
+  if (value <= 30) return { label: "한산", tone: "calm" };
+  if (value <= 60) return { label: "보통", tone: "normal" };
+  if (value <= 80) return { label: "혼잡", tone: "busy" };
+  return { label: "매우 혼잡", tone: "packed" };
+}
+
+function zoneDisplayName(zone) {
+  return ZONE_LABELS[zone.zoneKey] || zone.zoneName || zone.name || "축제 구역";
+}
+
+function zoneAction(percent) {
+  const value = clampPercent(percent);
+  if (value <= 30) return "지금 가기 좋음";
+  if (value <= 60) return "여유 확인 후 방문";
+  if (value <= 80) return "대기 예상";
+  return "잠시 후 방문 추천";
+}
+
+function predictionAction(level, score = 0) {
+  const text = `${level || ""}`.toUpperCase();
+  const value = Number(score) || 0;
+  if (text.includes("PACKED") || text.includes("매우") || value >= 80) return "가능하면 피하기";
+  if (text.includes("BUSY") || text.includes("혼잡") || value >= 60) return "잠시 후 방문 추천";
+  if (text.includes("NORMAL") || text.includes("보통") || value >= 35) return "지금 방문 추천";
+  return "바로 방문하기 좋음";
 }
 
 function formatUpdatedAt(value) {
@@ -63,8 +92,8 @@ function formatUpdatedAt(value) {
 
 function formatDelta(delta) {
   const value = Math.round(Number(delta) || 0);
-  if (value === 0) return "이전과 동일";
-  return `이전보다 ${value > 0 ? "+" : ""}${value}%`;
+  if (value === 0) return "이전보다 비슷함";
+  return value > 0 ? "이전보다 증가" : "이전보다 감소";
 }
 
 function deltaTone(delta) {
@@ -87,9 +116,11 @@ function Gauge({ percent }) {
     <svg className="analytics-gauge" viewBox="0 0 140 84" role="img" aria-label={`전체 혼잡도 ${value}%`}>
       <defs>
         <linearGradient id="analyticsGaugeGradient" x1="20" y1="0" x2="120" y2="0">
-          <stop offset="0%" stopColor="#19c7bd" />
-          <stop offset="55%" stopColor="#37c86b" />
-          <stop offset="100%" stopColor="#ffc247" />
+          <stop offset="0%" stopColor="#22c55e" />
+          <stop offset="32%" stopColor="#22c55e" />
+          <stop offset="60%" stopColor="#facc15" />
+          <stop offset="80%" stopColor="#fb923c" />
+          <stop offset="100%" stopColor="#ef4444" />
         </linearGradient>
       </defs>
       <path className="analytics-gauge__track" d="M20 70 A50 50 0 0 1 120 70" pathLength={length} />
@@ -174,12 +205,20 @@ function TrendChart({ points }) {
 
 export default function AnalyticsPage() {
   const [dashboard, setDashboard] = useState(EMPTY_DASHBOARD);
+  const [aiPredictions, setAiPredictions] = useState([]);
+  const [aiDecisionLogs, setAiDecisionLogs] = useState([]);
+  const [aiVisitorGuide, setAiVisitorGuide] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  const load = useCallback(async () => {
+  const load = useCallback(async ({ includeVisitorGuide = false } = {}) => {
     try {
-      const nextDashboard = await fetchAnalyticsDashboard(15);
+      const [nextDashboard, nextPredictions, nextDecisionLogs, nextVisitorGuide] = await Promise.all([
+        fetchAnalyticsDashboard(15),
+        fetchAiCongestionPredictions().catch(() => []),
+        fetchAiDecisionLogs().catch(() => []),
+        includeVisitorGuide ? fetchAiVisitorGuide("analytics").catch(() => null) : Promise.resolve(null),
+      ]);
       setDashboard({
         ...EMPTY_DASHBOARD,
         ...nextDashboard,
@@ -191,6 +230,9 @@ export default function AnalyticsPage() {
         zones: Array.isArray(nextDashboard?.zones) ? nextDashboard.zones : [],
         trend: Array.isArray(nextDashboard?.trend) ? nextDashboard.trend : [],
       });
+      setAiPredictions(Array.isArray(nextPredictions) ? nextPredictions : []);
+      setAiDecisionLogs(Array.isArray(nextDecisionLogs) ? nextDecisionLogs : []);
+      if (nextVisitorGuide) setAiVisitorGuide(nextVisitorGuide);
       setMessage("");
     } catch (error) {
       setMessage(error.message || "실시간 혼잡도 데이터를 불러오지 못했습니다.");
@@ -200,7 +242,7 @@ export default function AnalyticsPage() {
   }, []);
 
   useEffect(() => {
-    load();
+    load({ includeVisitorGuide: true });
 
     let stream = null;
     try {
@@ -215,42 +257,140 @@ export default function AnalyticsPage() {
     return () => stream?.close();
   }, [load]);
 
-  const overviewMeta = levelMeta(dashboard.overview.level);
+  const overviewPercentMeta = percentMeta(dashboard.overview.percent);
   const zones = useMemo(() => {
-    return [...dashboard.zones]
+    const source = dashboard.zones.length ? dashboard.zones : FALLBACK_GUIDE_ZONES;
+    return [...source]
       .sort((a, b) => b.percent - a.percent)
       .slice(0, 6);
   }, [dashboard.zones]);
-  const recommendation = dashboard.recommendation || EMPTY_DASHBOARD.recommendation;
+  const guideZones = useMemo(() => {
+    const source = dashboard.zones.length ? dashboard.zones : FALLBACK_GUIDE_ZONES;
+    return [...source].sort((a, b) => clampPercent(b.percent) - clampPercent(a.percent));
+  }, [dashboard.zones]);
+  const busiestZone = guideZones[0] || FALLBACK_GUIDE_ZONES[0];
+  const secondBusyZone = guideZones[1] || FALLBACK_GUIDE_ZONES[1];
+  const calmZone = [...guideZones].sort((a, b) => clampPercent(a.percent) - clampPercent(b.percent))[0] || FALLBACK_GUIDE_ZONES[2];
+  const laterZone = aiPredictions[0]
+    ? {
+        name: aiPredictions[0].boothName,
+        copy: `30분 뒤 ${aiPredictions[0].predictedLevel || "혼잡"} 예상`,
+      }
+    : {
+        name: zoneDisplayName(secondBusyZone),
+        copy: `${Math.max(10, Math.min(30, Math.round(clampPercent(secondBusyZone.percent) / 4)))}분 뒤 완화 여부 확인`,
+      };
+  const aiGuideActions = Array.isArray(aiVisitorGuide?.actions) ? aiVisitorGuide.actions : [];
+  const actionCards = aiGuideActions.length >= 3 ? aiGuideActions.slice(0, 3).map((action) => ({
+    title: action.title || "AI 추천",
+    name: action.target || "추천 장소",
+    value: action.description || "지금 확인해보세요.",
+    copy: aiVisitorGuide?.generated ? "OpenAI 실시간 해석" : "데이터 기반 추천",
+    tone: ["danger", "good", "wait"].includes(action.tone) ? action.tone : "wait",
+  })) : [
+    {
+      title: "지금 피할 곳",
+      name: zoneDisplayName(busiestZone),
+      value: `혼잡도 ${clampPercent(busiestZone.percent)}%`,
+      copy: "잠시 후 방문 추천",
+      tone: "danger",
+    },
+    {
+      title: "지금 가기 좋은 곳",
+      name: zoneDisplayName(calmZone),
+      value: `혼잡도 ${clampPercent(calmZone.percent)}%`,
+      copy: "바로 방문하기 좋음",
+      tone: "good",
+    },
+    {
+      title: "기다리면 좋은 곳",
+      name: laterZone.name,
+      value: laterZone.copy,
+      copy: "조금 뒤 다시 확인하기",
+      tone: "wait",
+    },
+  ];
+  const aiGuideBullets = Array.isArray(aiVisitorGuide?.bullets)
+    ? aiVisitorGuide.bullets.filter(Boolean).slice(0, 3)
+    : [];
+  const summaryLines = aiGuideBullets.length ? aiGuideBullets : [
+    `지금은 ${zoneDisplayName(busiestZone)}${secondBusyZone ? `와 ${zoneDisplayName(secondBusyZone)}` : ""}이 붐비고 있어요.`,
+    `${zoneDisplayName(calmZone)}은 비교적 여유로워요.`,
+    aiPredictions[0]
+      ? `${aiPredictions[0].boothName}은 30분 뒤 ${aiPredictions[0].predictedLevel || "혼잡"} 단계가 될 수 있어요.`
+      : `${zoneDisplayName(secondBusyZone)}은 잠시 뒤 더 붐빌 수 있어요.`,
+  ];
   const hasMeasurements = Number(dashboard.sampleCount) > 0
     || dashboard.trend.some((point) => Number(point.count) > 0);
 
   return (
     <section className="uni-page analytics-live-page">
-      <header className="analytics-live-header">
-        <div>
-          <h1>실시간 혼잡도</h1>
-          <p>GPS 로그 기반으로 캠퍼스 혼잡도를 집계합니다.</p>
+      <header className="analytics-ai-hero">
+        <div className="analytics-ai-hero__copy">
+          <div className="analytics-ai-hero__badges">
+            <span>실시간 분석 중</span>
+            <span>최근 {dashboard.minutesWindow}분 기준</span>
+          </div>
+          <h1>AI 혼잡도 예측</h1>
+          <p>지금 어디가 붐비는지, 어디로 가면 좋은지 AI가 알려드려요.</p>
         </div>
-        <button type="button" aria-label="혼잡도 새로고침" onClick={load} disabled={loading}>
+        <img
+          src="/images/ai/ai-congestion-chart.png"
+          alt="AI 혼잡도 예측"
+          onError={(event) => {
+            event.currentTarget.hidden = true;
+            event.currentTarget.closest(".analytics-ai-hero")?.classList.add("analytics-ai-hero--no-image");
+          }}
+        />
+        <button type="button" aria-label="혼잡도 새로고침" onClick={() => load({ includeVisitorGuide: true })} disabled={loading}>
           <IconRefresh className="h-5 w-5" />
         </button>
       </header>
 
       {message && <p className="app-inline-note app-inline-note--danger">{message}</p>}
 
-      <section className="analytics-overview-card" aria-label="캠퍼스 전체 혼잡도">
+      <section className="analytics-ai-summary-card" aria-label="AI 현재 요약">
+        <span>
+          <IconSparkles className="h-4 w-4" />
+          AI 현재 요약
+        </span>
+        <strong>{summaryLines[0]}</strong>
+        <ul>
+          {summaryLines.slice(1).map((line) => (
+            <li key={line}>{line}</li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="analytics-action-section" aria-label="지금 행동 추천">
+        <div className="analytics-section-head">
+          <h2>지금 행동 추천</h2>
+          <span>3초 안에 판단하기</span>
+        </div>
+        <div className="analytics-action-grid">
+          {actionCards.map((card) => (
+            <article key={card.title} className={`analytics-action-card analytics-action-card--${card.tone}`}>
+              <small>{card.title}</small>
+              <strong>{card.name}</strong>
+              <span>{card.value}</span>
+              <p>{card.copy}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className={`analytics-overview-card analytics-overview-card--${overviewPercentMeta.tone}`} aria-label="전체 축제장 혼잡도">
         <div className="analytics-overview-copy">
-          <span>캠퍼스 전체</span>
-          <strong className={`analytics-level analytics-level--${overviewMeta.tone}`}>
-            {overviewMeta.label}
+          <span>전체 축제장 혼잡도</span>
+          <strong className={`analytics-level analytics-level--${overviewPercentMeta.tone}`}>
+            현재 {overviewPercentMeta.label}
             <b>{clampPercent(dashboard.overview.percent)}%</b>
           </strong>
           <small className={`analytics-delta analytics-delta--${deltaTone(dashboard.overview.deltaPercent)}`}>
             {formatDelta(dashboard.overview.deltaPercent)}
           </small>
           <em>
-            최근 {dashboard.minutesWindow}분 실측 {Number(dashboard.sampleCount) || 0}건
+            최근 {dashboard.minutesWindow}분 기준 · 실측 {Number(dashboard.sampleCount) || 0}건
           </em>
         </div>
         <Gauge percent={dashboard.overview.percent} />
@@ -258,7 +398,7 @@ export default function AnalyticsPage() {
 
       {!hasMeasurements && (
         <p className="analytics-data-note">
-          아직 실시간 위치 로그가 부족합니다. 홈이나 지도에서 위치를 허용하면 이 화면이 실제 수집값으로 갱신됩니다.
+          아직 실시간 위치 로그가 부족해서 기본 안내를 함께 보여드려요. 위치 데이터가 쌓이면 실제 흐름으로 갱신됩니다.
         </p>
       )}
 
@@ -269,17 +409,48 @@ export default function AnalyticsPage() {
         </div>
         <div className="analytics-zone-grid">
           {zones.map((zone) => {
-            const meta = levelMeta(zone.level);
+            const meta = percentMeta(zone.percent);
             return (
               <article key={zone.zoneKey} className={`analytics-zone-card analytics-zone-card--${meta.tone}`}>
-                <span>{ZONE_LABELS[zone.zoneKey] || zone.zoneName}</span>
+                <span>{zoneDisplayName(zone)}</span>
                 <strong>{meta.label} {clampPercent(zone.percent)}%</strong>
                 <small className={`analytics-delta analytics-delta--${deltaTone(zone.deltaPercent)}`}>
-                  {formatDelta(zone.deltaPercent)}
+                  {zoneAction(zone.percent)}
                 </small>
               </article>
             );
           })}
+        </div>
+      </section>
+
+      <section className="analytics-prediction-section">
+        <div className="analytics-section-head">
+          <h2>30분 뒤 혼잡 예측</h2>
+          <span>공연·부스·위치 흐름 반영</span>
+        </div>
+        <div className="analytics-prediction-list">
+          {aiPredictions.slice(0, 4).map((item) => (
+            <article key={item.boothId || item.boothName} className="analytics-prediction-card">
+              <div>
+                <strong>{item.boothName}</strong>
+                <p>현재 {item.currentLevel || "보통"} → 30분 뒤 {item.predictedLevel || "혼잡"}</p>
+                <span>{predictionAction(item.predictedLevel, item.riskScore)}</span>
+              </div>
+              <small>AI 위험 점수 {Number(item.riskScore) || 0}점</small>
+            </article>
+          ))}
+          {!aiPredictions.length && (
+            FALLBACK_GUIDE_ZONES.slice(1, 3).map((zone) => (
+              <article key={`fallback-${zone.zoneKey}`} className="analytics-prediction-card">
+                <div>
+                  <strong>{zoneDisplayName(zone)}</strong>
+                  <p>현재 {percentMeta(zone.percent).label} → 30분 뒤 {clampPercent(zone.percent) > 65 ? "혼잡" : "보통"}</p>
+                  <span>{predictionAction(percentMeta(zone.percent).label, zone.percent)}</span>
+                </div>
+                <small>기본 안내</small>
+              </article>
+            ))
+          )}
         </div>
       </section>
 
@@ -293,23 +464,37 @@ export default function AnalyticsPage() {
         <TrendChart points={dashboard.trend} />
       </section>
 
-      <section className="analytics-recommend-card">
-        <div>
-          <span>혼잡도 낮은 시간 추천</span>
-          <p>
-            {recommendation.reason === "NO_DATA"
-              ? "위치 데이터가 쌓이면 추천 시간이 표시됩니다."
-              : "지금 방문하기 좋은 시간이에요!"}
-          </p>
+      <section className="analytics-evidence-section">
+        <div className="analytics-section-head">
+          <h2>AI 추천 근거</h2>
+          <span>왜 이 장소를 추천하거나 피하라고 했는지 알려드려요.</span>
         </div>
-        <strong>
-          {recommendation.startTime && recommendation.endTime
-            ? `${recommendation.startTime} - ${recommendation.endTime}`
-            : "수집 중"}
-        </strong>
-        <small>
-          예상 혼잡도 <b>{clampPercent(recommendation.expectedPercent)}%</b> 이하
-        </small>
+        <div className="analytics-evidence-list">
+          {aiDecisionLogs.slice(0, 3).map((log, index) => (
+            <article key={`${log.createdAt}-${index}`} className="analytics-evidence-card">
+              <span>
+                <IconMapPin className="h-4 w-4" />
+                {log.type || "AI 분석"}
+              </span>
+              <strong>{log.title}</strong>
+              <p>{log.summary}</p>
+              {(log.reasons || []).length > 0 && (
+                <small>{(log.reasons || []).slice(0, 2).join(" · ")}</small>
+              )}
+            </article>
+          ))}
+          {!aiDecisionLogs.length && (
+            <article className="analytics-evidence-card">
+              <span>
+                <IconChart className="h-4 w-4" />
+                AI 분석
+              </span>
+              <strong>{zoneDisplayName(busiestZone)} 혼잡 상승 예상</strong>
+              <p>주변 위치 흐름과 공연 전 이동량이 함께 늘어날 수 있어요.</p>
+              <small>위치 데이터가 쌓이면 실제 판단 근거로 바뀝니다.</small>
+            </article>
+          )}
+        </div>
       </section>
     </section>
   );

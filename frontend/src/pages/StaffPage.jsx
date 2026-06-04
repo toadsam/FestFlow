@@ -13,7 +13,7 @@ import {
   createLostItem,
   createLostItemStream,
   createStaffAiLostItemAssist,
-  createStaffAiReplyDraft,
+  fetchStaffAiFieldChecklist,
   createStaffStream,
   fetchLostItems,
   fetchStaffAiZoneSummary,
@@ -81,6 +81,8 @@ const EMPTY_TRANSLATE_FORM = {
   sourceLang: "ko",
   targetLang: "en",
 };
+
+const AI_LOST_MATCH_PREFIX = "lost-item:";
 
 const SPEECH_LANGUAGE_BY_TRANSLATE_LANGUAGE = {
   ko: "ko-KR",
@@ -188,6 +190,17 @@ function normalizeAiAssist(result) {
     highlights: Array.isArray(result.highlights) ? result.highlights : [],
     actions: Array.isArray(result.recommendedActions) ? result.recommendedActions : [],
     confidence: result.confidence || "",
+  };
+}
+
+function parseAiLostMatchHighlight(value) {
+  const text = String(value || "");
+  if (!text.startsWith(AI_LOST_MATCH_PREFIX)) return { id: "", text };
+  const separatorIndex = text.indexOf("|");
+  if (separatorIndex < 0) return { id: "", text };
+  return {
+    id: text.slice(AI_LOST_MATCH_PREFIX.length, separatorIndex),
+    text: text.slice(separatorIndex + 1),
   };
 }
 
@@ -314,6 +327,8 @@ export default function StaffPage() {
   const [aiBusy, setAiBusy] = useState(false);
   const [aiText, setAiText] = useState("");
   const [aiResult, setAiResult] = useState(null);
+  const [aiMode, setAiMode] = useState("");
+  const [aiLostQuery, setAiLostQuery] = useState("");
   const [translateForm, setTranslateForm] = useState(EMPTY_TRANSLATE_FORM);
   const [translateBusy, setTranslateBusy] = useState(false);
   const [translateResult, setTranslateResult] = useState(null);
@@ -617,6 +632,22 @@ export default function StaffPage() {
     setLostEditForm(createLostEditForm(item));
   }
 
+  function openAiMatchedLostItem(itemId) {
+    const item = lostItems.find((entry) => String(entry.id) === String(itemId));
+    if (!item) {
+      setMessage("해당 분실물을 현재 목록에서 찾지 못했습니다. 분실물 목록을 새로고침해 주세요.");
+      return;
+    }
+    selectLostItem(item);
+    setResponseToolTab("lost");
+    window.setTimeout(() => {
+      document.getElementById("staff-lost-detail-panel")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 80);
+  }
+
   function updateLostItemInState(updated) {
     setLostItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
     setSelectedLostId(updated.id);
@@ -693,14 +724,15 @@ export default function StaffPage() {
 
   async function runAi(type) {
     if (!staffToken) return;
+    setAiMode(type);
     setAiBusy(true);
     try {
       const result =
         type === "zone"
           ? await fetchStaffAiZoneSummary(staffToken)
           : type === "lost"
-            ? await createStaffAiLostItemAssist("분실물 센터 응대 문구를 작성해줘.", staffToken)
-            : await createStaffAiReplyDraft("축제 방문객에게 친절한 안내 답변을 작성해줘.", staffToken);
+            ? await createStaffAiLostItemAssist(aiLostQuery.trim(), staffToken)
+            : await fetchStaffAiFieldChecklist(staffToken);
       const normalized = normalizeAiAssist(result);
       setAiResult(normalized);
       setAiText(normalized?.summary || "AI 응답을 생성했습니다.");
@@ -891,7 +923,7 @@ export default function StaffPage() {
       <header className="staff-reference-topbar">
         <h1>스태프</h1>
         <div>
-          <button type="button" aria-label="AI 구역 요약" onClick={() => runAi("zone")} disabled={aiBusy}>
+          <button type="button" aria-label="AI 협업 판단" onClick={() => runAi("zone")} disabled={aiBusy}>
             <IconAlert className="h-5 w-5" />
           </button>
           <button type="button" aria-label="새로고침" onClick={() => load()} disabled={loading}>
@@ -1031,26 +1063,67 @@ export default function StaffPage() {
         <div className="staff-reference-tools">
           <button type="button" onClick={() => runAi("zone")} disabled={aiBusy}>
             <IconMapPin className="h-5 w-5" />
-            <strong>AI 구역 요약</strong>
+            <strong>AI 협업 판단</strong>
           </button>
-          <button type="button" onClick={() => runAi("lost")} disabled={aiBusy}>
+          <button
+            type="button"
+            className={aiMode === "lost" ? "active" : ""}
+            onClick={() => {
+              setAiMode("lost");
+              setAiResult(null);
+              setAiText("");
+            }}
+            disabled={aiBusy}
+          >
             <IconBox className="h-5 w-5" />
-            <strong>분실물 응대</strong>
+            <strong>AI 분실물 매칭</strong>
           </button>
-          <button type="button" onClick={() => runAi("reply")} disabled={aiBusy}>
+          <button type="button" onClick={() => runAi("checklist")} disabled={aiBusy}>
             <IconChat className="h-5 w-5" />
-            <strong>응대 문구</strong>
+            <strong>현장 체크리스트</strong>
           </button>
         </div>
+        {aiMode === "lost" && (
+          <form
+            className="staff-ai-lost-search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              runAi("lost");
+            }}
+          >
+            <input
+              value={aiLostQuery}
+              onChange={(event) => setAiLostQuery(event.target.value)}
+              placeholder="방문객 설명 입력 예: 검은색 반지갑을 학생회관 근처에서 잃어버렸어요"
+              disabled={aiBusy}
+            />
+            <button type="submit" disabled={aiBusy || !aiLostQuery.trim()}>
+              매칭
+            </button>
+          </form>
+        )}
         {aiResult ? (
-          <article className="staff-reference-ai-result staff-reference-ai-card">
+          <article className={aiResult.title.includes("분실물 매칭") ? "staff-reference-ai-result staff-reference-ai-card staff-reference-ai-card--match" : "staff-reference-ai-result staff-reference-ai-card"}>
             <strong>{aiResult.title}</strong>
             {aiResult.summary && <p>{aiResult.summary}</p>}
             {aiResult.highlights.length > 0 && (
               <div>
-                {aiResult.highlights.map((item) => (
-                  <span key={item}>{item}</span>
-                ))}
+                {aiResult.highlights.map((item) => {
+                  const match = parseAiLostMatchHighlight(item);
+                  if (match.id) {
+                    return (
+                      <button
+                        key={item}
+                        type="button"
+                        className="staff-ai-match-candidate"
+                        onClick={() => openAiMatchedLostItem(match.id)}
+                      >
+                        {match.text}
+                      </button>
+                    );
+                  }
+                  return <span key={item}>{match.text}</span>;
+                })}
               </div>
             )}
             {aiResult.actions.length > 0 && (
@@ -1250,7 +1323,7 @@ export default function StaffPage() {
         </button>
       </form>
 
-      <section className={responseToolTab === "lost" ? "staff-reference-section staff-lost-manager staff-tool-panel" : "staff-reference-section staff-lost-manager staff-tool-panel staff-tool-panel-hidden"}>
+      <section id="staff-lost-detail-panel" className={responseToolTab === "lost" ? "staff-reference-section staff-lost-manager staff-tool-panel" : "staff-reference-section staff-lost-manager staff-tool-panel staff-tool-panel-hidden"}>
         <div className="staff-reference-section-head">
           <h2>분실물 센터</h2>
           <span>{lostItems.length}건 관리</span>

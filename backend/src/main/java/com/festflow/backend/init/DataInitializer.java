@@ -2,14 +2,21 @@ package com.festflow.backend.init;
 
 import com.festflow.backend.entity.AdminUser;
 import com.festflow.backend.entity.Booth;
+import com.festflow.backend.entity.BoothReservation;
+import com.festflow.backend.entity.BoothReservationTable;
 import com.festflow.backend.entity.FestivalEvent;
+import com.festflow.backend.entity.GpsLog;
 import com.festflow.backend.entity.LostItem;
 import com.festflow.backend.entity.Notice;
+import com.festflow.backend.entity.ReservationStatus;
 import com.festflow.backend.entity.StaffMember;
 import com.festflow.backend.entity.StaffStatus;
 import com.festflow.backend.repository.AdminUserRepository;
 import com.festflow.backend.repository.BoothRepository;
+import com.festflow.backend.repository.BoothReservationRepository;
+import com.festflow.backend.repository.BoothReservationTableRepository;
 import com.festflow.backend.repository.EventRepository;
+import com.festflow.backend.repository.GpsLogRepository;
 import com.festflow.backend.repository.LostItemRepository;
 import com.festflow.backend.repository.NoticeRepository;
 import com.festflow.backend.repository.StaffMemberRepository;
@@ -21,6 +28,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -65,6 +73,9 @@ public class DataInitializer {
             NoticeRepository noticeRepository,
             LostItemRepository lostItemRepository,
             StaffMemberRepository staffMemberRepository,
+            BoothReservationTableRepository reservationTableRepository,
+            BoothReservationRepository reservationRepository,
+            GpsLogRepository gpsLogRepository,
             PasswordEncoder passwordEncoder
     ) {
         return args -> {
@@ -76,10 +87,15 @@ public class DataInitializer {
             } else {
                 seedMissingDemoBooths(boothRepository, demoBooths);
             }
+            seedMissingDemoBooths(boothRepository, seedScenarioBooths(now));
+            seedMissingDemoBooths(boothRepository, seedMoreScenarioBooths(now));
+            normalizeCorruptedDemoBooths(boothRepository, now);
 
             if (eventRepository.count() == 0) {
                 eventRepository.saveAll(seedEvents(now));
             }
+            seedMissingDemoEvents(eventRepository, seedScenarioEvents(now));
+            seedMissingDemoEvents(eventRepository, seedMoreScenarioEvents(now));
 
             if (noticeRepository.count() == 0) {
                 noticeRepository.save(new Notice(
@@ -89,6 +105,7 @@ public class DataInitializer {
                         true
                 ));
             }
+            seedDemoNotices(noticeRepository);
 
             seedDemoLostItems(lostItemRepository);
 
@@ -102,6 +119,13 @@ public class DataInitializer {
             } else if (simpleDemoCredentials) {
                 syncDemoStaff(staffMemberRepository, booths, passwordEncoder);
             }
+            seedDemoReservationTables(reservationTableRepository, booths);
+            seedDemoReservations(reservationRepository, reservationTableRepository, booths, now);
+            seedDemoGpsLogs(gpsLogRepository, booths);
+            seedMoreScenarioTables(reservationTableRepository, booths);
+            normalizeDemoReservationTableNames(reservationTableRepository);
+            seedMoreScenarioReservations(reservationRepository, reservationTableRepository, booths, now);
+            seedMoreScenarioGpsLogs(gpsLogRepository, booths);
         };
     }
 
@@ -123,6 +147,87 @@ public class DataInitializer {
                 booth("청년 플리마켓", 37.2818, 127.0450, "학생 셀러가 직접 만든 소품과 중고 굿즈를 판매하는 마켓입니다.", 14, 3, 110, "셀러 8팀 운영 중", now, "플리마켓", "주간", "11:00", "18:00", "소품, 굿즈, 마켓", false),
                 booth("모바일 충전 스테이션", 37.2831, 127.0435, "보조배터리 대여와 휴대폰 급속 충전을 지원하는 편의 부스입니다.", 15, 2, 24, "C타입 케이블 여유", now, "편의", "상시", "10:00", "01:00", "충전, 대여, 편의", false),
                 booth("미니 게임 존", 37.2815, 127.0446, "다트, 링토스, 랜덤 미션을 즐기고 경품을 받을 수 있는 게임 부스입니다.", 16, 4, 150, "경품 지급 중", now, "게임", "상시", "12:00", "22:00", "게임, 경품, 미션", false)
+        );
+    }
+
+    private List<Booth> seedScenarioBooths(LocalDateTime now) {
+        return List.of(
+                booth("청춘 분식 연구소", 37.2824, 127.0458, "떡볶이, 순대, 김말이처럼 회전율이 빠른 분식 메뉴를 판매합니다.", 17, 12, 85, "떡볶이 2판 조리 중", now.minusMinutes(4), "푸드", "상시", "11:00", "23:30", "분식, 떡볶이, 빠른주문", false),
+                booth("달빛 칵테일 바", 37.2835, 127.0450, "무알콜 칵테일과 과일 에이드를 함께 판매하는 야간 부스입니다.", 18, 28, 32, "피크 시간 진입, 주문 대기 증가", now.minusMinutes(2), "주점", "야간", "18:00", "01:00", "주점, 무알콜, 에이드", true),
+                booth("제로웨이스트 리필샵", 37.2812, 127.0449, "텀블러 세척, 생수 리필, 다회용기 대여를 지원하는 친환경 부스입니다.", 19, 3, 180, "텀블러 세척 가능", now.minusMinutes(8), "편의", "상시", "10:00", "23:00", "친환경, 리필, 텀블러", false),
+                booth("동아리 굿즈 플리마켓", 37.2811, 127.0454, "동아리별 스티커, 키링, 포스터를 판매하는 플리마켓입니다.", 20, 16, 58, "인기 키링 재고 절반 이하", now.minusMinutes(6), "굿즈", "주간", "11:00", "19:00", "굿즈, 키링, 포스터", false),
+                booth("향수 블렌딩 클래스", 37.2827, 127.0456, "취향 설문을 기반으로 나만의 향을 만드는 체험형 부스입니다.", 21, 22, 20, "예약자 우선 입장 중", now.minusMinutes(1), "체험", "상시", "12:00", "22:00", "체험, 향수, 클래스", true),
+                booth("AI 운세 사진관", 37.2830, 127.0460, "사진과 짧은 문답을 바탕으로 오늘의 축제 운세 카드를 생성합니다.", 22, 18, 44, "이미지 생성 대기 3팀", now.minusMinutes(3), "체험", "상시", "13:00", "23:00", "AI, 사진, 카드", false),
+                booth("캠퍼스 방탈출", 37.2819, 127.0459, "QR 단서를 따라 캠퍼스를 이동하며 문제를 해결하는 팀 미션입니다.", 23, 35, 12, "다음 회차 마감 임박", now.minusMinutes(5), "이벤트", "상시", "12:00", "21:00", "미션, 방탈출, QR", true),
+                booth("심야 라면 포차", 37.2836, 127.0440, "공연 종료 후 몰리는 라면, 어묵, 주먹밥 야식 부스입니다.", 24, 40, 26, "라면 주문 집중, 30분 뒤 완화 예상", now.minusMinutes(2), "푸드", "야간", "20:00", "02:00", "야식, 라면, 어묵", true),
+                booth("잔디광장 피크닉존", 37.2823, 127.0431, "돗자리 대여와 휴식 안내를 제공하는 피크닉 편의 구역입니다.", 25, 1, 90, "돗자리 여유 있음", now.minusMinutes(12), "편의", "상시", "10:00", "23:00", "휴식, 돗자리, 피크닉", false),
+                booth("응원봉 대여소", 37.2833, 127.0437, "공연 관람용 응원봉과 야광 팔찌를 대여합니다.", 26, 14, 34, "공연 전 대여 수요 증가", now.minusMinutes(7), "굿즈", "야간", "16:00", "23:30", "공연, 응원봉, 대여", false),
+                booth("글로벌 푸드트럭", 37.2820, 127.0462, "타코, 팟타이, 케밥을 한 곳에서 맛볼 수 있는 푸드트럭 라인입니다.", 27, 24, 60, "타코 라인 혼잡, 케밥 라인 여유", now.minusMinutes(4), "푸드", "상시", "11:30", "00:00", "타코, 팟타이, 케밥", true),
+                booth("조용한 상담 텐트", 37.2813, 127.0434, "분실, 안전, 귀가 동선 상담을 조용히 받을 수 있는 운영 지원 텐트입니다.", 28, 0, 999, "상담 가능", now.minusMinutes(10), "안내", "상시", "10:00", "01:00", "상담, 귀가, 안전", false)
+        );
+    }
+
+    private List<FestivalEvent> seedScenarioEvents(LocalDateTime now) {
+        return List.of(
+                event("오프닝 퍼레이드", now.plusMinutes(10), now.plusMinutes(35), "곧 시작", "정문에서 잔디광장까지 이동형 공연이 진행됩니다.", 0),
+                event("버스킹 릴레이", now.plusMinutes(55), now.plusMinutes(95), "예정", "동아리 4팀이 이어서 공연합니다.", 0),
+                event("응원단 합동 무대", now.plusHours(2), now.plusHours(2).plusMinutes(35), "예정", "무대 앞 혼잡이 예상되어 10분 전 입장을 권장합니다.", 0),
+                event("인디밴드 쇼케이스", now.plusHours(3), now.plusHours(3).plusMinutes(50), "예정", "메인 스테이지 야간 공연입니다.", 0),
+                event("DJ 나이트", now.plusHours(4).plusMinutes(30), now.plusHours(5).plusMinutes(20), "예정", "공연 종료 후 푸드존 혼잡이 증가할 수 있습니다.", 0),
+                event("폐막 불꽃 카운트다운", now.plusHours(6), now.plusHours(6).plusMinutes(20), "예정", "잔디광장과 후문 방향 귀가 동선 분산이 필요합니다.", 0)
+        );
+    }
+
+    private FestivalEvent event(String title, LocalDateTime startTime, LocalDateTime endTime, String status, String liveMessage, Integer delayMinutes) {
+        FestivalEvent event = new FestivalEvent(title, startTime, endTime, status, null, null, "center");
+        event.update(title, startTime, endTime, null, null, "center", status, liveMessage, delayMinutes);
+        return event;
+    }
+
+    private void seedMissingDemoEvents(EventRepository eventRepository, List<FestivalEvent> demoEvents) {
+        Set<String> existingTitles = eventRepository.findAll().stream()
+                .map(FestivalEvent::getTitle)
+                .collect(java.util.stream.Collectors.toSet());
+        List<FestivalEvent> missingEvents = demoEvents.stream()
+                .filter(event -> !existingTitles.contains(event.getTitle()))
+                .toList();
+        if (!missingEvents.isEmpty()) {
+            eventRepository.saveAll(missingEvents);
+        }
+    }
+
+    private List<Booth> seedMoreScenarioBooths(LocalDateTime now) {
+        return List.of(
+                booth("아이스티 리필 바", 37.28255, 127.04635, "더운 시간대에 빠르게 이용할 수 있는 음료 리필 부스입니다.", 29, 0, 250, "대기 거의 없음, 컵 재고 충분", now.minusMinutes(1), "푸드", "상시", "10:00", "23:00", "음료, 리필, 빠른회전", false),
+                booth("치즈 닭갈비 화덕존", 37.28375, 127.04535, "화덕 조리 메뉴라 맛은 좋지만 피크 시간 대기가 길어지는 부스입니다.", 30, 45, 18, "조리 병목 발생, 2개 라인 중 1개만 운영", now.minusMinutes(2), "푸드", "야간", "17:00", "01:00", "닭갈비, 화덕, 야식", true),
+                booth("비건 샌드위치 트럭", 37.28175, 127.04645, "비건 샌드위치와 샐러드를 판매하는 저혼잡 푸드트럭입니다.", 31, 4, 90, "샌드위치 즉시 제공 가능", now.minusMinutes(3), "푸드", "상시", "11:00", "22:00", "비건, 샌드위치, 샐러드", false),
+                booth("크레페 디저트랩", 37.28295, 127.04655, "크레페와 아이스크림을 판매하지만 일부 메뉴 재고가 소진된 디저트 부스입니다.", 32, 20, 0, "딸기 크레페 품절, 재입고 대기", now.minusMinutes(4), "푸드", "상시", "12:00", "23:30", "디저트, 크레페, 품절", true),
+                booth("타로 상담 부스", 37.28145, 127.04585, "짧은 타로 상담을 받을 수 있는 소규모 체험 부스입니다.", 33, 8, 70, "상담사 2명 운영, 회전 안정", now.minusMinutes(5), "체험", "상시", "12:00", "22:00", "타로, 상담, 체험", true),
+                booth("페이스페인팅 스튜디오", 37.28215, 127.0466, "공연 전 얼굴 스티커와 페이스페인팅을 받을 수 있는 부스입니다.", 34, 15, 35, "공연 전 수요 증가", now.minusMinutes(2), "체험", "상시", "13:00", "23:00", "페이스페인팅, 스티커, 사진", false),
+                booth("즉석 노래방 박스", 37.28315, 127.0459, "친구들과 1곡씩 부르는 미니 노래방 체험 부스입니다.", 35, 33, 22, "한 팀당 이용 시간이 길어 대기 증가", now.minusMinutes(1), "체험", "야간", "16:00", "01:00", "노래방, 체험, 친구", true),
+                booth("보드게임 라운지", 37.28195, 127.04395, "대기 중 쉬면서 보드게임을 즐길 수 있는 실내형 체험 공간입니다.", 36, 9, 50, "2인 게임 테이블 여유", now.minusMinutes(7), "체험", "상시", "11:00", "23:00", "보드게임, 휴식, 실내", true),
+                booth("캡스톤 전시관", 37.28095, 127.04465, "학생 프로젝트와 AI 데모를 둘러볼 수 있는 전시형 체험 부스입니다.", 37, 2, 120, "AI 데모 3종 상시 시연", now.minusMinutes(8), "체험", "주간", "10:00", "20:00", "AI, 전시, 캡스톤", false),
+                booth("학생회 굿즈 럭키박스", 37.28355, 127.04325, "랜덤 굿즈 박스를 판매하는 인기 부스입니다. 재고가 빠르게 줄고 있습니다.", 38, 30, 6, "럭키박스 6개 남음, 구매 제한 필요", now.minusMinutes(2), "굿즈", "상시", "11:00", "22:00", "굿즈, 럭키박스, 재고부족", false),
+                booth("포토카드 교환소", 37.28165, 127.04325, "축제 포토카드를 교환하고 인증 스탬프를 받을 수 있는 부스입니다.", 39, 11, 100, "교환 대기 보통", now.minusMinutes(6), "굿즈", "상시", "11:00", "23:00", "포토카드, 스탬프, 굿즈", false),
+                booth("민속놀이 마당", 37.28085, 127.04535, "투호, 딱지, 윷놀이를 짧게 즐길 수 있는 가족형 이벤트 부스입니다.", 40, 5, 160, "경품 충분, 바로 참여 가능", now.minusMinutes(4), "이벤트", "주간", "10:00", "19:00", "민속놀이, 경품, 이벤트", false),
+                booth("댄스 배틀존", 37.28385, 127.04375, "참가 신청자와 관객이 함께 몰리는 이벤트형 공연 구역입니다.", 41, 26, 80, "관객 밀집 증가, 스태프 유도 필요", now.minusMinutes(1), "공연", "야간", "18:00", "23:00", "댄스, 공연, 이벤트", false),
+                booth("재즈 버스킹 코너", 37.28075, 127.04375, "소규모 버스킹 공연을 가까이서 볼 수 있는 여유 공연 구역입니다.", 42, 3, 999, "좌석 여유, 조용한 관람 가능", now.minusMinutes(9), "공연", "상시", "15:00", "22:00", "재즈, 버스킹, 공연", false),
+                booth("소리없는 쉼터", 37.28055, 127.04425, "소음에 지친 방문객이 잠시 쉴 수 있는 저자극 휴식 공간입니다.", 43, 0, 999, "좌석 여유", now.minusMinutes(12), "편의", "상시", "10:00", "01:00", "휴식, 저자극, 쉼터", false),
+                booth("의무실 응급처치", 37.28245, 127.04245, "간단한 응급 처치와 상태 확인을 받을 수 있는 안전 거점입니다.", 44, 0, 999, "응급 처치 가능, 대기 없음", now.minusMinutes(2), "응급", "상시", "10:00", "01:00", "응급, 안전, 의무실", false),
+                booth("친구찾기 만남존", 37.28105, 127.04375, "일행을 잃어버렸을 때 재집결할 수 있는 만남 안내 구역입니다.", 45, 1, 999, "대기 인원 적음", now.minusMinutes(4), "안내", "상시", "10:00", "01:00", "만남, 안내, 재집결", false),
+                booth("우천 대피 텐트", 37.2809, 127.04405, "비가 올 때 대피할 수 있는 임시 텐트와 우비 배부 지점입니다.", 46, 0, 300, "우비 300개 확보", now.minusMinutes(15), "편의", "상시", "10:00", "01:00", "우천, 대피, 우비", false),
+                booth("후문 셔틀 안내소", 37.28065, 127.04605, "귀가 셔틀 시간과 대기열을 안내하는 후문 거점입니다.", 47, 2, 999, "22시 이후 혼잡 예상", now.minusMinutes(3), "안내", "야간", "18:00", "01:30", "셔틀, 귀가, 후문", false),
+                booth("학과 홍보 퀴즈존", 37.28275, 127.04295, "학과별 퀴즈를 풀고 작은 기념품을 받는 홍보형 체험 부스입니다.", 48, 13, 75, "퀴즈 참여 안정, 기념품 충분", now.minusMinutes(6), "체험", "주간", "10:00", "19:00", "학과, 퀴즈, 홍보", false)
+        );
+    }
+
+    private List<FestivalEvent> seedMoreScenarioEvents(LocalDateTime now) {
+        return List.of(
+                event("재즈 버스킹", now.plusMinutes(25), now.plusMinutes(55), "예정", "잔디광장 옆 소규모 공연이라 혼잡도가 낮습니다.", 0),
+                event("댄스 배틀 예선", now.plusHours(1), now.plusHours(1).plusMinutes(45), "예정", "관객이 배틀존으로 몰릴 수 있어 주변 동선 관리가 필요합니다.", 0),
+                event("동아리 랜덤 플레이댄스", now.plusHours(2).plusMinutes(20), now.plusHours(3), "예정", "참여형 공연으로 스테이지 전면 체류 시간이 길어질 수 있습니다.", 0),
+                event("심야 어쿠스틱", now.plusHours(5).plusMinutes(40), now.plusHours(6).plusMinutes(10), "예정", "DJ 이후 분산 관람을 유도하는 저혼잡 공연입니다.", 0),
+                event("셔틀 막차 안내 방송", now.plusHours(6).plusMinutes(30), now.plusHours(6).plusMinutes(40), "예정", "후문 셔틀 안내소 주변 일시 혼잡이 예상됩니다.", 0)
         );
     }
 
@@ -159,6 +264,68 @@ public class DataInitializer {
                 boothRepository.save(booth);
             }
         }
+    }
+
+    private void normalizeCorruptedDemoBooths(BoothRepository boothRepository, LocalDateTime now) {
+        List<Booth> corruptedBooths = boothRepository.findAll().stream()
+                .filter(booth -> isUnreadableText(booth.getName()) || isUnreadableText(booth.getDescription()))
+                .toList();
+        if (corruptedBooths.isEmpty()) {
+            return;
+        }
+        for (Booth booth : corruptedBooths) {
+            String category = booth.getCategory() == null ? "" : booth.getCategory();
+            String liveMessage = isUnreadableText(booth.getLiveStatusMessage())
+                    ? "샘플 데이터 복구 완료, 정상 운영 중"
+                    : booth.getLiveStatusMessage();
+            booth.update(
+                    replacementBoothName(category, booth.getDisplayOrder()),
+                    booth.getLatitude(),
+                    booth.getLongitude(),
+                    replacementBoothDescription(category),
+                    booth.getDisplayOrder(),
+                    booth.getImageUrl(),
+                    booth.getEstimatedWaitMinutes(),
+                    booth.getRemainingStock(),
+                    liveMessage,
+                    now
+            );
+        }
+        boothRepository.saveAll(corruptedBooths);
+    }
+
+    private boolean isUnreadableText(String value) {
+        if (value == null) {
+            return false;
+        }
+        String trimmed = value.trim();
+        return trimmed.matches("\\?{2,}") || trimmed.contains("????");
+    }
+
+    private String replacementBoothName(String category, Integer displayOrder) {
+        if (category.contains("주점")) {
+            return "캠퍼스 야간주점";
+        }
+        if (category.contains("푸드") || category.contains("음식")) {
+            return "캠퍼스 푸드부스";
+        }
+        if (category.contains("체험")) {
+            return "캠퍼스 체험부스";
+        }
+        return "축제 부스 " + (displayOrder == null ? "" : displayOrder);
+    }
+
+    private String replacementBoothDescription(String category) {
+        if (category.contains("주점")) {
+            return "축제 야간 시간대에 운영되는 주점 부스입니다.";
+        }
+        if (category.contains("푸드") || category.contains("음식")) {
+            return "빠르게 식사와 간식을 이용할 수 있는 먹거리 부스입니다.";
+        }
+        if (category.contains("체험")) {
+            return "방문객이 짧게 참여할 수 있는 체험형 부스입니다.";
+        }
+        return "축제 현장에서 운영 중인 샘플 부스입니다.";
     }
 
     private Booth booth(String name, double latitude, double longitude, String description, Integer displayOrder,
@@ -208,6 +375,271 @@ public class DataInitializer {
                 new FestivalEvent("댄스팀 쇼케이스", now.plusHours(3).plusMinutes(30), now.plusHours(4).plusMinutes(20), "예정", null, null, null),
                 new FestivalEvent("DJ 피날레", now.plusHours(5), now.plusHours(6), "예정", null, null, null)
         );
+    }
+
+    private void seedDemoNotices(NoticeRepository noticeRepository) {
+        List<String> existingTitles = noticeRepository.findAll().stream()
+                .map(Notice::getTitle)
+                .toList();
+        List<Notice> notices = List.of(
+                new Notice("AI 혼잡 예측 안내", "현재 푸드존과 심야 라면 포차 주변 혼잡 위험이 높습니다. 30분 뒤 방문하거나 글로벌 푸드트럭 케밥 라인을 이용해 주세요.", "혼잡", true),
+                new Notice("공연 전 동선 분산 요청", "응원단 합동 무대 시작 20분 전부터 메인 스테이지 앞 진입이 제한될 수 있습니다.", "공연", true),
+                new Notice("분실물 센터 위치 안내", "분실물 접수와 반환은 종합 안내 데스크와 조용한 상담 텐트에서 가능합니다.", "분실물", true),
+                new Notice("우천 대비 운영 변경", "비가 오면 향수 블렌딩 클래스와 AI 운세 사진관은 학생회관 1층으로 이동합니다.", "안내", true),
+                new Notice("심야 귀가 셔틀 안내", "23시 이후 후문, 정문, 기숙사 방향 셔틀 대기열을 분산 운영합니다.", "안전", true)
+        );
+        List<Notice> missingNotices = notices.stream()
+                .filter(notice -> !existingTitles.contains(notice.getTitle()))
+                .toList();
+        if (!missingNotices.isEmpty()) {
+            noticeRepository.saveAll(missingNotices);
+        }
+    }
+
+    private void seedDemoReservationTables(BoothReservationTableRepository tableRepository, List<Booth> booths) {
+        if (tableRepository.count() > 0) {
+            return;
+        }
+        List<BoothReservationTable> tables = new ArrayList<>();
+        booths.stream()
+                .filter(booth -> Boolean.TRUE.equals(booth.getReservationEnabled()))
+                .limit(10)
+                .forEach(booth -> {
+                    int base = booth.getDisplayOrder() == null ? 0 : booth.getDisplayOrder();
+                    tables.add(new BoothReservationTable(booth, demoTableName(1, 4), 4, base % 3 == 0 ? 0 : 4, 1));
+                    tables.add(new BoothReservationTable(booth, demoTableName(2, 4), 4, base % 4 == 0 ? 1 : 4, 2));
+                    tables.add(new BoothReservationTable(booth, demoTableName(3, 2), 2, base % 5 == 0 ? 0 : 2, 3));
+                });
+        if (!tables.isEmpty()) {
+            tableRepository.saveAll(tables);
+        }
+    }
+
+    private void seedDemoReservations(
+            BoothReservationRepository reservationRepository,
+            BoothReservationTableRepository tableRepository,
+            List<Booth> booths,
+            LocalDateTime now
+    ) {
+        if (reservationRepository.count() > 0) {
+            return;
+        }
+        List<BoothReservation> reservations = new ArrayList<>();
+        int userNo = 1;
+        for (Booth booth : booths.stream().filter(booth -> Boolean.TRUE.equals(booth.getReservationEnabled())).limit(8).toList()) {
+            List<BoothReservationTable> tables = tableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(booth.getId());
+            for (int i = 0; i < Math.min(2, tables.size()); i++) {
+                BoothReservation reservation = new BoothReservation(
+                        booth,
+                        tables.get(i),
+                        "demo-user-" + userNo++,
+                        i == 0 ? 4 : 2,
+                        ReservationStatus.RESERVED,
+                        now.minusMinutes(5 + userNo * 2L),
+                        now.plusMinutes(10 + userNo * 3L)
+                );
+                if ((booth.getDisplayOrder() + i) % 4 == 0) {
+                    reservation.markCheckedIn(now.minusMinutes(2 + i));
+                }
+                reservations.add(reservation);
+            }
+            if (tables.size() > 2 && booth.getDisplayOrder() % 3 == 0) {
+                BoothReservation completed = new BoothReservation(
+                        booth,
+                        tables.get(2),
+                        "demo-history-" + userNo++,
+                        2,
+                        ReservationStatus.RESERVED,
+                        now.minusMinutes(70),
+                        now.minusMinutes(50)
+                );
+                completed.markCompleted();
+                reservations.add(completed);
+            }
+        }
+        if (!reservations.isEmpty()) {
+            reservationRepository.saveAll(reservations);
+        }
+    }
+
+    private void seedDemoGpsLogs(GpsLogRepository gpsLogRepository, List<Booth> booths) {
+        if (gpsLogRepository.count() > 0) {
+            return;
+        }
+        List<GpsLog> logs = new ArrayList<>();
+        booths.stream()
+                .filter(booth -> booth.getDisplayOrder() != null)
+                .filter(booth -> booth.getDisplayOrder() <= 28)
+                .forEach(booth -> {
+                    int weight = switch (booth.getDisplayOrder() % 6) {
+                        case 0 -> 9;
+                        case 1 -> 5;
+                        case 2 -> 7;
+                        case 3 -> 2;
+                        case 4 -> 11;
+                        default -> 4;
+                    };
+                    for (int i = 0; i < weight; i++) {
+                        double offset = (i % 5 - 2) * 0.000025;
+                        logs.add(new GpsLog(booth.getLatitude() + offset, booth.getLongitude() - offset));
+                    }
+                });
+        if (!logs.isEmpty()) {
+            gpsLogRepository.saveAll(logs);
+        }
+    }
+
+    private void seedMoreScenarioTables(BoothReservationTableRepository tableRepository, List<Booth> booths) {
+        booths.stream()
+                .filter(booth -> Boolean.TRUE.equals(booth.getReservationEnabled()))
+                .forEach(booth -> {
+                    if (!tableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(booth.getId()).isEmpty()) {
+                        return;
+                    }
+                    int order = booth.getDisplayOrder() == null ? 1 : booth.getDisplayOrder();
+                    int availabilityPattern = order % 5;
+                    tableRepository.saveAll(List.of(
+                            new BoothReservationTable(booth, demoTableName(1, 4), 4, availabilityPattern == 0 ? 0 : 4, 1),
+                            new BoothReservationTable(booth, demoTableName(2, 4), 4, availabilityPattern <= 1 ? 1 : 4, 2),
+                            new BoothReservationTable(booth, demoTableName(3, 2), 2, availabilityPattern == 2 ? 0 : 2, 3),
+                            new BoothReservationTable(booth, demoTableName(4, 6), 6, availabilityPattern == 3 ? 2 : 6, 4)
+                    ));
+                });
+    }
+
+    private void normalizeDemoReservationTableNames(BoothReservationTableRepository tableRepository) {
+        List<BoothReservationTable> generatedTables = tableRepository.findAll().stream()
+                .filter(table -> isGeneratedTableName(table.getTableName()))
+                .toList();
+        if (generatedTables.isEmpty()) {
+            return;
+        }
+        generatedTables.forEach(table -> table.update(
+                demoTableName(table.getDisplayOrder(), table.getTotalSeats()),
+                table.getTotalSeats(),
+                table.getAvailableSeats(),
+                table.getDisplayOrder()
+        ));
+        tableRepository.saveAll(generatedTables);
+    }
+
+    private boolean isGeneratedTableName(String tableName) {
+        return tableName != null
+                && (tableName.matches("[ABC]-\\d+")
+                || tableName.matches("T-\\d+-\\d+")
+                || tableName.matches("Table \\d+")
+                || tableName.matches("테이블 \\d+")
+                || tableName.equals("단체 단체석"));
+    }
+
+    private String demoTableName(int displayOrder, int seats) {
+        String zone = switch (displayOrder) {
+            case 1 -> "입구";
+            case 2 -> "중앙";
+            case 3 -> "안쪽";
+            default -> "단체";
+        };
+        if (seats >= 6) {
+            return "단체".equals(zone) ? "단체석" : zone + " 단체석";
+        }
+        return zone + " " + seats + "인석";
+    }
+
+    private void seedMoreScenarioReservations(
+            BoothReservationRepository reservationRepository,
+            BoothReservationTableRepository tableRepository,
+            List<Booth> booths,
+            LocalDateTime now
+    ) {
+        if (reservationRepository.count() >= 55) {
+            return;
+        }
+        List<BoothReservation> reservations = new ArrayList<>();
+        int userNo = 100;
+        for (Booth booth : booths.stream().filter(booth -> Boolean.TRUE.equals(booth.getReservationEnabled())).toList()) {
+            List<BoothReservationTable> tables = tableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(booth.getId());
+            if (tables.isEmpty()) {
+                continue;
+            }
+            int order = booth.getDisplayOrder() == null ? 0 : booth.getDisplayOrder();
+            int activeCount = switch (order % 6) {
+                case 0 -> 4;
+                case 1 -> 1;
+                case 2 -> 3;
+                case 3 -> 0;
+                case 4 -> 2;
+                default -> 5;
+            };
+            for (int i = 0; i < Math.min(activeCount, tables.size()); i++) {
+                BoothReservation reservation = new BoothReservation(
+                        booth,
+                        tables.get(i),
+                        "scenario-user-" + userNo++,
+                        i % 2 == 0 ? 4 : 2,
+                        ReservationStatus.RESERVED,
+                        now.minusMinutes(3 + i * 6L + order),
+                        now.plusMinutes(8 + i * 5L)
+                );
+                if ((order + i) % 3 == 0) {
+                    reservation.markCheckedIn(now.minusMinutes(1 + i));
+                }
+                reservations.add(reservation);
+            }
+            if (order % 4 == 0 && tables.size() > 1) {
+                BoothReservation cancelled = new BoothReservation(
+                        booth,
+                        tables.get(1),
+                        "scenario-cancelled-" + userNo++,
+                        2,
+                        ReservationStatus.RESERVED,
+                        now.minusMinutes(45),
+                        now.minusMinutes(25)
+                );
+                cancelled.markCancelled(now.minusMinutes(20));
+                reservations.add(cancelled);
+            }
+        }
+        if (!reservations.isEmpty()) {
+            reservationRepository.saveAll(reservations);
+        }
+    }
+
+    private void seedMoreScenarioGpsLogs(GpsLogRepository gpsLogRepository, List<Booth> booths) {
+        int recentLogCount = gpsLogRepository.findByCreatedAtAfter(LocalDateTime.now().minusMinutes(15)).size();
+        if (recentLogCount >= 240) {
+            return;
+        }
+        List<GpsLog> logs = new ArrayList<>();
+        booths.stream()
+                .filter(booth -> booth.getDisplayOrder() != null)
+                .forEach(booth -> {
+                    int weight = gpsScenarioWeight(booth.getDisplayOrder());
+                    for (int i = 0; i < weight; i++) {
+                        double spread = ((i % 9) - 4) * 0.000018;
+                        double ring = ((i / 9) % 4) * 0.000012;
+                        logs.add(new GpsLog(booth.getLatitude() + spread + ring, booth.getLongitude() - spread + ring));
+                    }
+                });
+        if (!logs.isEmpty()) {
+            gpsLogRepository.saveAll(logs);
+        }
+    }
+
+    private int gpsScenarioWeight(int displayOrder) {
+        return switch (displayOrder % 12) {
+            case 0 -> 18;
+            case 1 -> 1;
+            case 2 -> 5;
+            case 3 -> 12;
+            case 4 -> 0;
+            case 5 -> 8;
+            case 6 -> 15;
+            case 7 -> 3;
+            case 8 -> 10;
+            case 9 -> 6;
+            case 10 -> 22;
+            default -> 2;
+        };
     }
 
     private void seedDemoLostItems(LostItemRepository lostItemRepository) {

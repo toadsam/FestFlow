@@ -122,7 +122,7 @@ export async function askChat(question) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ question }),
-  });
+  }, 9000);
   return parseJson(response, "챗봇 응답을 가져오지 못했습니다.");
 }
 
@@ -353,6 +353,26 @@ export async function fetchHeatmap() {
 export async function fetchAnalyticsDashboard(minutes = 15) {
   const response = await fetch(`${API_BASE}/analytics/dashboard?minutes=${minutes}`);
   return parseJson(response, "실시간 혼잡도 데이터를 불러오지 못했습니다.");
+}
+
+export async function fetchAiFestivalGuide() {
+  const response = await fetch(`${API_BASE}/ai/guide`);
+  return parseJson(response, "AI 축제 가이드를 불러오지 못했습니다.");
+}
+
+export async function fetchAiCongestionPredictions() {
+  const response = await fetch(`${API_BASE}/ai/congestion/predictions`);
+  return parseJson(response, "AI 혼잡도 예측을 불러오지 못했습니다.");
+}
+
+export async function fetchAiDecisionLogs() {
+  const response = await fetch(`${API_BASE}/ai/decisions`);
+  return parseJson(response, "AI 판단 이력을 불러오지 못했습니다.");
+}
+
+export async function fetchAiVisitorGuide(scope, timeoutMs = 15000) {
+  const response = await fetchWithTimeout(`${API_BASE}/ai/visitor-guide/${scope}`, {}, timeoutMs);
+  return parseJson(response, "AI 방문 가이드를 불러오지 못했습니다.");
 }
 
 export function createCongestionStream() {
@@ -683,6 +703,17 @@ export async function createStaffAiReplyDraft(prompt, staffToken) {
     body: JSON.stringify({ type: "reply", prompt }),
   });
   return parseJson(response, "응대 문구를 생성하지 못했습니다.");
+}
+
+export async function fetchStaffAiFieldChecklist(staffToken) {
+  const response = await fetch(`${API_BASE}/staff/ai/field-checklist`, {
+    method: "POST",
+    headers: staffToken
+      ? { "Content-Type": "application/json", "X-Staff-Token": staffToken }
+      : { "Content-Type": "application/json" },
+    body: JSON.stringify({ type: "field-checklist" }),
+  });
+  return parseJson(response, "AI 현장 체크리스트를 생성하지 못했습니다.");
 }
 
 export async function fetchStageCrowd(minutes = 10) {

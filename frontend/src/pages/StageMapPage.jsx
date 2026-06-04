@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import L from "leaflet";
 import { CircleMarker, MapContainer, Marker, Popup, TileLayer, Tooltip, useMap } from "react-leaflet";
 import { useLocation, useNavigate } from "react-router-dom";
-import { createBoothStream, fetchBooths, sendGps } from "../api";
+import { createBoothStream, fetchAiVisitorGuide, fetchBooths, sendGps } from "../api";
 import {
   IconBox,
   IconMapPin,
@@ -26,6 +26,9 @@ const FALLBACK_COORD_OFFSETS = [
 ];
 const CAMPUS_RADIUS_METERS = 2500;
 const SEARCH_RESULT_MAX_ZOOM = 17;
+const DEFAULT_VISIBLE_MAP_PINS = 18;
+const BOOTH_REFRESH_INTERVAL_MS = 3000;
+const AI_GUIDE_REFRESH_INTERVAL_MS = 12000;
 
 function normalize(value) {
   return `${value || ""}`.toLowerCase();
@@ -106,19 +109,63 @@ function categoryMatches(booth, activeCategory) {
 }
 
 function mapStatus(booth) {
-  const rawWait = booth?.estimatedWaitMinutes ?? booth?.wait;
-  const wait =
-    rawWait == null || rawWait === ""
-      ? Number.NaN
-      : Number(String(rawWait).replace(/[^0-9]/g, ""));
+  return statusFromWaitLabel(boothWait(booth), booth?.congestion);
+}
+
+function statusFromWaitLabel(waitLabel, fallbackLabel) {
+  const wait = Number(String(waitLabel || "").replace(/[^0-9]/g, ""));
+  let label = "보통";
+
   if (Number.isFinite(wait)) {
-    if (wait >= 25) return { label: "혼잡", tone: "danger", color: "#ef4444" };
-    if (wait >= 10) return { label: "보통", tone: "warning", color: "#f59e0b" };
-    return { label: "여유", tone: "good", color: "#22c55e" };
+    if (wait >= 25) label = "혼잡";
+    else if (wait >= 10) label = "보통";
+    else label = "여유";
+  } else if (fallbackLabel) {
+    label = fallbackLabel;
   }
-  if (booth?.congestion === "여유") return { label: "여유", tone: "good", color: "#22c55e" };
-  if (booth?.congestion === "혼잡") return { label: "혼잡", tone: "danger", color: "#ef4444" };
-  return { label: booth?.congestion || "보통", tone: "warning", color: "#f59e0b" };
+
+  if (label.includes("혼잡")) return { label, tone: "danger", color: "#ef4444" };
+  if (label.includes("여유") || label.includes("한산")) return { label, tone: "good", color: "#22c55e" };
+  return { label, tone: "warning", color: "#f59e0b" };
+}
+
+function waitMinutes(booth) {
+  const value = Number(booth?.estimatedWaitMinutes ?? booth?.wait);
+  return Number.isFinite(value) ? value : 999;
+}
+
+function findBoothByActionTarget(booths, action) {
+  const target = normalize(action?.target).replace(/\s+/g, "");
+  if (!target) return null;
+  return booths.find((booth) => {
+    const name = normalize(booth?.name).replace(/\s+/g, "");
+    return name && (target.includes(name) || name.includes(target));
+  }) || null;
+}
+
+function buildLiveGuideActions(booths) {
+  const sorted = booths
+    .filter((booth) => booth?.id)
+    .sort((a, b) => waitMinutes(a) - waitMinutes(b));
+  const good = sorted[0];
+  const busy = sorted[sorted.length - 1];
+
+  return [
+    good && {
+      title: "지금 가기 좋은 부스",
+      target: good.name,
+      description: `대기 ${boothWait(good)} 기준이에요.`,
+      tone: "good",
+      booth: good,
+    },
+    busy && busy.id !== good?.id && {
+      title: "잠시 피할 부스",
+      target: busy.name,
+      description: `대기 ${boothWait(busy)}이라 나중에 가는 편이 좋아요.`,
+      tone: "danger",
+      booth: busy,
+    },
+  ].filter(Boolean);
 }
 
 function pinTone(booth, index) {
@@ -255,6 +302,7 @@ export default function StageMapPage() {
   const [query, setQuery] = useState(() => new URLSearchParams(location.search).get("query") || "");
   const [searchOpen, setSearchOpen] = useState(() => Boolean(new URLSearchParams(location.search).get("query")));
   const [geoMessage, setGeoMessage] = useState("");
+  const [aiGuide, setAiGuide] = useState(null);
   const [loading, setLoading] = useState(true);
   const [currentLocation, setCurrentLocation] = useState(null);
 
@@ -268,16 +316,31 @@ export default function StageMapPage() {
     let mounted = true;
     setLoading(true);
 
-    fetchBooths()
-      .then((data) => {
+    async function loadBooths({ initial = false } = {}) {
+      if (initial) setLoading(true);
+      try {
+        const data = await fetchBooths();
         if (mounted) setBooths(data || []);
-      })
-      .catch(() => {
-        if (mounted) setBooths([]);
-      })
-      .finally(() => {
-        if (mounted) setLoading(false);
-      });
+      } catch {
+        if (mounted && initial) setBooths([]);
+      } finally {
+        if (mounted && initial) setLoading(false);
+      }
+    }
+
+    async function loadAiGuide() {
+      try {
+        const data = await fetchAiVisitorGuide("stage-map", 5000);
+        if (mounted) setAiGuide(data);
+      } catch {
+        if (mounted) setAiGuide(null);
+      }
+    }
+
+    loadBooths({ initial: true });
+    loadAiGuide();
+    const boothRefreshTimer = window.setInterval(loadBooths, BOOTH_REFRESH_INTERVAL_MS);
+    const aiGuideRefreshTimer = window.setInterval(loadAiGuide, AI_GUIDE_REFRESH_INTERVAL_MS);
 
     let stream = null;
     try {
@@ -296,6 +359,8 @@ export default function StageMapPage() {
 
     return () => {
       mounted = false;
+      window.clearInterval(boothRefreshTimer);
+      window.clearInterval(aiGuideRefreshTimer);
       stream?.close();
     };
   }, []);
@@ -329,7 +394,21 @@ export default function StageMapPage() {
       })),
     [filteredBooths],
   );
-  const mapPoints = useMemo(() => mapBooths.map((item) => item.point), [mapBooths]);
+  const visibleMapBooths = useMemo(() => {
+    if (query.trim()) return mapBooths;
+    return mapBooths.slice(0, DEFAULT_VISIBLE_MAP_PINS);
+  }, [mapBooths, query]);
+  const mapPoints = useMemo(() => visibleMapBooths.map((item) => item.point), [visibleMapBooths]);
+  const aiGuideActions = useMemo(() => {
+    const apiActions = Array.isArray(aiGuide?.actions)
+      ? aiGuide.actions.slice(0, 2).map((action) => ({
+        ...action,
+        booth: findBoothByActionTarget(source, action),
+      }))
+      : [];
+    const liveActions = buildLiveGuideActions(source);
+    return apiActions.length ? apiActions : liveActions;
+  }, [aiGuide, source]);
 
   async function handleLocate() {
     if (!navigator.geolocation) {
@@ -407,7 +486,7 @@ export default function StageMapPage() {
             maxNativeZoom={19}
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          {mapBooths.slice(0, 40).map(({ booth, index, point }) => {
+          {visibleMapBooths.map(({ booth, index, point }) => {
             return (
               <Marker
                 key={booth.id || `${booth.name}-${index}`}
@@ -460,6 +539,30 @@ export default function StageMapPage() {
 
       {geoMessage && <p className="app-inline-note">{geoMessage}</p>}
 
+      {(aiGuide || aiGuideActions.length > 0) && (
+        <section className="map-ai-guide-card" aria-label="AI 주변 부스 추천">
+          <span>{aiGuide?.generated ? "OpenAI 주변 추천" : "AI 데이터 추천"}</span>
+          <strong>{aiGuide?.summary || "가까운 부스 중 가기 좋은 곳을 정리하고 있어요."}</strong>
+          <div className="map-ai-guide-actions">
+            {aiGuideActions.map((action) => (
+              <button
+                key={`${action.title}-${action.target}`}
+                type="button"
+                className={`map-ai-guide-action map-ai-guide-action--${action.tone || "info"}`}
+                onClick={() => {
+                  if (action.booth?.id) navigate(`/booths/${action.booth.id}`);
+                }}
+                disabled={!action.booth?.id}
+              >
+                <small>{action.title}</small>
+                <b>{action.target}</b>
+                <p>{action.description}</p>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
+
       <section className="uni-section">
         <div className="uni-section-head">
           <h2>카테고리</h2>
@@ -490,26 +593,37 @@ export default function StageMapPage() {
           <h2>내 주변 부스</h2>
           <span>{filteredBooths.length}곳</span>
         </div>
-        <div className="booth-mini-list">
-          {filteredBooths.map((booth, index) => (
-            <button
-              key={booth.id || booth.name}
-              type="button"
-              className="booth-mini-row"
-              onClick={() => navigate(`/booths/${booth.id || 1}`)}
-            >
-              <span className={`map-list-icon map-list-icon--${pinTone({ ...booth, category: listIconCategory(booth, index) }, index)}`}>
-                <CategoryIcon category={listIconCategory(booth, index)} className="h-4 w-4" />
-              </span>
-              <span className="booth-mini-main">
-                <strong>{booth.name}</strong>
-                <small>{boothDistance(booth, index)} · 대기 {boothWait(booth)}</small>
-              </span>
-              <span className={`map-status-pill map-status-pill--${mapStatus(booth).tone}`}>
-                {mapStatus(booth).label}
-              </span>
-            </button>
-          ))}
+        <div className="booth-mini-list" data-i18n-skip>
+          {filteredBooths.map((booth, index) => {
+            const waitLabel = boothWait(booth);
+            const status = statusFromWaitLabel(waitLabel, booth?.congestion);
+            const iconCategory = listIconCategory(booth, index);
+
+            return (
+              <button
+                key={booth.id || booth.name}
+                type="button"
+                className="booth-mini-row"
+                onClick={() => navigate(`/booths/${booth.id || 1}`)}
+              >
+                <span className={`map-list-icon map-list-icon--${pinTone({ ...booth, category: iconCategory }, index)}`}>
+                  <CategoryIcon category={iconCategory} className="h-4 w-4" />
+                </span>
+                <span className="booth-mini-main">
+                  <strong>{booth.name}</strong>
+                  <small>{boothDistance(booth, index)} · 대기 {waitLabel}</small>
+                </span>
+                <span
+                  className={`map-status-pill map-status-pill--${status.tone}`}
+                  data-label={status.label}
+                  data-status={status.tone}
+                  data-i18n-skip
+                >
+                  {status.label}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
 

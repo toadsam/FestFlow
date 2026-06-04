@@ -17,11 +17,33 @@ const EMPTY_FORM = {
   description: "",
   finderContact: "",
 };
+const STATUS_LABELS = {
+  REGISTERED: "보관중",
+  FOUND: "보관중",
+  STORED: "보관중",
+  CLAIM_REQUESTED: "확인 요청",
+  OWNER_CLAIMED: "주인 확인",
+  RETURNED: "반환 완료",
+  EXPIRED: "보관 종료",
+};
+const STATUS_TEXT_LABELS = {
+  registered: "보관중",
+  found: "보관중",
+  stored: "보관중",
+  "owner claimed": "주인 확인",
+  "owner-claimed": "주인 확인",
+  owner_claimed: "주인 확인",
+  returned: "반환 완료",
+  claimed: "주인 확인",
+};
 
 function statusLabel(item) {
-  if (item.statusLabel) return item.statusLabel;
-  if (item.status === "OWNER_CLAIMED") return "주인 확인";
-  if (item.status === "RETURNED") return "반환 완료";
+  const rawLabel = `${item.statusLabel || ""}`.trim();
+  const normalizedLabel = rawLabel.toLowerCase();
+  if (STATUS_TEXT_LABELS[normalizedLabel]) return STATUS_TEXT_LABELS[normalizedLabel];
+  if (rawLabel && !/^[a-z_\-\s]+$/i.test(rawLabel)) return rawLabel;
+  const rawStatus = `${item.status || ""}`.trim().toUpperCase();
+  if (STATUS_LABELS[rawStatus]) return STATUS_LABELS[rawStatus];
   return "보관중";
 }
 
