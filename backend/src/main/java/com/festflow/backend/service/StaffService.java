@@ -12,6 +12,7 @@ import com.festflow.backend.entity.StaffStatus;
 import com.festflow.backend.repository.StaffMemberRepository;
 import com.festflow.backend.repository.StaffSessionRepository;
 import com.festflow.backend.service.stream.StreamService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +55,7 @@ public class StaffService {
     private final NoticeService noticeService;
     private final BoothService boothService;
     private final StreamService streamService;
+    private final boolean demoLoginEnabled;
 
     public StaffService(
             StaffMemberRepository staffMemberRepository,
@@ -61,7 +63,8 @@ public class StaffService {
             PasswordEncoder passwordEncoder,
             NoticeService noticeService,
             BoothService boothService,
-            StreamService streamService
+            StreamService streamService,
+            @Value("${app.staff.demo-login.enabled:false}") boolean demoLoginEnabled
     ) {
         this.staffMemberRepository = staffMemberRepository;
         this.staffSessionRepository = staffSessionRepository;
@@ -69,6 +72,7 @@ public class StaffService {
         this.noticeService = noticeService;
         this.boothService = boothService;
         this.streamService = streamService;
+        this.demoLoginEnabled = demoLoginEnabled;
     }
 
     @Transactional
@@ -219,10 +223,6 @@ public class StaffService {
     }
 
     private boolean matchesStaffPin(String rawPin, StaffMember member) {
-        if (rawPin.equals(member.getStaffNo())) {
-            return true;
-        }
-
         try {
             return passwordEncoder.matches(rawPin, member.getPinHash());
         } catch (IllegalArgumentException ignored) {
@@ -231,14 +231,14 @@ public class StaffService {
     }
 
     private DemoStaff resolveDemoStaffCredentials(String staffNo, String pin) {
-        if (staffNo == null || pin == null || !staffNo.equals(pin)) {
+        if (!demoLoginEnabled || staffNo == null || pin == null || !staffNo.equals(pin)) {
             return null;
         }
         return parseDemoStaffNumber(staffNo);
     }
 
     private DemoStaff resolveDemoStaffToken(String token) {
-        if (token == null || token.isBlank()) {
+        if (!demoLoginEnabled || token == null || token.isBlank()) {
             return null;
         }
         String[] parts = token.split("-", 5);

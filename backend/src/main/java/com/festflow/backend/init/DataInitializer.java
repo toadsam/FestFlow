@@ -32,6 +32,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 @Configuration
 public class DataInitializer {
@@ -115,9 +116,11 @@ public class DataInitializer {
                     .sorted(Comparator.comparing(Booth::getDisplayOrder))
                     .toList();
             if (staffMemberRepository.count() == 0) {
-                staffMemberRepository.saveAll(seedStaff(booths, passwordEncoder));
+                staffMemberRepository.saveAll(seedStaff(booths, passwordEncoder, simpleDemoCredentials));
             } else if (simpleDemoCredentials) {
                 syncDemoStaff(staffMemberRepository, booths, passwordEncoder);
+            } else {
+                hardenSimpleStaffCredentials(staffMemberRepository, passwordEncoder);
             }
             seedDemoReservationTables(reservationTableRepository, booths);
             seedDemoReservations(reservationRepository, reservationTableRepository, booths, now);
@@ -749,19 +752,20 @@ public class DataInitializer {
         );
     }
 
-    private List<StaffMember> seedStaff(List<Booth> booths, PasswordEncoder passwordEncoder) {
+    private List<StaffMember> seedStaff(List<Booth> booths, PasswordEncoder passwordEncoder, boolean useSimpleCredentials) {
         return java.util.stream.IntStream.range(0, STAFF_NAMES.size())
-                .mapToObj(i -> createStaff(i, booths, passwordEncoder))
+                .mapToObj(i -> createStaff(i, booths, passwordEncoder, useSimpleCredentials))
                 .toList();
     }
 
-    private StaffMember createStaff(int index, List<Booth> booths, PasswordEncoder passwordEncoder) {
+    private StaffMember createStaff(int index, List<Booth> booths, PasswordEncoder passwordEncoder, boolean useSimpleCredentials) {
         Booth booth = booths.isEmpty() ? null : booths.get(index % booths.size());
         StaffStatus status = index % 5 == 0 ? StaffStatus.URGENT : index % 3 == 0 ? StaffStatus.MOVING : StaffStatus.ON_DUTY;
         String number = String.valueOf(index + 1);
+        String rawPin = useSimpleCredentials ? number : UUID.randomUUID().toString();
         return new StaffMember(
                 number,
-                passwordEncoder.encode(number),
+                passwordEncoder.encode(rawPin),
                 STAFF_NAMES.get(index),
                 index % 2 == 0 ? "운영" : "안전",
                 status,
@@ -800,11 +804,32 @@ public class DataInitializer {
             String number = String.valueOf(i + 1);
             int index = i;
             StaffMember member = staffMemberRepository.findByStaffNoIgnoreCase(number)
-                    .orElseGet(() -> createStaff(index, booths, passwordEncoder));
+                    .orElseGet(() -> createStaff(index, booths, passwordEncoder, true));
             member.updateCredentials(number, passwordEncoder.encode(number));
             member.setName(STAFF_NAMES.get(i));
             member.setTeam(i % 2 == 0 ? "운영" : "안전");
             staffMemberRepository.save(member);
+        }
+    }
+
+    private void hardenSimpleStaffCredentials(
+            StaffMemberRepository staffMemberRepository,
+            PasswordEncoder passwordEncoder
+    ) {
+        List<StaffMember> staff = staffMemberRepository.findAll();
+        List<StaffMember> updated = new ArrayList<>();
+        for (StaffMember member : staff) {
+            String staffNo = member.getStaffNo();
+            if (staffNo == null || staffNo.isBlank() || member.getPinHash() == null || member.getPinHash().isBlank()) {
+                continue;
+            }
+            if (passwordEncoder.matches(staffNo, member.getPinHash())) {
+                member.updateCredentials(staffNo, passwordEncoder.encode(UUID.randomUUID().toString()));
+                updated.add(member);
+            }
+        }
+        if (!updated.isEmpty()) {
+            staffMemberRepository.saveAll(updated);
         }
     }
 }

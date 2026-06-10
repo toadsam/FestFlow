@@ -20,9 +20,20 @@ import java.util.regex.Pattern;
 public class PublicApiRateLimitFilter extends OncePerRequestFilter {
 
     private static final List<Rule> RULES = List.of(
+            new Rule("POST", Pattern.compile("^/api/auth/login$"), "admin-login", 10, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/staff/auth/login$"), "staff-login", 10, Duration.ofMinutes(10)),
+            new Rule("*", Pattern.compile("^/api/ops/.*"), "ops-key", 60, Duration.ofMinutes(1)),
             new Rule("POST", Pattern.compile("^/api/gps$"), "gps", 60, Duration.ofMinutes(1)),
             new Rule("POST", Pattern.compile("^/api/chat$"), "chat", 20, Duration.ofMinutes(1)),
+            new Rule("GET", Pattern.compile("^/api/ai/visitor-guide/.*"), "ai-visitor-guide", 30, Duration.ofMinutes(1)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/image-preview$"), "ai-match-image-preview", 3, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/profiles$"), "ai-match-profile-create", 5, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/profiles/access$"), "ai-match-profile-access", 20, Duration.ofMinutes(10)),
+            new Rule("GET", Pattern.compile("^/api/ai-match/phone-check$"), "ai-match-phone-check", 30, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/profiles/\\d+/(requests|favorite)$"), "ai-match-profile-action", 30, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/requests/\\d+/(accept|reject|cancel|meetup/propose|meetup/confirm)$"), "ai-match-request-action", 30, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/reservations/auth/send-code$"), "reservation-auth", 5, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/lost-items$"), "lost-item-create", 5, Duration.ofMinutes(10)),
             new Rule("PUT", Pattern.compile("^/api/lost-items/\\d+/claim$"), "lost-item-claim", 10, Duration.ofMinutes(1))
     );
 
@@ -80,7 +91,7 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
         String method = request.getMethod();
         String uri = request.getRequestURI();
         return RULES.stream()
-                .filter(rule -> rule.method().equalsIgnoreCase(method))
+                .filter(rule -> "*".equals(rule.method()) || rule.method().equalsIgnoreCase(method))
                 .filter(rule -> rule.pathPattern().matcher(uri).matches())
                 .findFirst()
                 .orElse(null);

@@ -67,9 +67,10 @@ public class LostItemController {
             @RequestParam("foundLocation") String foundLocation,
             @RequestParam(value = "finderContact", required = false) String finderContact,
             @RequestParam(value = "file", required = false) MultipartFile file,
-            @RequestHeader(value = "X-Staff-Token", required = false) String staffToken
+            @RequestHeader(value = "X-Staff-Token", required = false) String staffToken,
+            Authentication authentication
         ) throws IOException {
-        Reporter reporter = resolveStaffReporter(staffToken);
+        Reporter reporter = resolveCreateReporter(authentication, staffToken);
         String imageUrl = file == null || file.isEmpty() ? null : uploadStorageService.saveImage(file, "lost-item");
         LostItemResponseDto created = lostItemService.create(
                 title,
@@ -143,6 +144,17 @@ public class LostItemController {
         throw new ResponseStatusException(FORBIDDEN, "Only admin or staff can modify lost items.");
     }
 
+    private Reporter resolveCreateReporter(Authentication authentication, String staffToken) {
+        if (hasAdminRole(authentication)) {
+            return new Reporter("ADMIN", authentication.getName());
+        }
+        if (staffToken != null && !staffToken.isBlank()) {
+            StaffMemberResponseDto staff = staffService.authenticateByToken(staffToken);
+            return new Reporter("STAFF", staff.staffNo());
+        }
+        return new Reporter("PUBLIC", "visitor");
+    }
+
     private boolean hasAdminRole(Authentication authentication) {
         return authentication != null && authentication.getAuthorities() != null
                 && authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
@@ -158,14 +170,6 @@ public class LostItemController {
         } catch (ResponseStatusException ignored) {
             return false;
         }
-    }
-
-    private Reporter resolveStaffReporter(String staffToken) {
-        if (staffToken != null && !staffToken.isBlank()) {
-            StaffMemberResponseDto staff = staffService.authenticateByToken(staffToken);
-            return new Reporter("STAFF", staff.staffNo());
-        }
-        throw new ResponseStatusException(FORBIDDEN, "Only staff can create lost items.");
     }
 
     private record Reporter(String type, String ref) {

@@ -1,10 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { createEventStream, fetchAiVisitorGuide, fetchEvents } from "../api";
 import { IconCalendar, IconMusic } from "../components/UxIcons";
 import { FESTIVAL_IMAGE, fallbackEvents, formatTime } from "../data/festivalUiData";
+import {
+  areNotificationsEnabled,
+  ensureNotificationPermission,
+  showBrowserNotification,
+} from "../utils/notifications";
 
 const REMINDER_KEY = "festflow_event_reminders";
+const REMINDER_LEAD_MS = 10 * 60 * 1000;
+const MAX_TIMER_MS = 2_147_483_647;
+const STATUS = {
+  LIVE: "진행중",
+  SOON: "곧 시작",
+  ENDED: "종료",
+  SCHEDULED: "예정",
+  DELAYED: "지연",
+  CANCELED: "취소",
+  RESERVED: "예약",
+  REMINDER: "알림",
+};
 
 const EVENT_DISPLAY_PRESETS = [
   {
@@ -89,20 +106,37 @@ function displayImage(event, index) {
   return event?.imageUrl || presetFor(index).image || FESTIVAL_IMAGE;
 }
 
-function eventStatus(event, index) {
-  const raw = event?.statusOverride || event?.status || "";
-  if (raw.includes("진행")) return "진행중";
-  if (raw.includes("곧")) return "곧 시작";
-  if (raw.includes("종료")) return "종료";
-  return ["곧 시작", "종료", "진행중", "곧 시작", "예약", "예정"][index % 6];
+function eventStatus(event) {
+  const raw = `${event?.status || event?.statusOverride || ""}`;
+  const start = new Date(event?.startTime).getTime();
+  const end = new Date(event?.endTime).getTime();
+  const now = Date.now();
+
+  if (raw.includes(STATUS.CANCELED)) return STATUS.CANCELED;
+  if (Number.isFinite(end) && now > end) return STATUS.ENDED;
+  if (raw.includes(STATUS.LIVE)) return STATUS.LIVE;
+  if (raw.includes(STATUS.SOON)) return STATUS.SOON;
+  if (raw.includes(STATUS.DELAYED)) return STATUS.DELAYED;
+  if (raw.includes(STATUS.ENDED)) return STATUS.ENDED;
+  if (Number.isFinite(start) && now < start) {
+    return start - now <= 30 * 60 * 1000 ? STATUS.SOON : STATUS.SCHEDULED;
+  }
+  if (Number.isFinite(start) && Number.isFinite(end) && now >= start && now <= end) {
+    return STATUS.LIVE;
+  }
+  return STATUS.SCHEDULED;
 }
 
 function statusTone(status) {
-  if (status === "진행중") return "live";
-  if (status === "곧 시작") return "soon";
-  if (status === "예약") return "booked";
-  if (status === "종료") return "done";
+  if (status === STATUS.LIVE) return "live";
+  if (status === STATUS.SOON || status === STATUS.DELAYED) return "soon";
+  if (status === STATUS.RESERVED || status === STATUS.REMINDER) return "booked";
+  if (status === STATUS.ENDED || status === STATUS.CANCELED) return "done";
   return "idle";
+}
+
+function reminderKey(event, index = 0) {
+  return String(event?.id || `${event?.title || "event"}-${event?.startTime || index}-${index}`);
 }
 
 export default function EventPage() {
@@ -113,6 +147,7 @@ export default function EventPage() {
   const [reminders, setReminders] = useState(() => readReminders());
   const [aiGuide, setAiGuide] = useState(null);
   const [message, setMessage] = useState("");
+  const reminderTimersRef = useRef(new Map());
 
   useEffect(() => {
     let mounted = true;
@@ -191,19 +226,78 @@ export default function EventPage() {
     setStageFilter("전체");
   }
 
-  function toggleReminder(eventId) {
-    const key = String(eventId);
+  function clearReminderTimer(key) {
+    const timer = reminderTimersRef.current.get(key);
+    if (timer) {
+      window.clearTimeout(timer);
+      reminderTimersRef.current.delete(key);
+    }
+  }
+
+  function scheduleReminderNotification(event, index = 0) {
+    const key = reminderKey(event, index);
+    clearReminderTimer(key);
+
+    const start = new Date(event?.startTime).getTime();
+    if (!Number.isFinite(start)) {
+      return;
+    }
+
+    const delay = Math.max(0, start - Date.now() - REMINDER_LEAD_MS);
+    if (delay > MAX_TIMER_MS) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      showBrowserNotification("공연 알림", {
+        body: `${displayTitle(event, index)} 시작이 가까워졌습니다. ${displayStage(event, index)} 일정을 확인해 주세요.`,
+        tag: `festflow-event-${key}`,
+      });
+      reminderTimersRef.current.delete(key);
+    }, delay);
+    reminderTimersRef.current.set(key, timer);
+  }
+
+  async function toggleReminder(event, index = 0) {
+    const key = reminderKey(event, index);
     const next = new Set(reminders);
     if (next.has(key)) {
       next.delete(key);
+      clearReminderTimer(key);
       setMessage("공연 알림을 해제했습니다.");
     } else {
+      if (!areNotificationsEnabled()) {
+        setMessage("더보기에서 알림 설정을 켠 뒤 다시 시도해 주세요.");
+        return;
+      }
+      const granted = await ensureNotificationPermission();
+      if (!granted) {
+        setMessage("브라우저 알림 권한이 필요합니다.");
+        return;
+      }
       next.add(key);
+      scheduleReminderNotification(event, index);
       setMessage("공연 알림을 저장했습니다.");
     }
     setReminders(next);
     saveReminders(next);
   }
+
+  useEffect(() => {
+    reminderTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    reminderTimersRef.current.clear();
+    sortedEvents.forEach((event, index) => {
+      const key = reminderKey(event, index);
+      if (reminders.has(key)) {
+        scheduleReminderNotification(event, index);
+      }
+    });
+
+    return () => {
+      reminderTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+      reminderTimersRef.current.clear();
+    };
+  }, [reminders, sortedEvents]);
 
   return (
     <section className="events-reference-page">
@@ -244,7 +338,7 @@ export default function EventPage() {
       {heroEvent && (
         <section className="events-reference-hero-card">
           <div>
-            <span>{eventStatus(heroEvent, 0)}</span>
+            <span>{eventStatus(heroEvent)}</span>
             <h2>{displayTitle(heroEvent, 0)}</h2>
             <p>{formatTime(heroEvent.startTime)} · {displayStage(heroEvent, 0)}</p>
             {aiRecommendedAction && (
@@ -252,7 +346,7 @@ export default function EventPage() {
                 {aiRecommendedAction.target} · {aiRecommendedAction.description}
               </p>
             )}
-            <button type="button" onClick={() => toggleReminder(heroEvent.id || heroEvent.title)}>
+            <button type="button" onClick={() => toggleReminder(heroEvent, 0)}>
               알림 받기
             </button>
           </div>
@@ -277,9 +371,9 @@ export default function EventPage() {
 
       <section className="events-reference-list">
         {visibleEvents.map((event, index) => {
-          const eventId = event.id || `${event.title}-${index}`;
+          const eventId = reminderKey(event, index);
           const reminded = reminders.has(String(eventId));
-          const status = reminded ? "알림" : eventStatus(event, index);
+          const status = reminded ? STATUS.REMINDER : eventStatus(event);
           return (
             <article key={eventId} className="events-reference-row">
               <time>
@@ -293,7 +387,7 @@ export default function EventPage() {
               <button
                 type="button"
                 className={`events-reference-status events-reference-status--${statusTone(status)}`}
-                onClick={() => toggleReminder(eventId)}
+                onClick={() => toggleReminder(event, index)}
               >
                 {status}
               </button>

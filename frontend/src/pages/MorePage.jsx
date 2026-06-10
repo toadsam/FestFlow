@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useLanguage } from "../i18n";
 import {
   IconBox,
   IconChart,
@@ -12,6 +13,11 @@ import {
   IconSparkles,
   IconUsers,
 } from "../components/UxIcons";
+import {
+  areNotificationsEnabled,
+  ensureNotificationPermission,
+  setNotificationsEnabled,
+} from "../utils/notifications";
 
 const aiHubCards = [
   {
@@ -49,22 +55,27 @@ const menuItems = [
 ];
 
 export default function MorePage() {
+  const { language, setLanguage } = useLanguage();
   const [highContrast, setHighContrast] = useState(() => localStorage.getItem("festflow_high_contrast") === "true");
-  const [notifications, setNotifications] = useState(() => localStorage.getItem("festflow_notifications") !== "false");
-  const [language, setLanguage] = useState(() => localStorage.getItem("festflow_language") || "한국어");
+  const [notifications, setNotifications] = useState(() => areNotificationsEnabled());
 
   useEffect(() => {
     localStorage.setItem("festflow_high_contrast", String(highContrast));
     document.documentElement.dataset.contrast = highContrast ? "high" : "normal";
   }, [highContrast]);
 
-  useEffect(() => {
-    localStorage.setItem("festflow_notifications", String(notifications));
-  }, [notifications]);
+  async function handleNotificationChange(event) {
+    const enabled = event.target.checked;
+    if (!enabled) {
+      setNotifications(false);
+      setNotificationsEnabled(false);
+      return;
+    }
 
-  useEffect(() => {
-    localStorage.setItem("festflow_language", language);
-  }, [language]);
+    const granted = await ensureNotificationPermission();
+    setNotifications(granted);
+    setNotificationsEnabled(granted);
+  }
 
   return (
     <section className="uni-page more-page">
@@ -124,7 +135,7 @@ export default function MorePage() {
           <input
             type="checkbox"
             checked={notifications}
-            onChange={(event) => setNotifications(event.target.checked)}
+            onChange={handleNotificationChange}
           />
         </label>
         <label className="settings-row">
@@ -138,8 +149,8 @@ export default function MorePage() {
         <label className="settings-row">
           <span>언어</span>
           <select value={language} onChange={(event) => setLanguage(event.target.value)}>
-            <option>한국어</option>
-            <option>English</option>
+            <option value="ko">한국어</option>
+            <option value="en">English</option>
           </select>
         </label>
       </section>

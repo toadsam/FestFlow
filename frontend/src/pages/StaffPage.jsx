@@ -41,6 +41,8 @@ import {
 import { AJOU_CENTER } from "../utils/location";
 
 const STAFF_TOKEN_KEY = "festflow_staff_token_v2";
+const STAFF_DEMO_LOGIN_ENABLED =
+  import.meta.env.DEV || import.meta.env.VITE_ENABLE_STAFF_DEMO_LOGIN === "true";
 
 const STATUS_META = {
   ON_DUTY: { label: "업무중", tone: "green" },
@@ -299,13 +301,11 @@ function StaffMapViewport({ points, focusPoint }) {
 
 export default function StaffPage() {
   const [staffToken, setStaffToken] = useState(getSavedToken());
-  const [staffNoInput, setStaffNoInput] = useState("1");
-  const [pinInput, setPinInput] = useState("1");
+  const [staffNoInput, setStaffNoInput] = useState("");
+  const [pinInput, setPinInput] = useState("");
   const [showPin, setShowPin] = useState(false);
   const [loading, setLoading] = useState(Boolean(staffToken));
   const [message, setMessage] = useState("");
-  const [skipAutoLogin, setSkipAutoLogin] = useState(false);
-  const autoLoginStarted = useRef(Boolean(staffToken));
 
   const [me, setMe] = useState(null);
   const [staffList, setStaffList] = useState([]);
@@ -366,6 +366,10 @@ export default function StaffPage() {
   }
 
   async function enterDemoStaff() {
+    if (!STAFF_DEMO_LOGIN_ENABLED) {
+      setMessage("데모 입장은 개발 환경에서만 사용할 수 있습니다.");
+      return;
+    }
     setLoading(true);
     try {
       const data = await loginStaff("1", "1");
@@ -378,24 +382,6 @@ export default function StaffPage() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    if (staffToken || skipAutoLogin || autoLoginStarted.current) return;
-    autoLoginStarted.current = true;
-    setLoading(true);
-    loginStaff("1", "1")
-      .then((data) => {
-        setSavedToken(data.staffToken);
-        setStaffToken(data.staffToken);
-        setMessage("");
-      })
-      .catch((error) => {
-        setMessage(error.message);
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  }, [skipAutoLogin, staffToken]);
 
   useEffect(() => {
     load();
@@ -492,8 +478,6 @@ export default function StaffPage() {
 
   async function handleLogin(event) {
     event.preventDefault();
-    setSkipAutoLogin(false);
-    autoLoginStarted.current = true;
     setLoading(true);
     try {
       const data = await loginStaff(staffNoInput.trim().toUpperCase(), pinInput.trim());
@@ -513,8 +497,6 @@ export default function StaffPage() {
     } catch {
       // Logout should still clear the local session.
     }
-    setSkipAutoLogin(true);
-    autoLoginStarted.current = true;
     setSavedToken("");
     setStaffToken("");
     setMe(null);
@@ -909,9 +891,11 @@ export default function StaffPage() {
             <p className="auth-entry-helper">
               운영 계정이 없으신가요? <strong>관리자에게 문의</strong>
             </p>
-            <button type="button" className="auth-entry-link-button" onClick={enterDemoStaff} disabled={loading}>
-              데모로 바로 입장
-            </button>
+            {STAFF_DEMO_LOGIN_ENABLED && (
+              <button type="button" className="auth-entry-link-button" onClick={enterDemoStaff} disabled={loading}>
+                데모로 바로 입장
+              </button>
+            )}
           </div>
         </form>
       </section>

@@ -545,24 +545,61 @@ public class ChatService {
         }
 
         JsonNode root = objectMapper.readTree(response);
-        JsonNode outputText = root.path("output_text");
-        if (outputText.isTextual()) {
-            return outputText.asText();
+        return firstNonBlank(
+                extractResponseText(root.path("output_text")),
+                extractResponseText(root.path("output")),
+                extractResponseText(root.path("content")),
+                extractResponseText(root.path("message"))
+        );
+    }
+
+    private String extractResponseText(JsonNode node) {
+        if (node == null || node.isMissingNode() || node.isNull()) {
+            return null;
         }
 
-        JsonNode output = root.path("output");
-        if (output.isArray()) {
-            for (JsonNode item : output) {
-                JsonNode content = item.path("content");
-                if (!content.isArray()) {
-                    continue;
+        if (node.isTextual()) {
+            return node.asText();
+        }
+
+        if (node.isArray()) {
+            for (JsonNode item : node) {
+                String text = extractResponseText(item);
+                if (text != null && !text.isBlank()) {
+                    return text;
                 }
-                for (JsonNode contentItem : content) {
-                    String type = contentItem.path("type").asText();
-                    if ("output_text".equals(type) && contentItem.path("text").isTextual()) {
-                        return contentItem.path("text").asText();
-                    }
-                }
+            }
+            return null;
+        }
+
+        if (!node.isObject()) {
+            return null;
+        }
+
+        String type = node.path("type").asText("");
+        if (("output_text".equals(type) || "text".equals(type) || "message".equals(type))
+                && node.path("text").isTextual()) {
+            return node.path("text").asText();
+        }
+
+        JsonNode text = node.path("text");
+        if (text.isObject() && text.path("value").isTextual()) {
+            return text.path("value").asText();
+        }
+
+        return firstNonBlank(
+                extractResponseText(node.path("output_text")),
+                extractResponseText(node.path("content")),
+                extractResponseText(node.path("message")),
+                extractResponseText(node.path("output")),
+                extractResponseText(text)
+        );
+    }
+
+    private String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
             }
         }
         return null;

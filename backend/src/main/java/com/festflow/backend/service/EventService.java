@@ -119,26 +119,48 @@ public class EventService {
     }
 
     private String resolveStatus(FestivalEvent event, LocalDateTime now) {
-        if (event.getStatusOverride() != null && !event.getStatusOverride().isBlank()) {
-            String override = event.getStatusOverride();
-            if (!override.equals(event.getStatus())) {
-                event.setStatus(override);
-                eventRepository.save(event);
+        String override = normalizeStatus(event.getStatusOverride());
+        if ("\uCDE8\uC18C".equals(override)) {
+            return persistStatus(event, override);
+        }
+
+        boolean clearedOverride = false;
+        if (event.getEndTime() != null && now.isAfter(event.getEndTime())) {
+            if (override != null) {
+                event.setStatusOverride(null);
+                clearedOverride = true;
             }
-            return override;
+            return persistStatus(event, "\uC885\uB8CC", clearedOverride);
         }
 
-        String status;
-        if (now.isBefore(event.getStartTime())) {
-            status = "\uC608\uC815";
-        } else if (now.isAfter(event.getEndTime())) {
-            status = "\uC885\uB8CC";
-        } else {
-            status = "\uC9C4\uD589\uC911";
+        if (override != null) {
+            return persistStatus(event, override);
         }
 
+        if (event.getStartTime() != null && now.isBefore(event.getStartTime())) {
+            return persistStatus(event, "\uC608\uC815");
+        }
+
+        return persistStatus(event, "\uC9C4\uD589\uC911");
+    }
+
+    private String normalizeStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        return status.trim();
+    }
+
+    private String persistStatus(FestivalEvent event, String status) {
+        return persistStatus(event, status, false);
+    }
+
+    private String persistStatus(FestivalEvent event, String status, boolean forceSave) {
         if (!status.equals(event.getStatus())) {
             event.setStatus(status);
+            forceSave = true;
+        }
+        if (forceSave) {
             eventRepository.save(event);
         }
         return status;
