@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 
 public record ReservationAuthSendCodeResponseDto(
         String phoneNumber,
-        LocalDateTime expiresAt,
-        String temporaryCode
+        LocalDateTime expiresAt
 ) {
 }

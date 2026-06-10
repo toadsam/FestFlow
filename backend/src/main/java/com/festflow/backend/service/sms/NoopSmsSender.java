@@ -13,7 +13,7 @@ public class NoopSmsSender implements SmsSender {
 
     @Override
     public void sendVerificationCode(String phoneNumber, String code) {
-        log.info("[DEV_SMS] verification code requested for phone={}", maskPhoneNumber(phoneNumber));
+        log.info("[DEV_SMS] verification code requested for phone={}, code={}", maskPhoneNumber(phoneNumber), code);
     }
 
     private String maskPhoneNumber(String phoneNumber) {

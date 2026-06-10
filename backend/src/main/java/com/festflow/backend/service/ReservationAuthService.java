@@ -54,10 +54,18 @@ public class ReservationAuthService {
     public ReservationAuthSendCodeResponseDto sendCode(String rawPhoneNumber) {
         String phoneNumber = normalizePhoneNumber(rawPhoneNumber);
         LocalDateTime now = LocalDateTime.now();
-        String code = demoVerificationCode(phoneNumber);
+        String code = generateVerificationCode();
         LocalDateTime expiresAt = now.plusMinutes(3);
 
-        return new ReservationAuthSendCodeResponseDto(phoneNumber, expiresAt, code);
+        verificationCodeRepository.save(new ReservationVerificationCode(
+                phoneNumber,
+                passwordEncoder.encode(code),
+                expiresAt,
+                now
+        ));
+        smsSender.sendVerificationCode(phoneNumber, code);
+
+        return new ReservationAuthSendCodeResponseDto(phoneNumber, expiresAt);
     }
 
     @Transactional
@@ -65,15 +73,6 @@ public class ReservationAuthService {
         String phoneNumber = normalizePhoneNumber(rawPhoneNumber);
         String code = normalizeCode(rawCode);
         LocalDateTime now = LocalDateTime.now();
-
-        if (demoVerificationCode(phoneNumber).equals(code)) {
-            LocalDateTime expiresAt = now.plusHours(12);
-            return new ReservationAuthVerifyResponseDto(
-                    createStatelessReservationToken(phoneNumber, expiresAt),
-                    phoneNumber,
-                    expiresAt
-            );
-        }
 
         ReservationVerificationCode latest = verificationCodeRepository.findFirstByPhoneNumberOrderByCreatedAtDesc(phoneNumber)
                 .orElseThrow(() -> new ResponseStatusException(BAD_REQUEST, "Verification code was not requested."));
@@ -187,12 +186,8 @@ public class ReservationAuthService {
         return trimmed.isEmpty() ? null : trimmed;
     }
 
-    private String demoVerificationCode(String phoneNumber) {
-        String digits = phoneNumber.replaceAll("[^0-9]", "");
-        if (digits.length() >= 6) {
-            return digits.substring(digits.length() - 6);
-        }
-        return String.format("%06d", Integer.parseInt(digits));
+    private String generateVerificationCode() {
+        return String.format("%06d", random.nextInt(1_000_000));
     }
 
     private String createStatelessReservationToken(String phoneNumber, LocalDateTime expiresAt) {

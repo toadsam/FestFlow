@@ -291,9 +291,9 @@ export default function BoothDetailPage() {
   async function handleSendCode() {
     try {
       setReservationError("");
-      const response = await sendReservationAuthCode(phoneNumber);
-      if (response.temporaryCode) setVerifyCode(response.temporaryCode);
-      setMessage(response.temporaryCode ? `임시 인증번호: ${response.temporaryCode}` : "인증번호를 발송했습니다.");
+      await sendReservationAuthCode(phoneNumber);
+      setVerifyCode("");
+      setMessage("인증번호를 문자로 발송했습니다.");
       setSendCooldownSeconds(30);
     } catch (error) {
       setReservationError(error.message);
