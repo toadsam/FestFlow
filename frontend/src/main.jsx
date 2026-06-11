@@ -19,6 +19,7 @@ const LostFoundPage = lazy(() => import("./pages/LostFoundPage"));
 const MorePage = lazy(() => import("./pages/MorePage"));
 const OpsBoothPage = lazy(() => import("./pages/OpsBoothPage"));
 const OpsMasterPage = lazy(() => import("./pages/OpsMasterPage"));
+const OpsSimulationPage = lazy(() => import("./pages/OpsSimulationPage"));
 const StaffPage = lazy(() => import("./pages/StaffPage"));
 const StageMapPage = lazy(() => import("./pages/StageMapPage"));
 
@@ -64,6 +65,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="more" element={lazyElement(MorePage)} />
             <Route path="admin" element={lazyElement(AdminPage)} />
             <Route path="ops/master" element={lazyElement(OpsMasterPage)} />
+            <Route path="ops/simulation" element={lazyElement(OpsSimulationPage)} />
             <Route path="ops/booth/:id" element={lazyElement(OpsBoothPage)} />
             <Route path="ai-match" element={lazyElement(AiMatchPage)} />
             <Route path="ai-match/admin" element={lazyElement(AiMatchAdminPage)} />

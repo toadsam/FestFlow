@@ -39,17 +39,20 @@ public class BoothService {
     private final GpsLogRepository gpsLogRepository;
     private final BoothReservationTableRepository boothReservationTableRepository;
     private final BoothReservationRepository boothReservationRepository;
+    private final SimulationStateService simulationStateService;
 
     public BoothService(
             BoothRepository boothRepository,
             GpsLogRepository gpsLogRepository,
             BoothReservationTableRepository boothReservationTableRepository,
-            BoothReservationRepository boothReservationRepository
+            BoothReservationRepository boothReservationRepository,
+            SimulationStateService simulationStateService
     ) {
         this.boothRepository = boothRepository;
         this.gpsLogRepository = gpsLogRepository;
         this.boothReservationTableRepository = boothReservationTableRepository;
         this.boothReservationRepository = boothReservationRepository;
+        this.simulationStateService = simulationStateService;
     }
 
     public List<BoothResponseDto> getAllBooths() {
@@ -186,6 +189,11 @@ public class BoothService {
     public CongestionResponseDto getCongestionByBoothId(Long boothId) {
         Booth booth = boothRepository.findById(boothId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "부스를 찾을 수 없습니다."));
+
+        var simulated = simulationStateService.simulatedCongestion(booth.getId(), booth.getName());
+        if (simulated.isPresent()) {
+            return simulated.get();
+        }
 
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(15);
         List<GpsLog> recentLogs = gpsLogRepository.findByCreatedAtAfter(threshold);

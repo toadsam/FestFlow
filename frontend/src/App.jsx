@@ -6,6 +6,7 @@ import {
   IconHome,
   IconMapPin,
   IconSettings,
+  IconUsers,
 } from "./components/UxIcons";
 
 const navTabs = [
@@ -23,6 +24,7 @@ const navTabs = [
 
 const opsTabs = [
   { to: "/ops/master", label: "운영", icon: IconSettings, match: ["/ops/master"] },
+  { to: "/ops/simulation", label: "시뮬", icon: IconUsers, match: ["/ops/simulation"] },
   { to: null, label: "부스", icon: IconBox, match: ["/ops/booth"] },
   { to: "/stage-map", label: "지도", icon: IconMapPin, match: ["/stage-map"] },
   { to: "/more", label: "더보기", icon: IconSettings, match: ["/more"] },

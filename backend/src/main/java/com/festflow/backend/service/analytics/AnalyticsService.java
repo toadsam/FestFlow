@@ -14,6 +14,7 @@ import com.festflow.backend.entity.Booth;
 import com.festflow.backend.entity.GpsLog;
 import com.festflow.backend.repository.BoothRepository;
 import com.festflow.backend.repository.GpsLogRepository;
+import com.festflow.backend.service.SimulationStateService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -49,10 +50,16 @@ public class AnalyticsService {
 
     private final GpsLogRepository gpsLogRepository;
     private final BoothRepository boothRepository;
+    private final SimulationStateService simulationStateService;
 
-    public AnalyticsService(GpsLogRepository gpsLogRepository, BoothRepository boothRepository) {
+    public AnalyticsService(
+            GpsLogRepository gpsLogRepository,
+            BoothRepository boothRepository,
+            SimulationStateService simulationStateService
+    ) {
         this.gpsLogRepository = gpsLogRepository;
         this.boothRepository = boothRepository;
+        this.simulationStateService = simulationStateService;
     }
 
     public List<TrafficHourlyDto> trafficHourly() {
@@ -73,6 +80,14 @@ public class AnalyticsService {
     }
 
     public List<PopularBoothDto> popularBooths() {
+        if (simulationStateService.isRunning()) {
+            return simulationStateService.boothSnapshots(boothRepository.findAll()).stream()
+                    .map(item -> new PopularBoothDto(item.boothId(), item.boothName(), item.currentPeople()))
+                    .sorted(Comparator.comparing(PopularBoothDto::score).reversed())
+                    .limit(10)
+                    .toList();
+        }
+
         LocalDateTime from = LocalDateTime.now().minusMinutes(60);
         List<GpsLog> logs = gpsLogRepository.findByCreatedAtAfter(from);
         List<Booth> booths = boothRepository.findAll();
@@ -90,6 +105,13 @@ public class AnalyticsService {
     }
 
     public List<HeatPointDto> congestionHeatmap() {
+        if (simulationStateService.isRunning()) {
+            return simulationStateService.boothSnapshots(boothRepository.findAll()).stream()
+                    .map(item -> new HeatPointDto(item.latitude(), item.longitude(), item.currentPeople()))
+                    .sorted(Comparator.comparing(HeatPointDto::intensity).reversed())
+                    .toList();
+        }
+
         LocalDateTime from = LocalDateTime.now().minusMinutes(60);
         List<GpsLog> logs = gpsLogRepository.findByCreatedAtAfter(from);
         Map<String, Long> cells = new HashMap<>();
@@ -112,6 +134,31 @@ public class AnalyticsService {
 
     public StageCrowdResponseDto stageCrowd(int minutesWindow) {
         int minutes = Math.max(1, Math.min(60, minutesWindow));
+        if (simulationStateService.isRunning()) {
+            List<SimulationStateService.SimulationBoothSnapshot> snapshots =
+                    simulationStateService.boothSnapshots(boothRepository.findAll());
+            List<StageZoneCrowdDto> zones = STAGE_ZONES.stream()
+                    .map(zone -> {
+                        int count = snapshots.stream()
+                                .filter(item -> distanceInMeters(zone.latitude(), zone.longitude(), item.latitude(), item.longitude()) <= zone.radiusMeters())
+                                .mapToInt(SimulationStateService.SimulationBoothSnapshot::currentPeople)
+                                .sum();
+                        return new StageZoneCrowdDto(
+                                zone.key(),
+                                zone.name(),
+                                zone.latitude(),
+                                zone.longitude(),
+                                zone.radiusMeters(),
+                                count,
+                                zone.capacityHint(),
+                                resolveLevel(count, zone.capacityHint())
+                        );
+                    })
+                    .toList();
+            int total = zones.stream().mapToInt(StageZoneCrowdDto::crowdCount).sum();
+            return new StageCrowdResponseDto(LocalDateTime.now(), minutes, total, zones);
+        }
+
         LocalDateTime from = LocalDateTime.now().minusMinutes(minutes);
         List<GpsLog> logs = gpsLogRepository.findByCreatedAtAfter(from);
 
@@ -139,6 +186,10 @@ public class AnalyticsService {
 
     public AnalyticsDashboardDto dashboard(int minutesWindow) {
         int minutes = Math.max(5, Math.min(60, minutesWindow));
+        if (simulationStateService.isRunning()) {
+            return simulatedDashboard(minutes);
+        }
+
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime currentFrom = now.minusMinutes(minutes);
         LocalDateTime previousFrom = now.minusMinutes(minutes * 2L);
@@ -180,6 +231,110 @@ public class AnalyticsService {
                 trend,
                 recommendation
         );
+    }
+
+    private AnalyticsDashboardDto simulatedDashboard(int minutes) {
+        LocalDateTime now = LocalDateTime.now();
+        List<SimulationStateService.SimulationBoothSnapshot> snapshots =
+                simulationStateService.boothSnapshots(boothRepository.findAll());
+
+        List<AnalyticsZoneCrowdDto> zones = CROWD_ZONES.stream()
+                .map(zone -> simulatedZoneCrowd(zone, snapshots))
+                .toList();
+
+        int totalCapacity = CROWD_ZONES.stream().mapToInt(CrowdZone::capacityHint).sum();
+        int currentCount = countInAnyZoneSnapshots(snapshots, false);
+        int previousCount = countInAnyZoneSnapshots(snapshots, true);
+        int currentPercent = toPercent(currentCount, totalCapacity);
+        int previousPercent = toPercent(previousCount, totalCapacity);
+
+        AnalyticsOverviewDto overview = new AnalyticsOverviewDto(
+                currentPercent,
+                levelForPercent(currentPercent),
+                currentPercent - previousPercent,
+                currentCount,
+                previousCount
+        );
+        List<AnalyticsTrendPointDto> trend = simulatedTrend(now, totalCapacity, currentPercent, currentCount);
+
+        return new AnalyticsDashboardDto(
+                now,
+                minutes,
+                currentCount,
+                overview,
+                zones,
+                trend,
+                recommendLowCrowdTime(trend)
+        );
+    }
+
+    private AnalyticsZoneCrowdDto simulatedZoneCrowd(
+            CrowdZone zone,
+            List<SimulationStateService.SimulationBoothSnapshot> snapshots
+    ) {
+        int currentCount = snapshots.stream()
+                .filter(item -> distanceInMeters(zone.latitude(), zone.longitude(), item.latitude(), item.longitude()) <= zone.radiusMeters())
+                .mapToInt(SimulationStateService.SimulationBoothSnapshot::currentPeople)
+                .sum();
+        int previousCount = snapshots.stream()
+                .filter(item -> distanceInMeters(zone.latitude(), zone.longitude(), item.latitude(), item.longitude()) <= zone.radiusMeters())
+                .mapToInt(SimulationStateService.SimulationBoothSnapshot::previousPeople)
+                .sum();
+        int currentPercent = toPercent(currentCount, zone.capacityHint());
+        int previousPercent = toPercent(previousCount, zone.capacityHint());
+
+        return new AnalyticsZoneCrowdDto(
+                zone.key(),
+                zone.name(),
+                zone.latitude(),
+                zone.longitude(),
+                zone.radiusMeters(),
+                currentCount,
+                previousCount,
+                currentPercent,
+                currentPercent - previousPercent,
+                levelForPercent(currentPercent)
+        );
+    }
+
+    private List<AnalyticsTrendPointDto> simulatedTrend(
+            LocalDateTime now,
+            int totalCapacity,
+            int currentPercent,
+            int currentCount
+    ) {
+        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
+        List<AnalyticsTrendPointDto> result = new ArrayList<>();
+        int currentHourBlock = (now.getHour() / 3) * 3;
+
+        for (int hour = 0; hour < 24; hour += 3) {
+            LocalDateTime from = startOfDay.plusHours(hour);
+            LocalDateTime to = from.plusHours(3);
+            boolean current = hour == currentHourBlock;
+            int distance = Math.abs(hour - currentHourBlock) / 3;
+            int percent = current
+                    ? currentPercent
+                    : Math.max(0, Math.min(100, currentPercent - (distance * 6) + (hour % 2 == 0 ? 3 : -2)));
+            long count = current ? currentCount : Math.round(totalCapacity * (percent / 100.0));
+            result.add(new AnalyticsTrendPointDto(
+                    String.format("%02d\uC2DC", hour),
+                    from.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")),
+                    to.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")),
+                    percent,
+                    count,
+                    current
+            ));
+        }
+
+        return result;
+    }
+
+    private int countInAnyZoneSnapshots(List<SimulationStateService.SimulationBoothSnapshot> snapshots, boolean previous) {
+        return snapshots.stream()
+                .filter(item -> CROWD_ZONES.stream()
+                        .anyMatch(zone -> distanceInMeters(zone.latitude(), zone.longitude(), item.latitude(), item.longitude()) <= zone.radiusMeters()))
+                .mapToInt(item -> previous ? item.previousPeople() : item.currentPeople())
+                .sum();
     }
 
     private AnalyticsZoneCrowdDto zoneCrowd(CrowdZone zone, List<GpsLog> currentLogs, List<GpsLog> previousLogs) {
