@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  createAdminAiNoticeDraft,
   createBooth,
   createEvent,
   createNotice,
   deleteBooth,
   deleteEvent,
   deleteNotice,
+  fetchAdminAiBriefing,
   fetchAdminDashboardKpis,
   fetchAdminNotices,
   fetchAdminStaff,
@@ -35,6 +37,7 @@ import {
   IconMapPin,
   IconRefresh,
   IconShield,
+  IconSparkles,
   IconUsers,
 } from "../components/UxIcons";
 import { clearLogin, getAdminName, isLoggedIn, saveLogin } from "../utils/auth";
@@ -105,6 +108,13 @@ function toApiDateTime(value) {
   return value && value.length === 16 ? `${value}:00` : value;
 }
 
+function normalizeNoticeCategory(category) {
+  if (NOTICE_CATEGORIES.includes(category)) return category;
+  if (category === "분실물") return "분실물";
+  if (category === "긴급") return "긴급";
+  return "일반";
+}
+
 function moveItem(list, fromId, toId) {
   const fromIndex = list.findIndex((item) => item.id === fromId);
   const toIndex = list.findIndex((item) => item.id === toId);
@@ -128,6 +138,10 @@ export default function AdminPage() {
   const [events, setEvents] = useState([]);
   const [notices, setNotices] = useState([]);
   const [staffMembers, setStaffMembers] = useState([]);
+  const [aiBriefing, setAiBriefing] = useState(null);
+  const [aiNoticeDraft, setAiNoticeDraft] = useState(null);
+  const [aiDraftType, setAiDraftType] = useState("congestion");
+  const [aiPrompt, setAiPrompt] = useState("");
 
   const [boothForm, setBoothForm] = useState(initialBooth);
   const [eventForm, setEventForm] = useState(initialEvent);
@@ -184,13 +198,14 @@ export default function AdminPage() {
     setMessage("관리자 대시보드 동기화 중...");
 
     try {
-      const [boothResult, eventResult, noticeResult, kpiResult, logResult, staffResult] = await Promise.allSettled([
+      const [boothResult, eventResult, noticeResult, kpiResult, logResult, staffResult, aiResult] = await Promise.allSettled([
         fetchBooths(),
         fetchEvents(),
         fetchAdminNotices(),
         fetchAdminDashboardKpis(),
         fetchAuditLogs(),
         fetchAdminStaff(),
+        fetchAdminAiBriefing(),
       ]);
 
       const boothData = boothResult.status === "fulfilled" && Array.isArray(boothResult.value) ? boothResult.value : [];
@@ -199,6 +214,7 @@ export default function AdminPage() {
       const logData = logResult.status === "fulfilled" && Array.isArray(logResult.value) ? logResult.value : [];
       const staffData = staffResult.status === "fulfilled" && Array.isArray(staffResult.value) ? staffResult.value : [];
       const kpiData = kpiResult.status === "fulfilled" ? kpiResult.value : null;
+      const aiData = aiResult.status === "fulfilled" ? aiResult.value : null;
 
       setBooths(boothData);
       setEvents(eventData);
@@ -206,6 +222,9 @@ export default function AdminPage() {
       setKpi(kpiData);
       setAuditLogs(logData);
       setStaffMembers(staffData);
+      if (aiData) {
+        setAiBriefing(aiData);
+      }
 
       if (boothResult.status === "fulfilled") {
         setBoothLiveDrafts(
@@ -243,7 +262,7 @@ export default function AdminPage() {
         setStaffDrafts({});
       }
 
-      const anyUnauthorized = [noticeResult, kpiResult, logResult, staffResult].some(
+      const anyUnauthorized = [noticeResult, kpiResult, logResult, staffResult, aiResult].some(
         (result) => result.status === "rejected" && isUnauthorizedLike(result.reason),
       );
       if (anyUnauthorized) {
@@ -256,6 +275,8 @@ export default function AdminPage() {
         setKpi(null);
         setAuditLogs([]);
         setStaffMembers([]);
+        setAiBriefing(null);
+        setAiNoticeDraft(null);
         setBoothLiveDrafts({});
         setStaffDrafts({});
         setMessage("권한이 만료되었거나 로그인이 필요합니다. 다시 로그인해 주세요.");
@@ -277,6 +298,9 @@ export default function AdminPage() {
       if (staffResult.status === "rejected") {
         setMessage(adminErrorMessage(staffResult.reason));
       }
+      if (aiResult.status === "rejected" && !isUnauthorizedLike(aiResult.reason)) {
+        setMessage(adminErrorMessage(aiResult.reason));
+      }
       if (boothResult.status === "rejected") {
         setMessage(adminErrorMessage(boothResult.reason));
       }
@@ -284,6 +308,26 @@ export default function AdminPage() {
       setMessage(adminErrorMessage(error));
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function refreshAiBriefing({ silent = false } = {}) {
+    try {
+      const next = await fetchAdminAiBriefing();
+      setAiBriefing(next);
+      if (!silent) {
+        setMessage("AI 운영 브리핑을 갱신했습니다.");
+      }
+    } catch (error) {
+      if (isUnauthorizedLike(error)) {
+        clearLogin();
+        setLoggedIn(false);
+        setAdminName("");
+        return;
+      }
+      if (!silent) {
+        setMessage(adminErrorMessage(error));
+      }
     }
   }
 
@@ -347,6 +391,14 @@ export default function AdminPage() {
     }
   }, [loggedIn]);
 
+  useEffect(() => {
+    if (!loggedIn) return undefined;
+    const timer = window.setInterval(() => {
+      refreshAiBriefing({ silent: true });
+    }, 15000);
+    return () => window.clearInterval(timer);
+  }, [loggedIn]);
+
   async function handleLogin(e) {
     e.preventDefault();
     if (!loginForm.username.trim() || !loginForm.password) {
@@ -373,6 +425,8 @@ export default function AdminPage() {
     clearLogin();
     setLoggedIn(false);
     setAdminName("");
+    setAiBriefing(null);
+    setAiNoticeDraft(null);
     setMessage("로그아웃되었습니다.");
   }
 
@@ -391,6 +445,22 @@ export default function AdminPage() {
       await triggerEventStartNotice(eventId);
       setMessage("공연 시작 공지를 발행했습니다.");
       await loadAll();
+    });
+  }
+
+  async function handleAiNoticeDraft() {
+    await runAdminAction("admin-ai-notice-draft", "AI가 현재 혼잡 상황과 공지 문구를 분석 중입니다.", async () => {
+      const draft = await createAdminAiNoticeDraft(aiDraftType, aiPrompt);
+      setAiNoticeDraft(draft);
+      setNoticeForm({
+        title: draft.draftTitle || "축제 운영 안내",
+        content: draft.draftContent || draft.summary || "현장 상황에 따라 안내를 확인해 주세요.",
+        category: normalizeNoticeCategory(draft.draftCategory),
+        active: true,
+      });
+      setEditingNoticeId(null);
+      setMessage("AI 공지 추천을 공지 입력칸에 반영했습니다. 확인 후 등록하세요.");
+      scrollToAdminSection("admin-notices");
     });
   }
 
@@ -663,6 +733,14 @@ export default function AdminPage() {
       meta: `${activeNoticeCount}개`,
     },
     {
+      id: "admin-ai-ops",
+      title: "AI",
+      description: "운영 판단",
+      icon: IconSparkles,
+      tone: "violet",
+      meta: aiBriefing?.confidence || "분석",
+    },
+    {
       id: "admin-staff",
       title: "스태프",
       description: "배치 편집",
@@ -858,6 +936,16 @@ export default function AdminPage() {
           <strong>긴급 공지 관리</strong>
           <small>{activeNoticeCount}개 활성 공지를 바로 수정합니다.</small>
         </button>
+        <button
+          type="button"
+          className="admin-console-action-card admin-console-action-card--violet"
+          onClick={() => handleAiNoticeDraft().catch((error) => setMessage(adminErrorMessage(error)))}
+          disabled={isBusy || isActionBusy("admin-ai-notice-draft")}
+        >
+          <span>AI 대응</span>
+          <strong>공지 추천 생성</strong>
+          <small>현재 혼잡 상황에 맞는 안내 문구를 준비합니다.</small>
+        </button>
       </section>
 
       <section className="admin-console-section-shell">
@@ -886,6 +974,77 @@ export default function AdminPage() {
           })}
         </div>
       </section>
+
+      <article id="admin-ai-ops" className="admin-console-panel admin-console-panel--ai-ops">
+        <div className="admin-console-panel__head">
+          <div>
+            <span>실시간 운영 판단</span>
+            <h3>AI 혼잡 분석 / 공지 추천</h3>
+          </div>
+          <button
+            type="button"
+            className="admin-console-mini-button"
+            onClick={() => refreshAiBriefing().catch((error) => setMessage(adminErrorMessage(error)))}
+            disabled={isBusy || isActionBusy("admin-ai-notice-draft")}
+          >
+            AI 갱신
+          </button>
+        </div>
+        <div className="admin-console-ai-summary">
+          <div>
+            <span>{aiBriefing?.title || "AI 운영 브리핑"}</span>
+            <strong>{aiBriefing?.summary || "현재 현장 데이터를 분석해 혼잡 구역과 운영 조치를 추천합니다."}</strong>
+          </div>
+          <em>{aiBriefing?.confidence || "대기"}</em>
+        </div>
+        <div className="admin-console-ai-grid">
+          <div>
+            <p>감지된 상황</p>
+            {(aiBriefing?.highlights?.length ? aiBriefing.highlights : ["혼잡 데이터 수집 대기 중"]).slice(0, 4).map((item, index) => (
+              <span key={`ai-highlight-${index}`}>{item}</span>
+            ))}
+          </div>
+          <div>
+            <p>추천 조치</p>
+            {(aiBriefing?.recommendedActions?.length ? aiBriefing.recommendedActions : ["혼잡 부스와 무대 상태를 확인하세요."]).slice(0, 4).map((item, index) => (
+              <span key={`ai-action-${index}`}>{item}</span>
+            ))}
+          </div>
+        </div>
+        <div className="admin-console-ai-draft">
+          <select
+            className="admin-console-input admin-console-input--dense"
+            value={aiDraftType}
+            onChange={(e) => setAiDraftType(e.target.value)}
+          >
+            <option value="congestion">혼잡 완화</option>
+            <option value="event">공연 안내</option>
+            <option value="booth">부스 운영</option>
+            <option value="lost">분실물 안내</option>
+          </select>
+          <input
+            className="admin-console-input admin-console-input--dense"
+            placeholder="추가 요청 예: 주점 쪽 우회 안내 강조"
+            value={aiPrompt}
+            onChange={(e) => setAiPrompt(e.target.value)}
+          />
+          <button
+            type="button"
+            className="admin-console-submit admin-console-submit--violet"
+            onClick={() => handleAiNoticeDraft().catch((error) => setMessage(adminErrorMessage(error)))}
+            disabled={isBusy || isActionBusy("admin-ai-notice-draft")}
+          >
+            공지 추천
+          </button>
+        </div>
+        {aiNoticeDraft?.draftTitle && (
+          <div className="admin-console-ai-preview">
+            <span>{normalizeNoticeCategory(aiNoticeDraft.draftCategory)}</span>
+            <strong>{aiNoticeDraft.draftTitle}</strong>
+            <p>{aiNoticeDraft.draftContent}</p>
+          </div>
+        )}
+      </article>
 
       <article id="admin-notices" className="admin-console-panel admin-console-panel--notice">
         <div className="admin-console-panel__head">

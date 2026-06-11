@@ -24,7 +24,7 @@ const navTabs = [
 
 const opsTabs = [
   { to: "/ops/master", label: "운영", icon: IconSettings, match: ["/ops/master"] },
-  { to: "/ops/simulation", label: "시뮬", icon: IconUsers, match: ["/ops/simulation"] },
+  { to: "/admin/simulation", label: "시뮬", icon: IconUsers, match: ["/admin/simulation", "/ops/simulation"] },
   { to: null, label: "부스", icon: IconBox, match: ["/ops/booth"] },
   { to: "/stage-map", label: "지도", icon: IconMapPin, match: ["/stage-map"] },
   { to: "/more", label: "더보기", icon: IconSettings, match: ["/more"] },
@@ -38,7 +38,8 @@ function isActivePath(pathname, tab) {
 export default function App() {
   const location = useLocation();
   const isOpsRoute = ["/admin", "/ops"].some((path) => location.pathname.startsWith(path));
-  const isOpsPanelRoute = location.pathname.startsWith("/ops");
+  const isOpsPanelRoute =
+    location.pathname.startsWith("/ops") || location.pathname.startsWith("/admin/simulation");
   const isAiMatchRoute = location.pathname.startsWith("/ai-match");
 
   return (

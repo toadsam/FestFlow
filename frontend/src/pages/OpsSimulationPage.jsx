@@ -11,6 +11,7 @@ import {
   IconAlert,
   IconChart,
   IconMapPin,
+  IconMusic,
   IconRefresh,
   IconSettings,
   IconUsers,
@@ -21,7 +22,7 @@ const MASTER_KEY_STORAGE_KEY = "festflow_ops_master_key";
 const SCENARIOS = [
   { id: "calm", label: "전체 한산", description: "대부분 부스를 여유 상태로 초기화" },
   { id: "lunch-peak", label: "식사 피크", description: "주점/음식 부스 유입 집중" },
-  { id: "show-end", label: "공연 종료 직후", description: "전체 이동량과 음식 부스 대기 증가" },
+  { id: "show-end", label: "공연 종료 직후", description: "무대 관객이 주점으로 이동" },
   { id: "single-booth-surge", label: "특정 부스 몰림", description: "한 부스에 강한 쏠림 생성" },
   { id: "emergency-flow", label: "응급/안내 집중", description: "지원 부스 주변 인원 증가" },
 ];
@@ -37,6 +38,15 @@ function toDrafts(status) {
     };
   });
   return result;
+}
+
+function toStageDraft(status) {
+  const stage = status?.stage || {};
+  return {
+    currentPeople: stage.currentPeople ?? 0,
+    incomingPerMinute: stage.incomingPerMinute ?? 0,
+    outgoingPerMinute: stage.outgoingPerMinute ?? 0,
+  };
 }
 
 function toneForLevel(level) {
@@ -65,6 +75,7 @@ export default function OpsSimulationPage() {
   const [key, setKey] = useState(initialKey);
   const [status, setStatus] = useState(null);
   const [drafts, setDrafts] = useState({});
+  const [stageDraft, setStageDraft] = useState(toStageDraft(null));
   const [tickSeconds, setTickSeconds] = useState(3);
   const [jitterPercent, setJitterPercent] = useState(12);
   const [loading, setLoading] = useState(Boolean(initialKey));
@@ -73,6 +84,8 @@ export default function OpsSimulationPage() {
   const [message, setMessage] = useState("");
 
   const booths = status?.booths || [];
+  const stage = status?.stage || null;
+  const flowEvents = status?.flowEvents || [];
   const topBooth = useMemo(
     () => booths.slice().sort((a, b) => b.currentPeople - a.currentPeople)[0],
     [booths],
@@ -81,6 +94,7 @@ export default function OpsSimulationPage() {
     if (!booths.length) return 0;
     return Math.round(booths.reduce((sum, booth) => sum + booth.estimatedWaitMinutes, 0) / booths.length);
   }, [booths]);
+  const stageDelta = stage ? stage.currentPeople - stage.previousPeople : 0;
 
   async function load({ silent = false } = {}) {
     if (!key) {
@@ -93,6 +107,7 @@ export default function OpsSimulationPage() {
       const next = await fetchOpsSimulationStatus(key);
       setStatus(next);
       setDrafts(toDrafts(next));
+      setStageDraft(toStageDraft(next));
       setTickSeconds(next.tickSeconds ?? 3);
       setJitterPercent(next.jitterPercent ?? 12);
       setError("");
@@ -129,6 +144,7 @@ export default function OpsSimulationPage() {
     setKey("");
     setStatus(null);
     setDrafts({});
+    setStageDraft(toStageDraft(null));
     setMessage("");
     setError("");
     setLoading(false);
@@ -144,10 +160,22 @@ export default function OpsSimulationPage() {
     }));
   }
 
+  function updateStageDraft(field, value) {
+    setStageDraft((prev) => ({
+      ...prev,
+      [field]: clampNumber(value),
+    }));
+  }
+
   function payloadFromDrafts() {
     return {
       tickSeconds: clampNumber(tickSeconds, 3),
       jitterPercent: clampNumber(jitterPercent, 12),
+      stage: {
+        currentPeople: clampNumber(stageDraft.currentPeople, stage?.currentPeople ?? 0),
+        incomingPerMinute: clampNumber(stageDraft.incomingPerMinute, stage?.incomingPerMinute ?? 0),
+        outgoingPerMinute: clampNumber(stageDraft.outgoingPerMinute, stage?.outgoingPerMinute ?? 0),
+      },
       booths: booths.map((booth) => ({
         boothId: booth.boothId,
         currentPeople: clampNumber(drafts[booth.boothId]?.currentPeople, booth.currentPeople),
@@ -165,6 +193,7 @@ export default function OpsSimulationPage() {
       const next = await updateOpsSimulation(payloadFromDrafts(), key);
       setStatus(next);
       setDrafts(toDrafts(next));
+      setStageDraft(toStageDraft(next));
       setMessage("시뮬레이션 설정을 저장했습니다.");
     } catch (e) {
       setError(e.message);
@@ -181,6 +210,7 @@ export default function OpsSimulationPage() {
       const next = await startOpsSimulation(key);
       setStatus(next);
       setDrafts(toDrafts(next));
+      setStageDraft(toStageDraft(next));
       setMessage("시뮬레이션을 시작했습니다. 지도/상세/혼잡도 화면이 실시간으로 바뀝니다.");
     } catch (e) {
       setError(e.message);
@@ -196,6 +226,7 @@ export default function OpsSimulationPage() {
       const next = await stopOpsSimulation(key);
       setStatus(next);
       setDrafts(toDrafts(next));
+      setStageDraft(toStageDraft(next));
       setMessage("시뮬레이션을 일시정지했습니다.");
     } catch (e) {
       setError(e.message);
@@ -212,6 +243,7 @@ export default function OpsSimulationPage() {
       const next = await resetOpsSimulation(key);
       setStatus(next);
       setDrafts(toDrafts(next));
+      setStageDraft(toStageDraft(next));
       setTickSeconds(next.tickSeconds ?? 3);
       setJitterPercent(next.jitterPercent ?? 12);
       setMessage("시뮬레이션을 리셋하고 원래 부스 상태를 복구했습니다.");
@@ -229,6 +261,7 @@ export default function OpsSimulationPage() {
       const next = await applyOpsSimulationScenario(scenario, key);
       setStatus(next);
       setDrafts(toDrafts(next));
+      setStageDraft(toStageDraft(next));
       setMessage("시나리오를 적용했습니다. 시작 버튼을 누르면 실시간 변화가 시작됩니다.");
     } catch (e) {
       setError(e.message);
@@ -298,7 +331,7 @@ export default function OpsSimulationPage() {
 
           <section className="ops-simulation-kpis" aria-label="시뮬레이션 요약">
             <div>
-              <span>총 인원</span>
+              <span>부스+무대</span>
               <strong>{status.totalPeople}명</strong>
             </div>
             <div>
@@ -314,6 +347,77 @@ export default function OpsSimulationPage() {
               <strong>{formatTime(status.updatedAt)}</strong>
             </div>
           </section>
+
+          {stage && (
+            <section className="ops-simulation-panel ops-simulation-stage-panel">
+              <div className="ops-simulation-panel-head">
+                <div>
+                  <h3>
+                    <IconMusic className="h-4 w-4" />
+                    무대 관객 흐름
+                  </h3>
+                  <p>무대 인원이 늘고 줄면서 주변 부스와 주점으로 이동합니다.</p>
+                </div>
+                <span className={`ops-simulation-level ops-simulation-level--${toneForLevel(stage.congestionLevel)}`}>
+                  {stage.congestionLevel}
+                </span>
+              </div>
+              <div className="ops-simulation-stage-grid">
+                <label className="ops-simulation-slider">
+                  <span>무대 인원</span>
+                  <input
+                    type="range"
+                    min="0"
+                    max="360"
+                    value={stageDraft.currentPeople}
+                    onChange={(e) => updateStageDraft("currentPeople", e.target.value)}
+                  />
+                  <input
+                    type="number"
+                    min="0"
+                    max="360"
+                    value={stageDraft.currentPeople}
+                    onChange={(e) => updateStageDraft("currentPeople", e.target.value)}
+                  />
+                </label>
+                <div className="ops-simulation-rate-grid">
+                  <label>
+                    <span>무대 유입/분</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="180"
+                      value={stageDraft.incomingPerMinute}
+                      onChange={(e) => updateStageDraft("incomingPerMinute", e.target.value)}
+                    />
+                  </label>
+                  <label>
+                    <span>무대 이탈/분</span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="180"
+                      value={stageDraft.outgoingPerMinute}
+                      onChange={(e) => updateStageDraft("outgoingPerMinute", e.target.value)}
+                    />
+                  </label>
+                  <div className="ops-simulation-stage-counter">
+                    <span>현재 변화</span>
+                    <strong>{stage.currentPeople}명 · {stageDelta >= 0 ? "+" : ""}{stageDelta}</strong>
+                  </div>
+                </div>
+              </div>
+              <div className="ops-simulation-flow-list" aria-label="최근 이동 흐름">
+                {flowEvents.length === 0 && <p>시작 후 이동 이벤트가 여기에 표시됩니다.</p>}
+                {flowEvents.map((event, index) => (
+                  <article key={`${event.from}-${event.to}-${index}`}>
+                    <strong>{event.from} → {event.to}</strong>
+                    <span>{event.people}명 · {event.reason}</span>
+                  </article>
+                ))}
+              </div>
+            </section>
+          )}
 
           <section className="ops-simulation-panel">
             <div className="ops-simulation-panel-head">

@@ -332,6 +332,24 @@ export async function triggerEventStartNotice(eventId) {
   );
 }
 
+export async function fetchAdminAiBriefing() {
+  const response = await fetch(`${API_BASE}/admin/ai/briefing`, {
+    method: "POST",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ type: "briefing" }),
+  });
+  return parseJson(response, "AI 운영 브리핑을 생성하지 못했습니다.");
+}
+
+export async function createAdminAiNoticeDraft(type = "congestion", prompt = "") {
+  const response = await fetch(`${API_BASE}/admin/ai/notice-draft`, {
+    method: "POST",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ type, prompt }),
+  });
+  return parseJson(response, "AI 공지 추천을 생성하지 못했습니다.");
+}
+
 export async function fetchTrafficHourly() {
   const response = await fetch(`${API_BASE}/analytics/traffic-hourly`);
   return parseJson(

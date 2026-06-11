@@ -16802,6 +16802,15 @@ html[data-contrast="high"] .app-shell .uni-page {
   color: #2563eb !important;
 }
 
+.app-shell .admin-console-action-card--violet {
+  border-color: #ddd6fe !important;
+  background: linear-gradient(180deg, #f5f3ff 0%, #ffffff 100%) !important;
+}
+
+.app-shell .admin-console-action-card--violet strong {
+  color: #6d28d9 !important;
+}
+
 .app-shell .admin-console-action-card:hover,
 .app-shell .admin-console-action-card:active {
   color: inherit !important;
@@ -17238,6 +17247,120 @@ html[data-contrast="high"] .app-shell .uni-page {
   border: 1px solid #e3ecf6;
   border-radius: 0.98rem;
   background: #fbfdff;
+}
+
+.app-shell .admin-console-panel--ai-ops {
+  border-color: #ddd6fe !important;
+  background: linear-gradient(180deg, #fbfaff 0%, #ffffff 42%, #ffffff 100%) !important;
+}
+
+.app-shell .admin-console-ai-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.9rem;
+  border: 1px solid #e4ddff;
+  border-radius: 0.95rem;
+  background: #f8f6ff;
+}
+
+.app-shell .admin-console-ai-summary span,
+.app-shell .admin-console-ai-grid p,
+.app-shell .admin-console-ai-preview span {
+  display: block;
+  color: #6d28d9 !important;
+  font-size: 0.72rem !important;
+  font-weight: 900 !important;
+}
+
+.app-shell .admin-console-ai-summary strong {
+  display: block;
+  margin-top: 0.28rem;
+  color: #0f172a !important;
+  font-size: 0.88rem !important;
+  font-weight: 850 !important;
+  line-height: 1.55 !important;
+}
+
+.app-shell .admin-console-ai-summary em {
+  min-width: 3.2rem;
+  padding: 0.32rem 0.55rem;
+  border-radius: 999px;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 950;
+  text-align: center;
+}
+
+.app-shell .admin-console-ai-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.72rem;
+  margin-top: 0.72rem;
+}
+
+.app-shell .admin-console-ai-grid > div {
+  display: grid;
+  gap: 0.42rem;
+  padding: 0.82rem;
+  border: 1px solid #e5eaf4;
+  border-radius: 0.9rem;
+  background: #ffffff;
+}
+
+.app-shell .admin-console-ai-grid span {
+  display: block;
+  color: #334155 !important;
+  font-size: 0.76rem !important;
+  font-weight: 760 !important;
+  line-height: 1.42 !important;
+}
+
+.app-shell .admin-console-ai-draft {
+  display: grid;
+  grid-template-columns: 8.2rem minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+  margin-top: 0.72rem;
+}
+
+.app-shell .admin-console-ai-preview {
+  display: grid;
+  gap: 0.32rem;
+  margin-top: 0.72rem;
+  padding: 0.82rem;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.9rem;
+  background: #eff6ff;
+}
+
+.app-shell .admin-console-ai-preview strong {
+  color: #0f172a !important;
+  font-size: 0.9rem !important;
+  font-weight: 940 !important;
+}
+
+.app-shell .admin-console-ai-preview p {
+  margin: 0;
+  color: #475569 !important;
+  font-size: 0.78rem !important;
+  font-weight: 760 !important;
+  line-height: 1.48 !important;
+}
+
+@media (max-width: 640px) {
+  .app-shell .admin-console-ai-summary,
+  .app-shell .admin-console-ai-grid,
+  .app-shell .admin-console-ai-draft {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-shell .admin-console-ai-summary em {
+    justify-self: start;
+  }
 }
 
 .app-shell .admin-console-panel--ai-match {
@@ -21713,7 +21836,8 @@ body,
 .app-shell[data-route-scope="ops"] .ops-simulation-kpis span,
 .app-shell[data-route-scope="ops"] .ops-simulation-settings span,
 .app-shell[data-route-scope="ops"] .ops-simulation-rate-grid span,
-.app-shell[data-route-scope="ops"] .ops-simulation-slider span {
+.app-shell[data-route-scope="ops"] .ops-simulation-slider span,
+.app-shell[data-route-scope="ops"] .ops-simulation-stage-counter span {
   display: block;
   color: #64748b;
   font-size: 0.72rem;
@@ -21783,8 +21907,20 @@ body,
   gap: 0.65rem;
 }
 
+.app-shell[data-route-scope="ops"] .ops-simulation-stage-panel .ops-simulation-panel-head h3 {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.42rem;
+}
+
+.app-shell[data-route-scope="ops"] .ops-simulation-stage-grid {
+  display: grid;
+  gap: 0.7rem;
+}
+
 .app-shell[data-route-scope="ops"] .ops-simulation-settings label,
-.app-shell[data-route-scope="ops"] .ops-simulation-settings div {
+.app-shell[data-route-scope="ops"] .ops-simulation-settings div,
+.app-shell[data-route-scope="ops"] .ops-simulation-stage-counter {
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: center;
@@ -21818,6 +21954,44 @@ body,
   grid-column: span 2;
   color: #0f172a;
   font-weight: 900;
+}
+
+.app-shell[data-route-scope="ops"] .ops-simulation-stage-counter strong {
+  grid-column: span 2;
+  color: #0f172a;
+  font-size: 0.88rem;
+  font-weight: 920;
+}
+
+.app-shell[data-route-scope="ops"] .ops-simulation-flow-list {
+  display: grid;
+  gap: 0.46rem;
+  margin-top: 0.75rem;
+}
+
+.app-shell[data-route-scope="ops"] .ops-simulation-flow-list p,
+.app-shell[data-route-scope="ops"] .ops-simulation-flow-list article {
+  margin: 0;
+  border: 1px solid rgba(226, 232, 240, 0.95);
+  border-radius: 0.75rem;
+  padding: 0.62rem 0.72rem;
+  background: #f8fafc;
+}
+
+.app-shell[data-route-scope="ops"] .ops-simulation-flow-list strong,
+.app-shell[data-route-scope="ops"] .ops-simulation-flow-list span,
+.app-shell[data-route-scope="ops"] .ops-simulation-flow-list p {
+  display: block;
+  color: #334155;
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1.36;
+}
+
+.app-shell[data-route-scope="ops"] .ops-simulation-flow-list span {
+  margin-top: 0.12rem;
+  color: #64748b;
+  font-weight: 720;
 }
 
 .app-shell[data-route-scope="ops"] .ops-simulation-booth-list {

@@ -71,8 +71,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="staff" element={routeElement(StaffPage)} />
             <Route path="more" element={routeElement(MorePage)} />
             <Route path="admin" element={routeElement(AdminPage)} />
+            <Route path="admin/simulation" element={routeElement(OpsSimulationPage)} />
             <Route path="ops/master" element={routeElement(OpsMasterPage)} />
-            <Route path="ops/simulation" element={routeElement(OpsSimulationPage)} />
+            <Route path="ops/simulation" element={<Navigate to="/admin/simulation" replace />} />
             <Route path="ops/booth/:id" element={routeElement(OpsBoothPage)} />
             <Route path="ai-match" element={routeElement(AiMatchPage)} />
             <Route path="ai-match/admin" element={routeElement(AiMatchAdminPage)} />

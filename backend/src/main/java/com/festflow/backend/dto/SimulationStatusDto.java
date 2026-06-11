@@ -11,6 +11,8 @@ public record SimulationStatusDto(
         int jitterPercent,
         LocalDateTime updatedAt,
         int totalPeople,
-        List<SimulationBoothStateDto> booths
+        List<SimulationBoothStateDto> booths,
+        SimulationStageStateDto stage,
+        List<SimulationFlowEventDto> flowEvents
 ) {
 }

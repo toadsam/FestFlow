@@ -245,7 +245,7 @@ export default function StageCrowdPage() {
           <IconMapPin className="h-4 w-4" />
           지도에서 보기
         </Link>
-        <Link to="/ops/simulation">
+        <Link to="/admin/simulation">
           <IconSettingsLink />
           시뮬레이션
         </Link>

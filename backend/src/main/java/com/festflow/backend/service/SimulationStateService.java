@@ -2,15 +2,21 @@ package com.festflow.backend.service;
 
 import com.festflow.backend.dto.BoothResponseDto;
 import com.festflow.backend.dto.CongestionResponseDto;
+import com.festflow.backend.dto.SimulationFlowEventDto;
 import com.festflow.backend.dto.SimulationBoothPatchDto;
 import com.festflow.backend.dto.SimulationBoothStateDto;
 import com.festflow.backend.dto.SimulationPatchRequestDto;
+import com.festflow.backend.dto.SimulationStagePatchDto;
+import com.festflow.backend.dto.SimulationStageStateDto;
 import com.festflow.backend.dto.SimulationStatusDto;
 import com.festflow.backend.entity.Booth;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -23,8 +29,18 @@ public class SimulationStateService {
     private static final int DEFAULT_TICK_SECONDS = 3;
     private static final int DEFAULT_JITTER_PERCENT = 12;
     private static final int MAX_PEOPLE_PER_BOOTH = 250;
+    private static final int MAX_STAGE_PEOPLE = 360;
+    private static final int STAGE_CAPACITY_HINT = 180;
+    private static final int STAGE_RADIUS_METERS = 55;
+    private static final int MAX_FLOW_EVENTS = 8;
+    private static final String STAGE_ZONE_KEY = "open-air-theater";
+    private static final String STAGE_ZONE_NAME = "아주대 노천극장";
+    private static final double STAGE_LATITUDE = 37.281785;
+    private static final double STAGE_LONGITUDE = 127.045501;
 
     private final Map<Long, MutableBoothState> states = new ConcurrentHashMap<>();
+    private final Deque<SimulationFlowEventDto> flowEvents = new ArrayDeque<>();
+    private MutableStageState stage = defaultStageState();
 
     private boolean running;
     private String scenario = "manual";
@@ -46,6 +62,9 @@ public class SimulationStateService {
             }
             if (request.jitterPercent() != null) {
                 jitterPercent = clamp(request.jitterPercent(), 0, 50);
+            }
+            if (request.stage() != null) {
+                applyStagePatch(request.stage());
             }
             if (request.booths() != null) {
                 for (SimulationBoothPatchDto patch : request.booths()) {
@@ -82,6 +101,8 @@ public class SimulationStateService {
                 default -> applyCalm(state, booth, random);
             }
         }
+        applyStageScenario(resolved, random);
+        flowEvents.clear();
 
         scenario = resolved;
         updatedAt = LocalDateTime.now();
@@ -95,6 +116,8 @@ public class SimulationStateService {
         }
 
         ThreadLocalRandom random = ThreadLocalRandom.current();
+        flowEvents.clear();
+        stage.previousPeople = stage.currentPeople;
         for (BoothResponseDto booth : booths) {
             MutableBoothState state = states.get(booth.id());
             if (state == null) {
@@ -108,6 +131,11 @@ public class SimulationStateService {
             state.currentPeople = clamp(state.currentPeople + deterministicDelta + jitterDelta, 0, MAX_PEOPLE_PER_BOOTH);
             state.remainingStock = booth.remainingStock();
         }
+
+        moveBoothsToStage(booths, consumeStageIncoming(), random);
+        moveStageToBooths(booths, consumeStageOutgoing(), random);
+        moveBetweenBooths(booths, random);
+        stage.currentPeople = clamp(stage.currentPeople + jitterDelta(stage.currentPeople, random), 0, MAX_STAGE_PEOPLE);
 
         updatedAt = LocalDateTime.now();
         return booths.stream()
@@ -129,6 +157,7 @@ public class SimulationStateService {
 
     public synchronized void start(List<BoothResponseDto> booths) {
         seedMissing(booths);
+        flowEvents.clear();
         running = true;
         updatedAt = LocalDateTime.now();
     }
@@ -152,6 +181,8 @@ public class SimulationStateService {
 
     public synchronized void clear(List<BoothResponseDto> booths) {
         states.clear();
+        stage = defaultStageState();
+        flowEvents.clear();
         running = false;
         scenario = "manual";
         tickSeconds = DEFAULT_TICK_SECONDS;
@@ -206,6 +237,23 @@ public class SimulationStateService {
                 .toList();
     }
 
+    public synchronized Optional<SimulationStageSnapshot> stageSnapshot() {
+        if (!running) {
+            return Optional.empty();
+        }
+        return Optional.of(new SimulationStageSnapshot(
+                STAGE_ZONE_KEY,
+                STAGE_ZONE_NAME,
+                STAGE_LATITUDE,
+                STAGE_LONGITUDE,
+                STAGE_RADIUS_METERS,
+                stage.currentPeople,
+                stage.previousPeople,
+                STAGE_CAPACITY_HINT,
+                levelForStagePeople(stage.currentPeople)
+        ));
+    }
+
     private SimulationStatusDto toStatus(List<BoothResponseDto> booths, boolean enabled) {
         List<SimulationBoothStateDto> boothStates = booths.stream()
                 .map(booth -> {
@@ -228,7 +276,7 @@ public class SimulationStateService {
                 })
                 .filter(item -> item != null)
                 .toList();
-        int totalPeople = boothStates.stream().mapToInt(SimulationBoothStateDto::currentPeople).sum();
+        int totalPeople = boothStates.stream().mapToInt(SimulationBoothStateDto::currentPeople).sum() + stage.currentPeople;
         return new SimulationStatusDto(
                 enabled,
                 running,
@@ -237,7 +285,18 @@ public class SimulationStateService {
                 jitterPercent,
                 updatedAt,
                 totalPeople,
-                boothStates
+                boothStates,
+                new SimulationStageStateDto(
+                        STAGE_ZONE_KEY,
+                        STAGE_ZONE_NAME,
+                        stage.currentPeople,
+                        stage.previousPeople,
+                        stage.incomingPerMinute,
+                        stage.outgoingPerMinute,
+                        STAGE_CAPACITY_HINT,
+                        levelForStagePeople(stage.currentPeople)
+                ),
+                List.copyOf(flowEvents)
         );
     }
 
@@ -318,6 +377,178 @@ public class SimulationStateService {
         }
         state.previousPeople = Math.min(state.previousPeople, MAX_PEOPLE_PER_BOOTH);
         state.carry = 0;
+    }
+
+    private void applyStagePatch(SimulationStagePatchDto patch) {
+        if (patch == null) {
+            return;
+        }
+        if (patch.currentPeople() != null) {
+            stage.currentPeople = clamp(patch.currentPeople(), 0, MAX_STAGE_PEOPLE);
+        }
+        if (patch.incomingPerMinute() != null) {
+            stage.incomingPerMinute = clamp(patch.incomingPerMinute(), 0, 180);
+        }
+        if (patch.outgoingPerMinute() != null) {
+            stage.outgoingPerMinute = clamp(patch.outgoingPerMinute(), 0, 180);
+        }
+        stage.previousPeople = Math.min(stage.previousPeople, MAX_STAGE_PEOPLE);
+        stage.incomingCarry = 0;
+        stage.outgoingCarry = 0;
+    }
+
+    private void applyStageScenario(String resolved, ThreadLocalRandom random) {
+        switch (resolved) {
+            case "lunch-peak" -> {
+                stage.currentPeople = random.nextInt(28, 58);
+                stage.incomingPerMinute = random.nextInt(4, 10);
+                stage.outgoingPerMinute = random.nextInt(14, 28);
+            }
+            case "show-end" -> {
+                stage.currentPeople = random.nextInt(128, 176);
+                stage.incomingPerMinute = random.nextInt(0, 4);
+                stage.outgoingPerMinute = random.nextInt(44, 78);
+            }
+            case "single-booth-surge" -> {
+                stage.currentPeople = random.nextInt(42, 86);
+                stage.incomingPerMinute = random.nextInt(6, 14);
+                stage.outgoingPerMinute = random.nextInt(10, 22);
+            }
+            case "emergency-flow" -> {
+                stage.currentPeople = random.nextInt(18, 46);
+                stage.incomingPerMinute = random.nextInt(0, 5);
+                stage.outgoingPerMinute = random.nextInt(18, 34);
+            }
+            default -> {
+                stage.currentPeople = random.nextInt(10, 28);
+                stage.incomingPerMinute = random.nextInt(2, 7);
+                stage.outgoingPerMinute = random.nextInt(2, 7);
+            }
+        }
+        stage.previousPeople = stage.currentPeople;
+        stage.incomingCarry = 0;
+        stage.outgoingCarry = 0;
+    }
+
+    private int consumeStageIncoming() {
+        stage.incomingCarry += stage.incomingPerMinute * (tickSeconds / 60.0);
+        int whole = (int) stage.incomingCarry;
+        stage.incomingCarry -= whole;
+        return Math.max(0, whole);
+    }
+
+    private int consumeStageOutgoing() {
+        stage.outgoingCarry += stage.outgoingPerMinute * (tickSeconds / 60.0);
+        int whole = (int) stage.outgoingCarry;
+        stage.outgoingCarry -= whole;
+        return Math.max(0, whole);
+    }
+
+    private void moveBoothsToStage(List<BoothResponseDto> booths, int requestedPeople, ThreadLocalRandom random) {
+        if (requestedPeople <= 0 || booths.isEmpty()) {
+            return;
+        }
+        int remaining = requestedPeople;
+        List<BoothResponseDto> sources = booths.stream()
+                .filter(booth -> states.containsKey(booth.id()))
+                .sorted((left, right) -> Integer.compare(
+                        states.get(right.id()).currentPeople,
+                        states.get(left.id()).currentPeople
+                ))
+                .limit(4)
+                .toList();
+
+        for (BoothResponseDto source : sources) {
+            if (remaining <= 0) {
+                break;
+            }
+            MutableBoothState sourceState = states.get(source.id());
+            if (sourceState == null || sourceState.currentPeople <= 2) {
+                continue;
+            }
+            int moved = Math.min(remaining, Math.max(1, Math.min(sourceState.currentPeople / 8, random.nextInt(1, 5))));
+            moved = Math.min(moved, sourceState.currentPeople);
+            sourceState.currentPeople -= moved;
+            stage.currentPeople = clamp(stage.currentPeople + moved, 0, MAX_STAGE_PEOPLE);
+            remaining -= moved;
+            addFlow(source.name(), STAGE_ZONE_NAME, moved, "공연 관람 이동");
+        }
+    }
+
+    private void moveStageToBooths(List<BoothResponseDto> booths, int requestedPeople, ThreadLocalRandom random) {
+        if (requestedPeople <= 0 || booths.isEmpty() || stage.currentPeople <= 0) {
+            return;
+        }
+        int remaining = Math.min(requestedPeople, stage.currentPeople);
+        List<BoothResponseDto> targets = new ArrayList<>(booths.stream()
+                .filter(this::isFoodBooth)
+                .filter(booth -> states.containsKey(booth.id()))
+                .sorted(Comparator.comparingInt(booth -> states.get(booth.id()).currentPeople))
+                .limit(5)
+                .toList());
+        if (targets.isEmpty()) {
+            targets = booths.stream()
+                    .filter(booth -> states.containsKey(booth.id()))
+                    .sorted(Comparator.comparingInt(booth -> states.get(booth.id()).currentPeople))
+                    .limit(5)
+                    .toList();
+        }
+
+        for (BoothResponseDto target : targets) {
+            if (remaining <= 0) {
+                break;
+            }
+            MutableBoothState targetState = states.get(target.id());
+            if (targetState == null) {
+                continue;
+            }
+            int moved = Math.min(remaining, random.nextInt(1, Math.max(2, Math.min(8, remaining) + 1)));
+            stage.currentPeople -= moved;
+            targetState.currentPeople = clamp(targetState.currentPeople + moved, 0, MAX_PEOPLE_PER_BOOTH);
+            remaining -= moved;
+            addFlow(STAGE_ZONE_NAME, target.name(), moved, scenario.equals("show-end") ? "공연 종료 후 주점 이동" : "무대 이탈");
+        }
+    }
+
+    private void moveBetweenBooths(List<BoothResponseDto> booths, ThreadLocalRandom random) {
+        if (booths.size() < 2) {
+            return;
+        }
+        BoothResponseDto source = booths.stream()
+                .filter(booth -> states.containsKey(booth.id()))
+                .filter(booth -> states.get(booth.id()).currentPeople >= 24)
+                .max(Comparator.comparingInt(booth -> states.get(booth.id()).currentPeople))
+                .orElse(null);
+        BoothResponseDto target = booths.stream()
+                .filter(booth -> states.containsKey(booth.id()))
+                .filter(booth -> source == null || !booth.id().equals(source.id()))
+                .min(Comparator.comparingInt(booth -> states.get(booth.id()).currentPeople))
+                .orElse(null);
+        if (source == null || target == null) {
+            return;
+        }
+        MutableBoothState sourceState = states.get(source.id());
+        MutableBoothState targetState = states.get(target.id());
+        if (sourceState == null || targetState == null || sourceState.currentPeople <= targetState.currentPeople + 12) {
+            return;
+        }
+        int moved = Math.min(sourceState.currentPeople - 10, random.nextInt(1, 5));
+        if (moved <= 0) {
+            return;
+        }
+        sourceState.currentPeople -= moved;
+        targetState.currentPeople = clamp(targetState.currentPeople + moved, 0, MAX_PEOPLE_PER_BOOTH);
+        addFlow(source.name(), target.name(), moved, "혼잡 분산 이동");
+    }
+
+    private void addFlow(String from, String to, int people, String reason) {
+        if (people <= 0) {
+            return;
+        }
+        flowEvents.addFirst(new SimulationFlowEventDto(from, to, people, reason));
+        while (flowEvents.size() > MAX_FLOW_EVENTS) {
+            flowEvents.removeLast();
+        }
     }
 
     private void applyCalm(MutableBoothState state, BoothResponseDto booth, ThreadLocalRandom random) {
@@ -405,6 +636,20 @@ public class SimulationStateService {
         return "매우 혼잡";
     }
 
+    private String levelForStagePeople(int people) {
+        double ratio = people / (double) STAGE_CAPACITY_HINT;
+        if (ratio < 0.35) {
+            return "여유";
+        }
+        if (ratio < 0.65) {
+            return "보통";
+        }
+        if (ratio < 0.9) {
+            return "혼잡";
+        }
+        return "매우 혼잡";
+    }
+
     private int consumeWholeDelta(MutableBoothState state) {
         int whole = (int) state.carry;
         state.carry -= whole;
@@ -444,6 +689,10 @@ public class SimulationStateService {
             return 5;
         }
         return 2;
+    }
+
+    private MutableStageState defaultStageState() {
+        return new MutableStageState(24, 24, 4, 4);
     }
 
     private boolean isFoodBooth(BoothResponseDto booth) {
@@ -520,6 +769,27 @@ public class SimulationStateService {
         }
     }
 
+    private static final class MutableStageState {
+        private int currentPeople;
+        private int previousPeople;
+        private int incomingPerMinute;
+        private int outgoingPerMinute;
+        private double incomingCarry;
+        private double outgoingCarry;
+
+        private MutableStageState(
+                int currentPeople,
+                int previousPeople,
+                int incomingPerMinute,
+                int outgoingPerMinute
+        ) {
+            this.currentPeople = currentPeople;
+            this.previousPeople = previousPeople;
+            this.incomingPerMinute = incomingPerMinute;
+            this.outgoingPerMinute = outgoingPerMinute;
+        }
+    }
+
     public record SimulationTickState(
             Long boothId,
             Integer estimatedWaitMinutes,
@@ -544,6 +814,19 @@ public class SimulationStateService {
             int currentPeople,
             int previousPeople,
             int estimatedWaitMinutes,
+            String congestionLevel
+    ) {
+    }
+
+    public record SimulationStageSnapshot(
+            String zoneKey,
+            String zoneName,
+            double latitude,
+            double longitude,
+            int radiusMeters,
+            int currentPeople,
+            int previousPeople,
+            int capacityHint,
             String congestionLevel
     ) {
     }

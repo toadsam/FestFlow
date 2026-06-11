@@ -135,26 +135,39 @@ public class AnalyticsService {
     public StageCrowdResponseDto stageCrowd(int minutesWindow) {
         int minutes = Math.max(1, Math.min(60, minutesWindow));
         if (simulationStateService.isRunning()) {
-            List<SimulationStateService.SimulationBoothSnapshot> snapshots =
-                    simulationStateService.boothSnapshots(boothRepository.findAll());
-            List<StageZoneCrowdDto> zones = STAGE_ZONES.stream()
-                    .map(zone -> {
-                        int count = snapshots.stream()
-                                .filter(item -> distanceInMeters(zone.latitude(), zone.longitude(), item.latitude(), item.longitude()) <= zone.radiusMeters())
-                                .mapToInt(SimulationStateService.SimulationBoothSnapshot::currentPeople)
-                                .sum();
-                        return new StageZoneCrowdDto(
-                                zone.key(),
-                                zone.name(),
-                                zone.latitude(),
-                                zone.longitude(),
-                                zone.radiusMeters(),
-                                count,
-                                zone.capacityHint(),
-                                resolveLevel(count, zone.capacityHint())
-                        );
-                    })
-                    .toList();
+            List<StageZoneCrowdDto> zones = simulationStateService.stageSnapshot()
+                    .map(stage -> List.of(new StageZoneCrowdDto(
+                            stage.zoneKey(),
+                            stage.zoneName(),
+                            stage.latitude(),
+                            stage.longitude(),
+                            stage.radiusMeters(),
+                            stage.currentPeople(),
+                            stage.capacityHint(),
+                            stage.congestionLevel()
+                    )))
+                    .orElseGet(() -> {
+                        List<SimulationStateService.SimulationBoothSnapshot> snapshots =
+                                simulationStateService.boothSnapshots(boothRepository.findAll());
+                        return STAGE_ZONES.stream()
+                                .map(zone -> {
+                                    int count = snapshots.stream()
+                                            .filter(item -> distanceInMeters(zone.latitude(), zone.longitude(), item.latitude(), item.longitude()) <= zone.radiusMeters())
+                                            .mapToInt(SimulationStateService.SimulationBoothSnapshot::currentPeople)
+                                            .sum();
+                                    return new StageZoneCrowdDto(
+                                            zone.key(),
+                                            zone.name(),
+                                            zone.latitude(),
+                                            zone.longitude(),
+                                            zone.radiusMeters(),
+                                            count,
+                                            zone.capacityHint(),
+                                            resolveLevel(count, zone.capacityHint())
+                                    );
+                                })
+                                .toList();
+                    });
             int total = zones.stream().mapToInt(StageZoneCrowdDto::crowdCount).sum();
             return new StageCrowdResponseDto(LocalDateTime.now(), minutes, total, zones);
         }
