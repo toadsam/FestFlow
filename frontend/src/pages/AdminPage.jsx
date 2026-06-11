@@ -36,10 +36,12 @@ import {
   IconClock,
   IconMapPin,
   IconRefresh,
+  IconSettings,
   IconShield,
   IconSparkles,
   IconUsers,
 } from "../components/UxIcons";
+import OpsMasterPage from "./OpsMasterPage";
 import { clearLogin, getAdminName, isLoggedIn, saveLogin } from "../utils/auth";
 
 const NOTICE_CATEGORIES = ["긴급", "분실물", "우천", "일반"];
@@ -741,6 +743,14 @@ export default function AdminPage() {
       meta: aiBriefing?.confidence || "분석",
     },
     {
+      id: "admin-master",
+      title: "통합 운영",
+      description: "마스터 기능",
+      icon: IconSettings,
+      tone: "green",
+      meta: "전체",
+    },
+    {
       id: "admin-staff",
       title: "스태프",
       description: "배치 편집",
@@ -974,6 +984,20 @@ export default function AdminPage() {
           })}
         </div>
       </section>
+
+      <article id="admin-master" className="admin-console-panel admin-console-panel--master">
+        <div className="admin-console-panel__head">
+          <div>
+            <span>통합 운영자</span>
+            <h3>마스터 운영 콘솔</h3>
+          </div>
+          <strong>부스 · 공연 · 공지 · 로그</strong>
+        </div>
+        <p className="admin-console-hint">
+          기존 /ops/master 기능을 관리자 페이지 안으로 통합했습니다. 로컬에서는 운영 키 0000으로 자동 연결됩니다.
+        </p>
+        <OpsMasterPage embedded />
+      </article>
 
       <article id="admin-ai-ops" className="admin-console-panel admin-console-panel--ai-ops">
         <div className="admin-console-panel__head">

@@ -11,13 +11,13 @@ import AdminPage from "./pages/AdminPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import BoothDetailPage from "./pages/BoothDetailPage";
 import ChatPage from "./pages/ChatPage";
+import EventDetailPage from "./pages/EventDetailPage";
 import EventPage from "./pages/EventPage";
 import HomePage from "./pages/HomePage";
 import LineupPage from "./pages/LineupPage";
 import LostFoundPage from "./pages/LostFoundPage";
 import MorePage from "./pages/MorePage";
 import OpsBoothPage from "./pages/OpsBoothPage";
-import OpsMasterPage from "./pages/OpsMasterPage";
 import OpsSimulationPage from "./pages/OpsSimulationPage";
 import StaffPage from "./pages/StaffPage";
 import StageCrowdPage from "./pages/StageCrowdPage";
@@ -63,6 +63,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="stage-map" element={routeElement(StageMapPage)} />
             <Route path="events" element={routeElement(EventPage)} />
             <Route path="events/lineup" element={routeElement(LineupPage)} />
+            <Route path="events/:id" element={routeElement(EventDetailPage)} />
             <Route path="analytics" element={routeElement(AnalyticsPage)} />
             <Route path="analytics/stage" element={routeElement(StageCrowdPage)} />
             <Route path="booths/:id" element={routeElement(BoothDetailPage)} />
@@ -72,7 +73,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="more" element={routeElement(MorePage)} />
             <Route path="admin" element={routeElement(AdminPage)} />
             <Route path="admin/simulation" element={routeElement(OpsSimulationPage)} />
-            <Route path="ops/master" element={routeElement(OpsMasterPage)} />
+            <Route path="ops/master" element={<Navigate to="/admin" replace />} />
             <Route path="ops/simulation" element={<Navigate to="/admin/simulation" replace />} />
             <Route path="ops/booth/:id" element={routeElement(OpsBoothPage)} />
             <Route path="ai-match" element={routeElement(AiMatchPage)} />
