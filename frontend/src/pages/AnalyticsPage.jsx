@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import {
   createCongestionStream,
   fetchAiCongestionPredictions,
@@ -333,6 +334,10 @@ export default function AnalyticsPage() {
           </div>
           <h1>AI 혼잡도 예측</h1>
           <p>지금 어디가 붐비는지, 어디로 가면 좋은지 AI가 알려드려요.</p>
+          <Link to="/analytics/stage" className="analytics-stage-link">
+            <IconMapPin className="h-4 w-4" />
+            노천극장 인원 보기
+          </Link>
         </div>
         <img
           src="/images/ai/ai-congestion-chart.png"

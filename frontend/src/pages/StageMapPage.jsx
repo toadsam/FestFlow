@@ -168,6 +168,65 @@ function buildLiveGuideActions(booths) {
   ].filter(Boolean);
 }
 
+function guideActionWaitLabel(action) {
+  if (action?.booth) return `대기 ${boothWait(action.booth)}`;
+  const match = String(action?.description || "").match(/대기\s*([0-9]+)\s*분/);
+  return match ? `대기 ${match[1]}분` : "대기 확인 중";
+}
+
+function guideActionDistanceLabel(action, booths) {
+  if (!action?.booth) return "현재 위치 기준";
+  const boothIndex = booths.findIndex((booth) => booth?.id === action.booth?.id);
+  return `현재 위치에서 ${boothDistance(action.booth, Math.max(0, boothIndex))}`;
+}
+
+function SparkleIcon({ className = "" }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="M12 2l1.8 5.1L19 9l-5.2 1.9L12 16l-1.8-5.1L5 9l5.2-1.9L12 2Z" fill="currentColor" />
+      <path d="M19 14l.9 2.6 2.6.9-2.6.9L19 21l-.9-2.6-2.6-.9 2.6-.9L19 14Z" fill="currentColor" opacity="0.7" />
+      <path d="M5 14l.7 1.9 1.8.6-1.8.7L5 19l-.7-1.8-1.8-.7 1.8-.6L5 14Z" fill="#fb7185" />
+    </svg>
+  );
+}
+
+function BrainCircuitIcon({ className = "" }) {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" className={className} aria-hidden>
+      <path d="M26 13c-6 0-10 4.2-10 9.5 0 1.2.2 2.4.7 3.5A11.8 11.8 0 0 0 14 49h23c6.6 0 12-5.4 12-12 0-3.7-1.7-7-4.3-9.2.2-.9.3-1.8.3-2.8 0-6.1-4.9-11-11-11-1.8 0-3.5.4-5 1.2A9.8 9.8 0 0 0 26 13Z" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M45 25h8M53 18v14M53 18h5M53 32h5M45 39h8M53 39h5M30 24v10M25 29h10" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function GuideActionIcon({ tone }) {
+  if (tone === "danger" || tone === "busy") {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+        <path d="M7.7 16.8 5.5 19a2.1 2.1 0 0 0 3 3l2.2-2.2" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+        <path d="M10 17.6c2.9 1.5 6.7.5 8.8-2.6 2.1-3 1.8-6.9-.5-8.5-2.3-1.6-6-.4-8.1 2.6-1 1.5-1.5 3.2-1.4 4.8" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M13.8 7.6c1.2.2 2.2.6 3 1.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path d="M9 7V5.8C9 4.8 9.8 4 10.8 4h2.4c1 0 1.8.8 1.8 1.8V7" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+      <rect x="4" y="7" width="16" height="13" rx="3" stroke="currentColor" strokeWidth="1.9" />
+      <path d="M12 10.5v5M9.5 13h5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ChevronRightIcon({ className = "" }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden>
+      <path d="m9 5 7 7-7 7" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function pinTone(booth, index) {
   const category = displayCategory(booth);
   if (category === "푸드") return "orange";
@@ -541,8 +600,15 @@ export default function StageMapPage() {
 
       {(aiGuide || aiGuideActions.length > 0) && (
         <section className="map-ai-guide-card" aria-label="AI 주변 부스 추천">
-          <span>{aiGuide?.generated ? "OpenAI 주변 추천" : "AI 데이터 추천"}</span>
-          <strong>{aiGuide?.summary || "가까운 부스 중 가기 좋은 곳을 정리하고 있어요."}</strong>
+          <span className="map-ai-guide-badge">
+            <SparkleIcon className="map-ai-guide-badge-icon" />
+            AI 데이터 추천
+          </span>
+          <div className="map-ai-guide-watermark" aria-hidden="true">
+            <BrainCircuitIcon />
+          </div>
+          <strong>현재 위치와 혼잡도를 분석했어요.</strong>
+          <p className="map-ai-guide-copy">가까운 부스 중 가기 좋은 곳을 추천해드려요.</p>
           <div className="map-ai-guide-actions">
             {aiGuideActions.map((action) => (
               <button
@@ -554,12 +620,28 @@ export default function StageMapPage() {
                 }}
                 disabled={!action.booth?.id}
               >
-                <small>{action.title}</small>
-                <b>{action.target}</b>
-                <p>{action.description}</p>
+                <span className="map-ai-guide-action-icon" aria-hidden="true">
+                  <GuideActionIcon tone={action.tone || "info"} />
+                </span>
+                <span className="map-ai-guide-action-body">
+                  <small>{action.title}</small>
+                  <b>{action.target}</b>
+                  <span className="map-ai-guide-action-meta">
+                    <em>{guideActionWaitLabel(action)}</em>
+                    <span>
+                      <IconMapPin className="h-4 w-4" />
+                      {guideActionDistanceLabel(action, source)}
+                    </span>
+                  </span>
+                </span>
+                <ChevronRightIcon className="map-ai-guide-action-arrow" />
               </button>
             ))}
           </div>
+          <p className="map-ai-guide-footnote">
+            <SparkleIcon className="map-ai-guide-footnote-icon" />
+            AI 분석 기준: 실시간 혼잡도 · 대기시간 · 거리
+          </p>
         </section>
       )}
 

@@ -248,8 +248,24 @@ function applyTextTranslations(root, language) {
     if (!textOriginals.has(node)) {
       textOriginals.set(node, node.nodeValue);
     }
-    const original = textOriginals.get(node);
-    const nextValue = language === "en" ? translateText(original, language) : original;
+    let original = textOriginals.get(node);
+    const translated = translateText(original, "en");
+
+    if (language !== "en") {
+      if (node.nodeValue === translated) {
+        node.nodeValue = original;
+      } else if (node.nodeValue !== original) {
+        textOriginals.set(node, node.nodeValue);
+      }
+      return;
+    }
+
+    if (node.nodeValue !== original && node.nodeValue !== translated) {
+      original = node.nodeValue;
+      textOriginals.set(node, original);
+    }
+
+    const nextValue = translateText(original, language);
     if (node.nodeValue !== nextValue) {
       node.nodeValue = nextValue;
     }
@@ -270,9 +286,25 @@ function applyAttributeTranslations(root, language) {
       if (!originalByAttr[attr]) {
         originalByAttr[attr] = element.getAttribute(attr);
       }
-      const original = originalByAttr[attr];
-      const nextValue =
-        language === "en" ? translateText(original, language) : original;
+      let original = originalByAttr[attr];
+      const currentValue = element.getAttribute(attr);
+      const translated = translateText(original, "en");
+
+      if (language !== "en") {
+        if (currentValue === translated) {
+          element.setAttribute(attr, original);
+        } else if (currentValue !== original) {
+          originalByAttr[attr] = currentValue;
+        }
+        return;
+      }
+
+      if (currentValue !== original && currentValue !== translated) {
+        original = currentValue;
+        originalByAttr[attr] = original;
+      }
+
+      const nextValue = translateText(original, language);
       if (element.getAttribute(attr) !== nextValue) {
         element.setAttribute(attr, nextValue);
       }
@@ -305,8 +337,18 @@ export function LanguageProvider({ children }) {
   }, [language]);
 
   useEffect(() => {
-    if (typeof MutationObserver === "undefined") return undefined;
-    const observer = new MutationObserver(() => applyDocumentTranslations(language));
+    if (typeof MutationObserver === "undefined" || language !== "en") return undefined;
+
+    let frameId = 0;
+    const scheduleTranslation = () => {
+      if (frameId) window.cancelAnimationFrame(frameId);
+      frameId = window.requestAnimationFrame(() => {
+        frameId = 0;
+        applyDocumentTranslations(language);
+      });
+    };
+
+    const observer = new MutationObserver(scheduleTranslation);
     observer.observe(document.body, {
       childList: true,
       subtree: true,
@@ -314,7 +356,10 @@ export function LanguageProvider({ children }) {
       attributes: true,
       attributeFilter: PLACEHOLDER_ATTRS,
     });
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (frameId) window.cancelAnimationFrame(frameId);
+    };
   }, [language]);
 
   const value = useMemo(

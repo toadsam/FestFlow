@@ -1,44 +1,51 @@
-import React, { Suspense, lazy } from "react";
+import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import App from "./App";
 import { LanguageProvider } from "./i18n";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
+import AiMatchPage from "./pages/AiMatchPage";
+import AiMatchAdminPage from "./pages/AiMatchAdminPage";
+import AdminPage from "./pages/AdminPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
+import BoothDetailPage from "./pages/BoothDetailPage";
+import ChatPage from "./pages/ChatPage";
+import EventDetailPage from "./pages/EventDetailPage";
+import EventPage from "./pages/EventPage";
+import HomePage from "./pages/HomePage";
+import LineupPage from "./pages/LineupPage";
+import LostFoundPage from "./pages/LostFoundPage";
+import MorePage from "./pages/MorePage";
+import OpsBoothPage from "./pages/OpsBoothPage";
+import OpsSimulationPage from "./pages/OpsSimulationPage";
+import StaffPage from "./pages/StaffPage";
+import StageCrowdPage from "./pages/StageCrowdPage";
+import StageMapPage from "./pages/StageMapPage";
 
-const AiMatchPage = lazy(() => import("./pages/AiMatchPage"));
-const AiMatchAdminPage = lazy(() => import("./pages/AiMatchAdminPage"));
-const AdminPage = lazy(() => import("./pages/AdminPage"));
-const AnalyticsPage = lazy(() => import("./pages/AnalyticsPage"));
-const BoothDetailPage = lazy(() => import("./pages/BoothDetailPage"));
-const ChatPage = lazy(() => import("./pages/ChatPage"));
-const EventPage = lazy(() => import("./pages/EventPage"));
-const HomePage = lazy(() => import("./pages/HomePage"));
-const LineupPage = lazy(() => import("./pages/LineupPage"));
-const LostFoundPage = lazy(() => import("./pages/LostFoundPage"));
-const MorePage = lazy(() => import("./pages/MorePage"));
-const OpsBoothPage = lazy(() => import("./pages/OpsBoothPage"));
-const OpsMasterPage = lazy(() => import("./pages/OpsMasterPage"));
-const StaffPage = lazy(() => import("./pages/StaffPage"));
-const StageMapPage = lazy(() => import("./pages/StageMapPage"));
-
-function PageFallback() {
-  return (
-    <div className="uni-page min-h-[240px] flex items-center justify-center">
-      <p className="text-sm font-semibold text-slate-500">화면을 불러오는 중...</p>
-    </div>
-  );
+function routeElement(Page) {
+  return <Page />;
 }
 
-function lazyElement(Page) {
-  return (
-    <Suspense fallback={<PageFallback />}>
-      <Page />
-    </Suspense>
-  );
+const isLocalRuntime =
+  typeof window !== "undefined" &&
+  ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+
+if ((!import.meta.env.PROD || isLocalRuntime) && "serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations?.().then((registrations) => {
+    registrations.forEach((registration) => registration.unregister());
+  }).catch(() => {});
+
+  if ("caches" in window) {
+    caches.keys().then((keys) => {
+      keys
+        .filter((key) => key.startsWith("fest-") || key.startsWith("festflow-"))
+        .forEach((key) => caches.delete(key));
+    }).catch(() => {});
+  }
 }
 
-if (import.meta.env.PROD && "serviceWorker" in navigator) {
+if (import.meta.env.PROD && !isLocalRuntime && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/service-worker.js").catch(() => {
       // Service worker registration failure should not block the app.
@@ -52,21 +59,25 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<App />}>
-            <Route index element={lazyElement(HomePage)} />
-            <Route path="stage-map" element={lazyElement(StageMapPage)} />
-            <Route path="events" element={lazyElement(EventPage)} />
-            <Route path="events/lineup" element={lazyElement(LineupPage)} />
-            <Route path="analytics" element={lazyElement(AnalyticsPage)} />
-            <Route path="booths/:id" element={lazyElement(BoothDetailPage)} />
-            <Route path="lost-found" element={lazyElement(LostFoundPage)} />
-            <Route path="chat" element={lazyElement(ChatPage)} />
-            <Route path="staff" element={lazyElement(StaffPage)} />
-            <Route path="more" element={lazyElement(MorePage)} />
-            <Route path="admin" element={lazyElement(AdminPage)} />
-            <Route path="ops/master" element={lazyElement(OpsMasterPage)} />
-            <Route path="ops/booth/:id" element={lazyElement(OpsBoothPage)} />
-            <Route path="ai-match" element={lazyElement(AiMatchPage)} />
-            <Route path="ai-match/admin" element={lazyElement(AiMatchAdminPage)} />
+            <Route index element={routeElement(HomePage)} />
+            <Route path="stage-map" element={routeElement(StageMapPage)} />
+            <Route path="events" element={routeElement(EventPage)} />
+            <Route path="events/lineup" element={routeElement(LineupPage)} />
+            <Route path="events/:id" element={routeElement(EventDetailPage)} />
+            <Route path="analytics" element={routeElement(AnalyticsPage)} />
+            <Route path="analytics/stage" element={routeElement(StageCrowdPage)} />
+            <Route path="booths/:id" element={routeElement(BoothDetailPage)} />
+            <Route path="lost-found" element={routeElement(LostFoundPage)} />
+            <Route path="chat" element={routeElement(ChatPage)} />
+            <Route path="staff" element={routeElement(StaffPage)} />
+            <Route path="more" element={routeElement(MorePage)} />
+            <Route path="admin" element={routeElement(AdminPage)} />
+            <Route path="admin/simulation" element={routeElement(OpsSimulationPage)} />
+            <Route path="ops/master" element={<Navigate to="/admin" replace />} />
+            <Route path="ops/simulation" element={<Navigate to="/admin/simulation" replace />} />
+            <Route path="ops/booth/:id" element={routeElement(OpsBoothPage)} />
+            <Route path="ai-match" element={routeElement(AiMatchPage)} />
+            <Route path="ai-match/admin" element={routeElement(AiMatchAdminPage)} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

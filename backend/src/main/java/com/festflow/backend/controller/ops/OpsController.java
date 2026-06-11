@@ -16,6 +16,8 @@ import com.festflow.backend.dto.NoticeUpsertRequestDto;
 import com.festflow.backend.dto.OpsBoothBootstrapDto;
 import com.festflow.backend.dto.OpsMasterBootstrapDto;
 import com.festflow.backend.dto.ReservationCheckInByTokenRequestDto;
+import com.festflow.backend.dto.SimulationPatchRequestDto;
+import com.festflow.backend.dto.SimulationStatusDto;
 import com.festflow.backend.service.AdminActionService;
 import com.festflow.backend.service.AdminDashboardService;
 import com.festflow.backend.service.AuditLogService;
@@ -24,6 +26,7 @@ import com.festflow.backend.service.EventService;
 import com.festflow.backend.service.NoticeService;
 import com.festflow.backend.service.OpsAiService;
 import com.festflow.backend.service.ReservationService;
+import com.festflow.backend.service.SimulationService;
 import com.festflow.backend.service.UploadStorageService;
 import com.festflow.backend.service.stream.StreamService;
 import jakarta.validation.Valid;
@@ -58,6 +61,7 @@ public class OpsController {
     private final ReservationService reservationService;
     private final UploadStorageService uploadStorageService;
     private final OpsAiService opsAiService;
+    private final SimulationService simulationService;
 
     public OpsController(
             BoothService boothService,
@@ -69,7 +73,8 @@ public class OpsController {
             StreamService streamService,
             ReservationService reservationService,
             UploadStorageService uploadStorageService,
-            OpsAiService opsAiService
+            OpsAiService opsAiService,
+            SimulationService simulationService
     ) {
         this.boothService = boothService;
         this.eventService = eventService;
@@ -81,6 +86,7 @@ public class OpsController {
         this.reservationService = reservationService;
         this.uploadStorageService = uploadStorageService;
         this.opsAiService = opsAiService;
+        this.simulationService = simulationService;
     }
 
     @GetMapping("/master/bootstrap")
@@ -236,6 +242,44 @@ public class OpsController {
     @PostMapping("/master/ai/notice-draft")
     public AiAssistResponseDto masterAiNoticeDraft(@RequestBody AiAssistRequestDto requestDto) {
         return opsAiService.masterNoticeDraft(requestDto);
+    }
+
+    @GetMapping("/master/simulation")
+    public SimulationStatusDto simulationStatus() {
+        return simulationService.status();
+    }
+
+    @PutMapping("/master/simulation")
+    public SimulationStatusDto updateSimulation(@RequestBody SimulationPatchRequestDto requestDto) {
+        return simulationService.patch(requestDto);
+    }
+
+    @PostMapping("/master/simulation/start")
+    public SimulationStatusDto startSimulation(Authentication authentication) {
+        SimulationStatusDto status = simulationService.start();
+        auditLogService.log(authentication.getName(), "OPS_SIMULATION_START", "SIMULATION", null, status.scenario());
+        return status;
+    }
+
+    @PostMapping("/master/simulation/stop")
+    public SimulationStatusDto stopSimulation(Authentication authentication) {
+        SimulationStatusDto status = simulationService.stop();
+        auditLogService.log(authentication.getName(), "OPS_SIMULATION_STOP", "SIMULATION", null, status.scenario());
+        return status;
+    }
+
+    @PostMapping("/master/simulation/reset")
+    public SimulationStatusDto resetSimulation(Authentication authentication) {
+        SimulationStatusDto status = simulationService.reset();
+        auditLogService.log(authentication.getName(), "OPS_SIMULATION_RESET", "SIMULATION", null, "restore original booth live status");
+        return status;
+    }
+
+    @PostMapping("/master/simulation/scenarios/{scenario}")
+    public SimulationStatusDto applySimulationScenario(@PathVariable String scenario, Authentication authentication) {
+        SimulationStatusDto status = simulationService.applyScenario(scenario);
+        auditLogService.log(authentication.getName(), "OPS_SIMULATION_SCENARIO", "SIMULATION", null, scenario);
+        return status;
     }
 
     @PostMapping(value = "/booth/{id}/menu-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

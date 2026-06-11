@@ -93,8 +93,12 @@ function formatEventTime(value) {
   return value?.replace("T", " ").slice(5, 16) || "-";
 }
 
-export default function OpsMasterPage() {
-  const initialKey = sessionStorage.getItem(MASTER_KEY_STORAGE_KEY) || "";
+export default function OpsMasterPage({ embedded = false }) {
+  const isLocalRuntime =
+    typeof window !== "undefined" &&
+    ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname);
+  const localDefaultKey = embedded && isLocalRuntime ? "0000" : "";
+  const initialKey = sessionStorage.getItem(MASTER_KEY_STORAGE_KEY) || localDefaultKey;
 
   const [tab, setTab] = useState("notice");
   const [keyInput, setKeyInput] = useState(initialKey);
@@ -516,7 +520,7 @@ export default function OpsMasterPage() {
   }
 
   return (
-    <section className="cyber-page pt-4 space-y-3">
+    <section className={`cyber-page pt-4 space-y-3 ${embedded ? "ops-master-embedded" : ""}`}>
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-bold text-role-ops inline-flex items-center gap-1.5">
           <IconShield className="h-5 w-5 icon-role-ops" />

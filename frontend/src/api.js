@@ -332,6 +332,24 @@ export async function triggerEventStartNotice(eventId) {
   );
 }
 
+export async function fetchAdminAiBriefing() {
+  const response = await fetch(`${API_BASE}/admin/ai/briefing`, {
+    method: "POST",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ type: "briefing" }),
+  });
+  return parseJson(response, "AI 운영 브리핑을 생성하지 못했습니다.");
+}
+
+export async function createAdminAiNoticeDraft(type = "congestion", prompt = "") {
+  const response = await fetch(`${API_BASE}/admin/ai/notice-draft`, {
+    method: "POST",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ type, prompt }),
+  });
+  return parseJson(response, "AI 공지 추천을 생성하지 못했습니다.");
+}
+
 export async function fetchTrafficHourly() {
   const response = await fetch(`${API_BASE}/analytics/traffic-hourly`);
   return parseJson(
@@ -670,6 +688,54 @@ export async function createOpsMasterAiNoticeDraft(type, prompt, key) {
     body: JSON.stringify({ type, prompt }),
   });
   return parseJson(response, "AI 공지 초안을 생성하지 못했습니다.");
+}
+
+export async function fetchOpsSimulationStatus(key) {
+  const response = await fetch(opsUrl("/ops/master/simulation"), {
+    headers: opsHeaders(key),
+  });
+  return parseJson(response, "시뮬레이션 상태를 불러오지 못했습니다.");
+}
+
+export async function updateOpsSimulation(payload, key) {
+  const response = await fetch(opsUrl("/ops/master/simulation"), {
+    method: "PUT",
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "시뮬레이션 설정 저장에 실패했습니다.");
+}
+
+export async function startOpsSimulation(key) {
+  const response = await fetch(opsUrl("/ops/master/simulation/start"), {
+    method: "POST",
+    headers: opsHeaders(key),
+  });
+  return parseJson(response, "시뮬레이션 시작에 실패했습니다.");
+}
+
+export async function stopOpsSimulation(key) {
+  const response = await fetch(opsUrl("/ops/master/simulation/stop"), {
+    method: "POST",
+    headers: opsHeaders(key),
+  });
+  return parseJson(response, "시뮬레이션 정지에 실패했습니다.");
+}
+
+export async function resetOpsSimulation(key) {
+  const response = await fetch(opsUrl("/ops/master/simulation/reset"), {
+    method: "POST",
+    headers: opsHeaders(key),
+  });
+  return parseJson(response, "시뮬레이션 리셋에 실패했습니다.");
+}
+
+export async function applyOpsSimulationScenario(scenario, key) {
+  const response = await fetch(opsUrl(`/ops/master/simulation/scenarios/${scenario}`), {
+    method: "POST",
+    headers: opsHeaders(key),
+  });
+  return parseJson(response, "시뮬레이션 시나리오 적용에 실패했습니다.");
 }
 
 export async function fetchStaffAiZoneSummary(staffToken) {

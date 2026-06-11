@@ -136,6 +136,27 @@ export function IconCalendar(props) {
   );
 }
 
+export function IconBell(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M18 9a6 6 0 1 0-12 0c0 7-2.5 7-2.5 8h17c0-1-2.5-1-2.5-8Z" />
+      <path d="M9.8 20a2.2 2.2 0 0 0 4.4 0" />
+    </IconBase>
+  );
+}
+
+export function IconShare(props) {
+  return (
+    <IconBase {...props}>
+      <circle cx="18" cy="5" r="2.5" />
+      <circle cx="6" cy="12" r="2.5" />
+      <circle cx="18" cy="19" r="2.5" />
+      <path d="m8.2 10.8 7.6-4.5" />
+      <path d="m8.2 13.2 7.6 4.5" />
+    </IconBase>
+  );
+}
+
 export function IconArrowLeft(props) {
   return (
     <IconBase {...props}>
