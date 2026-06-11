@@ -750,7 +750,7 @@ export default function AdminPage() {
   }
 
   return (
-    <section className="cyber-page admin-console-page">
+    <section className="cyber-page admin-console-page" data-i18n-skip>
       <header className="admin-console-hero">
         <div className="admin-console-hero__top">
           <div className="admin-console-hero__copy">

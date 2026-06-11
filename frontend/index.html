@@ -24,7 +24,24 @@
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if (["localhost", "127.0.0.1", "::1"].includes(window.location.hostname)) {
+        if ("serviceWorker" in navigator) {
+          navigator.serviceWorker
+            .getRegistrations()
+            .then((registrations) => registrations.forEach((registration) => registration.unregister()))
+            .catch(() => {});
+        }
+
+        if ("caches" in window) {
+          caches
+            .keys()
+            .then((keys) => keys.forEach((key) => caches.delete(key)))
+            .catch(() => {});
+        }
+      }
+    </script>
+    <script type="module" src="/src/main.jsx?v=route-static-1"></script>
   </body>
 </html>
 

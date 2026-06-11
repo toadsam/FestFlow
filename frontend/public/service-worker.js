@@ -1,3 +1,22 @@
+const isLocalRuntime = ["localhost", "127.0.0.1", "::1"].includes(self.location.hostname);
+
+if (isLocalRuntime) {
+  self.addEventListener("install", (event) => {
+    event.waitUntil(self.skipWaiting());
+  });
+
+  self.addEventListener("activate", (event) => {
+    event.waitUntil(
+      caches
+        .keys()
+        .then((keys) => Promise.all(keys.map((key) => caches.delete(key))))
+        .then(() => self.registration.unregister())
+        .then(() => self.clients.matchAll({ type: "window", includeUncontrolled: true }))
+        .then((clients) => clients.forEach((client) => client.navigate(client.url)))
+        .catch(() => {}),
+    );
+  });
+} else {
 const CACHE_NAME = "fest-a-shell-v1";
 const APP_SHELL = [
   "/",
@@ -85,3 +104,4 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
+}
