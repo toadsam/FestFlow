@@ -12,9 +12,16 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class AdminDashboardService {
+
+    private static final Set<String> UPCOMING_STATUSES = Set.of(
+            "\uC608\uC815",
+            "\uB300\uAE30\uC911",
+            "\uACE7 \uC2DC\uC791"
+    );
 
     private final GpsLogRepository gpsLogRepository;
     private final BoothService boothService;
@@ -42,7 +49,8 @@ public class AdminDashboardService {
 
         // 30분 이내 시작 예정 공연 중 가장 가까운 공연을 KPI로 노출한다.
         EventResponseDto upcoming = eventService.getAllEvents().stream()
-                .filter(event -> "예정".equals(event.status()))
+                .filter(event -> UPCOMING_STATUSES.contains(event.status()))
+                .filter(event -> event.startTime() != null)
                 .filter(event -> !event.startTime().isBefore(now) && !event.startTime().isAfter(now.plusMinutes(30)))
                 .min(Comparator.comparing(EventResponseDto::startTime))
                 .orElse(null);

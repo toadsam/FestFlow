@@ -28,6 +28,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -97,6 +98,7 @@ public class DataInitializer {
             }
             seedMissingDemoEvents(eventRepository, seedScenarioEvents(now));
             seedMissingDemoEvents(eventRepository, seedMoreScenarioEvents(now));
+            refreshStaleDemoEvents(eventRepository, now);
 
             if (noticeRepository.count() == 0) {
                 noticeRepository.save(new Notice(
@@ -196,6 +198,57 @@ public class DataInitializer {
                 .toList();
         if (!missingEvents.isEmpty()) {
             eventRepository.saveAll(missingEvents);
+        }
+    }
+
+    private void refreshStaleDemoEvents(EventRepository eventRepository, LocalDateTime now) {
+        List<FestivalEvent> events = eventRepository.findAll().stream()
+                .sorted(Comparator.comparing(FestivalEvent::getStartTime))
+                .toList();
+        if (events.isEmpty()) {
+            return;
+        }
+
+        boolean hasActiveOrUpcomingEvent = events.stream()
+                .anyMatch(event -> event.getEndTime() != null && !event.getEndTime().isBefore(now));
+        if (hasActiveOrUpcomingEvent) {
+            return;
+        }
+
+        LocalDateTime base = now.withSecond(0).withNano(0);
+        int[] minuteOffsets = {10, 55, 120, 180, 270, 360, 25, 90, 150};
+        List<FestivalEvent> refreshed = new ArrayList<>();
+        for (int i = 0; i < events.size(); i++) {
+            FestivalEvent event = events.get(i);
+            if ("\uCDE8\uC18C".equals(event.getStatus()) || "\uCDE8\uC18C".equals(event.getStatusOverride())) {
+                continue;
+            }
+
+            long durationMinutes = 40;
+            if (event.getStartTime() != null && event.getEndTime() != null && event.getEndTime().isAfter(event.getStartTime())) {
+                durationMinutes = Math.max(20, Math.min(90, Duration.between(event.getStartTime(), event.getEndTime()).toMinutes()));
+            }
+            int dayOffset = i / minuteOffsets.length;
+            int minuteOffset = minuteOffsets[i % minuteOffsets.length];
+            LocalDateTime startTime = base.plusDays(dayOffset).plusMinutes(minuteOffset);
+            LocalDateTime endTime = startTime.plusMinutes(durationMinutes);
+            event.update(
+                    event.getTitle(),
+                    startTime,
+                    endTime,
+                    event.getImageUrl(),
+                    event.getImageCredit(),
+                    event.getImageFocus(),
+                    null,
+                    event.getLiveMessage(),
+                    event.getDelayMinutes()
+            );
+            event.setStatus("\uC608\uC815");
+            refreshed.add(event);
+        }
+
+        if (!refreshed.isEmpty()) {
+            eventRepository.saveAll(refreshed);
         }
     }
 
