@@ -15,6 +15,6 @@ public class SolapiSmsSender implements SmsSender {
 
     @Override
     public void sendVerificationCode(String phoneNumber, String code) {
-        solapiMessageClient.sendText(phoneNumber, "[FestFlow] 인증번호 " + code + " 를 입력해주세요.");
+        solapiMessageClient.sendText(phoneNumber, "[Fest-A] 인증번호 " + code + " 를 입력해주세요.");
     }
 }

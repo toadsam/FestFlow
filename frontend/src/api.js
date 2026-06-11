@@ -1012,11 +1012,6 @@ export async function fetchTranslateMetrics() {
   return parseJson(response, "통역 지표를 불러오지 못했습니다.");
 }
 
-export async function fetchAiMatchProfiles() {
-  const response = await fetch(`${API_BASE}/ai-match/profiles`);
-  return parseJson(response, "AI 프로필 목록을 불러오지 못했습니다.");
-}
-
 export async function checkAiMatchPhoneNumber(phoneNumber) {
   const params = new URLSearchParams({ phoneNumber: phoneNumber || "" });
   const response = await fetch(`${API_BASE}/ai-match/phone-check?${params.toString()}`);

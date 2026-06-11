@@ -106,7 +106,7 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const [expandedEvidence, setExpandedEvidence] = useState({});
   const [messages, setMessages] = useState([
-    createMessage("bot", "안녕하세요! FestFlow AI 챗봇이에요. 축제에 대해 궁금한 점을 편하게 물어보세요."),
+    createMessage("bot", "안녕하세요! Fest-A AI 챗봇이에요. 축제에 대해 궁금한 점을 편하게 물어보세요."),
   ]);
   const threadRef = useRef(null);
 
@@ -168,7 +168,7 @@ export default function ChatPage() {
       <header className="chat-hero">
         <div className="chat-hero__title">
           <strong>AI 챗봇</strong>
-          <p>FestFlow AI가 축제 정보를 도와드려요</p>
+          <p>Fest-A AI가 축제 정보를 도와드려요</p>
         </div>
 
         <div className="chat-intro-card">
@@ -176,7 +176,7 @@ export default function ChatPage() {
             <IconChat className="h-6 w-6" />
           </span>
           <div className="chat-intro-card__bubble">
-            <h1>안녕하세요! FestFlow AI 챗봇이에요.</h1>
+            <h1>안녕하세요! Fest-A AI 챗봇이에요.</h1>
             <p>축제에 대한 궁금한 점을 물어보세요.</p>
           </div>
         </div>
@@ -317,7 +317,7 @@ export default function ChatPage() {
 
       <section className="chat-assistant-panel" aria-label="도움말 카테고리">
         <header>
-          <h2>FestFlow AI가 도와드릴 수 있어요</h2>
+          <h2>Fest-A AI가 도와드릴 수 있어요</h2>
           <button type="button" onClick={() => submit("지금 가장 많이 묻는 질문 알려줘")} disabled={loading}>
             <IconChart className="h-4 w-4" />
             <span>추천 질문</span>

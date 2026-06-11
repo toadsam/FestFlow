@@ -1,4 +1,4 @@
-﻿# FestFlow - 대학교 축제 관리 웹앱
+# Fest-A - 대학교 축제 관리 웹앱
 
 React + Spring Boot + MySQL 기반의 축제 관리 앱입니다.
 
@@ -21,7 +21,7 @@ React + Spring Boot + MySQL 기반의 축제 관리 앱입니다.
 
 ## DB 연결 정보
 
-기본값은 공통 설정 기준으로 로컬 MySQL(`festival_db`, `root`, 비밀번호 없음)을 바라봅니다. `bootRun`은 `local` 프로파일을 사용하므로 로컬 기본 비밀번호는 `application-local.properties`의 `6247`이며, 환경변수로 오버라이드할 수 있습니다.
+기본값은 공통 설정 기준으로 로컬 MySQL(`festival_db`, `root`, 비밀번호 없음)을 바라봅니다. `bootRun`은 `local` 프로파일을 사용하므로 로컬 기본 비밀번호는 `application-local.properties`의 `6247`이며, 환경변수로 오버라이드할 수 있습니다. 운영 프로파일에는 관리자 계정, 운영키, 데모 스태프 로그인의 안전하지 않은 기본값이 없습니다.
 
 ```properties
 spring.datasource.url=${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/festival_db?createDatabaseIfNotExist=true&useSSL=false&serverTimezone=Asia/Seoul&allowPublicKeyRetrieval=true}
@@ -54,6 +54,7 @@ cd backend
 - 통합 운영 키: `0000`
 - 주점/부스 운영 키: `1111`
 - 스태프 계정/PIN: `1`/`1`, `2`/`2`, `3`/`3` 순서
+- 로컬 SMS 기본값은 `none`입니다. 실제 SMS 발송은 provider/API key/발신번호를 환경변수로 설정하세요.
 
 ### 2) 프론트 실행
 
@@ -88,7 +89,8 @@ npm run dev
   - 공연 목록/상태 표시(예정/진행중/종료)
   - 임박 공연 배너
 - 챗봇
-  - 질문 입력 + 더미 응답
+  - 축제 데이터 기반 근거 검색 + OpenAI 응답
+  - API 키가 없거나 응답 파싱에 실패하면 근거 기반 기본 안내로 fallback
 
 ### 실시간 기능
 
@@ -98,7 +100,7 @@ npm run dev
   - `/api/stream/notices`: 공지 갱신
 - 브라우저 알림
   - 혼잡 급상승 알림
-  - 임박 공연 알림
+  - 임박 공연 알림(페이지가 열려 있는 동안 저장된 공연 시작 10분 전 알림)
 
 ### 관리자 기능
 
@@ -194,15 +196,17 @@ npm run dev
 - `SPRING_PROFILES_ACTIVE=prod`
 - `SPRING_JPA_HIBERNATE_DDL_AUTO` (`prod` 기본값은 `validate`; 초기 DB 생성/마이그레이션 단계에서만 명시적으로 조정)
 - `APP_JWT_SECRET` (최소 32자 이상 권장)
-- `APP_CORS_ALLOWED_ORIGINS` (쉼표 구분, 예: `https://festflow.vercel.app,https://festflow-git-main-xxx.vercel.app`)
+- `APP_CORS_ALLOWED_ORIGINS` (쉼표 구분, 예: `https://fest-a.vercel.app,https://fest-a-git-main-xxx.vercel.app`)
 - `APP_INIT_ADMIN_USERNAME`
 - `APP_INIT_ADMIN_PASSWORD`
+- `APP_OPS_MASTER_KEY` (통합 운영 콘솔 사용 시)
+- `APP_OPS_BOOTH_KEYS` 또는 `APP_OPS_SHARED_BOOTH_KEY` (부스 운영 콘솔 사용 시)
 
 선택 환경변수:
 
-- `APP_OPS_MASTER_KEY`
-- `APP_OPS_BOOTH_KEYS` (예: `1:key1,2:key2`)
-- `APP_SMS_PROVIDER` (`none`, `twilio`, `aligo`)
+- `APP_INIT_SIMPLE_DEMO_CREDENTIALS=false` (운영 기본값 false)
+- `APP_STAFF_DEMO_LOGIN_ENABLED=false` (운영 기본값 false)
+- `APP_SMS_PROVIDER` (`none`, `twilio`, `aligo`, `solapi`)
 - `APP_SMS_TWILIO_ACCOUNT_SID`
 - `APP_SMS_TWILIO_AUTH_TOKEN`
 - `APP_SMS_TWILIO_FROM_NUMBER`
@@ -210,6 +214,9 @@ npm run dev
 - `APP_SMS_ALIGO_USER_ID`
 - `APP_SMS_ALIGO_SENDER`
 - `APP_SMS_ALIGO_TEST_MODE` (`true`/`false`)
+- `APP_SOLAPI_API_KEY`
+- `APP_SOLAPI_API_SECRET`
+- `APP_SOLAPI_FROM`
 
 `server.port`는 `${PORT:8080}`으로 설정되어 있어 Railway가 주는 `PORT`를 자동 사용합니다.
 

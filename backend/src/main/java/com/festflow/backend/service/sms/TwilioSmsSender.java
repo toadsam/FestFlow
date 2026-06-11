@@ -28,7 +28,7 @@ public class TwilioSmsSender implements SmsSender {
 
     @Override
     public void sendVerificationCode(String phoneNumber, String code) {
-        String body = "[FestFlow] 인증번호는 " + code + " 입니다. 3분 내 입력하세요.";
+        String body = "[Fest-A] 인증번호는 " + code + " 입니다. 3분 내 입력하세요.";
         Message.creator(new PhoneNumber(toE164(phoneNumber)), new PhoneNumber(fromNumber), body).create();
     }
 

@@ -1,0 +1,1768 @@
+{
+  "package": {
+    "pptx": "C:\\Users\\jk636\\Downloads\\FestFlow AI 축제 통합 운영 PPT.pptx",
+    "slide_count": 21,
+    "media_count": 30,
+    "media_files": [
+      "ppt/media/image1.png",
+      "ppt/media/image2.png",
+      "ppt/media/image3.png",
+      "ppt/media/image4.png",
+      "ppt/media/image5.png",
+      "ppt/media/image6.png",
+      "ppt/media/image7.png",
+      "ppt/media/image8.png",
+      "ppt/media/image9.png",
+      "ppt/media/image10.png",
+      "ppt/media/image11.png",
+      "ppt/media/image12.png",
+      "ppt/media/image13.png",
+      "ppt/media/image14.png",
+      "ppt/media/image15.png",
+      "ppt/media/image16.png",
+      "ppt/media/image17.png",
+      "ppt/media/image18.png",
+      "ppt/media/image19.png",
+      "ppt/media/image20.png",
+      "ppt/media/image21.png",
+      "ppt/media/image22.png",
+      "ppt/media/image23.png",
+      "ppt/media/image24.png",
+      "ppt/media/image25.png",
+      "ppt/media/image26.png",
+      "ppt/media/image27.png",
+      "ppt/media/image28.png",
+      "ppt/media/image29.png",
+      "ppt/media/image30.png"
+    ],
+    "has_vba": false
+  },
+  "slides": [
+    {
+      "index": 1,
+      "part": "ppt/slides/slide1.xml",
+      "title_guess": "FESTFLOW:",
+      "paragraph_count": 5,
+      "image_count": 0,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "FESTFLOW:",
+        "AI 기반 대학교 축제",
+        "통합 운영 플랫폼",
+        "현장 검증 기반 방문객·스태프·관리자 통합 웹앱",
+        "발표자 : 이사라  |  2027년 7월 7일"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 2",
+          "text": "FESTFLOW:\nAI 기반 대학교 축제\n통합 운영 플랫폼"
+        },
+        {
+          "name": "TextBox 3",
+          "text": "현장 검증 기반 방문객·스태프·관리자 통합 웹앱"
+        },
+        {
+          "name": "TextBox 4",
+          "text": "발표자 : 이사라  |  2027년 7월 7일"
+        }
+      ],
+      "image_refs": [],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 2,
+      "part": "ppt/slides/slide2.xml",
+      "title_guess": "실시간 축제 정보 제공. 지도, 부스 탐색, 공연 일정, 혼잡도 안내 및 AI 챗봇 기반 맞춤 추천 서비스.",
+      "paragraph_count": 13,
+      "image_count": 3,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "실시간 축제 정보 제공. 지도, 부스 탐색, 공연 일정, 혼잡도 안내 및 AI 챗봇 기반 맞춤 추천 서비스.",
+        "방문객",
+        "현장 상태 관리 기능. 부스 운영 현황, 무대 혼잡도, SSE 실시간 공지 수신 및 현장 상태 즉시 업데이트.",
+        "스태프",
+        "통합 운영 대시보드. 부스·공연·공지 CRUD, KPI 모니터링, AI 운영 보조 및 전체 축제 상황 실시간 통합 관리.",
+        "관리자",
+        "핵심 기능을 소개합니다.",
+        "FestFlow는 방문객, 스태프, 관리자를 하나로 연결하는 AI 기반 대학교 축제 통합 운영 플랫폼입니다. 실시간 정보 제공부터 AI 챗봇, 혼잡도 예측까지 축제 운영의 모든 것을 지원합니다.",
+        "FESTFLOW 프로젝트 요약",
+        "프로젝트 요약",
+        "문제 정의",
+        "핵심 기능",
+        "기술 스택"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 10",
+          "text": "실시간 축제 정보 제공. 지도, 부스 탐색, 공연 일정, 혼잡도 안내 및 AI 챗봇 기반 맞춤 추천 서비스."
+        },
+        {
+          "name": "TextBox 14",
+          "text": "방문객"
+        },
+        {
+          "name": "TextBox 20",
+          "text": "현장 상태 관리 기능. 부스 운영 현황, 무대 혼잡도, SSE 실시간 공지 수신 및 현장 상태 즉시 업데이트."
+        },
+        {
+          "name": "TextBox 24",
+          "text": "스태프"
+        },
+        {
+          "name": "TextBox 30",
+          "text": "통합 운영 대시보드. 부스·공연·공지 CRUD, KPI 모니터링, AI 운영 보조 및 전체 축제 상황 실시간 통합 관리."
+        },
+        {
+          "name": "TextBox 34",
+          "text": "관리자"
+        },
+        {
+          "name": "TextBox 35",
+          "text": "핵심 기능을 소개합니다."
+        },
+        {
+          "name": "TextBox 36",
+          "text": "FestFlow는 방문객, 스태프, 관리자를 하나로 연결하는 AI 기반 대학교 축제 통합 운영 플랫폼입니다. 실시간 정보 제공부터 AI 챗봇, 혼잡도 예측까지 축제 운영의 모든 것을 지원합니다."
+        },
+        {
+          "name": "TextBox 37",
+          "text": "FESTFLOW 프로젝트 요약"
+        },
+        {
+          "name": "TextBox 39",
+          "text": "프로젝트 요약"
+        },
+        {
+          "name": "TextBox 40",
+          "text": "문제 정의"
+        },
+        {
+          "name": "TextBox 41",
+          "text": "핵심 기능"
+        },
+        {
+          "name": "TextBox 42",
+          "text": "기술 스택"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image1.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image2.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image3.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 3,
+      "part": "ppt/slides/slide3.xml",
+      "title_guess": "기존 축제 운영의 문제점",
+      "paragraph_count": 15,
+      "image_count": 0,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "기존 축제 운영의 문제점",
+        "현장에서 발견된 실질적인 문제들을 분석하였습니다. 방문객, 운영진, 관리자 모두 정보 전달의 비효율성을 경험하고 있으며, 이를 해결하기 위한 실시간 통합 플랫폼의 필요성이 명확히 드러났습니다.",
+        "FESTFLOW 문제 정의",
+        "프로젝트 요약",
+        "문제 정의",
+        "개발 목적",
+        "시스템 개요",
+        "문제 01 | 방문객 정보 파악 어려움",
+        "운영진은 카카오톡 메시지나 구두 전달에 의존하여 현장 상태를 공유하였습니다. 이로 인해 정보 누락, 전달 지연, 혼선이 빈번히 발생하여 운영 효율이 크게 저하되었습니다.",
+        "문제 02 | 운영진 비효율적 전달",
+        "문제 03 | 관리자 상황 취합 지연",
+        "결론 | 실시간 통합 플랫폼 필요성",
+        "방문객은 붐비는 장소, 갑작스러운 공연 변경, 부스 운영 여부 등을 실시간으로 파악하기 어렵습니다. 현장에서 직접 돌아다니며 확인해야 하는 불편함이 반복적으로 발생하였습니다.",
+        "방문객, 스태프, 관리자 모두를 연결하는 실시간 운영 플랫폼과 AI 안내 기능이 필요합니다. FestFlow는 이러한 문제를 해결하기 위해 설계된 통합 웹앱입니다.",
+        "관리자는 각 운영 현장의 상황을 개별적으로 취합해야 하여 전체 현황 파악이 지연되었습니다. 실시간 모니터링 도구 없이 의사결정을 내려야 하는 구조적 문제가 존재하였습니다."
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 2",
+          "text": "기존 축제 운영의 문제점"
+        },
+        {
+          "name": "TextBox 3",
+          "text": "현장에서 발견된 실질적인 문제들을 분석하였습니다. 방문객, 운영진, 관리자 모두 정보 전달의 비효율성을 경험하고 있으며, 이를 해결하기 위한 실시간 통합 플랫폼의 필요성이 명확히 드러났습니다."
+        },
+        {
+          "name": "TextBox 4",
+          "text": "FESTFLOW 문제 정의"
+        },
+        {
+          "name": "TextBox 6",
+          "text": "프로젝트 요약"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "문제 정의"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "개발 목적"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "시스템 개요"
+        },
+        {
+          "name": "TextBox 20",
+          "text": "문제 01 | 방문객 정보 파악 어려움"
+        },
+        {
+          "name": "TextBox 24",
+          "text": "운영진은 카카오톡 메시지나 구두 전달에 의존하여 현장 상태를 공유하였습니다. 이로 인해 정보 누락, 전달 지연, 혼선이 빈번히 발생하여 운영 효율이 크게 저하되었습니다."
+        },
+        {
+          "name": "TextBox 32",
+          "text": "문제 02 | 운영진 비효율적 전달"
+        },
+        {
+          "name": "TextBox 43",
+          "text": "문제 03 | 관리자 상황 취합 지연"
+        },
+        {
+          "name": "TextBox 54",
+          "text": "결론 | 실시간 통합 플랫폼 필요성"
+        },
+        {
+          "name": "TextBox 55",
+          "text": "방문객은 붐비는 장소, 갑작스러운 공연 변경, 부스 운영 여부 등을 실시간으로 파악하기 어렵습니다. 현장에서 직접 돌아다니며 확인해야 하는 불편함이 반복적으로 발생하였습니다."
+        },
+        {
+          "name": "TextBox 56",
+          "text": "방문객, 스태프, 관리자 모두를 연결하는 실시간 운영 플랫폼과 AI 안내 기능이 필요합니다. FestFlow는 이러한 문제를 해결하기 위해 설계된 통합 웹앱입니다."
+        },
+        {
+          "name": "TextBox 57",
+          "text": "관리자는 각 운영 현장의 상황을 개별적으로 취합해야 하여 전체 현황 파악이 지연되었습니다. 실시간 모니터링 도구 없이 의사결정을 내려야 하는 구조적 문제가 존재하였습니다."
+        }
+      ],
+      "image_refs": [],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 4,
+      "part": "ppt/slides/slide4.xml",
+      "title_guess": "실제 스태프 활동 중 발견한 문제들",
+      "paragraph_count": 12,
+      "image_count": 2,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "실제 스태프 활동 중 발견한 문제들",
+        "직접 축제 스태프로 참여하며 현장에서 겪은 불편함이 FestFlow 기능 설계의 핵심 근거가 되었습니다. 무대 수용 인원 확인 불가, 부스 담당자 연락 지연, 구두 전달 누락, 반복 방문객 문의 등 실제 운영 현장의 문제를 직접 체험했습니다.",
+        "현장 경험 기반",
+        "프로젝트 개요",
+        "문제 정의",
+        "현장 경험",
+        "기능 소개",
+        "① 무대 입장 가능 인원 실시간 확인 필요",
+        "② 부스 담당자 즉시 확인 불가",
+        "③ 현장 상태 전달 지연 및 누락",
+        "④ 반복적인 방문객 문의 응대 과부하",
+        "FESTFLOW 설계 근거"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 4",
+          "text": "실제 스태프 활동 중 발견한 문제들"
+        },
+        {
+          "name": "TextBox 5",
+          "text": "직접 축제 스태프로 참여하며 현장에서 겪은 불편함이 FestFlow 기능 설계의 핵심 근거가 되었습니다. 무대 수용 인원 확인 불가, 부스 담당자 연락 지연, 구두 전달 누락, 반복 방문객 문의 등 실제 운영 현장의 문제를 직접 체험했습니다."
+        },
+        {
+          "name": "TextBox 6",
+          "text": "현장 경험 기반"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "프로젝트 개요"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "문제 정의"
+        },
+        {
+          "name": "TextBox 10",
+          "text": "현장 경험"
+        },
+        {
+          "name": "TextBox 11",
+          "text": "기능 소개"
+        },
+        {
+          "name": "TextBox 14",
+          "text": "① 무대 입장 가능 인원 실시간 확인 필요\n② 부스 담당자 즉시 확인 불가\n③ 현장 상태 전달 지연 및 누락\n④ 반복적인 방문객 문의 응대 과부하"
+        },
+        {
+          "name": "TextBox 15",
+          "text": "FESTFLOW 설계 근거"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image4.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image5.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 5,
+      "part": "ppt/slides/slide5.xml",
+      "title_guess": "방법론 개요",
+      "paragraph_count": 13,
+      "image_count": 3,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "방법론 개요",
+        "페르소나 분석",
+        "핵심 인사이트",
+        "HMW 질문",
+        "사용자 중심 설계로 FESTFLOW를 만들었습니다.",
+        "AEIOU 관찰, 페르소나 도출, 5 Whys 분석을 통해 방문객·운영진·관리자 세 그룹의 핵심 니즈를 발견했습니다. 이 인사이트가 FestFlow의 기능 설계 근거가 되었습니다.",
+        "DESIGN THINKING 요약",
+        "현장 상태 변경 사항을 카톡·구두 없이 즉시 전체 스태프에게 전달하고 싶다.",
+        "운영진 니즈",
+        "붐비는 장소, 공연 일정, 부스 위치 등 축제 정보를 빠르고 정확하게 확인하고 싶다.",
+        "방문객 니즈",
+        "부스·공연·혼잡도 등 전체 축제 상황을 하나의 화면에서 통합 파악하고 싶다.",
+        "관리자 니즈"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 19",
+          "text": "방법론 개요"
+        },
+        {
+          "name": "TextBox 20",
+          "text": "페르소나 분석"
+        },
+        {
+          "name": "TextBox 21",
+          "text": "핵심 인사이트"
+        },
+        {
+          "name": "TextBox 22",
+          "text": "HMW 질문"
+        },
+        {
+          "name": "TextBox 23",
+          "text": "사용자 중심 설계로 FESTFLOW를 만들었습니다."
+        },
+        {
+          "name": "TextBox 24",
+          "text": "AEIOU 관찰, 페르소나 도출, 5 Whys 분석을 통해 방문객·운영진·관리자 세 그룹의 핵심 니즈를 발견했습니다. 이 인사이트가 FestFlow의 기능 설계 근거가 되었습니다."
+        },
+        {
+          "name": "TextBox 25",
+          "text": "DESIGN THINKING 요약"
+        },
+        {
+          "name": "TextBox 26",
+          "text": "현장 상태 변경 사항을 카톡·구두 없이 즉시 전체 스태프에게 전달하고 싶다."
+        },
+        {
+          "name": "TextBox 27",
+          "text": "운영진 니즈"
+        },
+        {
+          "name": "TextBox 28",
+          "text": "붐비는 장소, 공연 일정, 부스 위치 등 축제 정보를 빠르고 정확하게 확인하고 싶다."
+        },
+        {
+          "name": "TextBox 29",
+          "text": "방문객 니즈"
+        },
+        {
+          "name": "TextBox 30",
+          "text": "부스·공연·혼잡도 등 전체 축제 상황을 하나의 화면에서 통합 파악하고 싶다."
+        },
+        {
+          "name": "TextBox 31",
+          "text": "관리자 니즈"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image6.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image7.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image8.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 6,
+      "part": "ppt/slides/slide6.xml",
+      "title_guess": "개발 목적",
+      "paragraph_count": 15,
+      "image_count": 0,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "개발 목적",
+        "FestFlow는 축제 현장의 실제 문제를 해결하기 위해 4가지 핵심 목적을 바탕으로 설계되었습니다. AI 기술과 실시간 데이터를 결합하여 방문객, 스태프, 관리자 모두를 위한 통합 운영 플랫폼을 구현합니다.",
+        "FESTFLOW 개발 목적",
+        "프로젝트 요약",
+        "문제 정의",
+        "디자인 씽킹",
+        "개발 목적",
+        "목적 01 | 실시간 축제 정보 제공",
+        "스태프와 운영진이 카톡·구두 전달에 의존하지 않고, 웹앱을 통해 부스 상태, 공연 현황, 현장 이슈를 즉시 등록·공유할 수 있는 분산형 운영 체계를 구현합니다.",
+        "목적 02 | 분산형 운영 관리",
+        "목적 03 | 관리자 통합 대시보드",
+        "목적 04 | AI 기반 안내 및 참여 경험 확장",
+        "방문객이 공연 일정, 부스 위치, 혼잡도, 분실물 등 축제 전반의 정보를 실시간으로 확인할 수 있도록 SSE 기반 즉각 업데이트 환경을 제공합니다. 앱 하나로 모든 축제 정보를 탐색 가능합니다.",
+        "AI 챗봇으로 반복 문의를 자동 응답하고, 혼잡도 기반 부스·코스 추천, AI Match 참여형 기능으로 방문객의 축제 경험을 능동적으로 확장합니다. AI는 단순 안내를 넘어 운영 지원 도구로 활용됩니다.",
+        "관리자가 부스·공연·공지 CRUD, KPI 모니터링, 감사 로그, CSV 업로드 등을 한 화면에서 처리할 수 있는 통합 대시보드를 제공하여 전체 운영 상황을 실시간으로 파악합니다."
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 2",
+          "text": "개발 목적"
+        },
+        {
+          "name": "TextBox 3",
+          "text": "FestFlow는 축제 현장의 실제 문제를 해결하기 위해 4가지 핵심 목적을 바탕으로 설계되었습니다. AI 기술과 실시간 데이터를 결합하여 방문객, 스태프, 관리자 모두를 위한 통합 운영 플랫폼을 구현합니다."
+        },
+        {
+          "name": "TextBox 4",
+          "text": "FESTFLOW 개발 목적"
+        },
+        {
+          "name": "TextBox 6",
+          "text": "프로젝트 요약"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "문제 정의"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "디자인 씽킹"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "개발 목적"
+        },
+        {
+          "name": "TextBox 20",
+          "text": "목적 01 | 실시간 축제 정보 제공"
+        },
+        {
+          "name": "TextBox 24",
+          "text": "스태프와 운영진이 카톡·구두 전달에 의존하지 않고, 웹앱을 통해 부스 상태, 공연 현황, 현장 이슈를 즉시 등록·공유할 수 있는 분산형 운영 체계를 구현합니다."
+        },
+        {
+          "name": "TextBox 32",
+          "text": "목적 02 | 분산형 운영 관리"
+        },
+        {
+          "name": "TextBox 43",
+          "text": "목적 03 | 관리자 통합 대시보드"
+        },
+        {
+          "name": "TextBox 54",
+          "text": "목적 04 | AI 기반 안내 및 참여 경험 확장"
+        },
+        {
+          "name": "TextBox 55",
+          "text": "방문객이 공연 일정, 부스 위치, 혼잡도, 분실물 등 축제 전반의 정보를 실시간으로 확인할 수 있도록 SSE 기반 즉각 업데이트 환경을 제공합니다. 앱 하나로 모든 축제 정보를 탐색 가능합니다."
+        },
+        {
+          "name": "TextBox 56",
+          "text": "AI 챗봇으로 반복 문의를 자동 응답하고, 혼잡도 기반 부스·코스 추천, AI Match 참여형 기능으로 방문객의 축제 경험을 능동적으로 확장합니다. AI는 단순 안내를 넘어 운영 지원 도구로 활용됩니다."
+        },
+        {
+          "name": "TextBox 57",
+          "text": "관리자가 부스·공연·공지 CRUD, KPI 모니터링, 감사 로그, CSV 업로드 등을 한 화면에서 처리할 수 있는 통합 대시보드를 제공하여 전체 운영 상황을 실시간으로 파악합니다."
+        }
+      ],
+      "image_refs": [],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 7,
+      "part": "ppt/slides/slide7.xml",
+      "title_guess": "프로젝트 개요",
+      "paragraph_count": 10,
+      "image_count": 1,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "프로젝트 개요",
+        "시스템 구조",
+        "주요 기능",
+        "AI 기능",
+        "시스템 전체",
+        "구성 개요",
+        "FestFlow는 방문객·스태프·관리자 세 역할을 하나의 플랫폼으로 통합합니다. 방문객 웹앱은 실시간 축제 정보, 혼잡도, AI 챗봇을 제공하며, 스태프 화면은 현장 상태 즉시 업데이트를 지원합니다. 관리자 대시보드는 전체 운영 현황을 통합 관리합니다.",
+        "FESTFLOW 기술 아키텍처 전체 개요",
+        "SYSTEM",
+        "백엔드: Spring Boot REST API + MySQL + JPA로 데이터 처리. 실시간 통신: SSE(Server-Sent Events)로 방문객 화면에 즉시 반영. AI 연동: OpenAI API 기반 챗봇, AI Match 이미지 생성, 혼잡도 예측 및 운영 보조 기능 통합."
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 6",
+          "text": "프로젝트 개요"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "시스템 구조"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "주요 기능"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "AI 기능"
+        },
+        {
+          "name": "TextBox 10",
+          "text": "시스템 전체\n구성 개요"
+        },
+        {
+          "name": "TextBox 11",
+          "text": "FestFlow는 방문객·스태프·관리자 세 역할을 하나의 플랫폼으로 통합합니다. 방문객 웹앱은 실시간 축제 정보, 혼잡도, AI 챗봇을 제공하며, 스태프 화면은 현장 상태 즉시 업데이트를 지원합니다. 관리자 대시보드는 전체 운영 현황을 통합 관리합니다."
+        },
+        {
+          "name": "TextBox 12",
+          "text": "FESTFLOW 기술 아키텍처 전체 개요"
+        },
+        {
+          "name": "TextBox 15",
+          "text": "SYSTEM"
+        },
+        {
+          "name": "TextBox 16",
+          "text": "백엔드: Spring Boot REST API + MySQL + JPA로 데이터 처리. 실시간 통신: SSE(Server-Sent Events)로 방문객 화면에 즉시 반영. AI 연동: OpenAI API 기반 챗봇, AI Match 이미지 생성, 혼잡도 예측 및 운영 보조 기능 통합."
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image9.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 8,
+      "part": "ppt/slides/slide8.xml",
+      "title_guess": "방문객 기능",
+      "paragraph_count": 11,
+      "image_count": 2,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "방문객 기능",
+        "FestFlow 앱 하나로 축제의 모든 정보를 실시간으로 탐색하고, AI 추천으로 최적의 축제 동선을 경험하세요.",
+        "방문객을 위한 스마트 축제 경험",
+        "프로젝트 요약",
+        "문제 정의",
+        "시스템 개요",
+        "방문객 기능",
+        "홈 화면, 지도, 부스 탐색, 공연 일정, 혼잡도 현황을 한눈에 확인할 수 있습니다.",
+        "정보 탐색",
+        "분실물 접수, AI 챗봇 질의응답, 혼잡도 기반 맞춤 추천으로 편리한 축제 경험을 제공합니다.",
+        "AI 안내"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 2",
+          "text": "방문객 기능"
+        },
+        {
+          "name": "TextBox 3",
+          "text": "FestFlow 앱 하나로 축제의 모든 정보를 실시간으로 탐색하고, AI 추천으로 최적의 축제 동선을 경험하세요."
+        },
+        {
+          "name": "TextBox 4",
+          "text": "방문객을 위한 스마트 축제 경험"
+        },
+        {
+          "name": "TextBox 6",
+          "text": "프로젝트 요약"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "문제 정의"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "시스템 개요"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "방문객 기능"
+        },
+        {
+          "name": "TextBox 18",
+          "text": "홈 화면, 지도, 부스 탐색, 공연 일정, 혼잡도 현황을 한눈에 확인할 수 있습니다."
+        },
+        {
+          "name": "TextBox 22",
+          "text": "정보 탐색"
+        },
+        {
+          "name": "TextBox 28",
+          "text": "분실물 접수, AI 챗봇 질의응답, 혼잡도 기반 맞춤 추천으로 편리한 축제 경험을 제공합니다."
+        },
+        {
+          "name": "TextBox 32",
+          "text": "AI 안내"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image10.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image11.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 9,
+      "part": "ppt/slides/slide9.xml",
+      "title_guess": "축제 챗봇으로 언제든지",
+      "paragraph_count": 13,
+      "image_count": 2,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "축제 챗봇으로 언제든지",
+        "스마트하게 안내받으세요.",
+        "FestFlow AI 챗봇은 방문객의 자연어 질문에 실시간으로 응답합니다. 혼잡한 부스 안내, 공연 시작 알림, 먹거리 추천까지 — 앱 하나로 모든 축제 정보를 AI가 직접 안내합니다.",
+        "AI 방문객 안내",
+        "프로젝트 개요",
+        "AI 안내 기능",
+        "운영자 기능",
+        "기술 스택",
+        "💬 \"지금 덜 붐비는 부스 어디야?\"",
+        "💬 \"곧 시작하는 공연 알려줘\"",
+        "💬 \"먹거리 부스 추천해줘\"",
+        "💬 \"화장실 가는 길 알려줘\"",
+        "자연어 질의 예시"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 4",
+          "text": "축제 챗봇으로 언제든지\n스마트하게 안내받으세요."
+        },
+        {
+          "name": "TextBox 5",
+          "text": "FestFlow AI 챗봇은 방문객의 자연어 질문에 실시간으로 응답합니다. 혼잡한 부스 안내, 공연 시작 알림, 먹거리 추천까지 — 앱 하나로 모든 축제 정보를 AI가 직접 안내합니다."
+        },
+        {
+          "name": "TextBox 6",
+          "text": "AI 방문객 안내"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "프로젝트 개요"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "AI 안내 기능"
+        },
+        {
+          "name": "TextBox 10",
+          "text": "운영자 기능"
+        },
+        {
+          "name": "TextBox 11",
+          "text": "기술 스택"
+        },
+        {
+          "name": "TextBox 14",
+          "text": "💬 \"지금 덜 붐비는 부스 어디야?\"\n💬 \"곧 시작하는 공연 알려줘\"\n💬 \"먹거리 부스 추천해줘\"\n💬 \"화장실 가는 길 알려줘\""
+        },
+        {
+          "name": "TextBox 15",
+          "text": "자연어 질의 예시"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image12.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image13.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 10,
+      "part": "ppt/slides/slide10.xml",
+      "title_guess": "관리자/운영자 기능을 소개합니다.",
+      "paragraph_count": 15,
+      "image_count": 0,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "관리자/운영자 기능을 소개합니다.",
+        "FestFlow의 관리자 및 운영자 화면은 축제 전체 운영을 한 곳에서 통제할 수 있도록 설계되었습니다. 실시간 공지 및 부스 상태 변경이 방문객 화면에 즉시 반영됩니다.",
+        "FESTFLOW — 관리자·운영자 기능",
+        "프로젝트 요약",
+        "핵심 기능",
+        "AI 기능",
+        "운영 결과",
+        "기능 첫번째 | 로그인 및 CRUD 관리",
+        "방문객 수, 부스 조회 수, 챗봇 질의 건수 등 핵심 성과 지표를 실시간으로 대시보드에서 확인할 수 있습니다. 감사 로그를 통해 운영 이력을 추적하고, 이상 상황을 신속하게 파악할 수 있습니다.",
+        "기능 두번째 | KPI 모니터링",
+        "기능 세번째 | 실시간 공지 및 상태 반영",
+        "기능 네번째 | CSV·이미지 업로드",
+        "관리자 전용 로그인 인증 후 부스·공연·공지 정보를 생성·수정·삭제할 수 있습니다. CSV 파일 및 이미지 업로드를 통해 대량 데이터를 빠르게 등록하고 관리할 수 있어 운영 효율이 크게 향상됩니다.",
+        "부스 목록, 공연 일정, 스태프 정보 등을 CSV 파일로 일괄 업로드할 수 있습니다. 이미지 업로드 기능을 통해 부스 대표 사진 및 공연 포스터를 손쉽게 등록하여 방문객에게 풍부한 시각 정보를 제공합니다.",
+        "관리자가 공지 사항을 등록하거나 부스 운영 상태를 변경하면 SSE 기술을 통해 방문객 화면에 즉시 반영됩니다. 별도 새로고침 없이 현장 정보가 실시간으로 업데이트되어 혼선을 방지합니다."
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 2",
+          "text": "관리자/운영자 기능을 소개합니다."
+        },
+        {
+          "name": "TextBox 3",
+          "text": "FestFlow의 관리자 및 운영자 화면은 축제 전체 운영을 한 곳에서 통제할 수 있도록 설계되었습니다. 실시간 공지 및 부스 상태 변경이 방문객 화면에 즉시 반영됩니다."
+        },
+        {
+          "name": "TextBox 4",
+          "text": "FESTFLOW — 관리자·운영자 기능"
+        },
+        {
+          "name": "TextBox 6",
+          "text": "프로젝트 요약"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "핵심 기능"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "AI 기능"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "운영 결과"
+        },
+        {
+          "name": "TextBox 20",
+          "text": "기능 첫번째 | 로그인 및 CRUD 관리"
+        },
+        {
+          "name": "TextBox 24",
+          "text": "방문객 수, 부스 조회 수, 챗봇 질의 건수 등 핵심 성과 지표를 실시간으로 대시보드에서 확인할 수 있습니다. 감사 로그를 통해 운영 이력을 추적하고, 이상 상황을 신속하게 파악할 수 있습니다."
+        },
+        {
+          "name": "TextBox 32",
+          "text": "기능 두번째 | KPI 모니터링"
+        },
+        {
+          "name": "TextBox 43",
+          "text": "기능 세번째 | 실시간 공지 및 상태 반영"
+        },
+        {
+          "name": "TextBox 54",
+          "text": "기능 네번째 | CSV·이미지 업로드"
+        },
+        {
+          "name": "TextBox 55",
+          "text": "관리자 전용 로그인 인증 후 부스·공연·공지 정보를 생성·수정·삭제할 수 있습니다. CSV 파일 및 이미지 업로드를 통해 대량 데이터를 빠르게 등록하고 관리할 수 있어 운영 효율이 크게 향상됩니다."
+        },
+        {
+          "name": "TextBox 56",
+          "text": "부스 목록, 공연 일정, 스태프 정보 등을 CSV 파일로 일괄 업로드할 수 있습니다. 이미지 업로드 기능을 통해 부스 대표 사진 및 공연 포스터를 손쉽게 등록하여 방문객에게 풍부한 시각 정보를 제공합니다."
+        },
+        {
+          "name": "TextBox 57",
+          "text": "관리자가 공지 사항을 등록하거나 부스 운영 상태를 변경하면 SSE 기술을 통해 방문객 화면에 즉시 반영됩니다. 별도 새로고침 없이 현장 정보가 실시간으로 업데이트되어 혼선을 방지합니다."
+        }
+      ],
+      "image_refs": [],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 11,
+      "part": "ppt/slides/slide11.xml",
+      "title_guess": "프로젝트 개요",
+      "paragraph_count": 13,
+      "image_count": 3,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "프로젝트 개요",
+        "핵심 기능",
+        "AI 기능",
+        "운영 결과",
+        "AI가 운영진을 돕는 스마트 운영 지원 도구",
+        "FestFlow의 AI는 단순 챗봇을 넘어, 공지 초안 생성부터 혼잡 구역 요약, 방문객 질문 패턴 분석까지 운영 전반을 지원하는 통합 운영 보조 도구입니다.",
+        "FESTFLOW 운영 보조 AI",
+        "실시간 혼잡 구역 요약 및 방문객 동선 분석으로 운영진이 신속하게 현장 상황을 파악하고 대응할 수 있습니다.",
+        "혼잡도 분석 및 요약",
+        "공지 초안 자동 생성, 운영 브리핑 지원, 분실물 응대 보조 기능으로 반복 업무를 AI가 대신 처리합니다.",
+        "공지 및 브리핑 자동화",
+        "방문객 질문 패턴을 분석해 자주 묻는 정보를 사전 공지하고, AI가 반복 문의를 자동 응답해 운영 부담을 줄입니다.",
+        "질문 패턴 분석"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 19",
+          "text": "프로젝트 개요"
+        },
+        {
+          "name": "TextBox 20",
+          "text": "핵심 기능"
+        },
+        {
+          "name": "TextBox 21",
+          "text": "AI 기능"
+        },
+        {
+          "name": "TextBox 22",
+          "text": "운영 결과"
+        },
+        {
+          "name": "TextBox 23",
+          "text": "AI가 운영진을 돕는 스마트 운영 지원 도구"
+        },
+        {
+          "name": "TextBox 24",
+          "text": "FestFlow의 AI는 단순 챗봇을 넘어, 공지 초안 생성부터 혼잡 구역 요약, 방문객 질문 패턴 분석까지 운영 전반을 지원하는 통합 운영 보조 도구입니다."
+        },
+        {
+          "name": "TextBox 25",
+          "text": "FESTFLOW 운영 보조 AI"
+        },
+        {
+          "name": "TextBox 26",
+          "text": "실시간 혼잡 구역 요약 및 방문객 동선 분석으로 운영진이 신속하게 현장 상황을 파악하고 대응할 수 있습니다."
+        },
+        {
+          "name": "TextBox 27",
+          "text": "혼잡도 분석 및 요약"
+        },
+        {
+          "name": "TextBox 28",
+          "text": "공지 초안 자동 생성, 운영 브리핑 지원, 분실물 응대 보조 기능으로 반복 업무를 AI가 대신 처리합니다."
+        },
+        {
+          "name": "TextBox 29",
+          "text": "공지 및 브리핑 자동화"
+        },
+        {
+          "name": "TextBox 30",
+          "text": "방문객 질문 패턴을 분석해 자주 묻는 정보를 사전 공지하고, AI가 반복 문의를 자동 응답해 운영 부담을 줄입니다."
+        },
+        {
+          "name": "TextBox 31",
+          "text": "질문 패턴 분석"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image14.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image15.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image16.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 12,
+      "part": "ppt/slides/slide12.xml",
+      "title_guess": "AI MATCH: 참여 경험을 확장합니다.",
+      "paragraph_count": 11,
+      "image_count": 2,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "AI MATCH: 참여 경험을 확장합니다.",
+        "FestFlow의 AI Match 기능은 실제 학교 축제에 적용되어 사용자 등록, AI 프로필 이미지 생성, 매칭 신청 및 관리자 처리 흐름까지 성공적으로 운영되었습니다.",
+        "실제 축제 현장에서 검증된",
+        "프로젝트 요약",
+        "시스템 개요",
+        "AI 기능",
+        "운영 결과",
+        "QR 코드 접속 후 프로필 등록, AI가 프로필 이미지를 자동 생성하고 등록자 목록에서 마음에 드는 상대에게 신청할 수 있습니다.",
+        "사용자 경험",
+        "관리자는 등록자 검수, 신청 내역 확인, 성사 매칭 관리 및 상태 처리를 통해 축제 현장에서 매칭 운영을 총괄합니다.",
+        "관리자 운영"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 2",
+          "text": "AI MATCH: 참여 경험을 확장합니다."
+        },
+        {
+          "name": "TextBox 3",
+          "text": "FestFlow의 AI Match 기능은 실제 학교 축제에 적용되어 사용자 등록, AI 프로필 이미지 생성, 매칭 신청 및 관리자 처리 흐름까지 성공적으로 운영되었습니다."
+        },
+        {
+          "name": "TextBox 4",
+          "text": "실제 축제 현장에서 검증된"
+        },
+        {
+          "name": "TextBox 6",
+          "text": "프로젝트 요약"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "시스템 개요"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "AI 기능"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "운영 결과"
+        },
+        {
+          "name": "TextBox 18",
+          "text": "QR 코드 접속 후 프로필 등록, AI가 프로필 이미지를 자동 생성하고 등록자 목록에서 마음에 드는 상대에게 신청할 수 있습니다."
+        },
+        {
+          "name": "TextBox 22",
+          "text": "사용자 경험"
+        },
+        {
+          "name": "TextBox 28",
+          "text": "관리자는 등록자 검수, 신청 내역 확인, 성사 매칭 관리 및 상태 처리를 통해 축제 현장에서 매칭 운영을 총괄합니다."
+        },
+        {
+          "name": "TextBox 32",
+          "text": "관리자 운영"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image17.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image18.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 13,
+      "part": "ppt/slides/slide13.xml",
+      "title_guess": "첫번째 목차 이름",
+      "paragraph_count": 13,
+      "image_count": 3,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "첫번째 목차 이름",
+        "두번째 목차 이름",
+        "세번째 목차 이름",
+        "네번째 목차 이름",
+        "AI MATCH 사용자 흐름",
+        "QR 코드로 접속한 사용자가 프로필을 등록하고 AI 이미지를 생성한 뒤, 등록자 목록을 확인하고 마음에 드는 상대에게 신청 후 결과를 확인하는 전체 흐름입니다.",
+        "FESTFLOW — AI MATCH",
+        "AI가 생성한 프로필 카드 목록을 탐색합니다. 마음에 드는 상대를 선택해 매칭 신청을 보내고, 관리자가 신청 내역을 검토하여 매칭을 처리합니다.",
+        "STEP 2: 등록자 목록 확인 & 신청",
+        "QR 코드로 AI Match 페이지에 접속합니다. 이름, 학과, 간단한 자기소개를 입력하고 AI가 자동으로 프로필 이미지를 생성합니다.",
+        "STEP 1: QR 접속 & 프로필 등록",
+        "신청 후 상태(대기·수락·거절)를 실시간으로 확인할 수 있습니다. 매칭 성사 시 알림이 제공되며, 실제 축제에서 다수의 신청 및 매칭 성공 사례가 기록되었습니다.",
+        "STEP 3: 신청 상태 확인 & 결과"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 19",
+          "text": "첫번째 목차 이름"
+        },
+        {
+          "name": "TextBox 20",
+          "text": "두번째 목차 이름"
+        },
+        {
+          "name": "TextBox 21",
+          "text": "세번째 목차 이름"
+        },
+        {
+          "name": "TextBox 22",
+          "text": "네번째 목차 이름"
+        },
+        {
+          "name": "TextBox 23",
+          "text": "AI MATCH 사용자 흐름"
+        },
+        {
+          "name": "TextBox 24",
+          "text": "QR 코드로 접속한 사용자가 프로필을 등록하고 AI 이미지를 생성한 뒤, 등록자 목록을 확인하고 마음에 드는 상대에게 신청 후 결과를 확인하는 전체 흐름입니다."
+        },
+        {
+          "name": "TextBox 25",
+          "text": "FESTFLOW — AI MATCH"
+        },
+        {
+          "name": "TextBox 26",
+          "text": "AI가 생성한 프로필 카드 목록을 탐색합니다. 마음에 드는 상대를 선택해 매칭 신청을 보내고, 관리자가 신청 내역을 검토하여 매칭을 처리합니다."
+        },
+        {
+          "name": "TextBox 27",
+          "text": "STEP 2: 등록자 목록 확인 & 신청"
+        },
+        {
+          "name": "TextBox 28",
+          "text": "QR 코드로 AI Match 페이지에 접속합니다. 이름, 학과, 간단한 자기소개를 입력하고 AI가 자동으로 프로필 이미지를 생성합니다."
+        },
+        {
+          "name": "TextBox 29",
+          "text": "STEP 1: QR 접속 & 프로필 등록"
+        },
+        {
+          "name": "TextBox 30",
+          "text": "신청 후 상태(대기·수락·거절)를 실시간으로 확인할 수 있습니다. 매칭 성사 시 알림이 제공되며, 실제 축제에서 다수의 신청 및 매칭 성공 사례가 기록되었습니다."
+        },
+        {
+          "name": "TextBox 31",
+          "text": "STEP 3: 신청 상태 확인 & 결과"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image19.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image20.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image21.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 14,
+      "part": "ppt/slides/slide14.xml",
+      "title_guess": "AI MATCH 관리자",
+      "paragraph_count": 16,
+      "image_count": 3,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "AI MATCH 관리자",
+        "두번째 목차 이름",
+        "세번째 목차 이름",
+        "네번째 목차 이름",
+        "AI MATCH 관리자 흐름",
+        "관리자는 로그인 후 등록자를 검수하고, 신청 내역을 확인하며, 매칭 성사 여부를 직접 관리하고 상태를 처리합니다.",
+        "FESTFLOW — AI MATCH 운영 관리",
+        "등록자 간 데이트 신청 내역을 실시간으로 확인하고, 신청 상태 및 매칭 요청 현황을 모니터링합니다.",
+        "STEP 02",
+        "신청 내역 확인",
+        "관리자 계정으로 로그인 후 AI Match 등록자 목록을 확인하고 프로필 이미지 및 정보를 검수합니다.",
+        "STEP 01",
+        "관리자 로그인 및 검수",
+        "성사된 매칭을 확인하고 관리자가 직접 매칭 상태를 승인·거절 처리하며 전체 운영 결과를 관리합니다.",
+        "STEP 03",
+        "매칭 관리 및 상태 처리"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 19",
+          "text": "AI MATCH 관리자"
+        },
+        {
+          "name": "TextBox 20",
+          "text": "두번째 목차 이름"
+        },
+        {
+          "name": "TextBox 21",
+          "text": "세번째 목차 이름"
+        },
+        {
+          "name": "TextBox 22",
+          "text": "네번째 목차 이름"
+        },
+        {
+          "name": "TextBox 23",
+          "text": "AI MATCH 관리자 흐름"
+        },
+        {
+          "name": "TextBox 24",
+          "text": "관리자는 로그인 후 등록자를 검수하고, 신청 내역을 확인하며, 매칭 성사 여부를 직접 관리하고 상태를 처리합니다."
+        },
+        {
+          "name": "TextBox 25",
+          "text": "FESTFLOW — AI MATCH 운영 관리"
+        },
+        {
+          "name": "TextBox 26",
+          "text": "등록자 간 데이트 신청 내역을 실시간으로 확인하고, 신청 상태 및 매칭 요청 현황을 모니터링합니다."
+        },
+        {
+          "name": "TextBox 27",
+          "text": "STEP 02\n신청 내역 확인"
+        },
+        {
+          "name": "TextBox 28",
+          "text": "관리자 계정으로 로그인 후 AI Match 등록자 목록을 확인하고 프로필 이미지 및 정보를 검수합니다."
+        },
+        {
+          "name": "TextBox 29",
+          "text": "STEP 01\n관리자 로그인 및 검수"
+        },
+        {
+          "name": "TextBox 30",
+          "text": "성사된 매칭을 확인하고 관리자가 직접 매칭 상태를 승인·거절 처리하며 전체 운영 결과를 관리합니다."
+        },
+        {
+          "name": "TextBox 31",
+          "text": "STEP 03\n매칭 관리 및 상태 처리"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image22.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image23.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image24.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 15,
+      "part": "ppt/slides/slide15.xml",
+      "title_guess": "실제 운영 결과",
+      "paragraph_count": 19,
+      "image_count": 0,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "실제 운영 결과",
+        "FestFlow는 실제 대학교 축제 현장에서 AI Match 기능을 포함한 통합 플랫폼을 운영하며 다음과 같은 성과를 달성했습니다.",
+        "현장 검증 기반 운영 데이터",
+        "방문객 기능",
+        "AI MATCH 기능",
+        "운영 결과",
+        "향후 계획",
+        "47명",
+        "AI Match 등록자 수",
+        "30+",
+        "관리자 처리 건수",
+        "3일",
+        "운영 기간",
+        "12건",
+        "성사 매칭 수",
+        "23건",
+        "매칭 신청 수",
+        "15명",
+        "QA 참여 인원"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 2",
+          "text": "실제 운영 결과"
+        },
+        {
+          "name": "TextBox 3",
+          "text": "FestFlow는 실제 대학교 축제 현장에서 AI Match 기능을 포함한 통합 플랫폼을 운영하며 다음과 같은 성과를 달성했습니다."
+        },
+        {
+          "name": "TextBox 4",
+          "text": "현장 검증 기반 운영 데이터"
+        },
+        {
+          "name": "TextBox 6",
+          "text": "방문객 기능"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "AI MATCH 기능"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "운영 결과"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "향후 계획"
+        },
+        {
+          "name": "TextBox 16",
+          "text": "47명"
+        },
+        {
+          "name": "TextBox 17",
+          "text": "AI Match 등록자 수"
+        },
+        {
+          "name": "TextBox 27",
+          "text": "30+"
+        },
+        {
+          "name": "TextBox 28",
+          "text": "관리자 처리 건수"
+        },
+        {
+          "name": "TextBox 29",
+          "text": "3일"
+        },
+        {
+          "name": "TextBox 30",
+          "text": "운영 기간"
+        },
+        {
+          "name": "TextBox 31",
+          "text": "12건"
+        },
+        {
+          "name": "TextBox 32",
+          "text": "성사 매칭 수"
+        },
+        {
+          "name": "TextBox 36",
+          "text": "23건"
+        },
+        {
+          "name": "TextBox 37",
+          "text": "매칭 신청 수"
+        },
+        {
+          "name": "TextBox 38",
+          "text": "15명"
+        },
+        {
+          "name": "TextBox 39",
+          "text": "QA 참여 인원"
+        }
+      ],
+      "image_refs": [],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 16,
+      "part": "ppt/slides/slide16.xml",
+      "title_guess": "스태프 관점 현장 검증",
+      "paragraph_count": 9,
+      "image_count": 1,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "스태프 관점 현장 검증",
+        "실제 축제 스태프 역할 수행 중 발견한 4가지 핵심 문제와 FestFlow의 해결책을 검증했습니다. 무대 수용 인원 확인 → 혼잡도 현황 화면 제공, 부스 담당자 확인 → 부스 운영 상태 관리 기능, 반복 방문객 문의 → AI 챗봇 자동 응답, 구두 전달 누락 → SSE 실시간 반영으로 현장 효율성이 크게 향상되었습니다.",
+        "스태프 현장 검증 결과",
+        "프로젝트 요약",
+        "시스템 개요",
+        "AI 기능",
+        "현장 검증",
+        "문제 발생 빈도",
+        "해결 효과"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 6",
+          "text": "스태프 관점 현장 검증"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "실제 축제 스태프 역할 수행 중 발견한 4가지 핵심 문제와 FestFlow의 해결책을 검증했습니다. 무대 수용 인원 확인 → 혼잡도 현황 화면 제공, 부스 담당자 확인 → 부스 운영 상태 관리 기능, 반복 방문객 문의 → AI 챗봇 자동 응답, 구두 전달 누락 → SSE 실시간 반영으로 현장 효율성이 크게 향상되었습니다."
+        },
+        {
+          "name": "TextBox 8",
+          "text": "스태프 현장 검증 결과"
+        },
+        {
+          "name": "TextBox 10",
+          "text": "프로젝트 요약"
+        },
+        {
+          "name": "TextBox 11",
+          "text": "시스템 개요"
+        },
+        {
+          "name": "TextBox 12",
+          "text": "AI 기능"
+        },
+        {
+          "name": "TextBox 13",
+          "text": "현장 검증"
+        },
+        {
+          "name": "TextBox 18",
+          "text": "문제 발생 빈도"
+        },
+        {
+          "name": "TextBox 23",
+          "text": "해결 효과"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image25.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 17,
+      "part": "ppt/slides/slide17.xml",
+      "title_guess": "QA 진행 및 주요 개선 사례",
+      "paragraph_count": 11,
+      "image_count": 2,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "QA 진행 및 주요 개선 사례",
+        "모바일 QA · 관리자 QA · AI Match 신청 흐름 QA · 데이터 표시 QA · 현장 사용성 QA를 단계별로 진행하며 실사용 환경에서 발견된 문제를 체계적으로 수정하였습니다.",
+        "품질 검증 단계",
+        "첫번째 목차 이름",
+        "두번째 목차 이름",
+        "세번째 목차 이름",
+        "네번째 목차 이름",
+        "① 버튼 위치 조정: 모바일 하단 고정으로 접근성 향상",
+        "② 모바일 가독성 개선: 폰트 크기·대비 최적화로 야외 가시성 확보",
+        "③ 관리자 상태 처리 흐름 개선: 매칭 승인·거절 단계 UX 재설계",
+        "주요 개선 3가지"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 4",
+          "text": "QA 진행 및 주요 개선 사례"
+        },
+        {
+          "name": "TextBox 5",
+          "text": "모바일 QA · 관리자 QA · AI Match 신청 흐름 QA · 데이터 표시 QA · 현장 사용성 QA를 단계별로 진행하며 실사용 환경에서 발견된 문제를 체계적으로 수정하였습니다."
+        },
+        {
+          "name": "TextBox 6",
+          "text": "품질 검증 단계"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "첫번째 목차 이름"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "두번째 목차 이름"
+        },
+        {
+          "name": "TextBox 10",
+          "text": "세번째 목차 이름"
+        },
+        {
+          "name": "TextBox 11",
+          "text": "네번째 목차 이름"
+        },
+        {
+          "name": "TextBox 14",
+          "text": "① 버튼 위치 조정: 모바일 하단 고정으로 접근성 향상\n② 모바일 가독성 개선: 폰트 크기·대비 최적화로 야외 가시성 확보\n③ 관리자 상태 처리 흐름 개선: 매칭 승인·거절 단계 UX 재설계"
+        },
+        {
+          "name": "TextBox 15",
+          "text": "주요 개선 3가지"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image26.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image27.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 18,
+      "part": "ppt/slides/slide18.xml",
+      "title_guess": "첫번째 목차 이름",
+      "paragraph_count": 14,
+      "image_count": 1,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "첫번째 목차 이름",
+        "두번째 목차 이름",
+        "세번째 목차 이름",
+        "네번째 목차 이름",
+        "데모 영상 흐름",
+        "소개",
+        "① AI Match 접속 (QR 코드)",
+        "② 프로필 등록 및 AI 이미지 생성",
+        "③ 등록자 목록 확인",
+        "④ 상대방에게 신청",
+        "⑤ 관리자 대시보드 처리",
+        "FESTFLOW 데모 영상 안내",
+        "DEMO",
+        "후반부 하이라이트: 관리자 대시보드에서 실시간 공지 반영 및 챗봇 질문 시연 (약 5초). \"지금 덜 붐비는 부스 어디야?\" 등 자연어 질의 응답 장면 포함."
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 6",
+          "text": "첫번째 목차 이름"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "두번째 목차 이름"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "세번째 목차 이름"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "네번째 목차 이름"
+        },
+        {
+          "name": "TextBox 10",
+          "text": "데모 영상 흐름\n소개"
+        },
+        {
+          "name": "TextBox 11",
+          "text": "① AI Match 접속 (QR 코드)\n② 프로필 등록 및 AI 이미지 생성\n③ 등록자 목록 확인\n④ 상대방에게 신청\n⑤ 관리자 대시보드 처리"
+        },
+        {
+          "name": "TextBox 12",
+          "text": "FESTFLOW 데모 영상 안내"
+        },
+        {
+          "name": "TextBox 15",
+          "text": "DEMO"
+        },
+        {
+          "name": "TextBox 16",
+          "text": "후반부 하이라이트: 관리자 대시보드에서 실시간 공지 반영 및 챗봇 질문 시연 (약 5초). \"지금 덜 붐비는 부스 어디야?\" 등 자연어 질의 응답 장면 포함."
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image28.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 19,
+      "part": "ppt/slides/slide19.xml",
+      "title_guess": "기술 스택 및 구현 구조",
+      "paragraph_count": 15,
+      "image_count": 0,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "기술 스택 및 구현 구조",
+        "FestFlow는 현대적인 웹 기술과 AI API를 결합하여 방문객·스태프·관리자 모두를 위한 통합 플랫폼을 구현했습니다.",
+        "FESTFLOW: AI 기반 대학교 축제 통합 운영 플랫폼",
+        "프로젝트 요약",
+        "시스템 개요",
+        "기술 스택",
+        "향후 개선",
+        "FRONTEND | REACT / VITE / TAILWIND / PWA",
+        "Spring Boot 기반 RESTful API 서버를 구축하고, MySQL과 JPA를 통해 데이터를 관리합니다. SSE(Server-Sent Events)를 활용하여 부스 상태 변경 및 공지사항이 방문객 화면에 실시간으로 반영됩니다.",
+        "BACKEND | SPRING BOOT / MYSQL / JPA",
+        "인증 및 실시간 통신 | JWT / SSE",
+        "AI 기능 | OPENAI API 기반 챗봇 / 이미지 생성 / 운영 보조",
+        "React와 Vite를 기반으로 빠른 빌드 및 SPA 구조를 구현하였으며, Tailwind CSS로 반응형 UI를 설계했습니다. PWA 적용으로 모바일 환경에서도 앱처럼 사용 가능하며, 현장 접근성을 극대화했습니다.",
+        "OpenAI API를 활용하여 축제 챗봇, AI Match 프로필 이미지 생성, 공지 초안 자동 생성, 운영 브리핑 지원 등 다양한 AI 기능을 구현했습니다. 단순 챗봇을 넘어 운영 지원 도구로 확장된 AI 활용이 핵심입니다.",
+        "JWT 기반 인증으로 관리자·스태프·방문객 역할별 접근 권한을 분리 관리합니다. SSE를 통한 단방향 실시간 통신으로 서버 부하를 최소화하면서도 즉각적인 현장 정보 반영이 가능합니다."
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 2",
+          "text": "기술 스택 및 구현 구조"
+        },
+        {
+          "name": "TextBox 3",
+          "text": "FestFlow는 현대적인 웹 기술과 AI API를 결합하여 방문객·스태프·관리자 모두를 위한 통합 플랫폼을 구현했습니다."
+        },
+        {
+          "name": "TextBox 4",
+          "text": "FESTFLOW: AI 기반 대학교 축제 통합 운영 플랫폼"
+        },
+        {
+          "name": "TextBox 6",
+          "text": "프로젝트 요약"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "시스템 개요"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "기술 스택"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "향후 개선"
+        },
+        {
+          "name": "TextBox 20",
+          "text": "FRONTEND | REACT / VITE / TAILWIND / PWA"
+        },
+        {
+          "name": "TextBox 24",
+          "text": "Spring Boot 기반 RESTful API 서버를 구축하고, MySQL과 JPA를 통해 데이터를 관리합니다. SSE(Server-Sent Events)를 활용하여 부스 상태 변경 및 공지사항이 방문객 화면에 실시간으로 반영됩니다."
+        },
+        {
+          "name": "TextBox 32",
+          "text": "BACKEND | SPRING BOOT / MYSQL / JPA"
+        },
+        {
+          "name": "TextBox 43",
+          "text": "인증 및 실시간 통신 | JWT / SSE"
+        },
+        {
+          "name": "TextBox 54",
+          "text": "AI 기능 | OPENAI API 기반 챗봇 / 이미지 생성 / 운영 보조"
+        },
+        {
+          "name": "TextBox 55",
+          "text": "React와 Vite를 기반으로 빠른 빌드 및 SPA 구조를 구현하였으며, Tailwind CSS로 반응형 UI를 설계했습니다. PWA 적용으로 모바일 환경에서도 앱처럼 사용 가능하며, 현장 접근성을 극대화했습니다."
+        },
+        {
+          "name": "TextBox 56",
+          "text": "OpenAI API를 활용하여 축제 챗봇, AI Match 프로필 이미지 생성, 공지 초안 자동 생성, 운영 브리핑 지원 등 다양한 AI 기능을 구현했습니다. 단순 챗봇을 넘어 운영 지원 도구로 확장된 AI 활용이 핵심입니다."
+        },
+        {
+          "name": "TextBox 57",
+          "text": "JWT 기반 인증으로 관리자·스태프·방문객 역할별 접근 권한을 분리 관리합니다. SSE를 통한 단방향 실시간 통신으로 서버 부하를 최소화하면서도 즉각적인 현장 정보 반영이 가능합니다."
+        }
+      ],
+      "image_refs": [],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 20,
+      "part": "ppt/slides/slide20.xml",
+      "title_guess": "차별성과 향후 개선 방향",
+      "paragraph_count": 12,
+      "image_count": 2,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "차별성과 향후 개선 방향",
+        "통합 플랫폼 설계, 실제 축제 현장 검증, AI 기반 기능을 바탕으로 FestFlow는 기존 운영 방식과 차별화된 가치를 제공합니다.",
+        "FESTFLOW만의 강점과 앞으로의 방향",
+        "프로젝트 개요",
+        "핵심 기능",
+        "현장 검증",
+        "차별성 & 개선",
+        "방문객·스태프·관리자 통합 플랫폼 / 실제 축제 적용 경험 / AI Match·AI 챗봇·실시간 운영 기능 탑재",
+        "차별성",
+        "혼잡도 예측 고도화 / 실제 축제 데이터 학습 / AI 운영 브리핑 강화 / 축제별 템플릿화",
+        "향후 개선",
+        "→"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 2",
+          "text": "차별성과 향후 개선 방향"
+        },
+        {
+          "name": "TextBox 3",
+          "text": "통합 플랫폼 설계, 실제 축제 현장 검증, AI 기반 기능을 바탕으로 FestFlow는 기존 운영 방식과 차별화된 가치를 제공합니다."
+        },
+        {
+          "name": "TextBox 4",
+          "text": "FESTFLOW만의 강점과 앞으로의 방향"
+        },
+        {
+          "name": "TextBox 6",
+          "text": "프로젝트 개요"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "핵심 기능"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "현장 검증"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "차별성 & 개선"
+        },
+        {
+          "name": "TextBox 18",
+          "text": "방문객·스태프·관리자 통합 플랫폼 / 실제 축제 적용 경험 / AI Match·AI 챗봇·실시간 운영 기능 탑재"
+        },
+        {
+          "name": "TextBox 22",
+          "text": "차별성"
+        },
+        {
+          "name": "TextBox 28",
+          "text": "혼잡도 예측 고도화 / 실제 축제 데이터 학습 / AI 운영 브리핑 강화 / 축제별 템플릿화"
+        },
+        {
+          "name": "TextBox 32",
+          "text": "향후 개선"
+        },
+        {
+          "name": "TextBox 33",
+          "text": "→"
+        }
+      ],
+      "image_refs": [
+        {
+          "type": "image",
+          "target": "../media/image29.png",
+          "mode": ""
+        },
+        {
+          "type": "image",
+          "target": "../media/image30.png",
+          "mode": ""
+        }
+      ],
+      "media_refs": [],
+      "hyperlinks": []
+    },
+    {
+      "index": 21,
+      "part": "ppt/slides/slide21.xml",
+      "title_guess": "발표를 들어주셔서",
+      "paragraph_count": 7,
+      "image_count": 0,
+      "media_ref_count": 0,
+      "hyperlink_count": 0,
+      "paragraphs": [
+        "발표를 들어주셔서",
+        "감사합니다 🎉",
+        "FESTFLOW: AI 기반 대학교 축제 통합 운영 플랫폼",
+        "문의 및 피드백 환영",
+        "festflow@university.ac.kr",
+        "FestFlow — 현장 검증 기반 축제 통합 웹앱, 2024",
+        "github.com/festflow"
+      ],
+      "shapes": [
+        {
+          "name": "TextBox 5",
+          "text": "발표를 들어주셔서\n감사합니다 🎉"
+        },
+        {
+          "name": "TextBox 6",
+          "text": "FESTFLOW: AI 기반 대학교 축제 통합 운영 플랫폼"
+        },
+        {
+          "name": "TextBox 7",
+          "text": "문의 및 피드백 환영"
+        },
+        {
+          "name": "TextBox 8",
+          "text": "festflow@university.ac.kr"
+        },
+        {
+          "name": "TextBox 9",
+          "text": "FestFlow — 현장 검증 기반 축제 통합 웹앱, 2024"
+        },
+        {
+          "name": "TextBox 10",
+          "text": "github.com/festflow"
+        }
+      ],
+      "image_refs": [],
+      "media_refs": [],
+      "hyperlinks": []
+    }
+  ]
+}

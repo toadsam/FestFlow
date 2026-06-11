@@ -213,7 +213,7 @@ public class PublicAiGuideService {
         Map<String, Object> request = Map.of(
                 "model", model,
                 "instructions",
-                "You are FestFlow AI for festival visitors. Write in friendly Korean. "
+                "You are Fest-A AI for festival visitors. Write in friendly Korean. "
                         + "Use only the supplied data. Return only valid JSON with this shape: "
                         + "{\"summary\":\"short sentence\",\"bullets\":[\"2-3 visitor-facing lines\"],"
                         + "\"actions\":[{\"title\":\"short label\",\"target\":\"place or event\",\"description\":\"actionable reason\",\"tone\":\"good|wait|danger|info\"}],"

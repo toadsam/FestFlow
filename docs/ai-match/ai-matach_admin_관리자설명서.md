@@ -5,7 +5,7 @@
 
 ## 1. 관리자 로그인
 
-![관리자 로그인 화면](admin-ui.png)
+![관리자 로그인 화면](../assets/screenshots/admin/admin-ui.png)
 
 1. 데스크탑 브라우저에서 `/ai-match/admin`으로 접속합니다.
 2. 관리자 아이디와 비밀번호를 입력합니다.
@@ -22,7 +22,7 @@
 
 ## 2. 관리자 대시보드 전체 구조
 
-![관리자 데스크탑 대시보드](manual-assets/ai-match-admin-dashboard-desktop.png)
+![관리자 데스크탑 대시보드](../assets/ai-match/admin/ai-match-admin-dashboard-desktop.png)
 
 로그인 후 화면은 크게 네 영역으로 나뉩니다.
 
@@ -46,7 +46,7 @@
 
 ## 4. 등록된 사람들 관리
 
-![관리자 프로필 관리 화면](manual-assets/ai-match-admin-profiles-desktop.png)
+![관리자 프로필 관리 화면](../assets/ai-match/admin/ai-match-admin-profiles-desktop.png)
 
 1. 왼쪽의 `등록된 사람들` 영역을 확인합니다.
 2. 검색창에서 닉네임, 전화번호, MBTI, 관심사를 검색합니다.
@@ -62,7 +62,7 @@
 
 ## 5. 성사된 매치 확인 및 연결 조율
 
-![성사된 매치 관리 화면](manual-assets/ai-match-admin-matches-desktop.png)
+![성사된 매치 관리 화면](../assets/ai-match/admin/ai-match-admin-matches-desktop.png)
 
 1. 오른쪽의 `성사된 매치` 영역을 확인합니다.
 2. 매칭된 두 사람의 닉네임과 프로필 사진을 확인합니다.
@@ -99,7 +99,7 @@
 
 ## 7. 신청 기록 확인
 
-![신청 기록 화면](manual-assets/ai-match-admin-requests-desktop.png)
+![신청 기록 화면](../assets/ai-match/admin/ai-match-admin-requests-desktop.png)
 
 신청 기록 영역에서는 전체 신청 로그를 확인합니다.
 

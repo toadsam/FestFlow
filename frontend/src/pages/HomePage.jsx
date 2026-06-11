@@ -258,7 +258,7 @@ export default function HomePage() {
         }}
       >
         <div className="home-hero-top">
-          <strong>FestFlow</strong>
+          <strong>Fest-A</strong>
           <button type="button" aria-label="공지사항" onClick={() => navigate("/more")}>
             <IconAlert className="h-4 w-4" />
           </button>

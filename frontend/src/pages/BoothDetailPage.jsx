@@ -25,7 +25,7 @@ import {
 const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
 
 function createKakaoDirectionsUrl(booth) {
-  const name = booth?.name || booth?.locationName || "FestFlow 부스";
+  const name = booth?.name || booth?.locationName || "Fest-A 부스";
   const lat = Number(booth?.latitude);
   const lng = Number(booth?.longitude);
   if (Number.isFinite(lat) && Number.isFinite(lng)) {
