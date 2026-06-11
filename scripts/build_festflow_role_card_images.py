@@ -6,11 +6,10 @@ from PIL import Image, ImageDraw, ImageFilter, ImageFont
 ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = (
     ROOT
-    / "outputs"
-    / "019eb0d6-a6e5-72e2-953e-179ff240642c"
-    / "presentations"
-    / "festflow-role-card-images"
-    / "output"
+    / "docs"
+    / "assets"
+    / "presentation"
+    / "role-card-images"
 )
 
 CANVAS = (1500, 1000)
@@ -226,7 +225,7 @@ def main():
     outputs = [
         make_card(
             "visitor",
-            Path("qa-screenshots") / "home-mobile.png",
+            Path("docs") / "assets" / "qa-screenshots" / "home-mobile.png",
             "visitor",
             "VISITOR",
             "Festival guide / map / booth discovery",
@@ -234,7 +233,7 @@ def main():
         ),
         make_card(
             "staff",
-            Path("preview-stage-map.png"),
+            Path("docs") / "assets" / "screenshots" / "previews" / "preview-stage-map.png",
             "staff",
             "STAFF",
             "Live stage capacity / field status",
@@ -242,7 +241,7 @@ def main():
         ),
         make_card(
             "admin",
-            Path("admin-final-mobile.png"),
+            Path("docs") / "assets" / "screenshots" / "admin" / "admin-final-mobile.png",
             "admin",
             "ADMIN",
             "Control dashboard / AI Match operation",
@@ -252,7 +251,7 @@ def main():
     clean_outputs = [
         make_card(
             "visitor_clean",
-            Path("qa-screenshots") / "home-mobile.png",
+            Path("docs") / "assets" / "qa-screenshots" / "home-mobile.png",
             "visitor",
             "VISITOR",
             "Festival guide / map / booth discovery",
@@ -262,7 +261,7 @@ def main():
         ),
         make_card(
             "staff_clean",
-            Path("preview-stage-map.png"),
+            Path("docs") / "assets" / "screenshots" / "previews" / "preview-stage-map.png",
             "staff",
             "STAFF",
             "Live stage capacity / field status",
@@ -272,7 +271,7 @@ def main():
         ),
         make_card(
             "admin_clean",
-            Path("admin-final-mobile.png"),
+            Path("docs") / "assets" / "screenshots" / "admin" / "admin-final-mobile.png",
             "admin",
             "ADMIN",
             "Control dashboard / AI Match operation",

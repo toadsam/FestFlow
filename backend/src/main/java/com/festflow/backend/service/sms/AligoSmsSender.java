@@ -52,7 +52,7 @@ public class AligoSmsSender implements SmsSender {
 
     @Override
     public void sendVerificationCode(String phoneNumber, String code) {
-        String message = "[FestFlow] 인증번호는 " + code + " 입니다. 3분 내 입력하세요.";
+        String message = "[Fest-A] 인증번호는 " + code + " 입니다. 3분 내 입력하세요.";
 
         Map<String, String> params = new LinkedHashMap<>();
         params.put("key", requireNonBlank(apiKey, "app.sms.aligo.api-key"));

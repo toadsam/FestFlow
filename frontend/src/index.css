@@ -5134,7 +5134,7 @@ body::after {
   }
 }
 
-/* FestFlow visitor app design system */
+/* Fest-A visitor app design system */
 :root {
   --festival-bg: #f5f7fb;
   --festival-surface: #ffffff;
@@ -13982,7 +13982,7 @@ html[data-contrast="high"] .app-shell .uni-page {
   }
 }
 
-/* Reference match: home and map should read like the supplied FestFlow mobile screens. */
+/* Reference match: home and map should read like the supplied Fest-A mobile screens. */
 .app-shell[data-route-scope="public"] .reference-home-page {
   gap: 0.9rem !important;
   padding: 0.5rem 0.9rem 6rem !important;

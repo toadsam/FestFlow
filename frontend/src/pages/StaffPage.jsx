@@ -851,7 +851,7 @@ export default function StaffPage() {
         <div className="auth-entry-orb auth-entry-orb--violet" aria-hidden="true" />
         <div className="auth-entry-orb auth-entry-orb--cyan" aria-hidden="true" />
         <form className="auth-entry-card" onSubmit={handleLogin}>
-          <p className="auth-entry-brand">FestFlow</p>
+          <p className="auth-entry-brand">Fest-A</p>
           <div className="auth-entry-copy">
             <h1>운영진 전용 페이지</h1>
             <p>실시간 현장 운영과 응대를 위한 운영진 시스템입니다.</p>

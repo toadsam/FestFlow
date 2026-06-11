@@ -699,7 +699,7 @@ export default function AdminPage() {
         <div className="auth-entry-orb auth-entry-orb--violet" aria-hidden="true" />
         <div className="auth-entry-orb auth-entry-orb--cyan" aria-hidden="true" />
         <form className="auth-entry-card" onSubmit={handleLogin}>
-          <p className="auth-entry-brand">FestFlow</p>
+          <p className="auth-entry-brand">Fest-A</p>
           <div className="auth-entry-copy">
             <h1>관리자 전용 페이지</h1>
             <p>안전하고 체계적인 축제 운영을 위한 관리자 시스템입니다.</p>
@@ -754,7 +754,7 @@ export default function AdminPage() {
       <header className="admin-console-hero">
         <div className="admin-console-hero__top">
           <div className="admin-console-hero__copy">
-            <span className="admin-console-hero__eyebrow">FestFlow Control</span>
+            <span className="admin-console-hero__eyebrow">Fest-A Control</span>
             <h1>관리자 대시보드</h1>
             <p>{adminName} 계정으로 로그인됨 · 축제 운영 흐름을 한 화면에서 관리합니다.</p>
           </div>

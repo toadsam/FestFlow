@@ -5,8 +5,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageFilter
 
 
-WORKSPACE = Path(__file__).resolve().parents[1]
-OUT = WORKSPACE / "output"
+ROOT = Path(__file__).resolve().parents[2]
+OUT = ROOT / "docs" / "assets" / "diagrams" / "simple-architecture"
 OUT.mkdir(parents=True, exist_ok=True)
 
 W, H = 1600, 900

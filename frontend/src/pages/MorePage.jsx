@@ -83,7 +83,7 @@ export default function MorePage() {
         <div>
           <span>아주대학교</span>
           <strong>AI 허브</strong>
-          <p>FestFlow AI의 모든 기능을 한 곳에서 이용하세요.</p>
+          <p>Fest-A AI의 모든 기능을 한 곳에서 이용하세요.</p>
         </div>
         <IconSparkles className="h-6 w-6" />
       </header>

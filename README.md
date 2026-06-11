@@ -1,4 +1,4 @@
-﻿# FestFlow - 대학교 축제 관리 웹앱
+# Fest-A - 대학교 축제 관리 웹앱
 
 React + Spring Boot + MySQL 기반의 축제 관리 앱입니다.
 
@@ -196,7 +196,7 @@ npm run dev
 - `SPRING_PROFILES_ACTIVE=prod`
 - `SPRING_JPA_HIBERNATE_DDL_AUTO` (`prod` 기본값은 `validate`; 초기 DB 생성/마이그레이션 단계에서만 명시적으로 조정)
 - `APP_JWT_SECRET` (최소 32자 이상 권장)
-- `APP_CORS_ALLOWED_ORIGINS` (쉼표 구분, 예: `https://festflow.vercel.app,https://festflow-git-main-xxx.vercel.app`)
+- `APP_CORS_ALLOWED_ORIGINS` (쉼표 구분, 예: `https://fest-a.vercel.app,https://fest-a-git-main-xxx.vercel.app`)
 - `APP_INIT_ADMIN_USERNAME`
 - `APP_INIT_ADMIN_PASSWORD`
 - `APP_OPS_MASTER_KEY` (통합 운영 콘솔 사용 시)

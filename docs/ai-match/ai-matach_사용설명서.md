@@ -5,7 +5,7 @@
 
 ## 1. AI 소개팅 부스 접속하기
 
-![AI Match 소개 화면](qa-screenshots/ai-match-ref-intro.png)
+![AI Match 소개 화면](../assets/qa-screenshots/ai-match-ref-intro.png)
 
 1. 모바일 브라우저에서 서비스 주소로 접속합니다.
 2. 첫 화면에서 `AI 소개팅 부스` 안내와 QR 영역을 확인합니다.
@@ -16,7 +16,7 @@
 
 ## 2. 프로필 등록하기
 
-![프로필 등록 화면](qa-screenshots/ai-match-ref-register.png)
+![프로필 등록 화면](../assets/qa-screenshots/ai-match-ref-register.png)
 
 1. `사진 업로드`를 눌러 정면 사진을 올립니다.
 2. AI 변환 미리보기가 생성되면 결과 이미지를 확인합니다.
@@ -35,7 +35,7 @@
 
 ## 3. 등록된 사람 보기
 
-![등록된 사람 목록 화면](qa-screenshots/ai-match-ref-people.png)
+![등록된 사람 목록 화면](../assets/qa-screenshots/ai-match-ref-people.png)
 
 1. 하단 메뉴에서 `사람들`을 누릅니다.
 2. 등록된 프로필 목록을 확인합니다.
@@ -55,7 +55,7 @@
 
 ## 4. 프로필 상세 확인 및 데이트 신청
 
-![프로필 상세 및 데이트 신청 화면](qa-screenshots/ai-match-ref-detail.png)
+![프로필 상세 및 데이트 신청 화면](../assets/qa-screenshots/ai-match-ref-detail.png)
 
 1. 상대 프로필의 사진과 소개를 확인합니다.
 2. `신청자 닉네임`을 입력합니다.
@@ -71,7 +71,7 @@
 
 ## 5. 신청함 확인하기
 
-![하단 메뉴 확인 화면](qa-screenshots/ai-match-bottom-check-3.png)
+![하단 메뉴 확인 화면](../assets/qa-screenshots/ai-match-bottom-check-3.png)
 
 1. 하단 메뉴에서 `신청함`을 누릅니다.
 2. 닉네임과 PIN 인증을 진행합니다.
