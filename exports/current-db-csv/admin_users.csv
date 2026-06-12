@@ -1,0 +1,4 @@
+"id","password","role","username"
+"1","$2a$10$Jrhh8Q9e0nx87Pc7Vr6Cyuf54ACrxHdXntT7sxvc/QfgYL1/eFuPy","ADMIN","admin"
+"2","$2a$10$FTsl2wQpHIPCvUV4rovUYeuAfAJZGTLorCOcMY1/AbNKHUPzc57.C","ADMIN","0000"
+"3","$2a$10$Oz1k0KQngOz2uDPLtDDwcedehxKrjrAwRS3x3gdiVXKQS1j/Xsyp.","ADMIN","toadsam"
