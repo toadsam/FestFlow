@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import json
 from pathlib import Path
 
 import joblib
@@ -33,10 +34,15 @@ NUMERIC_FEATURES = [
     "event_soon",
     "minutes_to_next_event",
     "gps_count_nearby",
+    "gps_delta_5m",
+    "gps_delta_15m",
     "reservation_count",
+    "reservation_delta_15m",
     "checked_in_count",
+    "checked_in_delta_15m",
     "available_seats",
     "wait_minutes",
+    "wait_delta_15m",
     "remaining_stock",
     "event_count_context",
 ]
@@ -88,7 +94,43 @@ def write_feature_importance(model_name: str, feature_names: list[str], importan
         writer.writerows(rows)
 
 
-def write_random_forest_model(rf_pipeline: Pipeline, output_dir: Path) -> None:
+def build_training_profile(df: pd.DataFrame) -> dict:
+    numeric_profile = {}
+    for feature in NUMERIC_FEATURES:
+        series = pd.to_numeric(df[feature], errors="coerce").dropna()
+        numeric_profile[feature] = {
+            "mean": round(float(series.mean()), 4),
+            "std": round(float(series.std(ddof=0)), 4),
+            "p05": round(float(series.quantile(0.05)), 4),
+            "p95": round(float(series.quantile(0.95)), 4),
+            "min": round(float(series.min()), 4),
+            "max": round(float(series.max()), 4),
+        }
+
+    categorical_profile = {
+        feature: sorted(str(value) for value in df[feature].dropna().unique())
+        for feature in CATEGORICAL_FEATURES
+    }
+    return {
+        "numeric": numeric_profile,
+        "categorical": categorical_profile,
+        "drift_policy": {
+            "normal_max_score": 0.15,
+            "caution_max_score": 0.35,
+        },
+    }
+
+
+def write_training_profile(profile: dict, output_dir: Path) -> None:
+    models_dir = output_dir / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    (models_dir / "congestion_training_profile.json").write_text(
+        json.dumps(profile, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def write_random_forest_model(rf_pipeline: Pipeline, training_profile: dict, output_dir: Path) -> None:
     models_dir = output_dir / "models"
     models_dir.mkdir(parents=True, exist_ok=True)
     payload = {
@@ -99,6 +141,7 @@ def write_random_forest_model(rf_pipeline: Pipeline, output_dir: Path) -> None:
         "categorical_features": CATEGORICAL_FEATURES,
         "target": TARGET,
         "labels": LABEL_ORDER,
+        "training_profile": training_profile,
     }
     joblib.dump(payload, models_dir / "random_forest_congestion_model.pkl")
 
@@ -124,6 +167,8 @@ def main() -> None:
     missing = [column for column in FEATURES + [TARGET, "rule_based_level"] if column not in df.columns]
     if missing:
         raise ValueError(f"Dataset is missing required columns: {missing}")
+    training_profile = build_training_profile(df)
+    write_training_profile(training_profile, args.output_dir)
 
     x = df[FEATURES]
     y = df[TARGET]
@@ -169,7 +214,7 @@ def main() -> None:
         rf_pipeline.named_steps["model"].feature_importances_,
         args.output_dir,
     )
-    write_random_forest_model(rf_pipeline, args.output_dir)
+    write_random_forest_model(rf_pipeline, training_profile, args.output_dir)
 
     xgb_pred: list[str] | None = None
     if XGBClassifier is not None:

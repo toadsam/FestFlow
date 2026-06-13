@@ -30,5 +30,9 @@ public interface BoothReservationRepository extends JpaRepository<BoothReservati
     boolean existsByTableIdAndStatusIn(Long tableId, List<ReservationStatus> statuses);
 
     List<BoothReservation> findByStatusAndExpiresAtBefore(ReservationStatus status, LocalDateTime expiresAt);
+
+    long countByBoothIdAndReservedAtBetween(Long boothId, LocalDateTime from, LocalDateTime to);
+
+    long countByBoothIdAndCheckedInAtBetween(Long boothId, LocalDateTime from, LocalDateTime to);
 }
 

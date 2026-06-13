@@ -368,14 +368,14 @@ export default function OpsSimulationPage() {
                   <input
                     type="range"
                     min="0"
-                    max="360"
+                    max="4000"
                     value={stageDraft.currentPeople}
                     onChange={(e) => updateStageDraft("currentPeople", e.target.value)}
                   />
                   <input
                     type="number"
                     min="0"
-                    max="360"
+                    max="4000"
                     value={stageDraft.currentPeople}
                     onChange={(e) => updateStageDraft("currentPeople", e.target.value)}
                   />
@@ -386,7 +386,7 @@ export default function OpsSimulationPage() {
                     <input
                       type="number"
                       min="0"
-                      max="180"
+                      max="800"
                       value={stageDraft.incomingPerMinute}
                       onChange={(e) => updateStageDraft("incomingPerMinute", e.target.value)}
                     />
@@ -396,7 +396,7 @@ export default function OpsSimulationPage() {
                     <input
                       type="number"
                       min="0"
-                      max="180"
+                      max="800"
                       value={stageDraft.outgoingPerMinute}
                       onChange={(e) => updateStageDraft("outgoingPerMinute", e.target.value)}
                     />

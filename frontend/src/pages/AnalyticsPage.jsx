@@ -80,6 +80,40 @@ function predictionAction(level, score = 0) {
   return "바로 방문하기 좋음";
 }
 
+function driftStatusLabel(status) {
+  const value = `${status || ""}`.toUpperCase();
+  if (value === "WARNING") return "AI 데이터 신뢰도 낮음";
+  if (value === "CAUTION") return "AI 데이터 신뢰도 주의";
+  return "AI 데이터 신뢰도 안정";
+}
+
+function driftWarningSummary(warnings = []) {
+  const messages = [];
+  const raw = warnings.map((warning) => `${warning || ""}`);
+  const has = (pattern) => raw.some((warning) => warning.includes(pattern));
+
+  if (has("gps_delta")) {
+    messages.push("최근 위치 변화량이 평소 학습 범위보다 커서 혼잡이 빠르게 변할 수 있습니다.");
+  }
+  if (has("gps_count_nearby")) {
+    messages.push("현재 주변 위치 신호가 학습 데이터보다 많아 예측을 참고용으로 표시합니다.");
+  }
+  if (has("reservation_delta") || has("reservation_count")) {
+    messages.push("예약 증가 흐름이 평소 패턴과 달라 예측 신뢰도가 낮아질 수 있습니다.");
+  }
+  if (has("checked_in")) {
+    messages.push("체크인 증가 흐름이 학습 범위와 달라 현장 확인이 필요합니다.");
+  }
+  if (has("wait")) {
+    messages.push("대기시간 변화가 평소 패턴과 달라 혼잡도가 빠르게 바뀔 수 있습니다.");
+  }
+  if (has("stage") || has("event")) {
+    messages.push("공연 일정 또는 예상 인파 조건이 학습 범위와 달라 예측을 보수적으로 봐야 합니다.");
+  }
+
+  return [...new Set(messages)].slice(0, 2);
+}
+
 function formatUpdatedAt(value) {
   if (!value) return "업데이트 대기";
   const date = new Date(value);
@@ -434,29 +468,46 @@ export default function AnalyticsPage() {
           <span>공연·부스·위치 흐름 반영</span>
         </div>
         <div className="analytics-prediction-list">
-          {aiPredictions.slice(0, 4).map((item) => (
-            <article key={item.boothId || item.boothName} className="analytics-prediction-card">
-              <div>
-                <strong>{item.boothName}</strong>
-                <p>현재 {item.currentLevel || "보통"} → 30분 뒤 {item.predictedLevel || "혼잡"}</p>
-                <span>{predictionAction(item.predictedLevel, item.riskScore)}</span>
-                {item.aiModel && (
-                  <div className="analytics-prediction-card__model">
-                    <b>{item.aiModel.modelBased ? item.aiModel.modelType || "RandomForest" : "Fallback"}</b>
-                    <em>
-                      신뢰도 {Number.isFinite(Number(item.aiModel.confidence))
-                        ? `${Math.round(Number(item.aiModel.confidence) * 100)}%`
-                        : "확인 중"}
-                    </em>
-                    {Array.isArray(item.aiModel.factors) && item.aiModel.factors.length > 0 && (
-                      <small>{item.aiModel.factors.slice(0, 2).join(" · ")}</small>
-                    )}
-                  </div>
-                )}
-              </div>
-              <small>AI 위험 점수 {Number(item.riskScore) || 0}점</small>
-            </article>
-          ))}
+          {aiPredictions.slice(0, 4).map((item) => {
+            const driftNotes = driftWarningSummary(item.aiModel?.driftWarnings);
+
+            return (
+              <article key={item.boothId || item.boothName} className="analytics-prediction-card">
+                <div>
+                  <strong>{item.boothName}</strong>
+                  <p>현재 {item.currentLevel || "보통"} → 30분 뒤 {item.predictedLevel || "혼잡"}</p>
+                  <span>{predictionAction(item.predictedLevel, item.riskScore)}</span>
+                  {item.aiModel && (
+                    <div className="analytics-prediction-card__model">
+                      <b>{item.aiModel.modelBased ? item.aiModel.modelType || "RandomForest" : "Fallback"}</b>
+                      <em>
+                        신뢰도 {Number.isFinite(Number(item.aiModel.confidence))
+                          ? `${Math.round(Number(item.aiModel.confidence) * 100)}%`
+                          : "확인 중"}
+                      </em>
+                      {item.aiModel.driftStatus && (
+                        <em className={`analytics-prediction-card__drift analytics-prediction-card__drift--${String(item.aiModel.driftStatus).toLowerCase()}`}>
+                          {driftStatusLabel(item.aiModel.driftStatus)}
+                          {Number.isFinite(Number(item.aiModel.driftScore))
+                            ? ` ${Math.round(Number(item.aiModel.driftScore) * 100)}%`
+                            : ""}
+                        </em>
+                      )}
+                      {Array.isArray(item.aiModel.factors) && item.aiModel.factors.length > 0 && (
+                        <small>{item.aiModel.factors.slice(0, 3).join(" · ")}</small>
+                      )}
+                      {driftNotes.length > 0 && (
+                        <small className="analytics-prediction-card__drift-reason">
+                          {driftNotes.join(" ")}
+                        </small>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <small>AI 위험 점수 {Number(item.riskScore) || 0}점</small>
+              </article>
+            );
+          })}
           {!aiPredictions.length && (
             FALLBACK_GUIDE_ZONES.slice(1, 3).map((zone) => (
               <article key={`fallback-${zone.zoneKey}`} className="analytics-prediction-card">

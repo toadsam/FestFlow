@@ -29,8 +29,8 @@ public class SimulationStateService {
     private static final int DEFAULT_TICK_SECONDS = 3;
     private static final int DEFAULT_JITTER_PERCENT = 12;
     private static final int MAX_PEOPLE_PER_BOOTH = 250;
-    private static final int MAX_STAGE_PEOPLE = 360;
-    private static final int STAGE_CAPACITY_HINT = 180;
+    private static final int MAX_STAGE_PEOPLE = 4000;
+    private static final int STAGE_CAPACITY_HINT = 4000;
     private static final int STAGE_RADIUS_METERS = 55;
     private static final int MAX_FLOW_EVENTS = 8;
     private static final String STAGE_ZONE_KEY = "open-air-theater";
@@ -387,10 +387,10 @@ public class SimulationStateService {
             stage.currentPeople = clamp(patch.currentPeople(), 0, MAX_STAGE_PEOPLE);
         }
         if (patch.incomingPerMinute() != null) {
-            stage.incomingPerMinute = clamp(patch.incomingPerMinute(), 0, 180);
+            stage.incomingPerMinute = clamp(patch.incomingPerMinute(), 0, 800);
         }
         if (patch.outgoingPerMinute() != null) {
-            stage.outgoingPerMinute = clamp(patch.outgoingPerMinute(), 0, 180);
+            stage.outgoingPerMinute = clamp(patch.outgoingPerMinute(), 0, 800);
         }
         stage.previousPeople = Math.min(stage.previousPeople, MAX_STAGE_PEOPLE);
         stage.incomingCarry = 0;
@@ -400,29 +400,29 @@ public class SimulationStateService {
     private void applyStageScenario(String resolved, ThreadLocalRandom random) {
         switch (resolved) {
             case "lunch-peak" -> {
-                stage.currentPeople = random.nextInt(28, 58);
-                stage.incomingPerMinute = random.nextInt(4, 10);
-                stage.outgoingPerMinute = random.nextInt(14, 28);
+                stage.currentPeople = random.nextInt(450, 900);
+                stage.incomingPerMinute = random.nextInt(60, 130);
+                stage.outgoingPerMinute = random.nextInt(120, 240);
             }
             case "show-end" -> {
-                stage.currentPeople = random.nextInt(128, 176);
-                stage.incomingPerMinute = random.nextInt(0, 4);
-                stage.outgoingPerMinute = random.nextInt(44, 78);
+                stage.currentPeople = random.nextInt(3000, 3900);
+                stage.incomingPerMinute = random.nextInt(20, 80);
+                stage.outgoingPerMinute = random.nextInt(360, 720);
             }
             case "single-booth-surge" -> {
-                stage.currentPeople = random.nextInt(42, 86);
-                stage.incomingPerMinute = random.nextInt(6, 14);
-                stage.outgoingPerMinute = random.nextInt(10, 22);
+                stage.currentPeople = random.nextInt(900, 1700);
+                stage.incomingPerMinute = random.nextInt(80, 180);
+                stage.outgoingPerMinute = random.nextInt(90, 210);
             }
             case "emergency-flow" -> {
-                stage.currentPeople = random.nextInt(18, 46);
-                stage.incomingPerMinute = random.nextInt(0, 5);
-                stage.outgoingPerMinute = random.nextInt(18, 34);
+                stage.currentPeople = random.nextInt(1200, 2600);
+                stage.incomingPerMinute = random.nextInt(0, 50);
+                stage.outgoingPerMinute = random.nextInt(280, 620);
             }
             default -> {
-                stage.currentPeople = random.nextInt(10, 28);
-                stage.incomingPerMinute = random.nextInt(2, 7);
-                stage.outgoingPerMinute = random.nextInt(2, 7);
+                stage.currentPeople = random.nextInt(180, 520);
+                stage.incomingPerMinute = random.nextInt(20, 70);
+                stage.outgoingPerMinute = random.nextInt(20, 70);
             }
         }
         stage.previousPeople = stage.currentPeople;
@@ -660,7 +660,7 @@ public class SimulationStateService {
         if (jitterPercent <= 0 || currentPeople == 0) {
             return 0;
         }
-        int max = Math.max(1, Math.min(8, (int) Math.round(currentPeople * (jitterPercent / 100.0) * 0.25)));
+        int max = Math.max(1, Math.min(80, (int) Math.round(currentPeople * (jitterPercent / 100.0) * 0.25)));
         return random.nextInt(-max, max + 1);
     }
 
@@ -692,7 +692,7 @@ public class SimulationStateService {
     }
 
     private MutableStageState defaultStageState() {
-        return new MutableStageState(24, 24, 4, 4);
+        return new MutableStageState(280, 280, 35, 35);
     }
 
     private boolean isFoodBooth(BoothResponseDto booth) {

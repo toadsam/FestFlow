@@ -9,7 +9,7 @@ const FALLBACK_ZONE = {
   zoneName: "아주대 노천극장",
   radiusMeters: 55,
   crowdCount: 0,
-  capacityHint: 180,
+  capacityHint: 4000,
   level: "여유",
 };
 
@@ -175,7 +175,7 @@ export default function StageCrowdPage() {
         <div className="stage-crowd-map-head">
           <div>
             <h2>객석 밀집도</h2>
-            <p>반경 {mainZone.radiusMeters || 55}m 기준 · 수용 기준 {mainZone.capacityHint || 180}명</p>
+            <p>반경 {mainZone.radiusMeters || 55}m 기준 · 수용 기준 {mainZone.capacityHint || 4000}명</p>
           </div>
           <span className={`stage-crowd-level stage-crowd-level--${meta.tone}`}>{meta.label}</span>
         </div>

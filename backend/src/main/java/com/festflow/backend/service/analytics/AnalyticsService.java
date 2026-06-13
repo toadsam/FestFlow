@@ -36,7 +36,7 @@ public class AnalyticsService {
     }
 
     private static final List<StageZone> STAGE_ZONES = List.of(
-            new StageZone("open-air-theater", "\uC544\uC8FC\uB300 \uB178\uCC9C\uADF9\uC7A5", 37.281785, 127.045501, 55, 180)
+            new StageZone("open-air-theater", "\uC544\uC8FC\uB300 \uB178\uCC9C\uADF9\uC7A5", 37.281785, 127.045501, 55, 4000)
     );
 
     private static final List<CrowdZone> CROWD_ZONES = List.of(

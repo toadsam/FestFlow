@@ -169,7 +169,7 @@ def build_rows(source_dir: Path, target_rows: int, seed: int) -> list[dict[str, 
         for hour in range(10, 25):
             popularity = popularity_for_day(day, hour, rng)
             is_peak = int(18 <= hour <= 22)
-            capacity = rng.randint(3000, 4000)
+            capacity = 4000
 
             if popularity == "HIGH" and is_peak:
                 stage_crowd = rng.randint(2600, 4200)
@@ -199,6 +199,10 @@ def build_rows(source_dir: Path, target_rows: int, seed: int) -> list[dict[str, 
                 }[zone]
 
                 gps_count = max(0, int(rng.gauss(gps_base * zone_factor, 7)))
+                previous_gps_5m = max(0, int(rng.gauss(gps_count - (4 if is_peak else 1), 5)))
+                previous_gps_15m = max(0, int(rng.gauss(gps_count - (8 if is_peak else 2), 7)))
+                gps_delta_5m = gps_count - previous_gps_5m
+                gps_delta_15m = gps_count - previous_gps_15m
                 base_reservations = reservation_count_by_booth.get(booth_id, 0)
                 reservation_count = max(
                     0,
@@ -210,6 +214,8 @@ def build_rows(source_dir: Path, target_rows: int, seed: int) -> list[dict[str, 
                     ),
                 )
                 checked_in_count = min(reservation_count, max(0, int(rng.gauss(checked_in_by_booth.get(booth_id, 0) + reservation_count * 0.45, 2))))
+                reservation_delta_15m = max(0, int(rng.gauss((3 if is_night_booth else 1) + reservation_count * 0.18, 2)))
+                checked_in_delta_15m = max(0, int(rng.gauss(checked_in_count * 0.22, 1.5)))
                 available_seats = max(0, int(rng.gauss(18 - reservation_count * 1.5, 4)))
 
                 wait_base = {
@@ -221,6 +227,7 @@ def build_rows(source_dir: Path, target_rows: int, seed: int) -> list[dict[str, 
                     "SAFETY": 2,
                 }[zone]
                 wait_minutes = max(0, int(rng.gauss(wait_base + gps_count * 0.28 + reservation_count * 1.2, 7)))
+                wait_delta_15m = int(rng.gauss(gps_delta_15m * 0.18 + reservation_delta_15m * 0.9 + (5 if event_soon else 0), 4))
 
                 if zone in {"PUB", "FOOD", "GOODS"}:
                     remaining_stock = max(0, int(rng.gauss(95 - hour * 2.3 - reservation_count * 2.2, 18)))
@@ -242,10 +249,15 @@ def build_rows(source_dir: Path, target_rows: int, seed: int) -> list[dict[str, 
                     "event_soon": event_soon,
                     "minutes_to_next_event": minutes_to_next_event,
                     "gps_count_nearby": gps_count,
+                    "gps_delta_5m": gps_delta_5m,
+                    "gps_delta_15m": gps_delta_15m,
                     "reservation_count": reservation_count,
+                    "reservation_delta_15m": reservation_delta_15m,
                     "checked_in_count": checked_in_count,
+                    "checked_in_delta_15m": checked_in_delta_15m,
                     "available_seats": available_seats,
                     "wait_minutes": wait_minutes,
+                    "wait_delta_15m": wait_delta_15m,
                     "remaining_stock": remaining_stock,
                     "event_count_context": event_count,
                     "data_source": "HYBRID_SIMULATED",

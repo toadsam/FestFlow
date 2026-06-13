@@ -21185,10 +21185,36 @@ body,
   color: #0f172a;
 }
 
+.analytics-prediction-card__model .analytics-prediction-card__drift {
+  padding: 0.16rem 0.45rem;
+  border-radius: 999px;
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.analytics-prediction-card__model .analytics-prediction-card__drift--normal {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.analytics-prediction-card__model .analytics-prediction-card__drift--caution {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.analytics-prediction-card__model .analytics-prediction-card__drift--warning {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
 .analytics-prediction-card__model small {
   flex-basis: 100%;
   color: #64748b;
   line-height: 1.35;
+}
+
+.analytics-prediction-card__model .analytics-prediction-card__drift-reason {
+  color: #92400e;
 }
 
 .analytics-prediction-card > small {

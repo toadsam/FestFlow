@@ -1,0 +1,199 @@
+{
+  "numeric": {
+    "scenario_day": {
+      "mean": 14.5,
+      "std": 8.0777,
+      "p05": 2.0,
+      "p95": 27.0,
+      "min": 1.0,
+      "max": 28.0
+    },
+    "hour": {
+      "mean": 17.0,
+      "std": 4.3205,
+      "p05": 10.0,
+      "p95": 24.0,
+      "min": 10.0,
+      "max": 24.0
+    },
+    "is_peak_time": {
+      "mean": 0.3333,
+      "std": 0.4714,
+      "p05": 0.0,
+      "p95": 1.0,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "artist_popularity_score": {
+      "mean": 1.7738,
+      "std": 0.7488,
+      "p05": 1.0,
+      "p95": 3.0,
+      "min": 1.0,
+      "max": 3.0
+    },
+    "stage_capacity": {
+      "mean": 4000.0,
+      "std": 0.0,
+      "p05": 4000.0,
+      "p95": 4000.0,
+      "min": 4000.0,
+      "max": 4000.0
+    },
+    "expected_stage_crowd": {
+      "mean": 1168.7429,
+      "std": 971.028,
+      "p05": 201.85,
+      "p95": 3290.55,
+      "min": 120.0,
+      "max": 4189.0
+    },
+    "stage_load_ratio": {
+      "mean": 0.2922,
+      "std": 0.2427,
+      "p05": 0.051,
+      "p95": 0.8231,
+      "min": 0.03,
+      "max": 1.047
+    },
+    "is_night_booth": {
+      "mean": 0.1556,
+      "std": 0.3624,
+      "p05": 0.0,
+      "p95": 1.0,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "event_soon": {
+      "mean": 0.0556,
+      "std": 0.2291,
+      "p05": 0.0,
+      "p95": 1.0,
+      "min": 0.0,
+      "max": 1.0
+    },
+    "minutes_to_next_event": {
+      "mean": 153.8393,
+      "std": 160.0472,
+      "p05": 0.0,
+      "p95": 480.0,
+      "min": 0.0,
+      "max": 480.0
+    },
+    "gps_count_nearby": {
+      "mean": 27.8385,
+      "std": 17.2603,
+      "p05": 7.0,
+      "p95": 64.0,
+      "min": 0.0,
+      "max": 96.0
+    },
+    "gps_delta_5m": {
+      "mean": 2.5956,
+      "std": 5.0989,
+      "p05": -6.0,
+      "p95": 11.0,
+      "min": -14.0,
+      "max": 19.0
+    },
+    "gps_delta_15m": {
+      "mean": 4.3103,
+      "std": 7.3198,
+      "p05": -7.0,
+      "p95": 16.0,
+      "min": -22.0,
+      "max": 32.0
+    },
+    "reservation_count": {
+      "mean": 3.5163,
+      "std": 3.6317,
+      "p05": 0.0,
+      "p95": 11.0,
+      "min": 0.0,
+      "max": 21.0
+    },
+    "reservation_delta_15m": {
+      "mean": 1.8365,
+      "std": 1.922,
+      "p05": 0.0,
+      "p95": 6.0,
+      "min": 0.0,
+      "max": 11.0
+    },
+    "checked_in_count": {
+      "mean": 1.4567,
+      "std": 2.0563,
+      "p05": 0.0,
+      "p95": 6.0,
+      "min": 0.0,
+      "max": 12.0
+    },
+    "checked_in_delta_15m": {
+      "mean": 0.5294,
+      "std": 0.8765,
+      "p05": 0.0,
+      "p95": 2.0,
+      "min": 0.0,
+      "max": 5.0
+    },
+    "available_seats": {
+      "mean": 12.4889,
+      "std": 6.2953,
+      "p05": 0.0,
+      "p95": 22.0,
+      "min": 0.0,
+      "max": 30.0
+    },
+    "wait_minutes": {
+      "mean": 22.0079,
+      "std": 12.3409,
+      "p05": 3.0,
+      "p95": 44.0,
+      "min": 0.0,
+      "max": 62.0
+    },
+    "wait_delta_15m": {
+      "mean": 2.4643,
+      "std": 4.4673,
+      "p05": -4.0,
+      "p95": 10.0,
+      "min": -12.0,
+      "max": 23.0
+    },
+    "remaining_stock": {
+      "mean": 75.2948,
+      "std": 36.8498,
+      "p05": 16.95,
+      "p95": 136.0,
+      "min": 0.0,
+      "max": 177.0
+    },
+    "event_count_context": {
+      "mean": 18.0,
+      "std": 0.0,
+      "p05": 18.0,
+      "p95": 18.0,
+      "min": 18.0,
+      "max": 18.0
+    }
+  },
+  "categorical": {
+    "zone_type": [
+      "EXPERIENCE",
+      "FOOD",
+      "GOODS",
+      "PUB",
+      "SAFETY",
+      "STAGE"
+    ],
+    "artist_popularity": [
+      "HIGH",
+      "LOW",
+      "MEDIUM"
+    ]
+  },
+  "drift_policy": {
+    "normal_max_score": 0.15,
+    "caution_max_score": 0.35
+  }
+}

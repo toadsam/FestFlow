@@ -7,6 +7,8 @@ import com.festflow.backend.dto.BoothResponseDto;
 import com.festflow.backend.dto.CongestionResponseDto;
 import com.festflow.backend.dto.EventResponseDto;
 import com.festflow.backend.entity.ReservationStatus;
+import com.festflow.backend.repository.BoothReservationRepository;
+import com.festflow.backend.repository.GpsLogRepository;
 import com.festflow.backend.service.FestivalSnapshotService.FestivalSnapshot;
 import org.springframework.stereotype.Service;
 
@@ -24,15 +26,21 @@ public class AiCongestionService {
     private final FestivalSnapshotService snapshotService;
     private final AiDecisionLogService decisionLogService;
     private final PythonCongestionModelService pythonCongestionModelService;
+    private final GpsLogRepository gpsLogRepository;
+    private final BoothReservationRepository boothReservationRepository;
 
     public AiCongestionService(
             FestivalSnapshotService snapshotService,
             AiDecisionLogService decisionLogService,
-            PythonCongestionModelService pythonCongestionModelService
+            PythonCongestionModelService pythonCongestionModelService,
+            GpsLogRepository gpsLogRepository,
+            BoothReservationRepository boothReservationRepository
     ) {
         this.snapshotService = snapshotService;
         this.decisionLogService = decisionLogService;
         this.pythonCongestionModelService = pythonCongestionModelService;
+        this.gpsLogRepository = gpsLogRepository;
+        this.boothReservationRepository = boothReservationRepository;
     }
 
     public AiFestivalGuideDto guide() {
@@ -145,7 +153,8 @@ public class AiCongestionService {
 
         int predictedScore = Math.min(100, riskScore + (eventSoon ? 8 : 0) + (activeReservations >= 2 ? 5 : 0));
         String fallbackPredictedLevel = displayPredictedLevel(predictedScore);
-        List<String> modelFactors = modelFactors(booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon);
+        TemporalFeatures temporal = temporalFeatures(snapshot, booth, eventSoon);
+        List<String> modelFactors = modelFactors(booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon, temporal);
         AiModelPredictionDto aiModel = modelPrediction != null
                 ? modelPrediction
                 : AiModelPredictionDto.fallback(fallbackPredictedLevel, modelFactors, "MODEL_UNAVAILABLE");
@@ -160,7 +169,7 @@ public class AiCongestionService {
                 booth.name(),
                 booth.category(),
                 congestion == null ? "UNKNOWN" : congestion.level(),
-                predictedLevel(predictedScore),
+                finalPredictedLevel,
                 riskLevel(riskScore),
                 riskScore,
                 crowdCount,
@@ -185,15 +194,53 @@ public class AiCongestionService {
                     int availableSeats = value(booth.reservationAvailableSeats());
                     int waitMinutes = value(booth.estimatedWaitMinutes());
                     int remainingStock = booth.remainingStock() == null ? 99 : Math.max(0, booth.remainingStock());
-                    List<String> factors = modelFactors(booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon);
+                    TemporalFeatures temporal = temporalFeatures(snapshot, booth, eventSoon);
+                    List<String> factors = modelFactors(booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon, temporal);
                     return new PythonCongestionModelService.ModelPredictionRequest(
                             booth.id(),
-                            modelFeatures(snapshot, booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon),
+                            modelFeatures(snapshot, booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon, temporal),
                             factors
                     );
                 })
                 .toList();
         return pythonCongestionModelService.predictBatch(requests);
+    }
+
+    private TemporalFeatures temporalFeatures(FestivalSnapshot snapshot, BoothResponseDto booth, boolean eventSoon) {
+        LocalDateTime now = snapshot.capturedAt();
+        int currentGps5m = gpsNearbyBetween(booth, now.minusMinutes(5), now);
+        int previousGps5m = gpsNearbyBetween(booth, now.minusMinutes(10), now.minusMinutes(5));
+        int currentGps15m = gpsNearbyBetween(booth, now.minusMinutes(15), now);
+        int previousGps15m = gpsNearbyBetween(booth, now.minusMinutes(30), now.minusMinutes(15));
+        int reservationDelta15m = (int) boothReservationRepository.countByBoothIdAndReservedAtBetween(
+                booth.id(),
+                now.minusMinutes(15),
+                now
+        );
+        int checkedInDelta15m = (int) boothReservationRepository.countByBoothIdAndCheckedInAtBetween(
+                booth.id(),
+                now.minusMinutes(15),
+                now
+        );
+        int waitDelta15m = (int) Math.round(
+                ((currentGps15m - previousGps15m) * 0.2)
+                        + (reservationDelta15m * 0.9)
+                        + (eventSoon ? 5 : 0)
+        );
+        return new TemporalFeatures(
+                currentGps5m - previousGps5m,
+                currentGps15m - previousGps15m,
+                reservationDelta15m,
+                checkedInDelta15m,
+                waitDelta15m
+        );
+    }
+
+    private int gpsNearbyBetween(BoothResponseDto booth, LocalDateTime from, LocalDateTime to) {
+        return (int) gpsLogRepository.findByCreatedAtAfter(from).stream()
+                .filter(log -> log.getCreatedAt() != null && !log.getCreatedAt().isBefore(from) && log.getCreatedAt().isBefore(to))
+                .filter(log -> distanceInMeters(booth.latitude(), booth.longitude(), log.getLatitude(), log.getLongitude()) <= 80.0)
+                .count();
     }
 
     private Map<String, Object> modelFeatures(
@@ -205,10 +252,11 @@ public class AiCongestionService {
             int availableSeats,
             int waitMinutes,
             int remainingStock,
-            boolean eventSoon
+            boolean eventSoon,
+            TemporalFeatures temporal
     ) {
         int hour = snapshot.capturedAt().getHour();
-        int stageCapacity = 3500;
+        int stageCapacity = 4000;
         String artistPopularity = artistPopularity(snapshot.events(), snapshot.capturedAt(), eventSoon);
         int expectedStageCrowd = expectedStageCrowd(hour, artistPopularity, eventSoon);
 
@@ -224,10 +272,15 @@ public class AiCongestionService {
         features.put("event_soon", eventSoon ? 1 : 0);
         features.put("minutes_to_next_event", minutesToNextEvent(snapshot.events(), snapshot.capturedAt()));
         features.put("gps_count_nearby", crowdCount);
+        features.put("gps_delta_5m", temporal.gpsDelta5m());
+        features.put("gps_delta_15m", temporal.gpsDelta15m());
         features.put("reservation_count", (int) activeReservations);
+        features.put("reservation_delta_15m", temporal.reservationDelta15m());
         features.put("checked_in_count", (int) checkedInReservations);
+        features.put("checked_in_delta_15m", temporal.checkedInDelta15m());
         features.put("available_seats", availableSeats);
         features.put("wait_minutes", waitMinutes);
+        features.put("wait_delta_15m", temporal.waitDelta15m());
         features.put("remaining_stock", remainingStock);
         features.put("event_count_context", snapshot.events().size());
         features.put("zone_type", zoneType(booth));
@@ -243,11 +296,15 @@ public class AiCongestionService {
             int availableSeats,
             int waitMinutes,
             int remainingStock,
-            boolean eventSoon
+            boolean eventSoon,
+            TemporalFeatures temporal
     ) {
         List<String> factors = new ArrayList<>();
         factors.add("GPS 추정 인원 " + crowdCount + "명");
         factors.add("대기 시간 " + waitMinutes + "분");
+        factors.add("GPS 변화량 5분 " + signed(temporal.gpsDelta5m()) + " / 15분 " + signed(temporal.gpsDelta15m()));
+        factors.add("예약 증가 15분 +" + temporal.reservationDelta15m() + "건 / 체크인 증가 +" + temporal.checkedInDelta15m() + "건");
+        factors.add("추정 대기 변화 15분 " + signed(temporal.waitDelta15m()) + "분");
         if (Boolean.TRUE.equals(booth.reservationEnabled())) {
             factors.add("예약 " + activeReservations + "건 / 체크인 " + checkedInReservations + "건");
             factors.add("예약 가능 좌석 " + availableSeats + "석");
@@ -469,8 +526,8 @@ public class AiCongestionService {
             return eventSoon ? 1100 : 450;
         }
         return switch (artistPopularity) {
-            case "HIGH" -> 3300;
-            case "MEDIUM" -> 2200;
+            case "HIGH" -> 3800;
+            case "MEDIUM" -> 2500;
             default -> 900;
         };
     }
@@ -486,6 +543,21 @@ public class AiCongestionService {
 
     private String normalize(String value) {
         return value == null ? "" : value.trim().toLowerCase();
+    }
+
+    private String signed(int value) {
+        return value >= 0 ? "+" + value : String.valueOf(value);
+    }
+
+    private double distanceInMeters(double lat1, double lon1, double lat2, double lon2) {
+        double earthRadius = 6_371_000;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return earthRadius * c;
     }
 
     private String displayPredictedLevel(int score) {
@@ -530,5 +602,14 @@ public class AiCongestionService {
 
     private int value(Integer value) {
         return value == null ? 0 : Math.max(0, value);
+    }
+
+    private record TemporalFeatures(
+            int gpsDelta5m,
+            int gpsDelta15m,
+            int reservationDelta15m,
+            int checkedInDelta15m,
+            int waitDelta15m
+    ) {
     }
 }
