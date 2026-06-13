@@ -146,15 +146,22 @@ public class PythonCongestionModelService {
         Object rawLevelValue = result.containsKey("predictedLevel") ? result.get("predictedLevel") : "NORMAL";
         String rawLevel = String.valueOf(rawLevelValue);
         Double confidence = asDouble(result.get("confidence"));
+        Object driftStatusValue = result.containsKey("driftStatus") ? result.get("driftStatus") : "UNKNOWN";
+        String driftStatus = String.valueOf(driftStatusValue);
+        Double driftScore = asDouble(result.get("driftScore"));
+        List<String> driftWarnings = asStringList(result.get("driftWarnings"));
         Object modelTypeValue = result.containsKey("modelType") ? result.get("modelType") : "RandomForest";
         return Optional.of(new PredictionResult(
                 id,
                 new AiModelPredictionDto(
                         String.valueOf(modelTypeValue),
                         rawLevel,
-                        displayLevel(rawLevel),
+                        displayLevelStable(rawLevel),
                         confidence,
                         true,
+                        driftStatus,
+                        driftScore,
+                        driftWarnings,
                         request.factors(),
                         null
                 )
@@ -227,6 +234,25 @@ public class PythonCongestionModelService {
             }
         }
         return null;
+    }
+
+    private List<String> asStringList(Object value) {
+        if (value instanceof List<?> list) {
+            return list.stream()
+                    .map(String::valueOf)
+                    .toList();
+        }
+        return List.of();
+    }
+
+    private static String displayLevelStable(String rawLevel) {
+        return switch (String.valueOf(rawLevel).toUpperCase()) {
+            case "LOW" -> "\uC5EC\uC720";
+            case "NORMAL" -> "\uBCF4\uD1B5";
+            case "BUSY" -> "\uD63C\uC7A1";
+            case "VERY_BUSY" -> "\uB9E4\uC6B0 \uD63C\uC7A1";
+            default -> String.valueOf(rawLevel);
+        };
     }
 
     public static String displayLevel(String rawLevel) {

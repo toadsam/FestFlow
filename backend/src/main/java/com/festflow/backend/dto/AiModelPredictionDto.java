@@ -8,6 +8,9 @@ public record AiModelPredictionDto(
         String displayPredictedLevel,
         Double confidence,
         boolean modelBased,
+        String driftStatus,
+        Double driftScore,
+        List<String> driftWarnings,
         List<String> factors,
         String error
 ) {
@@ -18,6 +21,9 @@ public record AiModelPredictionDto(
                 displayPredictedLevel,
                 null,
                 false,
+                "UNKNOWN",
+                null,
+                List.of(),
                 factors,
                 error
         );

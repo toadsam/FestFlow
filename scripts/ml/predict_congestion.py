@@ -28,6 +28,60 @@ def normalize_row(payload: dict, features: list[str]) -> dict:
     return {feature: row.get(feature, 0) for feature in features}
 
 
+def drift_check(row: dict, model_payload: dict) -> dict:
+    profile = model_payload.get("training_profile") or {}
+    numeric_profile = profile.get("numeric") or {}
+    categorical_profile = profile.get("categorical") or {}
+    policy = profile.get("drift_policy") or {}
+    normal_max = float(policy.get("normal_max_score", 0.15))
+    caution_max = float(policy.get("caution_max_score", 0.35))
+
+    checks = 0
+    drift_points = 0.0
+    warnings = []
+
+    for feature, stats in numeric_profile.items():
+        if feature not in row:
+            continue
+        try:
+            value = float(row[feature])
+        except (TypeError, ValueError):
+            continue
+        checks += 1
+        p05 = float(stats.get("p05", value))
+        p95 = float(stats.get("p95", value))
+        min_value = float(stats.get("min", p05))
+        max_value = float(stats.get("max", p95))
+        if value < min_value or value > max_value:
+            drift_points += 1.0
+            warnings.append(f"{feature}={value:g} is outside training range [{min_value:g}, {max_value:g}]")
+        elif value < p05 or value > p95:
+            drift_points += 0.45
+            warnings.append(f"{feature}={value:g} is outside typical training band [{p05:g}, {p95:g}]")
+
+    for feature, allowed_values in categorical_profile.items():
+        if feature not in row:
+            continue
+        checks += 1
+        value = str(row[feature])
+        if value not in allowed_values:
+            drift_points += 1.0
+            warnings.append(f"{feature}={value} was not seen during training")
+
+    score = round(drift_points / max(1, checks), 4)
+    if score <= normal_max:
+        status = "NORMAL"
+    elif score <= caution_max:
+        status = "CAUTION"
+    else:
+        status = "WARNING"
+    return {
+        "driftStatus": status,
+        "driftScore": score,
+        "driftWarnings": warnings[:4],
+    }
+
+
 def predict_one(pipeline, model_payload: dict, row: dict) -> dict:
     frame = pd.DataFrame([row], columns=model_payload["features"])
     prediction = str(pipeline.predict(frame)[0])
@@ -45,6 +99,7 @@ def predict_one(pipeline, model_payload: dict, row: dict) -> dict:
         "predictedLevel": prediction,
         "confidence": confidence,
         "probabilities": probabilities,
+        **drift_check(row, model_payload),
     }
 
 
@@ -70,6 +125,7 @@ def predict_many(pipeline, model_payload: dict, items: list[dict]) -> list[dict]
             "predictedLevel": predictions[index],
             "confidence": max(probabilities.values()) if probabilities else None,
             "id": item.get("id"),
+            **drift_check(rows[index], model_payload),
         })
     return results
 
