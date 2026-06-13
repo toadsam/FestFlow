@@ -9,7 +9,7 @@ from docx.oxml.ns import qn
 from docx.shared import Inches, Pt, RGBColor
 
 
-OUTPUT_PATH = Path("exports/ml/FestFlow_ai_future_extension_report.docx")
+OUTPUT_PATH = Path("exports/ml/페스트플로우_인공지능_고도화_확장_제안서.docx")
 
 
 def set_cell_shading(cell, fill: str) -> None:

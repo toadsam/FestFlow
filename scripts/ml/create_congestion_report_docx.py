@@ -320,7 +320,7 @@ def build_report(output_dir: Path, docx_path: Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Create a DOCX report for FestFlow congestion ML results.")
     parser.add_argument("--output-dir", type=Path, default=Path("exports/ml"))
-    parser.add_argument("--docx", type=Path, default=Path("exports/ml/FestFlow_congestion_ai_report.docx"))
+    parser.add_argument("--docx", type=Path, default=Path("exports/ml/페스트플로우_혼잡도_인공지능_예측_보고서.docx"))
     args = parser.parse_args()
     build_report(args.output_dir, args.docx)
     print(f"Report written to {args.docx}")

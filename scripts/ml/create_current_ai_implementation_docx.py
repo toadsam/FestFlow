@@ -10,7 +10,7 @@ from docx.shared import Inches, Pt, RGBColor
 
 
 ROOT = Path(__file__).resolve().parents[2]
-OUTPUT_PATH = ROOT / "exports" / "ml" / "FestFlow_current_ai_implementation_report.docx"
+OUTPUT_PATH = ROOT / "exports" / "ml" / "페스트플로우_현재_인공지능_구현_전체_설명서.docx"
 
 FONT = "Malgun Gothic"
 BLUE = "1F4D78"
@@ -205,7 +205,7 @@ def add_cover(doc):
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
     set_paragraph_spacing(p, after=4)
-    add_run(p, "FestFlow", bold=True, color=BLUE, size=14)
+    add_run(p, "페스트플로우 현재 인공지능 구현 전체 설명서", bold=True, color=BLUE, size=14)
 
     title = doc.add_paragraph()
     set_paragraph_spacing(title, before=20, after=8)
@@ -229,6 +229,7 @@ def add_cover(doc):
             ["핵심 AI", "RandomForest 기반 혼잡도 분류 모델"],
             ["실제 노출 화면", "프론트엔드 /analytics 페이지의 30분 혼잡도 예측 카드"],
             ["주의", "XGBoost는 비교 실험용이며 현재 서버 실시간 추론에는 RandomForest 모델만 연결"],
+            ["배포 보완", "Python 실행 실패 시 Java Portable RandomForest가 random_forest_congestion_model.json을 직접 읽어 추론"],
         ],
         [2200, 7160],
         LIGHT_BLUE,
@@ -242,18 +243,19 @@ def add_current_scope(doc):
     add_callout(
         doc,
         "핵심 결론",
-        "현재 FestFlow에는 단순 규칙 기반 표시만 있는 것이 아니라, 학습된 RandomForest 모델 파일을 Spring Boot 서버가 Python 추론 스크립트를 통해 직접 불러와 API 응답에 포함하는 구조가 들어가 있습니다.",
+        "현재 FestFlow에는 단순 규칙 기반 표시만 있는 것이 아니라, 학습된 RandomForest 모델을 Spring Boot 서버가 실제 API 응답에 연결하는 구조가 들어가 있습니다. 기본적으로 Python 추론 스크립트를 호출하고, 배포 환경에서 Python 실행이 실패하면 Java Portable RandomForest가 portable JSON 모델을 직접 읽어 추론하도록 보완했습니다.",
         GREEN,
     )
     add_table(
         doc,
         ["구분", "현재 상태", "설명"],
         [
-            ["RandomForest 혼잡도 예측", "실제 적용", "저장된 .pkl 모델을 서버가 호출하여 부스별 혼잡도를 예측"],
+            ["RandomForest 혼잡도 예측", "실제 적용", "저장된 .pkl 또는 portable .json 모델을 서버가 호출하여 부스별 혼잡도를 예측"],
             ["XGBoost", "비교 실험", "학습/평가 결과는 있지만 현재 운영 API의 실시간 추론 모델은 아님"],
             ["규칙 기반 혼잡도", "비교 기준", "기존 휴리스틱 방식과 AI 모델 성능을 비교하기 위한 baseline"],
             ["시간 변화 feature", "실제 적용", "최근 GPS 변화량, 예약 변화량, 체크인 변화량, 대기시간 변화량을 feature로 사용"],
             ["Drift 감지", "실제 적용", "현재 입력값이 학습 데이터 분포에서 얼마나 벗어났는지 점수와 경고로 표시"],
+            ["Java Portable RandomForest 추론", "실제 적용", "배포 서버에 Python 패키지가 없어도 RandomForest JSON 모델로 추론 가능"],
             ["LSTM/GNN/온라인 러닝", "미구현", "문서화된 향후 확장 방향이며 현재 기능에는 포함되지 않음"],
         ],
         [2200, 1700, 5460],
@@ -293,7 +295,7 @@ def add_dataset_section(doc):
         ["booth_id", "숫자", "부스 식별자. 실제 API에서는 부스별 예측 결과를 연결하는 기준"],
         ["artist_popularity", "범주", "LOW, MEDIUM, HIGH 등 공연자 인기 수준"],
         ["artist_popularity_score", "숫자", "인기 수준을 모델이 처리할 수 있도록 숫자로 바꾼 값"],
-        ["stage_capacity", "숫자", "노천극장 최대 수용 가능 인원. 현재 기준은 4,000명"],
+        ["stage_capacity", "숫자", "노천극장 최대 수용 가능 인원. 현재 기준은 4,000명이며 발표에서는 노천극장 최대 수용 인원 4000명으로 설명"],
         ["expected_stage_crowd", "숫자", "공연 시간과 인기 가수 여부를 반영한 예상 무대 인파"],
         ["stage_load_ratio", "숫자", "expected_stage_crowd / stage_capacity. 무대 포화 정도"],
         ["is_night_booth", "0/1", "공연 외 시간대에 야간 부스 쪽으로 사람이 몰리는 상황 여부"],
@@ -330,9 +332,9 @@ def add_model_section(doc):
         doc,
         ["모델", "Accuracy", "Macro F1", "현재 역할"],
         [
-            ["규칙 기반 baseline", "0.6810", "0.6436", "기존 방식 비교 기준"],
-            ["RandomForest", "0.7873", "0.7708", "현재 서버 실시간 추론에 실제 적용"],
-            ["XGBoost", "0.8127", "0.7869", "성능 비교용. 현재 운영 API에는 미연결"],
+            ["규칙 기반 baseline", "0.7270", "0.7047", "기존 방식 비교 기준"],
+            ["RandomForest", "0.7984", "0.7853", "현재 서버 실시간 추론에 실제 적용"],
+            ["XGBoost", "0.8143", "0.7971", "성능 비교용. 현재 운영 API에는 미연결"],
         ],
         [2600, 1600, 1600, 3960],
         LIGHT_BLUE,
@@ -360,19 +362,20 @@ def add_inference_section(doc):
     doc.add_heading("4. 서버 실시간 추론 구조", level=1)
     add_number(doc, "프론트엔드가 /api/ai/congestion/predictions API를 요청합니다.")
     add_number(doc, "Spring Boot의 AiCongestionService가 부스, GPS, 예약, 체크인, 이벤트 데이터를 모아 모델 입력 feature를 구성합니다.")
-    add_number(doc, "PythonCongestionModelService가 임시 JSON 파일을 만들고 scripts/ml/predict_congestion.py를 실행합니다.")
-    add_number(doc, "Python 스크립트가 exports/ml/models/random_forest_congestion_model.pkl 모델 파일을 로드합니다.")
-    add_number(doc, "모델이 부스별 predictedLevel, confidence, driftStatus, driftScore, driftWarnings를 계산합니다.")
+    add_number(doc, "PythonCongestionModelService가 우선 scripts/ml/predict_congestion.py를 실행해 .pkl 모델 추론을 시도합니다.")
+    add_number(doc, "Python 실행, 패키지, 모델 경로 문제로 실패하면 Java가 random_forest_congestion_model.json을 직접 로드해 RandomForest 트리를 순회합니다.")
+    add_number(doc, "두 경로 모두 predictedLevel, confidence, driftStatus, driftScore, driftWarnings를 계산합니다.")
     add_number(doc, "백엔드는 이 결과를 AiModelPredictionDto와 AiBoothRecommendationDto에 담아 프론트엔드로 반환합니다.")
 
     add_table(
         doc,
         ["구성요소", "역할"],
         [
-            ["PythonCongestionModelService.java", "Spring Boot에서 Python 추론 프로세스를 실행하고 결과 JSON을 읽음"],
+            ["PythonCongestionModelService.java", "Python 추론을 먼저 시도하고 실패 시 Java Portable RandomForest 추론 수행"],
             ["AiCongestionService.java", "현재 운영 데이터를 모델 feature로 변환하고 AI 예측 응답을 조립"],
-            ["predict_congestion.py", "저장된 RandomForest 모델을 로드해 실제 예측 수행"],
-            ["random_forest_congestion_model.pkl", "학습이 완료된 실제 모델 파일"],
+            ["predict_congestion.py", "저장된 RandomForest .pkl 모델을 로드해 Python 기반 예측 수행"],
+            ["random_forest_congestion_model.pkl", "학습이 완료된 Python/scikit-learn 모델 파일"],
+            ["random_forest_congestion_model.json", "Java 서버가 직접 읽을 수 있는 Java Portable RandomForest 모델 파일"],
             ["congestion_training_profile.json", "drift 감지를 위한 학습 데이터 분포 정보"],
         ],
         [3600, 5760],
@@ -383,14 +386,23 @@ def add_inference_section(doc):
         doc,
         ["항목", "현재 기본값 또는 설명"],
         [
-            ["Python 실행 파일", "../.venv-ml/Scripts/python.exe"],
-            ["추론 스크립트", "../scripts/ml/predict_congestion.py"],
-            ["모델 파일", "../exports/ml/models/random_forest_congestion_model.pkl"],
+            ["Python 실행 파일", "APP_ML_PYTHON_COMMAND 또는 기본값 python3"],
+            ["Python 추론 스크립트", "APP_ML_CONGESTION_PREDICT_SCRIPT 또는 ./scripts/ml/predict_congestion.py"],
+            ["Python 모델 파일", "APP_ML_CONGESTION_MODEL_PATH 또는 ./exports/ml/models/random_forest_congestion_model.pkl"],
+            ["Java Portable RandomForest 모델 파일", "APP_ML_CONGESTION_PORTABLE_MODEL_PATH 또는 ./exports/ml/models/random_forest_congestion_model.json"],
             ["타임아웃", "20,000 ms"],
-            ["주의점", "서버 배포 환경에도 Python, scikit-learn, joblib 등 requirements-ml.txt 의존성이 필요"],
+            ["주의점", "Python 환경이 없어도 portable JSON 모델이 있으면 Java Portable RandomForest 추론으로 Fallback 표시를 피할 수 있음"],
         ],
         [2600, 6760],
         LIGHT_BLUE,
+    )
+
+    doc.add_heading("4.2 배포 환경에서 Fallback을 줄인 방식", level=2)
+    add_callout(
+        doc,
+        "배포 안정성 보완",
+        "초기 배포에서는 Python 경로 또는 패키지 의존성 문제로 RandomForest 대신 Fallback이 표시될 수 있었습니다. 현재는 학습 스크립트가 scikit-learn .pkl과 함께 portable JSON 모델을 생성하고, 백엔드가 Python 호출 실패 시 이 JSON 모델을 Java Portable RandomForest 코드로 직접 추론합니다. 따라서 배포 환경에 Python이 완전하게 준비되지 않아도 실제 AI 예측 결과를 반환할 수 있습니다.",
+        GREEN,
     )
 
 
@@ -409,7 +421,7 @@ def add_api_front_section(doc):
             ["driftScore", "현재 입력이 학습 분포에서 벗어난 정도"],
             ["driftWarnings", "분포 이탈 원인 설명 목록"],
             ["factors", "예측에 영향을 준 주요 요인 설명"],
-            ["error", "Python 추론 실패 시 오류 메시지"],
+            ["error", "Python/Java 모델 추론이 모두 실패했을 때의 오류 메시지"],
         ],
         [2800, 6560],
     )
@@ -476,7 +488,8 @@ def add_runbook_section(doc):
         [
             ["데이터셋 생성", ".venv-ml\\Scripts\\python.exe scripts\\ml\\build_congestion_dataset.py"],
             ["모델 학습/비교", ".venv-ml\\Scripts\\python.exe scripts\\ml\\train_congestion_models.py"],
-            ["단일/배치 예측", ".venv-ml\\Scripts\\python.exe scripts\\ml\\predict_congestion.py"],
+            ["Python 단일/배치 예측", ".venv-ml\\Scripts\\python.exe scripts\\ml\\predict_congestion.py"],
+            ["배포 모델 확인", "exports\\ml\\models\\random_forest_congestion_model.json 존재 여부 확인"],
             ["백엔드 컴파일 확인", "backend\\gradlew.bat compileJava"],
             ["프론트엔드 빌드 확인", "cd frontend && npm run build"],
         ],
@@ -489,13 +502,14 @@ def add_runbook_section(doc):
         ["파일", "역할"],
         [
             ["scripts/ml/build_congestion_dataset.py", "AI 학습용 혼잡도 데이터셋 생성"],
-            ["scripts/ml/train_congestion_models.py", "RandomForest/XGBoost 학습과 비교 평가"],
+            ["scripts/ml/train_congestion_models.py", "RandomForest/XGBoost 학습, .pkl 및 portable .json 모델 생성"],
             ["scripts/ml/predict_congestion.py", "저장된 RandomForest 모델을 로드해 예측 실행"],
             ["exports/ml/congestion_training_dataset.csv", "학습 데이터셋"],
             ["exports/ml/model_comparison.csv", "모델별 성능 비교 결과"],
-            ["exports/ml/models/random_forest_congestion_model.pkl", "실제 서버 추론에 사용되는 모델 파일"],
+            ["exports/ml/models/random_forest_congestion_model.pkl", "Python 추론에 사용되는 scikit-learn 모델 파일"],
+            ["exports/ml/models/random_forest_congestion_model.json", "배포 안정성을 위한 Java 직접 추론 모델 파일"],
             ["exports/ml/models/congestion_training_profile.json", "drift 감지용 학습 분포 프로파일"],
-            ["backend/src/main/java/com/festflow/backend/service/PythonCongestionModelService.java", "Spring Boot에서 Python 모델 추론 호출"],
+            ["backend/src/main/java/com/festflow/backend/service/PythonCongestionModelService.java", "Python 모델 추론 및 Java Portable RandomForest 모델 추론 처리"],
             ["backend/src/main/java/com/festflow/backend/service/AiCongestionService.java", "AI feature 구성과 예측 응답 생성"],
             ["frontend/src/pages/AnalyticsPage.jsx", "AI 예측 카드와 drift 정보 화면 표시"],
         ],
@@ -508,7 +522,7 @@ def add_presentation_script(doc):
     add_callout(
         doc,
         "발표용 설명",
-        "처음에는 대기 인원, 예약 수, 체크인 수, 시간대 등을 단순 규칙으로 계산했지만, AI 활용도가 부족하다고 판단해서 같은 정보를 feature로 정리하고 RandomForest 모델을 학습시켰습니다. 현재는 학습된 모델 파일을 백엔드가 직접 호출해 부스별 30분 혼잡도를 예측하고, 프론트엔드 분석 화면에 모델명, 신뢰도, drift 상태까지 함께 표시합니다. XGBoost도 비교 실험을 했지만, 운영 안정성과 설명 가능성을 고려해 현재 실시간 추론에는 RandomForest를 먼저 연결했습니다.",
+        "처음에는 대기 인원, 예약 수, 체크인 수, 시간대 등을 단순 규칙으로 계산했지만, AI 활용도가 부족하다고 판단해서 같은 정보를 feature로 정리하고 RandomForest 모델을 학습시켰습니다. 현재는 학습된 모델을 백엔드가 실제 API에서 호출해 부스별 30분 혼잡도를 예측하고, 프론트엔드 분석 화면에 모델명, 신뢰도, drift 상태까지 함께 표시합니다. 또한 배포 환경에서 Python 의존성 문제로 Fallback이 뜨지 않도록 Java가 직접 읽는 Java Portable RandomForest JSON 모델까지 추가했습니다. 노천극장 최대 수용 인원은 4000명 기준으로 데이터와 예측 feature에 반영했습니다. XGBoost도 비교 실험을 했지만, 운영 안정성과 설명 가능성을 고려해 현재 실시간 추론에는 RandomForest를 먼저 연결했습니다.",
         GREEN,
     )
 
