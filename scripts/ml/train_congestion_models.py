@@ -144,6 +144,42 @@ def write_random_forest_model(rf_pipeline: Pipeline, training_profile: dict, out
         "training_profile": training_profile,
     }
     joblib.dump(payload, models_dir / "random_forest_congestion_model.pkl")
+    write_portable_random_forest_model(rf_pipeline, training_profile, models_dir)
+
+
+def write_portable_random_forest_model(rf_pipeline: Pipeline, training_profile: dict, models_dir: Path) -> None:
+    preprocessor = rf_pipeline.named_steps["preprocess"]
+    model = rf_pipeline.named_steps["model"]
+    encoder = preprocessor.named_transformers_["category"]
+    categorical_values = {
+        feature: [str(value) for value in values]
+        for feature, values in zip(CATEGORICAL_FEATURES, encoder.categories_)
+    }
+    trees = []
+    for estimator in model.estimators_:
+        tree = estimator.tree_
+        trees.append({
+            "children_left": tree.children_left.tolist(),
+            "children_right": tree.children_right.tolist(),
+            "feature": tree.feature.tolist(),
+            "threshold": [float(value) for value in tree.threshold.tolist()],
+            "value": tree.value[:, 0, :].tolist(),
+        })
+    payload = {
+        "model_type": "RandomForest",
+        "features": FEATURES,
+        "numeric_features": NUMERIC_FEATURES,
+        "categorical_features": CATEGORICAL_FEATURES,
+        "categorical_values": categorical_values,
+        "transformed_features": preprocessor.get_feature_names_out().tolist(),
+        "labels": [str(label) for label in model.classes_],
+        "training_profile": training_profile,
+        "trees": trees,
+    }
+    (models_dir / "random_forest_congestion_model.json").write_text(
+        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+        encoding="utf-8",
+    )
 
 
 def metric_row(model_name: str, y_true: pd.Series, y_pred: list[str], notes: str) -> dict[str, str | float]:
