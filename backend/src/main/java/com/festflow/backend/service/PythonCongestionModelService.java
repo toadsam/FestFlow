@@ -35,9 +35,9 @@ public class PythonCongestionModelService {
     public PythonCongestionModelService(
             ObjectMapper objectMapper,
             @Value("${app.ml.congestion.enabled:true}") boolean enabled,
-            @Value("${app.ml.python-command:../.venv-ml/Scripts/python.exe}") String pythonCommand,
-            @Value("${app.ml.congestion.predict-script:../scripts/ml/predict_congestion.py}") String predictScript,
-            @Value("${app.ml.congestion.model-path:../exports/ml/models/random_forest_congestion_model.pkl}") String modelPath,
+            @Value("${app.ml.python-command:python3}") String pythonCommand,
+            @Value("${app.ml.congestion.predict-script:./scripts/ml/predict_congestion.py}") String predictScript,
+            @Value("${app.ml.congestion.model-path:./exports/ml/models/random_forest_congestion_model.pkl}") String modelPath,
             @Value("${app.ml.congestion.timeout-ms:20000}") long timeoutMs
     ) {
         this.objectMapper = objectMapper;
