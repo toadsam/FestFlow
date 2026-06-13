@@ -2,6 +2,7 @@ package com.festflow.backend.service;
 
 import com.festflow.backend.dto.AiBoothRecommendationDto;
 import com.festflow.backend.dto.AiFestivalGuideDto;
+import com.festflow.backend.dto.AiModelPredictionDto;
 import com.festflow.backend.dto.BoothResponseDto;
 import com.festflow.backend.dto.CongestionResponseDto;
 import com.festflow.backend.dto.EventResponseDto;
@@ -13,20 +14,25 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class AiCongestionService {
 
     private final FestivalSnapshotService snapshotService;
     private final AiDecisionLogService decisionLogService;
+    private final PythonCongestionModelService pythonCongestionModelService;
 
     public AiCongestionService(
             FestivalSnapshotService snapshotService,
-            AiDecisionLogService decisionLogService
+            AiDecisionLogService decisionLogService,
+            PythonCongestionModelService pythonCongestionModelService
     ) {
         this.snapshotService = snapshotService;
         this.decisionLogService = decisionLogService;
+        this.pythonCongestionModelService = pythonCongestionModelService;
     }
 
     public AiFestivalGuideDto guide() {
@@ -52,7 +58,7 @@ public class AiCongestionService {
                 .filter(this::isVisitorDestination)
                 .filter(dto -> dto.riskScore() < 70)
                 .sorted(Comparator
-                        .comparing((AiBoothRecommendationDto dto) -> levelRank(dto.predictedLevel()))
+                        .comparing((AiBoothRecommendationDto dto) -> modelLevelRank(dto.predictedLevel()))
                         .thenComparingInt(AiBoothRecommendationDto::riskScore))
                 .limit(3)
                 .toList();
@@ -77,8 +83,9 @@ public class AiCongestionService {
 
     private List<AiBoothRecommendationDto> analyze(FestivalSnapshot snapshot) {
         boolean eventSoon = hasEventStartingSoon(snapshot.events(), snapshot.capturedAt());
+        Map<Long, AiModelPredictionDto> modelPredictions = modelPredictions(snapshot, eventSoon);
         return snapshot.booths().stream()
-                .map(booth -> analyzeBooth(snapshot, booth, eventSoon))
+                .map(booth -> analyzeBooth(snapshot, booth, eventSoon, modelPredictions.get(booth.id())))
                 .sorted(Comparator.comparingInt(AiBoothRecommendationDto::riskScore).reversed())
                 .toList();
     }
@@ -97,7 +104,12 @@ public class AiCongestionService {
         );
     }
 
-    private AiBoothRecommendationDto analyzeBooth(FestivalSnapshot snapshot, BoothResponseDto booth, boolean eventSoon) {
+    private AiBoothRecommendationDto analyzeBooth(
+            FestivalSnapshot snapshot,
+            BoothResponseDto booth,
+            boolean eventSoon,
+            AiModelPredictionDto modelPrediction
+    ) {
         CongestionResponseDto congestion = snapshot.congestionByBoothId().get(booth.id());
         int crowdCount = congestion == null ? 0 : congestion.nearbyUserCount();
         long activeReservations = snapshot.activeReservationCount(booth.id());
@@ -132,6 +144,12 @@ public class AiCongestionService {
         riskScore = Math.max(0, Math.min(100, riskScore));
 
         int predictedScore = Math.min(100, riskScore + (eventSoon ? 8 : 0) + (activeReservations >= 2 ? 5 : 0));
+        String fallbackPredictedLevel = displayPredictedLevel(predictedScore);
+        List<String> modelFactors = modelFactors(booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon);
+        AiModelPredictionDto aiModel = modelPrediction != null
+                ? modelPrediction
+                : AiModelPredictionDto.fallback(fallbackPredictedLevel, modelFactors, "MODEL_UNAVAILABLE");
+        String finalPredictedLevel = aiModel.displayPredictedLevel() == null ? fallbackPredictedLevel : aiModel.displayPredictedLevel();
         boolean recommendedNow = riskScore <= 45
                 && waitMinutes <= 15
                 && remainingStock > 0
@@ -152,8 +170,96 @@ public class AiCongestionService {
                 booth.estimatedWaitMinutes(),
                 booth.remainingStock(),
                 recommendedNow,
-                reasons(booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon, riskScore)
+                reasons(booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon, riskScore),
+                aiModel
         );
+    }
+
+    private Map<Long, AiModelPredictionDto> modelPredictions(FestivalSnapshot snapshot, boolean eventSoon) {
+        List<PythonCongestionModelService.ModelPredictionRequest> requests = snapshot.booths().stream()
+                .map(booth -> {
+                    CongestionResponseDto congestion = snapshot.congestionByBoothId().get(booth.id());
+                    int crowdCount = congestion == null ? 0 : congestion.nearbyUserCount();
+                    long activeReservations = snapshot.activeReservationCount(booth.id());
+                    long checkedInReservations = snapshot.reservationCount(booth.id(), ReservationStatus.CHECKED_IN);
+                    int availableSeats = value(booth.reservationAvailableSeats());
+                    int waitMinutes = value(booth.estimatedWaitMinutes());
+                    int remainingStock = booth.remainingStock() == null ? 99 : Math.max(0, booth.remainingStock());
+                    List<String> factors = modelFactors(booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon);
+                    return new PythonCongestionModelService.ModelPredictionRequest(
+                            booth.id(),
+                            modelFeatures(snapshot, booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon),
+                            factors
+                    );
+                })
+                .toList();
+        return pythonCongestionModelService.predictBatch(requests);
+    }
+
+    private Map<String, Object> modelFeatures(
+            FestivalSnapshot snapshot,
+            BoothResponseDto booth,
+            int crowdCount,
+            long activeReservations,
+            long checkedInReservations,
+            int availableSeats,
+            int waitMinutes,
+            int remainingStock,
+            boolean eventSoon
+    ) {
+        int hour = snapshot.capturedAt().getHour();
+        int stageCapacity = 3500;
+        String artistPopularity = artistPopularity(snapshot.events(), snapshot.capturedAt(), eventSoon);
+        int expectedStageCrowd = expectedStageCrowd(hour, artistPopularity, eventSoon);
+
+        Map<String, Object> features = new HashMap<>();
+        features.put("scenario_day", snapshot.capturedAt().getDayOfYear());
+        features.put("hour", hour);
+        features.put("is_peak_time", isPeakTime(hour) ? 1 : 0);
+        features.put("artist_popularity_score", popularityScore(artistPopularity));
+        features.put("stage_capacity", stageCapacity);
+        features.put("expected_stage_crowd", expectedStageCrowd);
+        features.put("stage_load_ratio", Math.round((expectedStageCrowd / (double) stageCapacity) * 1000.0) / 1000.0);
+        features.put("is_night_booth", isNightBooth(booth, hour) ? 1 : 0);
+        features.put("event_soon", eventSoon ? 1 : 0);
+        features.put("minutes_to_next_event", minutesToNextEvent(snapshot.events(), snapshot.capturedAt()));
+        features.put("gps_count_nearby", crowdCount);
+        features.put("reservation_count", (int) activeReservations);
+        features.put("checked_in_count", (int) checkedInReservations);
+        features.put("available_seats", availableSeats);
+        features.put("wait_minutes", waitMinutes);
+        features.put("remaining_stock", remainingStock);
+        features.put("event_count_context", snapshot.events().size());
+        features.put("zone_type", zoneType(booth));
+        features.put("artist_popularity", artistPopularity);
+        return features;
+    }
+
+    private List<String> modelFactors(
+            BoothResponseDto booth,
+            int crowdCount,
+            long activeReservations,
+            long checkedInReservations,
+            int availableSeats,
+            int waitMinutes,
+            int remainingStock,
+            boolean eventSoon
+    ) {
+        List<String> factors = new ArrayList<>();
+        factors.add("GPS 추정 인원 " + crowdCount + "명");
+        factors.add("대기 시간 " + waitMinutes + "분");
+        if (Boolean.TRUE.equals(booth.reservationEnabled())) {
+            factors.add("예약 " + activeReservations + "건 / 체크인 " + checkedInReservations + "건");
+            factors.add("예약 가능 좌석 " + availableSeats + "석");
+        }
+        if (eventSoon) {
+            factors.add("30분 내 공연 시작");
+        }
+        if (remainingStock <= 10) {
+            factors.add(remainingStock <= 0 ? "재고 소진" : "재고 10개 이하");
+        }
+        factors.add("구역 유형 " + zoneType(booth));
+        return factors;
     }
 
     private List<String> reasons(
@@ -297,6 +403,105 @@ public class AiCongestionService {
             alerts.add("즉시 조치가 필요한 AI 경보는 없습니다.");
         }
         return alerts;
+    }
+
+    private boolean isPeakTime(int hour) {
+        return hour >= 18 && hour <= 22;
+    }
+
+    private boolean isNightBooth(BoothResponseDto booth, int hour) {
+        String text = normalize(booth.category() + " " + booth.dayPart() + " " + booth.name() + " " + booth.tags());
+        return hour >= 18 && (text.contains("주점")
+                || text.contains("야간")
+                || text.contains("푸드")
+                || text.contains("food")
+                || text.contains("pub")
+                || text.contains("bar"));
+    }
+
+    private String zoneType(BoothResponseDto booth) {
+        String text = normalize(booth.category() + " " + booth.name() + " " + booth.tags());
+        if (text.contains("공연") || text.contains("무대") || text.contains("stage")) {
+            return "STAGE";
+        }
+        if (text.contains("주점") || text.contains("pub") || text.contains("bar")) {
+            return "PUB";
+        }
+        if (text.contains("푸드") || text.contains("음식") || text.contains("food") || text.contains("카페") || text.contains("디저트")) {
+            return "FOOD";
+        }
+        if (text.contains("체험") || text.contains("이벤트") || text.contains("experience")) {
+            return "EXPERIENCE";
+        }
+        if (text.contains("굿즈") || text.contains("goods")) {
+            return "GOODS";
+        }
+        return "SAFETY";
+    }
+
+    private String artistPopularity(List<EventResponseDto> events, LocalDateTime now, boolean eventSoon) {
+        int hour = now.getHour();
+        if (eventSoon && isPeakTime(hour)) {
+            return "HIGH";
+        }
+        boolean hasCurrentOrSoonEvent = events.stream()
+                .filter(event -> event.startTime() != null)
+                .anyMatch(event -> {
+                    long minutes = Duration.between(now, event.startTime()).toMinutes();
+                    return minutes >= -30 && minutes <= 60;
+                });
+        if (hasCurrentOrSoonEvent && isPeakTime(hour)) {
+            return "MEDIUM";
+        }
+        return isPeakTime(hour) ? "MEDIUM" : "LOW";
+    }
+
+    private int popularityScore(String popularity) {
+        return switch (popularity) {
+            case "HIGH" -> 3;
+            case "MEDIUM" -> 2;
+            default -> 1;
+        };
+    }
+
+    private int expectedStageCrowd(int hour, String artistPopularity, boolean eventSoon) {
+        if (!isPeakTime(hour)) {
+            return eventSoon ? 1100 : 450;
+        }
+        return switch (artistPopularity) {
+            case "HIGH" -> 3300;
+            case "MEDIUM" -> 2200;
+            default -> 900;
+        };
+    }
+
+    private int minutesToNextEvent(List<EventResponseDto> events, LocalDateTime now) {
+        return events.stream()
+                .map(EventResponseDto::startTime)
+                .filter(startTime -> startTime != null && !startTime.isBefore(now.minusMinutes(5)))
+                .mapToInt(startTime -> (int) Math.max(0, Duration.between(now, startTime).toMinutes()))
+                .min()
+                .orElse(180);
+    }
+
+    private String normalize(String value) {
+        return value == null ? "" : value.trim().toLowerCase();
+    }
+
+    private String displayPredictedLevel(int score) {
+        if (score >= 75) return "매우 혼잡";
+        if (score >= 55) return "혼잡";
+        if (score >= 30) return "보통";
+        return "여유";
+    }
+
+    private int modelLevelRank(String level) {
+        String normalized = normalize(level);
+        if (normalized.contains("low") || normalized.contains("여유")) return 0;
+        if (normalized.contains("normal") || normalized.contains("보통")) return 1;
+        if (normalized.contains("very_busy") || normalized.contains("매우")) return 3;
+        if (normalized.contains("busy") || normalized.contains("혼잡")) return 2;
+        return 4;
     }
 
     private String riskLevel(int score) {

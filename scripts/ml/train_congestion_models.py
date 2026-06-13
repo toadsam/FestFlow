@@ -4,6 +4,7 @@ import argparse
 import csv
 from pathlib import Path
 
+import joblib
 import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.ensemble import RandomForestClassifier
@@ -87,6 +88,21 @@ def write_feature_importance(model_name: str, feature_names: list[str], importan
         writer.writerows(rows)
 
 
+def write_random_forest_model(rf_pipeline: Pipeline, output_dir: Path) -> None:
+    models_dir = output_dir / "models"
+    models_dir.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "model_type": "RandomForest",
+        "pipeline": rf_pipeline,
+        "features": FEATURES,
+        "numeric_features": NUMERIC_FEATURES,
+        "categorical_features": CATEGORICAL_FEATURES,
+        "target": TARGET,
+        "labels": LABEL_ORDER,
+    }
+    joblib.dump(payload, models_dir / "random_forest_congestion_model.pkl")
+
+
 def metric_row(model_name: str, y_true: pd.Series, y_pred: list[str], notes: str) -> dict[str, str | float]:
     return {
         "model": model_name,
@@ -153,6 +169,7 @@ def main() -> None:
         rf_pipeline.named_steps["model"].feature_importances_,
         args.output_dir,
     )
+    write_random_forest_model(rf_pipeline, args.output_dir)
 
     xgb_pred: list[str] | None = None
     if XGBClassifier is not None:

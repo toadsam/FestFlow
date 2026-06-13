@@ -440,6 +440,19 @@ export default function AnalyticsPage() {
                 <strong>{item.boothName}</strong>
                 <p>현재 {item.currentLevel || "보통"} → 30분 뒤 {item.predictedLevel || "혼잡"}</p>
                 <span>{predictionAction(item.predictedLevel, item.riskScore)}</span>
+                {item.aiModel && (
+                  <div className="analytics-prediction-card__model">
+                    <b>{item.aiModel.modelBased ? item.aiModel.modelType || "RandomForest" : "Fallback"}</b>
+                    <em>
+                      신뢰도 {Number.isFinite(Number(item.aiModel.confidence))
+                        ? `${Math.round(Number(item.aiModel.confidence) * 100)}%`
+                        : "확인 중"}
+                    </em>
+                    {Array.isArray(item.aiModel.factors) && item.aiModel.factors.length > 0 && (
+                      <small>{item.aiModel.factors.slice(0, 2).join(" · ")}</small>
+                    )}
+                  </div>
+                )}
               </div>
               <small>AI 위험 점수 {Number(item.riskScore) || 0}점</small>
             </article>
