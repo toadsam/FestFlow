@@ -17,6 +17,7 @@ public record AiBoothRecommendationDto(
         Integer waitMinutes,
         Integer remainingStock,
         boolean recommendedNow,
-        List<String> reasons
+        List<String> reasons,
+        AiModelPredictionDto aiModel
 ) {
 }
