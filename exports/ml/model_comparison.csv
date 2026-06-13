@@ -1,0 +1,4 @@
+﻿model,accuracy,macro_f1,notes
+rule_based_baseline,0.7048,0.6779,Current weighted heuristic style baseline.
+random_forest,0.8016,0.7861,Tree ensemble trained on simulated operating patterns.
+xgboost,0.8079,0.7827,Gradient boosting comparison model.
