@@ -26,10 +26,15 @@ import java.nio.file.Path;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
-
+/**
+ * [서비스 상세 주석] 이미지/파일 업로드 저장을 처리합니다.
+ * 이 클래스의 핵심은 프론트 FormData 파일을 MultipartFile로 받아 로컬 또는 S3에 저장하고 URL을 반환합니다.
+ * 주요 관심사는 파일 업로드입니다.
+ * 읽을 때는 필드 의존성 -> 생성자 주입 -> public 메서드 -> private 보조 메서드 순서로 보면 흐름이 가장 잘 보입니다.
+ */
 @Service
 public class UploadStorageService {
-
+// [의존성 주석] 여러 메서드에서 같은 기준으로 쓰는 상수입니다. 기준값을 한 곳에 모아야 나중에 정책이 바뀌어도 수정 지점이 줄어듭니다.
     private static final long MAX_IMAGE_BYTES = 10L * 1024L * 1024L;
     private static final Map<String, String> IMAGE_EXTENSIONS = Map.of(
             "image/jpeg", ".jpg",
@@ -37,12 +42,27 @@ public class UploadStorageService {
             "image/webp", ".webp",
             "image/gif", ".gif"
     );
-
+// [의존성 주석] 환경별 설정값입니다. 로컬과 배포 환경에서 값이 달라질 수 있으므로 코드에 고정하지 않습니다.
     private final Path uploadPath;
-    private final boolean s3Enabled;
-    private final String s3Bucket;
-    private final String s3PublicBaseUrl;
-    private final S3Client s3Client;
+// [의존성 주석] 환경별 설정값입니다. 로컬과 배포 환경에서 값이 달라질 수 있으므로 코드에 고정하지 않습니다.
+private final boolean s3Enabled;
+// [의존성 주석] 환경별 설정값입니다. 로컬과 배포 환경에서 값이 달라질 수 있으므로 코드에 고정하지 않습니다.
+private final String s3Bucket;
+// [의존성 주석] 환경별 설정값입니다. 로컬과 배포 환경에서 값이 달라질 수 있으므로 코드에 고정하지 않습니다.
+private final String s3PublicBaseUrl;
+// [의존성 주석] 외부 API나 문자 발송처럼 서버 밖 시스템과 통신하는 객체입니다.
+private final S3Client s3Client;
+/**
+ * [상세 주석] 생성자입니다. Spring이 이 서비스를 만들 때 필요한 Repository, 다른 Service, 설정값을 주입합니다.
+ * 한줄 요약: 이 서비스가 사용할 Repository, 다른 Service, 설정값을 처음에 연결해 두는 생성자입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 값을 반환하지 않고 this 필드에 의존성을 저장합니다.
+ * 처리 흐름:
+ * - 생성자 파라미터로 필요한 Repository, Service, 설정값을 받습니다.
+ * - 받은 값을 this.xxx 필드에 저장해서 이후 public/private 메서드에서 재사용합니다.
+ * - 이 과정을 생성자 주입이라고 부르며 테스트와 유지보수에 유리합니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
 
     public UploadStorageService(
             @Value("${app.upload.dir}") String uploadDir,
@@ -73,7 +93,18 @@ public class UploadStorageService {
             this.s3Client = null;
         }
     }
-
+/**
+ * [상세 주석] saveImage 메서드는 새 데이터를 생성하거나 저장하는 흐름을 담당합니다.
+ * 한줄 요약: 업로드된 이미지 파일을 저장소에 저장하고 접근 가능한 URL을 반환하는 메서드입니다.
+ * 입력: 프론트가 FormData로 업로드한 파일입니다. JSON body가 아니라 multipart/form-data 흐름입니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 업로드된 파일의 이름, 확장자, contentType, 저장 위치를 확인한 뒤 저장소에 씁니다.
+ * 조건/분기 설명:
+ * - 업로드된 MultipartFile을 검증하고 저장소에 파일로 저장한 뒤 접근 가능한 URL을 반환합니다.
+ * - 파일 업로드는 JSON body가 아니라 multipart/form-data 흐름이므로 프론트 FormData와 연결됩니다.
+ * 초보자 포인트: 파일 업로드는 JSON.stringify가 아니라 FormData와 multipart/form-data 흐름으로 이해해야 합니다.
+ */
     public String saveImage(MultipartFile file, String prefix) throws IOException {
         validateImage(file);
 
@@ -90,7 +121,17 @@ public class UploadStorageService {
         file.transferTo(target);
         return toStoredUrl(key);
     }
-
+/**
+ * [상세 주석] saveImageBytes 메서드는 새 데이터를 생성하거나 저장하는 흐름을 담당합니다.
+ * 한줄 요약: 이 서비스 안에서 필요한 세부 업무를 처리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 대상이 없거나 요청이 잘못된 경우 예외를 던져 잘못된 흐름을 즉시 중단합니다.
+ * 조건/분기 설명:
+ * - 상태값에 따라 예약, 스태프, 분실물, 매칭 요청의 다음 흐름이 달라집니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     public String saveImageBytes(byte[] imageBytes, String prefix, String extension) throws IOException {
         if (imageBytes == null || imageBytes.length == 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image is required.");
@@ -108,7 +149,16 @@ public class UploadStorageService {
         Files.write(target, imageBytes);
         return toStoredUrl(key);
     }
-
+/**
+ * [상세 주석] resolveUploadUrl 메서드는 이 서비스의 업무 흐름 중 한 부분을 처리합니다.
+ * 한줄 요약: 이 서비스 안에서 필요한 세부 업무를 처리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: Path 타입 값을 반환합니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     public Path resolveUploadUrl(String imageUrl) throws IOException {
         String key = extractObjectKey(imageUrl);
         if (s3Enabled) {
@@ -121,7 +171,18 @@ public class UploadStorageService {
         }
         return resolveLocalTarget(key);
     }
-
+/**
+ * [상세 주석] loadStoredObject 메서드는 데이터를 조회해 화면이나 다른 서비스가 쓸 수 있는 형태로 반환합니다.
+ * 한줄 요약: 필요한 데이터를 조회해 하나의 결과 또는 DTO로 반환하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: StoredObject 타입 값을 반환합니다.
+ * 처리 흐름:
+ * - 대상이 없거나 요청이 잘못된 경우 예외를 던져 잘못된 흐름을 즉시 중단합니다.
+ * 조건/분기 설명:
+ * - 대상 데이터나 파일이 실제로 있는지 먼저 확인해 없는 상태에서 다음 로직이 실행되지 않게 합니다.
+ * - 상태값에 따라 예약, 스태프, 분실물, 매칭 요청의 다음 흐름이 달라집니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     public StoredObject loadStoredObject(String imageUrl) throws IOException {
         String key = extractObjectKey(imageUrl);
         if (s3Enabled) {
@@ -137,7 +198,16 @@ public class UploadStorageService {
                 contentType == null ? contentTypeForExtension(extensionFromKey(key)) : contentType
         );
     }
-
+/**
+ * [상세 주석] deleteUploadUrl 메서드는 데이터를 삭제하거나 더 이상 유효하지 않은 상태로 바꿉니다.
+ * 한줄 요약: 대상 데이터가 있는지 확인한 뒤 삭제하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 참/거짓 판단 결과입니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     public boolean deleteUploadUrl(String imageUrl) throws IOException {
         String value = imageUrl == null ? "" : imageUrl.trim();
         if (value.isBlank()) {
@@ -150,7 +220,17 @@ public class UploadStorageService {
         }
         return Files.deleteIfExists(resolveLocalTarget(key));
     }
-
+/**
+ * [상세 주석] resolveLocalTarget 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 이 서비스 안에서 필요한 세부 업무를 처리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: Path 타입 값을 반환합니다.
+ * 처리 흐름:
+ * - 대상이 없거나 요청이 잘못된 경우 예외를 던져 잘못된 흐름을 즉시 중단합니다.
+ * 조건/분기 설명:
+ * - 상태값에 따라 예약, 스태프, 분실물, 매칭 요청의 다음 흐름이 달라집니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private Path resolveLocalTarget(String key) {
         Path target = uploadPath.resolve(key).normalize();
         if (!target.startsWith(uploadPath)) {
@@ -158,7 +238,18 @@ public class UploadStorageService {
         }
         return target;
     }
-
+/**
+ * [상세 주석] putS3Object 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 이 서비스 안에서 필요한 세부 업무를 처리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 반환값은 없고 저장, 삭제, 발송, 상태 변경, SSE 발행 같은 부수 효과를 수행합니다.
+ * 처리 흐름:
+ * - 대상이 없거나 요청이 잘못된 경우 예외를 던져 잘못된 흐름을 즉시 중단합니다.
+ * - 외부 API, 파일, 모델 실행처럼 실패 가능한 작업은 try/catch로 감싸 fallback이나 로그 처리를 합니다.
+ * 조건/분기 설명:
+ * - 상태값에 따라 예약, 스태프, 분실물, 매칭 요청의 다음 흐름이 달라집니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private void putS3Object(String key, byte[] bytes, String contentType) {
         try {
             s3Client.putObject(
@@ -174,7 +265,18 @@ public class UploadStorageService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "S3 image upload failed.", ex);
         }
     }
-
+/**
+ * [상세 주석] deleteS3Object 메서드는 데이터를 삭제하거나 더 이상 유효하지 않은 상태로 바꿉니다.
+ * 한줄 요약: 대상 데이터가 있는지 확인한 뒤 삭제하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 반환값은 없고 저장, 삭제, 발송, 상태 변경, SSE 발행 같은 부수 효과를 수행합니다.
+ * 처리 흐름:
+ * - 대상이 없거나 요청이 잘못된 경우 예외를 던져 잘못된 흐름을 즉시 중단합니다.
+ * - 외부 API, 파일, 모델 실행처럼 실패 가능한 작업은 try/catch로 감싸 fallback이나 로그 처리를 합니다.
+ * 조건/분기 설명:
+ * - 상태값에 따라 예약, 스태프, 분실물, 매칭 요청의 다음 흐름이 달라집니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private void deleteS3Object(String key) {
         try {
             s3Client.deleteObject(
@@ -187,7 +289,18 @@ public class UploadStorageService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "S3 image delete failed.", ex);
         }
     }
-
+/**
+ * [상세 주석] getS3Object 메서드는 데이터를 조회해 화면이나 다른 서비스가 쓸 수 있는 형태로 반환합니다.
+ * 한줄 요약: 필요한 데이터를 조회해 하나의 결과 또는 DTO로 반환하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: StoredObject 타입 값을 반환합니다.
+ * 처리 흐름:
+ * - 대상이 없거나 요청이 잘못된 경우 예외를 던져 잘못된 흐름을 즉시 중단합니다.
+ * - 외부 API, 파일, 모델 실행처럼 실패 가능한 작업은 try/catch로 감싸 fallback이나 로그 처리를 합니다.
+ * 조건/분기 설명:
+ * - 상태값에 따라 예약, 스태프, 분실물, 매칭 요청의 다음 흐름이 달라집니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private StoredObject getS3Object(String key) {
         try {
             ResponseBytes<GetObjectResponse> objectBytes = s3Client.getObjectAsBytes(
@@ -207,14 +320,34 @@ public class UploadStorageService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "S3 image download failed.", ex);
         }
     }
-
+/**
+ * [상세 주석] toStoredUrl 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: Entity나 내부 값을 화면/API 응답용 형태로 변환하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private String toStoredUrl(String key) {
         if (s3Enabled && !s3PublicBaseUrl.isBlank()) {
             return s3PublicBaseUrl + "/" + key;
         }
         return "/uploads/" + key;
     }
-
+/**
+ * [상세 주석] extractObjectKey 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 이 서비스 안에서 필요한 세부 업무를 처리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 대상이 없거나 요청이 잘못된 경우 예외를 던져 잘못된 흐름을 즉시 중단합니다.
+ * - 외부 API, 파일, 모델 실행처럼 실패 가능한 작업은 try/catch로 감싸 fallback이나 로그 처리를 합니다.
+ * 조건/분기 설명:
+ * - 상태값에 따라 예약, 스태프, 분실물, 매칭 요청의 다음 흐름이 달라집니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private String extractObjectKey(String imageUrl) {
         String value = imageUrl == null ? "" : imageUrl.trim();
         if (value.startsWith("/uploads/")) {
@@ -233,11 +366,31 @@ public class UploadStorageService {
         }
         throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid upload URL.");
     }
-
+/**
+ * [상세 주석] buildObjectKey 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 응답 문구나 요청 payload처럼 다음 단계에서 쓸 데이터를 조립하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private String buildObjectKey(String prefix, String extension) {
         return sanitizePrefix(prefix) + "-" + UUID.randomUUID() + extension;
     }
-
+/**
+ * [상세 주석] sanitizeObjectKey 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 문자열이나 입력값을 비교하기 쉬운 형태로 정리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 대상이 없거나 요청이 잘못된 경우 예외를 던져 잘못된 흐름을 즉시 중단합니다.
+ * 조건/분기 설명:
+ * - 상태값에 따라 예약, 스태프, 분실물, 매칭 요청의 다음 흐름이 달라집니다.
+ * - 카테고리 문자열을 확인해 부스 유형이나 방문 추천 가능 여부를 분류합니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private String sanitizeObjectKey(String key) {
         String value = key == null ? "" : key.trim().replace("\\", "/");
         if (value.isBlank() || value.contains("..") || value.startsWith("/") || value.endsWith("/")) {
@@ -245,7 +398,19 @@ public class UploadStorageService {
         }
         return value;
     }
-
+/**
+ * [상세 주석] validateImage 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 업로드된 파일을 받아 검증하거나 저장하는 메서드입니다.
+ * 입력: 프론트가 FormData로 업로드한 파일입니다. JSON body가 아니라 multipart/form-data 흐름입니다.
+ * 반환: 반환값은 없고 저장, 삭제, 발송, 상태 변경, SSE 발행 같은 부수 효과를 수행합니다.
+ * 처리 흐름:
+ * - 대상이 없거나 요청이 잘못된 경우 예외를 던져 잘못된 흐름을 즉시 중단합니다.
+ * - 업로드된 파일의 이름, 확장자, contentType, 저장 위치를 확인한 뒤 저장소에 씁니다.
+ * 조건/분기 설명:
+ * - 목록이 비어 있는 경우에는 조회 결과 없음, 추천 없음, 또는 처리할 데이터 없음으로 보고 별도 흐름을 탑니다.
+ * - 상태값에 따라 예약, 스태프, 분실물, 매칭 요청의 다음 흐름이 달라집니다.
+ * 초보자 포인트: 파일 업로드는 JSON.stringify가 아니라 FormData와 multipart/form-data 흐름으로 이해해야 합니다.
+ */
     private void validateImage(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Image file is required.");
@@ -258,17 +423,45 @@ public class UploadStorageService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only JPG, PNG, WEBP, or GIF images are allowed.");
         }
     }
-
+/**
+ * [상세 주석] normalizeContentType 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 문자열이나 입력값을 비교하기 쉬운 형태로 정리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private String normalizeContentType(String contentType) {
         return contentType == null ? "" : contentType.toLowerCase(Locale.ROOT).trim();
     }
-
+/**
+ * [상세 주석] sanitizePrefix 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 문자열이나 입력값을 비교하기 쉬운 형태로 정리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private String sanitizePrefix(String prefix) {
         String value = prefix == null ? "upload" : prefix.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9-]", "-");
         value = value.replaceAll("-+", "-").replaceAll("^-|-$", "");
         return value.isBlank() ? "upload" : value;
     }
-
+/**
+ * [상세 주석] sanitizeExtension 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 문자열이나 입력값을 비교하기 쉬운 형태로 정리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 대상이 없거나 요청이 잘못된 경우 예외를 던져 잘못된 흐름을 즉시 중단합니다.
+ * 조건/분기 설명:
+ * - 상태값에 따라 예약, 스태프, 분실물, 매칭 요청의 다음 흐름이 달라집니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private String sanitizeExtension(String extension) {
         String value = extension == null ? ".bin" : extension.toLowerCase(Locale.ROOT).trim();
         if (!value.startsWith(".")) {
@@ -279,7 +472,16 @@ public class UploadStorageService {
         }
         return value;
     }
-
+/**
+ * [상세 주석] extensionFromKey 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 이 서비스 안에서 필요한 세부 업무를 처리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private String extensionFromKey(String key) {
         int dotIndex = key == null ? -1 : key.lastIndexOf(".");
         if (dotIndex < 0) {
@@ -287,7 +489,16 @@ public class UploadStorageService {
         }
         return sanitizeExtension(key.substring(dotIndex));
     }
-
+/**
+ * [상세 주석] contentTypeForExtension 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 이 서비스 안에서 필요한 세부 업무를 처리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private String contentTypeForExtension(String extension) {
         return switch (sanitizeExtension(extension)) {
             case ".jpg", ".jpeg" -> "image/jpeg";
@@ -297,14 +508,42 @@ public class UploadStorageService {
             default -> "application/octet-stream";
         };
     }
-
+/**
+ * [상세 주석] normalizePublicBaseUrl 메서드는 public 메서드의 복잡한 계산을 나누기 위한 내부 보조 메서드입니다.
+ * 한줄 요약: 문자열이나 입력값을 비교하기 쉬운 형태로 정리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: 화면 문구나 외부 API에 전달할 문자열입니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     private String normalizePublicBaseUrl(String value) {
         String trimmed = value == null ? "" : value.trim();
         return trimmed.replaceAll("/+$", "");
     }
-
+/**
+ * [상세 주석] StoredObject 메서드는 이 서비스의 업무 흐름 중 한 부분을 처리합니다.
+ * 한줄 요약: 이 서비스 안에서 필요한 세부 업무를 처리하는 메서드입니다.
+ * 입력: 파라미터 이름과 타입을 보면 이 메서드가 어떤 id, 상태값, 문자열, 시간값을 기준으로 처리하는지 알 수 있습니다.
+ * 반환: record 타입 값을 반환합니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
     public record StoredObject(byte[] bytes, String contentType) {
-        public Resource resource() {
+/**
+ * [상세 주석] resource 메서드는 이 서비스의 업무 흐름 중 한 부분을 처리합니다.
+ * 한줄 요약: 이 서비스 안에서 필요한 세부 업무를 처리하는 메서드입니다.
+ * 입력: 없습니다. 내부 필드, 현재 시간, Repository 조회 결과를 사용합니다.
+ * 반환: Resource 타입 값을 반환합니다.
+ * 처리 흐름:
+ * - 입력값과 내부 필드를 사용해 필요한 계산을 수행합니다.
+ * - 계산 결과를 반환하거나 호출한 쪽에서 이어서 사용할 값을 만듭니다.
+ * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
+ */
+public Resource resource() {
             return new org.springframework.core.io.ByteArrayResource(bytes);
         }
     }
