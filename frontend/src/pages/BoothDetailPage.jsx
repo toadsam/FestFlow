@@ -12,7 +12,18 @@ import {
   sendReservationAuthCode,
   verifyReservationAuthCode,
 } from "../api";
-import { IconArrowLeft, IconClock, IconMapPin, IconRefresh, IconSearch } from "../components/UxIcons";
+import {
+  IconArrowLeft,
+  IconBox,
+  IconCalendar,
+  IconChevronRight,
+  IconClock,
+  IconMapPin,
+  IconRefresh,
+  IconSearch,
+  IconShield,
+  IconUsers,
+} from "../components/UxIcons";
 import { resolveBoothImageUrl } from "../config/boothImages";
 import { fallbackBooths } from "../data/festivalUiData";
 import {
@@ -98,6 +109,19 @@ function tableStatusLabel(table) {
 
 function canReserveTable(table) {
   return tableStatus(table) === "AVAILABLE" && tableSeats(table) > 0;
+}
+
+function tableToneClass(table) {
+  switch (tableStatus(table)) {
+    case "RESERVED":
+      return "booth-seat-tile--reserved";
+    case "IN_USE":
+      return "booth-seat-tile--busy";
+    case "FULL":
+      return "booth-seat-tile--full";
+    default:
+      return "booth-seat-tile--open";
+  }
 }
 
 function parseTimeMs(value) {
@@ -396,27 +420,34 @@ export default function BoothDetailPage() {
 
   const imageUrl = resolveBoothImageUrl(booth);
   const congestionLabel = congestion?.level || congestion?.label || booth?.congestion || "보통";
+  const totalReservableSeats =
+    reservationState.tables?.reduce((sum, table) => sum + tableSeats(table), 0) || 0;
 
   return (
-    <section className="uni-page booth-detail-page">
-      <header className="plain-page-header">
-        <Link to="/stage-map" aria-label="지도로 돌아가기">
+    <section className="uni-page booth-detail-page booth-showcase-page">
+      <header className="booth-mobile-topbar">
+        <Link to="/stage-map" aria-label="지도로 돌아가기" className="booth-icon-button">
           <IconArrowLeft className="h-5 w-5" />
         </Link>
         <h1>부스 상세</h1>
-        <button type="button" aria-label="혼잡도 새로고침" onClick={handleRefreshCongestion}>
+        <button
+          type="button"
+          aria-label="혼잡도 새로고침"
+          onClick={handleRefreshCongestion}
+          className="booth-icon-button"
+        >
           <IconRefresh className="h-5 w-5" />
         </button>
       </header>
 
-      <section className="booth-photo-card">
-        <img src={imageUrl} alt="" />
-        <button type="button" aria-label="검색으로 이동" onClick={() => navigate("/stage-map")}>
+      <section className="booth-showcase-hero">
+        <img src={imageUrl} alt={`${booth?.name || "부스"} 이미지`} />
+        <button type="button" aria-label="지도로 이동" onClick={() => navigate("/stage-map")}>
           <IconSearch className="h-5 w-5" />
         </button>
       </section>
 
-      <section className="booth-detail-title">
+      <section className="booth-showcase-title">
         <span>{booth?.category || "축제 부스"}</span>
         <h2>{booth?.name || "축제 부스"}</h2>
         <p>{booth?.description || "아주대 축제 부스 정보를 확인하세요."}</p>
@@ -425,7 +456,7 @@ export default function BoothDetailPage() {
       {error && <p className="app-inline-note">{error}</p>}
       {message && <p className="app-inline-note app-inline-note--success">{message}</p>}
 
-      <section className="uni-card detail-info-grid">
+      <section className="booth-info-strip">
         <article>
           <IconClock className="h-5 w-5" />
           <span>운영 시간</span>
@@ -433,24 +464,27 @@ export default function BoothDetailPage() {
         </article>
         <button type="button" onClick={handleDirections} aria-label={`${booth?.name || "부스"} 길찾기`}>
           <IconMapPin className="h-5 w-5" />
-          <span>길찾기</span>
+          <span>위치</span>
           <strong>{booth?.locationName || "아주대 캠퍼스"}</strong>
         </button>
         <article>
-          <IconSearch className="h-5 w-5" />
+          <IconUsers className="h-5 w-5" />
           <span>혼잡도</span>
           <strong>{congestionLabel}</strong>
         </article>
       </section>
 
-      <section ref={reservationRef} className="uni-card reservation-summary-card">
-        <div className="uni-section-head">
-          <h2>예약 가능 좌석</h2>
+      <section ref={reservationRef} className="booth-feature-card reservation-summary-card">
+        <div className="booth-card-head">
+          <div>
+            <IconCalendar className="h-5 w-5" />
+            <h2>예약 가능 좌석</h2>
+          </div>
           <span>{reservationState.tables?.length || 0}개 테이블</span>
         </div>
 
         {myReservation ? (
-          <div className="active-reservation-card">
+          <div className="active-reservation-card booth-active-reservation">
             <strong>현재 활성 예약</strong>
             <p>{myReservation.tableName} · {myReservation.seatCount}석</p>
             <span>남은 시간 {timerText(remainingSeconds)}</span>
@@ -471,15 +505,29 @@ export default function BoothDetailPage() {
           </div>
         ) : (
           <>
-            <div className="seat-control-row">
+            <div className="booth-reservation-action">
               <label>
                 예약 인원
-                <input
-                  type="number"
-                  min="1"
-                  value={seatCount}
-                  onChange={(event) => setSeatCount(event.target.value)}
-                />
+                <span>
+                  <button
+                    type="button"
+                    onClick={() => setSeatCount((value) => Math.max(1, Number(value || 1) - 1))}
+                  >
+                    -
+                  </button>
+                  <input
+                    type="number"
+                    min="1"
+                    value={seatCount}
+                    onChange={(event) => setSeatCount(event.target.value)}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setSeatCount((value) => Math.max(1, Number(value || 1) + 1))}
+                  >
+                    +
+                  </button>
+                </span>
               </label>
               <button
                 type="button"
@@ -491,7 +539,7 @@ export default function BoothDetailPage() {
               </button>
             </div>
 
-            <div className="reservation-table-grid">
+            <div className="booth-seat-grid">
               {reservationState.tables?.length ? (
                 reservationState.tables.map((table, index) => {
                   const selected = selectedTableId === table.id;
@@ -499,14 +547,16 @@ export default function BoothDetailPage() {
                     <button
                       key={table.id}
                       type="button"
-                      className={selected ? "reservation-table reservation-table--selected" : "reservation-table"}
+                      className={`booth-seat-tile ${tableToneClass(table)} ${
+                        selected ? "booth-seat-tile--selected" : ""
+                      }`}
                       onClick={() => {
                         setSelectedTableId(table.id);
                         if (!reservationToken) guideToAuth();
                       }}
                       disabled={!canReserveTable(table)}
                     >
-                      <strong>{table.tableName || index + 1}</strong>
+                      <strong>{table.tableName || `T${index + 1}`}</strong>
                       <small>{tableStatusLabel(table)}</small>
                       <span>{tableSeats(table)}석</span>
                     </button>
@@ -516,6 +566,10 @@ export default function BoothDetailPage() {
                 <p className="empty-copy">예약 테이블 정보가 아직 설정되지 않았습니다.</p>
               )}
             </div>
+
+            <p className="booth-seat-footnote">
+              현재 예약 가능한 좌석은 총 {totalReservableSeats}석입니다.
+            </p>
           </>
         )}
 
@@ -523,9 +577,12 @@ export default function BoothDetailPage() {
         {reservationError && <p className="app-inline-note app-inline-note--danger">{reservationError}</p>}
       </section>
 
-      <section ref={authRef} className="uni-card reservation-auth-card">
-        <div className="uni-section-head">
-          <h2>휴대폰 인증</h2>
+      <section ref={authRef} className="booth-feature-card reservation-auth-card">
+        <div className="booth-card-head">
+          <div>
+            <IconShield className="h-5 w-5" />
+            <h2>휴대폰 인증</h2>
+          </div>
           {isAuthComplete && <button type="button" onClick={handleClearAuth}>해제</button>}
         </div>
         {isAuthComplete ? (
@@ -535,7 +592,7 @@ export default function BoothDetailPage() {
             <input
               value={phoneNumber}
               onChange={(event) => setPhoneNumber(event.target.value)}
-              placeholder="01012345678"
+              placeholder="휴대폰 번호 입력"
             />
             <button type="button" onClick={handleSendCode} disabled={sendCooldownSeconds > 0}>
               {sendCooldownSeconds > 0 ? `${sendCooldownSeconds}s` : "번호 받기"}
@@ -543,7 +600,7 @@ export default function BoothDetailPage() {
             <input
               value={verifyCode}
               onChange={(event) => setVerifyCode(event.target.value)}
-              placeholder="인증번호"
+              placeholder="인증번호 입력"
             />
             <button type="button" onClick={handleVerifyCode}>인증 확인</button>
           </div>
@@ -551,30 +608,42 @@ export default function BoothDetailPage() {
       </section>
 
       {menuItems.length > 0 && (
-        <section className="uni-card menu-preview-card">
-          <div className="uni-section-head">
-            <h2>메뉴판</h2>
+        <section className="booth-feature-card menu-preview-card">
+          <div className="booth-card-head">
+            <div>
+              <IconBox className="h-5 w-5" />
+              <h2>메뉴판</h2>
+            </div>
             <span>{menuItems.length}개</span>
           </div>
-          <div className="menu-item-list">
+          <div className="menu-item-list booth-menu-list">
             {menuItems.map((item, index) => (
               <article key={`${item.name}-${index}`} className={item.soldOut ? "menu-item menu-item--soldout" : "menu-item"}>
-                <strong>{item.name}</strong>
-                <span>{item.price}</span>
-                {item.description && <small>{item.description}</small>}
+                <div className="booth-menu-thumb" aria-hidden />
+                <div>
+                  <strong>{item.name}</strong>
+                  {item.description && <small>{item.description}</small>}
+                </div>
+                <span>{item.soldOut ? "품절" : item.price}</span>
+                <IconChevronRight className="h-4 w-4" />
               </article>
             ))}
           </div>
         </section>
       )}
 
-      <section className="uni-card ops-login-card">
-        <h2>부스 운영자</h2>
+      <section className="booth-feature-card ops-login-card">
+        <div className="booth-card-head">
+          <div>
+            <IconShield className="h-5 w-5" />
+            <h2>부스 운영자</h2>
+          </div>
+        </div>
         <div className="auth-form-grid">
           <input
             value={opsKeyInput}
             onChange={(event) => setOpsKeyInput(event.target.value)}
-            placeholder="운영 키"
+            placeholder="운영 키 입력"
           />
           <button type="button" onClick={handleOpsLogin}>운영 화면</button>
         </div>

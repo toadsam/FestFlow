@@ -764,15 +764,15 @@ export default function OpsBoothPage() {
   }, [reservationDraft.tables]);
 
   return (
-    <section className="cyber-page pt-4 space-y-3">
-      <h2 className="text-lg font-bold text-role-ops inline-flex items-center gap-1.5">
+    <section className="cyber-page booth-ops-dashboard pt-4 space-y-3">
+      <h2 className="ops-dashboard-title text-lg font-bold text-role-ops inline-flex items-center gap-1.5">
         <IconShield className="h-5 w-5 icon-role-ops" />
         부스 운영 대시보드
       </h2>
 
       <form
         onSubmit={submitKey}
-        className="rounded-xl border border-slate-200 bg-white p-3 space-y-2"
+        className="ops-key-card rounded-xl border border-slate-200 bg-white p-3 space-y-2"
       >
         <p className="text-sm font-semibold text-role-ops inline-flex items-center gap-1.5">
           <IconSettings className="h-4 w-4 icon-role-ops" />
@@ -807,13 +807,13 @@ export default function OpsBoothPage() {
       {message && <p className="text-sm text-teal-700">{message}</p>}
 
       {data && (
-        <article className="rounded-xl border border-slate-200 bg-white overflow-hidden">
+        <article className="ops-live-card rounded-xl border border-slate-200 bg-white overflow-hidden">
           {reservationAlert && (
             <div className="border-b border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
               {reservationAlert}
             </div>
           )}
-          <div className="aspect-[16/8] bg-slate-100">
+          <div className="ops-hero-photo aspect-[16/8] bg-slate-100">
             <img
               src={resolveBoothImageUrl(data.booth)}
               alt={`${data.booth.name} 이미지`}
@@ -823,8 +823,8 @@ export default function OpsBoothPage() {
             />
           </div>
 
-          <div className="p-3 space-y-4">
-            <div className="flex items-center justify-between gap-2">
+          <div className="ops-live-body p-3 space-y-4">
+            <div className="ops-booth-heading flex items-center justify-between gap-2">
               <h3 className="text-base font-bold text-role-map inline-flex items-center gap-1.5">
                 <IconMapPin className="h-4 w-4 icon-role-map" />
                 {data.booth.name}
@@ -832,28 +832,28 @@ export default function OpsBoothPage() {
               <CongestionBadge level={data.congestion.level} />
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-sky-200 bg-sky-50 p-2">
-                <p className="text-[11px] text-sky-700">⏱ 대기(분)</p>
+            <div className="ops-metric-grid grid grid-cols-2 gap-2">
+              <div className="ops-metric-card ops-metric-card--wait rounded-lg border border-sky-200 bg-sky-50 p-2">
+                <p className="text-[11px] text-sky-700">대기(분)</p>
                 <p className="text-lg font-bold text-sky-800">{data.booth.estimatedWaitMinutes ?? "-"}</p>
               </div>
-              <div className="rounded-lg border border-purple-200 bg-purple-50 p-2">
-                <p className="text-[11px] text-purple-700">📦 재고</p>
+              <div className="ops-metric-card ops-metric-card--stock rounded-lg border border-purple-200 bg-purple-50 p-2">
+                <p className="text-[11px] text-purple-700">재고</p>
                 <p className="text-lg font-bold text-purple-800">{data.booth.remainingStock ?? "-"}</p>
               </div>
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-2">
-                <p className="text-[11px] text-amber-700">🧾 활성 예약</p>
+              <div className="ops-metric-card ops-metric-card--reservation rounded-lg border border-amber-200 bg-amber-50 p-2">
+                <p className="text-[11px] text-amber-700">활성 예약</p>
                 <p className="text-lg font-bold text-amber-800">{activeReservations.length}건</p>
               </div>
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2">
-                <p className="text-[11px] text-emerald-700">🪑 사용 좌석</p>
+              <div className="ops-metric-card ops-metric-card--seats rounded-lg border border-emerald-200 bg-emerald-50 p-2">
+                <p className="text-[11px] text-emerald-700">사용 좌석</p>
                 <p className="text-lg font-bold text-emerald-800">
                   {tableSummary.occupiedSeats}/{tableSummary.totalSeats || 0}
                 </p>
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-200 p-3 space-y-2">
+            <div className="ops-panel ops-panel--status rounded-lg border border-slate-200 p-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-semibold text-role-log inline-flex items-center gap-1.5">
                   <IconClipboard className="h-4 w-4 icon-role-log" />
@@ -1098,7 +1098,7 @@ export default function OpsBoothPage() {
               </button>
             </div>
 
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-3">
+            <div className="ops-panel ops-panel--tables rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-3">
               <div className="flex items-center justify-between">
               <p className="text-sm font-semibold text-emerald-900 text-role-ops inline-flex items-center gap-1.5">
                 <IconUsers className="h-4 w-4 icon-role-ops" />
@@ -1309,7 +1309,7 @@ export default function OpsBoothPage() {
               </button>
             </div>
 
-            <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-2">
+            <div className="ops-panel ops-panel--checkin rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-2">
               <p className="text-sm font-semibold text-cyan-900 text-role-schedule inline-flex items-center gap-1.5">
                 <IconCalendar className="h-4 w-4 icon-role-schedule" />
                 QR 체크인
@@ -1370,7 +1370,7 @@ export default function OpsBoothPage() {
               </div>
             </div>
 
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+            <div className="ops-panel ops-panel--reservations rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
               <p className="text-sm font-semibold text-amber-900">활성 예약 목록</p>
 
               {activeReservations.length ? (
