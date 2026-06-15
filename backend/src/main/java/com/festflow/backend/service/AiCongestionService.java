@@ -6,6 +6,7 @@ import com.festflow.backend.dto.AiModelPredictionDto;
 import com.festflow.backend.dto.BoothResponseDto;
 import com.festflow.backend.dto.CongestionResponseDto;
 import com.festflow.backend.dto.EventResponseDto;
+import com.festflow.backend.entity.GpsLog;
 import com.festflow.backend.entity.ReservationStatus;
 import com.festflow.backend.repository.BoothReservationRepository;
 import com.festflow.backend.repository.GpsLogRepository;
@@ -141,9 +142,10 @@ private final BoothReservationRepository boothReservationRepository;
  */
     private List<AiBoothRecommendationDto> analyze(FestivalSnapshot snapshot) {
         boolean eventSoon = hasEventStartingSoon(snapshot.events(), snapshot.capturedAt());
-        Map<Long, AiModelPredictionDto> modelPredictions = modelPredictions(snapshot, eventSoon);
+        Map<Long, TemporalFeatures> temporalByBoothId = temporalFeaturesByBooth(snapshot, eventSoon);
+        Map<Long, AiModelPredictionDto> modelPredictions = modelPredictions(snapshot, eventSoon, temporalByBoothId);
         return snapshot.booths().stream()
-                .map(booth -> analyzeBooth(snapshot, booth, eventSoon, modelPredictions.get(booth.id())))
+                .map(booth -> analyzeBooth(snapshot, booth, eventSoon, modelPredictions.get(booth.id()), temporalByBoothId.get(booth.id())))
                 .sorted(Comparator.comparingInt(AiBoothRecommendationDto::riskScore).reversed())
                 .toList();
     }
@@ -188,7 +190,8 @@ private final BoothReservationRepository boothReservationRepository;
             FestivalSnapshot snapshot,
             BoothResponseDto booth,
             boolean eventSoon,
-            AiModelPredictionDto modelPrediction
+            AiModelPredictionDto modelPrediction,
+            TemporalFeatures temporal
     ) {
         CongestionResponseDto congestion = snapshot.congestionByBoothId().get(booth.id());
         int crowdCount = congestion == null ? 0 : congestion.nearbyUserCount();
@@ -225,7 +228,7 @@ private final BoothReservationRepository boothReservationRepository;
 
         int predictedScore = Math.min(100, riskScore + (eventSoon ? 8 : 0) + (activeReservations >= 2 ? 5 : 0));
         String fallbackPredictedLevel = displayPredictedLevel(predictedScore);
-        TemporalFeatures temporal = temporalFeatures(snapshot, booth, eventSoon);
+        temporal = temporal == null ? TemporalFeatures.empty() : temporal;
         List<String> modelFactors = modelFactors(booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon, temporal);
         AiModelPredictionDto aiModel = modelPrediction != null
                 ? modelPrediction
@@ -270,7 +273,11 @@ private final BoothReservationRepository boothReservationRepository;
  * - 대기시간은 방문 추천과 혼잡 위험 점수 계산에 직접 영향을 줍니다.
  * 초보자 포인트: stream 체인은 위에서 아래로 읽으면서 filter는 걸러내기, map은 변환, sorted는 정렬, toList는 결과 확정이라고 보면 됩니다.
  */
-    private Map<Long, AiModelPredictionDto> modelPredictions(FestivalSnapshot snapshot, boolean eventSoon) {
+    private Map<Long, AiModelPredictionDto> modelPredictions(
+            FestivalSnapshot snapshot,
+            boolean eventSoon,
+            Map<Long, TemporalFeatures> temporalByBoothId
+    ) {
         List<PythonCongestionModelService.ModelPredictionRequest> requests = snapshot.booths().stream()
                 .map(booth -> {
                     CongestionResponseDto congestion = snapshot.congestionByBoothId().get(booth.id());
@@ -280,7 +287,7 @@ private final BoothReservationRepository boothReservationRepository;
                     int availableSeats = value(booth.reservationAvailableSeats());
                     int waitMinutes = value(booth.estimatedWaitMinutes());
                     int remainingStock = booth.remainingStock() == null ? 99 : Math.max(0, booth.remainingStock());
-                    TemporalFeatures temporal = temporalFeatures(snapshot, booth, eventSoon);
+                    TemporalFeatures temporal = temporalByBoothId.getOrDefault(booth.id(), TemporalFeatures.empty());
                     List<String> factors = modelFactors(booth, crowdCount, activeReservations, checkedInReservations, availableSeats, waitMinutes, remainingStock, eventSoon, temporal);
                     return new PythonCongestionModelService.ModelPredictionRequest(
                             booth.id(),
@@ -304,12 +311,27 @@ private final BoothReservationRepository boothReservationRepository;
  * - 정적인 현재값뿐 아니라 '방금 증가했는지'를 모델이 볼 수 있게 하는 부분입니다.
  * 초보자 포인트: 메서드 이름으로 목적을 먼저 잡고, 조건문은 예외/분기, return은 최종 결과라고 보고 읽으면 됩니다.
  */
-    private TemporalFeatures temporalFeatures(FestivalSnapshot snapshot, BoothResponseDto booth, boolean eventSoon) {
+    private Map<Long, TemporalFeatures> temporalFeaturesByBooth(FestivalSnapshot snapshot, boolean eventSoon) {
         LocalDateTime now = snapshot.capturedAt();
-        int currentGps5m = gpsNearbyBetween(booth, now.minusMinutes(5), now);
-        int previousGps5m = gpsNearbyBetween(booth, now.minusMinutes(10), now.minusMinutes(5));
-        int currentGps15m = gpsNearbyBetween(booth, now.minusMinutes(15), now);
-        int previousGps15m = gpsNearbyBetween(booth, now.minusMinutes(30), now.minusMinutes(15));
+        List<GpsLog> recentGpsLogs = gpsLogRepository.findByCreatedAtAfter(now.minusMinutes(30));
+        Map<Long, TemporalFeatures> result = new HashMap<>();
+        for (BoothResponseDto booth : snapshot.booths()) {
+            result.put(booth.id(), temporalFeatures(snapshot, booth, eventSoon, recentGpsLogs));
+        }
+        return result;
+    }
+
+    private TemporalFeatures temporalFeatures(
+            FestivalSnapshot snapshot,
+            BoothResponseDto booth,
+            boolean eventSoon,
+            List<GpsLog> recentGpsLogs
+    ) {
+        LocalDateTime now = snapshot.capturedAt();
+        int currentGps5m = gpsNearbyBetween(recentGpsLogs, booth, now.minusMinutes(5), now);
+        int previousGps5m = gpsNearbyBetween(recentGpsLogs, booth, now.minusMinutes(10), now.minusMinutes(5));
+        int currentGps15m = gpsNearbyBetween(recentGpsLogs, booth, now.minusMinutes(15), now);
+        int previousGps15m = gpsNearbyBetween(recentGpsLogs, booth, now.minusMinutes(30), now.minusMinutes(15));
         int reservationDelta15m = (int) boothReservationRepository.countByBoothIdAndReservedAtBetween(
                 booth.id(),
                 now.minusMinutes(15),
@@ -346,8 +368,8 @@ private final BoothReservationRepository boothReservationRepository;
  * - 시간 조건과 거리 조건을 모두 통과한 로그 수가 해당 구간의 주변 인원 추정값이 됩니다.
  * 초보자 포인트: stream 체인은 위에서 아래로 읽으면서 filter는 걸러내기, map은 변환, sorted는 정렬, toList는 결과 확정이라고 보면 됩니다.
  */
-    private int gpsNearbyBetween(BoothResponseDto booth, LocalDateTime from, LocalDateTime to) {
-        return (int) gpsLogRepository.findByCreatedAtAfter(from).stream()
+    private int gpsNearbyBetween(List<GpsLog> logs, BoothResponseDto booth, LocalDateTime from, LocalDateTime to) {
+        return (int) logs.stream()
                 .filter(log -> log.getCreatedAt() != null && !log.getCreatedAt().isBefore(from) && log.getCreatedAt().isBefore(to))
                 .filter(log -> distanceInMeters(booth.latitude(), booth.longitude(), log.getLatitude(), log.getLongitude()) <= 80.0)
                 .count();
@@ -989,5 +1011,8 @@ private final BoothReservationRepository boothReservationRepository;
             int checkedInDelta15m,
             int waitDelta15m
     ) {
+        static TemporalFeatures empty() {
+            return new TemporalFeatures(0, 0, 0, 0, 0);
+        }
     }
 }

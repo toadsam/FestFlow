@@ -244,13 +244,25 @@ export default function AnalyticsPage() {
   const [aiDecisionLogs, setAiDecisionLogs] = useState([]);
   const [aiVisitorGuide, setAiVisitorGuide] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [predictionLoading, setPredictionLoading] = useState(false);
   const [message, setMessage] = useState("");
+
+  const loadPredictions = useCallback(async () => {
+    setPredictionLoading(true);
+    try {
+      const nextPredictions = await fetchAiCongestionPredictions();
+      setAiPredictions(Array.isArray(nextPredictions) ? nextPredictions : []);
+    } catch {
+      setAiPredictions([]);
+    } finally {
+      setPredictionLoading(false);
+    }
+  }, []);
 
   const load = useCallback(async ({ includeVisitorGuide = false } = {}) => {
     try {
-      const [nextDashboard, nextPredictions, nextDecisionLogs, nextVisitorGuide] = await Promise.all([
+      const [nextDashboard, nextDecisionLogs, nextVisitorGuide] = await Promise.all([
         fetchAnalyticsDashboard(15),
-        fetchAiCongestionPredictions().catch(() => []),
         fetchAiDecisionLogs().catch(() => []),
         includeVisitorGuide ? fetchAiVisitorGuide("analytics").catch(() => null) : Promise.resolve(null),
       ]);
@@ -265,16 +277,16 @@ export default function AnalyticsPage() {
         zones: Array.isArray(nextDashboard?.zones) ? nextDashboard.zones : [],
         trend: Array.isArray(nextDashboard?.trend) ? nextDashboard.trend : [],
       });
-      setAiPredictions(Array.isArray(nextPredictions) ? nextPredictions : []);
       setAiDecisionLogs(Array.isArray(nextDecisionLogs) ? nextDecisionLogs : []);
       if (nextVisitorGuide) setAiVisitorGuide(nextVisitorGuide);
       setMessage("");
+      loadPredictions();
     } catch (error) {
       setMessage(error.message || "실시간 혼잡도 데이터를 불러오지 못했습니다.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadPredictions]);
 
   useEffect(() => {
     load({ includeVisitorGuide: true });
@@ -508,7 +520,17 @@ export default function AnalyticsPage() {
               </article>
             );
           })}
-          {!aiPredictions.length && (
+          {predictionLoading && !aiPredictions.length && (
+            <article className="analytics-prediction-card">
+              <div>
+                <strong>AI 예측 분석 중</strong>
+                <p>대시보드는 먼저 표시하고, 30분 뒤 예측은 배경에서 불러오고 있습니다.</p>
+                <span>잠시 후 결과 반영</span>
+              </div>
+              <small>AI 분석 중</small>
+            </article>
+          )}
+          {!predictionLoading && !aiPredictions.length && (
             FALLBACK_GUIDE_ZONES.slice(1, 3).map((zone) => (
               <article key={`fallback-${zone.zoneKey}`} className="analytics-prediction-card">
                 <div>
