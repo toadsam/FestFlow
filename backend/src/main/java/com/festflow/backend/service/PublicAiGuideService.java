@@ -35,6 +35,7 @@ import java.util.Map;
 public class PublicAiGuideService {
 // [의존성 주석] 여러 메서드에서 같은 기준으로 쓰는 상수입니다. 기준값을 한 곳에 모아야 나중에 정책이 바뀌어도 수정 지점이 줄어듭니다.
     private static final String OPENAI_RESPONSES_PATH = "/v1/responses";
+    private static final int VISITOR_GUIDE_MAX_OUTPUT_TOKENS = 520;
 // [의존성 주석] 다른 업무 로직을 재사용하기 위한 Service입니다. 한 서비스가 모든 일을 직접 하지 않도록 책임을 나눕니다.
     private final AnalyticsService analyticsService;
 // [의존성 주석] 다른 업무 로직을 재사용하기 위한 Service입니다. 한 서비스가 모든 일을 직접 하지 않도록 책임을 나눕니다.
@@ -317,7 +318,9 @@ private final String model;
                         + "\"reasons\":[\"why the AI recommends this\"]}. "
                         + "Focus on what the visitor should do in the next 30 minutes.",
                 "input", "scope=" + scope + "\ntitle=" + title + "\n" + context,
-                "max_output_tokens", 520
+                "max_output_tokens", VISITOR_GUIDE_MAX_OUTPUT_TOKENS,
+                "reasoning", Map.of("effort", "minimal"),
+                "text", Map.of("verbosity", "low")
         );
         String response = restClient.post()
                 .uri(OPENAI_RESPONSES_PATH)

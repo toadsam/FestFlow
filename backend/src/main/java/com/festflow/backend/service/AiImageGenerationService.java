@@ -216,7 +216,9 @@ private final boolean photoValidationEnabled;
         Map<String, Object> body = Map.of(
                 "model", textModel,
                 "store", false,
-                "max_output_tokens", 180,
+                "max_output_tokens", 220,
+                "reasoning", Map.of("effort", "minimal"),
+                "text", Map.of("verbosity", "low"),
                 "input", List.of(Map.of(
                         "role", "user",
                         "content", List.of(

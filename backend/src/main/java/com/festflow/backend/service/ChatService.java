@@ -41,6 +41,7 @@ public class ChatService {
     private static final String OPENAI_RESPONSES_PATH = "/v1/responses";
 // [의존성 주석] 여러 메서드에서 같은 기준으로 쓰는 상수입니다. 기준값을 한 곳에 모아야 나중에 정책이 바뀌어도 수정 지점이 줄어듭니다.
 private static final int MAX_EVIDENCE = 5;
+    private static final int CHAT_MAX_OUTPUT_TOKENS = 320;
     private static final List<KnowledgeChunk> STATIC_KNOWLEDGE = List.of(
             new KnowledgeChunk(1L, "예약 안내", "예약 가능한 부스는 부스 상세 화면에서 예약 상태와 테이블 현황을 먼저 확인한 뒤 예약해야 합니다. 예약이 꺼진 부스는 현장 이용 방식입니다.", "faq", null),
             new KnowledgeChunk(2L, "혼잡도 안내", "혼잡도는 주변 GPS 및 운영 데이터 기반 참고값입니다. 안전 이동이 필요하면 여유 또는 보통 단계의 부스를 우선 추천합니다.", "faq", null),
@@ -127,7 +128,9 @@ private final String model;
                     "model", model,
                     "instructions", buildInstructions(),
                     "input", buildInput(question, retrieval),
-                    "max_output_tokens", 220
+                    "max_output_tokens", CHAT_MAX_OUTPUT_TOKENS,
+                    "reasoning", Map.of("effort", "minimal"),
+                    "text", Map.of("verbosity", "low")
             );
 
             String response = restClient.post()
