@@ -295,6 +295,16 @@ export function IconMic(props) {
   );
 }
 
+export function IconVolume(props) {
+  return (
+    <IconBase {...props}>
+      <path d="M4 9v6h4l5 4V5L8 9H4Z" />
+      <path d="M16 9.5a4 4 0 0 1 0 5" />
+      <path d="M18.5 7a7 7 0 0 1 0 10" />
+    </IconBase>
+  );
+}
+
 export function IconEye(props) {
   return (
     <IconBase {...props}>

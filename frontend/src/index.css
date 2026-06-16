@@ -16040,6 +16040,23 @@ html[data-contrast="high"] .app-shell .uni-page {
   box-shadow: 0 8px 18px rgba(7, 26, 61, 0.08) !important;
 }
 
+.app-shell .staff-reference-topbar button:hover,
+.app-shell .staff-reference-topbar button:active,
+.app-shell .staff-reference-topbar button:focus-visible {
+  border: 1px solid #bfdbfe !important;
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.16) !important;
+}
+
+.app-shell .staff-reference-topbar button:disabled {
+  border: 1px solid #dbeafe !important;
+  background: #eef4ff !important;
+  color: #94a3b8 !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
 .app-shell .staff-reference-summary {
   display: grid;
   gap: 0.75rem;
@@ -16152,6 +16169,14 @@ html[data-contrast="high"] .app-shell .uni-page {
   background: rgba(255, 255, 255, 0.1) !important;
   color: #ffffff !important;
   box-shadow: none !important;
+}
+
+.app-shell .staff-reference-mode button:hover,
+.app-shell .staff-reference-mode button:active,
+.app-shell .staff-reference-mode button:focus-visible {
+  background: rgba(255, 255, 255, 0.18) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(191, 219, 254, 0.22) !important;
 }
 
 .app-shell .staff-reference-note {
@@ -16565,6 +16590,24 @@ html[data-contrast="high"] .app-shell .uni-page {
   box-shadow: 0 8px 16px rgba(37, 99, 235, 0.16) !important;
 }
 
+.app-shell .staff-reference-control .staff-reference-section-head button:hover,
+.app-shell .staff-reference-control .staff-reference-section-head button:active,
+.app-shell .staff-reference-control .staff-reference-section-head button:focus-visible {
+  border-color: #1d4ed8 !important;
+  background: #1d4ed8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.24) !important;
+}
+
+.app-shell .staff-reference-control .staff-reference-section-head button:disabled,
+.app-shell .staff-reference-control button:disabled {
+  border-color: #cbd5e1 !important;
+  background: #e2e8f0 !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
+}
+
 .app-shell .staff-reference-control p,
 .app-shell .staff-reference-login-card p {
   margin: 0;
@@ -16613,8 +16656,27 @@ html[data-contrast="high"] .app-shell .uni-page {
 }
 
 .app-shell .staff-lost-list button.active {
-  border-color: #bfdbfe !important;
-  background: #eff6ff !important;
+  border-color: #14b8a6 !important;
+  background: #ecfeff !important;
+  box-shadow: inset 0 3px 0 #14b8a6 !important;
+}
+
+.app-shell .staff-lost-list button:hover,
+.app-shell .staff-lost-list button:active,
+.app-shell .staff-lost-list button:focus-visible {
+  border-color: #93c5fd !important;
+  background: #f0f7ff !important;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.1) !important;
+}
+
+.app-shell .staff-lost-list button.active:hover,
+.app-shell .staff-lost-list button.active:active,
+.app-shell .staff-lost-list button.active:focus-visible {
+  border-color: #14b8a6 !important;
+  background: #ccfbf1 !important;
+  box-shadow:
+    inset 0 3px 0 #14b8a6,
+    0 10px 20px rgba(20, 184, 166, 0.14) !important;
 }
 
 .app-shell .staff-lost-list img,
@@ -16759,22 +16821,55 @@ html[data-contrast="high"] .app-shell .uni-page {
   min-height: 2.25rem;
   border: 1px solid #dbeafe !important;
   border-radius: 0.7rem !important;
-  background: #ffffff !important;
-  color: #2563eb !important;
+  background: #f8fbff !important;
+  color: #071a3d !important;
   box-shadow: none !important;
   font-size: 0.66rem !important;
   font-weight: 900 !important;
 }
 
-.app-shell .staff-lost-status-actions button.active,
-.app-shell .staff-lost-detail-actions button:first-child {
-  background: #2563eb !important;
-  color: #ffffff !important;
+.app-shell .staff-lost-status-actions button:hover,
+.app-shell .staff-lost-status-actions button:active,
+.app-shell .staff-lost-status-actions button:focus-visible,
+.app-shell .staff-lost-detail-actions button:hover,
+.app-shell .staff-lost-detail-actions button:active,
+.app-shell .staff-lost-detail-actions button:focus-visible {
+  border-color: #93c5fd !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.12) !important;
 }
 
-.app-shell .staff-lost-detail-actions button:last-child {
+.app-shell .staff-lost-status-actions button.active,
+.app-shell .staff-lost-status-actions button.active:hover,
+.app-shell .staff-lost-status-actions button.active:active,
+.app-shell .staff-lost-status-actions button.active:focus-visible,
+.app-shell .staff-lost-detail-actions button:first-child,
+.app-shell .staff-lost-detail-actions button:first-child:hover,
+.app-shell .staff-lost-detail-actions button:first-child:active,
+.app-shell .staff-lost-detail-actions button:first-child:focus-visible {
+  border-color: #2563eb !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2) !important;
+}
+
+.app-shell .staff-lost-detail-actions button:last-child,
+.app-shell .staff-lost-detail-actions button:last-child:hover,
+.app-shell .staff-lost-detail-actions button:last-child:active,
+.app-shell .staff-lost-detail-actions button:last-child:focus-visible {
   border-color: #fecaca !important;
+  background: #fff1f2 !important;
   color: #dc2626 !important;
+}
+
+.app-shell .staff-lost-status-actions button:disabled,
+.app-shell .staff-lost-detail-actions button:disabled {
+  border-color: #cbd5e1 !important;
+  background: #e2e8f0 !important;
+  color: #64748b !important;
+  box-shadow: none !important;
+  opacity: 1 !important;
 }
 
 .app-shell .staff-lost-detail input,
@@ -20100,11 +20195,47 @@ html[data-contrast="high"] .app-shell .uni-page {
   background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%) !important;
 }
 
+.app-shell .staff-translate-result-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
 .app-shell .staff-translate-result strong {
+  flex: 1;
+  min-width: 12rem;
   color: #071a3d !important;
   font-size: 0.86rem !important;
   font-weight: 920 !important;
   line-height: 1.42 !important;
+  overflow-wrap: anywhere;
+}
+
+.app-shell .staff-reference-translate .staff-translate-speak-button {
+  display: inline-flex !important;
+  width: auto !important;
+  min-width: 5rem !important;
+  min-height: 2rem !important;
+  flex: 0 0 auto !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.3rem !important;
+  padding: 0 0.62rem !important;
+  border: 1px solid #bfdbfe !important;
+  border-radius: 999px !important;
+  background: #ffffff !important;
+  color: #2563eb !important;
+  box-shadow: none !important;
+  font-size: 0.66rem !important;
+  line-height: 1 !important;
+}
+
+.app-shell .staff-reference-translate .staff-translate-speak-button.is-speaking {
+  border-color: #14b8a6 !important;
+  background: #ecfdf5 !important;
+  color: #0f766e !important;
 }
 
 .app-shell .staff-translate-result small {
@@ -20123,17 +20254,30 @@ html[data-contrast="high"] .app-shell .uni-page {
   min-height: 2.25rem;
   border: 1px solid #e5ecf6 !important;
   border-radius: 999px !important;
-  background: #ffffff !important;
-  color: #64748b !important;
+  background: #f8fbff !important;
+  color: #071a3d !important;
   box-shadow: none !important;
   font-size: 0.68rem !important;
   font-weight: 900 !important;
 }
 
-.app-shell .staff-reference-status-buttons button.active {
-  border-color: #bfdbfe !important;
+.app-shell .staff-reference-status-buttons button:hover,
+.app-shell .staff-reference-status-buttons button:active,
+.app-shell .staff-reference-status-buttons button:focus-visible {
+  border-color: #93c5fd !important;
   background: #eff6ff !important;
-  color: #2563eb !important;
+  color: #1d4ed8 !important;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.12) !important;
+}
+
+.app-shell .staff-reference-status-buttons button.active,
+.app-shell .staff-reference-status-buttons button.active:hover,
+.app-shell .staff-reference-status-buttons button.active:active,
+.app-shell .staff-reference-status-buttons button.active:focus-visible {
+  border-color: #2563eb !important;
+  background: #2563eb !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2) !important;
 }
 
 .app-shell .staff-reference-face {

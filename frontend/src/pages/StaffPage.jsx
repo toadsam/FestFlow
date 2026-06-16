@@ -37,6 +37,7 @@ import {
   IconRefresh,
   IconShield,
   IconUsers,
+  IconVolume,
 } from "../components/UxIcons";
 import { AJOU_CENTER } from "../utils/location";
 
@@ -334,9 +335,11 @@ export default function StaffPage() {
   const [translateResult, setTranslateResult] = useState(null);
   const [voiceListening, setVoiceListening] = useState(false);
   const [voicePreview, setVoicePreview] = useState("");
+  const [translateSpeaking, setTranslateSpeaking] = useState(false);
   const [showAllNotices, setShowAllNotices] = useState(false);
   const [responseToolTab, setResponseToolTab] = useState("translate");
   const recognitionRef = useRef(null);
+  const speechRef = useRef(null);
 
   async function load(token = staffToken) {
     if (!token) return;
@@ -434,6 +437,8 @@ export default function StaffPage() {
     return () => {
       recognitionRef.current?.stop?.();
       recognitionRef.current = null;
+      window.speechSynthesis?.cancel?.();
+      speechRef.current = null;
     };
   }, []);
 
@@ -734,6 +739,7 @@ export default function StaffPage() {
       return;
     }
 
+    stopTranslatedSpeech();
     setTranslateBusy(true);
     setTranslateResult(null);
     try {
@@ -753,12 +759,71 @@ export default function StaffPage() {
   }
 
   function swapTranslateLanguages() {
+    stopTranslatedSpeech();
     setTranslateForm((prev) => ({
       ...prev,
       sourceLang: prev.targetLang,
       targetLang: prev.sourceLang,
     }));
     setTranslateResult(null);
+  }
+
+  function stopTranslatedSpeech() {
+    window.speechSynthesis?.cancel?.();
+    speechRef.current = null;
+    setTranslateSpeaking(false);
+  }
+
+  function speakTranslatedText() {
+    if (translateSpeaking) {
+      stopTranslatedSpeech();
+      return;
+    }
+
+    const text = translateResult?.translatedText?.trim();
+    if (!text) {
+      setMessage("읽어줄 통역 결과가 없습니다.");
+      return;
+    }
+
+    if (!window.speechSynthesis || typeof window.SpeechSynthesisUtterance !== "function") {
+      setMessage("이 브라우저는 음성 출력을 지원하지 않습니다.");
+      return;
+    }
+
+    stopTranslatedSpeech();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang =
+      SPEECH_LANGUAGE_BY_TRANSLATE_LANGUAGE[translateForm.targetLang] ||
+      translateForm.targetLang ||
+      "ko-KR";
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+
+    const voices = window.speechSynthesis.getVoices?.() || [];
+    const languagePrefix = utterance.lang.split("-")[0];
+    const matchedVoice =
+      voices.find((voice) => voice.lang === utterance.lang) ||
+      voices.find((voice) => voice.lang?.startsWith(languagePrefix));
+    if (matchedVoice) utterance.voice = matchedVoice;
+
+    utterance.onend = () => {
+      if (speechRef.current !== utterance) return;
+      speechRef.current = null;
+      setTranslateSpeaking(false);
+    };
+    utterance.onerror = (event) => {
+      if (speechRef.current !== utterance) return;
+      speechRef.current = null;
+      setTranslateSpeaking(false);
+      if (event.error !== "interrupted" && event.error !== "canceled") {
+        setMessage("음성 출력에 실패했습니다. 다시 시도해 주세요.");
+      }
+    };
+
+    speechRef.current = utterance;
+    setTranslateSpeaking(true);
+    window.speechSynthesis.speak(utterance);
   }
 
   function handleVoiceInput() {
@@ -1133,6 +1198,7 @@ export default function StaffPage() {
             <select
               value={translateForm.sourceLang}
               onChange={(event) => {
+                stopTranslatedSpeech();
                 setTranslateForm((prev) => ({ ...prev, sourceLang: event.target.value }));
                 setTranslateResult(null);
               }}
@@ -1150,6 +1216,7 @@ export default function StaffPage() {
             <select
               value={translateForm.targetLang}
               onChange={(event) => {
+                stopTranslatedSpeech();
                 setTranslateForm((prev) => ({ ...prev, targetLang: event.target.value }));
                 setTranslateResult(null);
               }}
@@ -1166,6 +1233,7 @@ export default function StaffPage() {
             <textarea
               value={translateForm.text}
               onChange={(event) => {
+                stopTranslatedSpeech();
                 setTranslateForm((prev) => ({ ...prev, text: event.target.value }));
                 setTranslateResult(null);
               }}
@@ -1189,7 +1257,22 @@ export default function StaffPage() {
         </form>
         {translateResult && (
           <article className="staff-translate-result">
-            <strong>{translateResult.translatedText}</strong>
+            <div className="staff-translate-result-head">
+              <strong>{translateResult.translatedText}</strong>
+              <button
+                type="button"
+                className={
+                  translateSpeaking
+                    ? "staff-translate-speak-button is-speaking"
+                    : "staff-translate-speak-button"
+                }
+                onClick={speakTranslatedText}
+                aria-label={translateSpeaking ? "음성 출력 정지" : "통역 결과 읽어주기"}
+              >
+                <IconVolume className="h-4 w-4" />
+                {translateSpeaking ? "정지" : "읽어주기"}
+              </button>
+            </div>
             <small>
               {translateResult.provider || "translate"} · 신뢰도 {Math.round((translateResult.confidence || 0) * 100)}%
             </small>
