@@ -58,6 +58,82 @@ public class DataInitializer {
             "정재훈"
     );
 
+    private static final List<DemoEventSeed> DEMO_EVENT_LINEUP = List.of(
+            new DemoEventSeed(
+                    "득근득근 포징 공연",
+                    "메인 스테이지 오프닝 포징 퍼포먼스입니다.",
+                    "https://commons.wikimedia.org/wiki/Special:Redirect/file/Jay_Cutler_Mr._Olympia_2006-2007-2009-2010.JPG?width=900",
+                    "Wikimedia Commons / Jay Cutler Mr. Olympia 2006-2007-2009-2010.JPG",
+                    "center 35%"
+            ),
+            new DemoEventSeed(
+                    "에스파",
+                    "메인 스테이지 K-pop 하이라이트 공연입니다. 공연 전후 무대 앞 혼잡이 예상됩니다.",
+                    "https://commons.wikimedia.org/wiki/Special:Redirect/file/Aespa_2024_MMA_2.jpg?width=900",
+                    "Wikimedia Commons / Aespa 2024 MMA 2.jpg",
+                    "center 30%"
+            ),
+            new DemoEventSeed(
+                    "베이비몬스터",
+                    "강한 퍼포먼스 중심의 걸그룹 무대입니다. 입장 동선 분산이 필요합니다.",
+                    "https://commons.wikimedia.org/wiki/Special:Redirect/file/BABYMONSTER_in_Seattle.jpg?width=900",
+                    "Wikimedia Commons / BABYMONSTER in Seattle.jpg",
+                    "center 32%"
+            ),
+            new DemoEventSeed(
+                    "하츠투하트",
+                    "신인 걸그룹 무대로 포토존과 무대 앞 대기 수요가 함께 증가할 수 있습니다.",
+                    "https://commons.wikimedia.org/wiki/Special:Redirect/file/Hearts2Hearts_250515.jpg?width=900",
+                    "Wikimedia Commons / Hearts2Hearts 250515.jpg",
+                    "center 30%"
+            ),
+            new DemoEventSeed(
+                    "이즈나",
+                    "댄스 퍼포먼스 중심의 야간 무대입니다. 공연 직전 스테이지 체류 시간이 길어질 수 있습니다.",
+                    "https://commons.wikimedia.org/wiki/Special:Redirect/file/241125_izna.png?width=900",
+                    "Wikimedia Commons / 241125 izna.png",
+                    "center 28%"
+            ),
+            new DemoEventSeed(
+                    "엔플라잉",
+                    "밴드 라이브 무대입니다. 공연 후 푸드존 이동 인원이 늘어날 수 있습니다.",
+                    "https://commons.wikimedia.org/wiki/Special:Redirect/file/180112_%EC%97%94%ED%94%8C%EB%9D%BC%EC%9E%89.jpg?width=900",
+                    "Wikimedia Commons / 180112 엔플라잉.jpg",
+                    "center 35%"
+            ),
+            new DemoEventSeed(
+                    "데이식스",
+                    "밴드 라이브 피날레 무대입니다. 종료 후 귀가 동선 분산 안내가 필요합니다.",
+                    "https://commons.wikimedia.org/wiki/Special:Redirect/file/180628_Day6.jpg?width=900",
+                    "Wikimedia Commons / 180628 Day6.jpg",
+                    "center 38%"
+            )
+    );
+
+    private static final Set<String> LEGACY_DEMO_EVENT_TITLES = Set.of(
+            "오프닝 공연",
+            "밴드 라이브",
+            "댄스팀 쇼케이스",
+            "DJ 피날레",
+            "오프닝 퍼레이드",
+            "버스킹 릴레이",
+            "응원단 합동 무대",
+            "인디밴드 쇼케이스",
+            "DJ 나이트",
+            "폐막 불꽃 카운트다운",
+            "재즈 버스킹",
+            "댄스 배틀 예선",
+            "동아리 랜덤 플레이댄스",
+            "심야 어쿠스틱",
+            "셔틀 막차 안내 방송",
+            "하이키",
+            "키키",
+            "밴드 연습실",
+            "DJ Awesome",
+            "에일리",
+            "싸이"
+    );
+
     @Value("${app.init.admin.username:}")
     private String initialAdminUsername;
 
@@ -98,6 +174,7 @@ public class DataInitializer {
             }
             seedMissingDemoEvents(eventRepository, seedScenarioEvents(now));
             seedMissingDemoEvents(eventRepository, seedMoreScenarioEvents(now));
+            syncDemoConcertLineup(eventRepository, now);
             refreshStaleDemoEvents(eventRepository, now);
 
             if (noticeRepository.count() == 0) {
@@ -173,20 +250,25 @@ public class DataInitializer {
     }
 
     private List<FestivalEvent> seedScenarioEvents(LocalDateTime now) {
-        return List.of(
-                event("오프닝 퍼레이드", now.plusMinutes(10), now.plusMinutes(35), "곧 시작", "정문에서 잔디광장까지 이동형 공연이 진행됩니다.", 0),
-                event("버스킹 릴레이", now.plusMinutes(55), now.plusMinutes(95), "예정", "동아리 4팀이 이어서 공연합니다.", 0),
-                event("응원단 합동 무대", now.plusHours(2), now.plusHours(2).plusMinutes(35), "예정", "무대 앞 혼잡이 예상되어 10분 전 입장을 권장합니다.", 0),
-                event("인디밴드 쇼케이스", now.plusHours(3), now.plusHours(3).plusMinutes(50), "예정", "메인 스테이지 야간 공연입니다.", 0),
-                event("DJ 나이트", now.plusHours(4).plusMinutes(30), now.plusHours(5).plusMinutes(20), "예정", "공연 종료 후 푸드존 혼잡이 증가할 수 있습니다.", 0),
-                event("폐막 불꽃 카운트다운", now.plusHours(6), now.plusHours(6).plusMinutes(20), "예정", "잔디광장과 후문 방향 귀가 동선 분산이 필요합니다.", 0)
-        );
+        return demoConcertLineup(now);
     }
 
-    private FestivalEvent event(String title, LocalDateTime startTime, LocalDateTime endTime, String status, String liveMessage, Integer delayMinutes) {
-        FestivalEvent event = new FestivalEvent(title, startTime, endTime, status, null, null, "center");
-        event.update(title, startTime, endTime, null, null, "center", status, liveMessage, delayMinutes);
+    private FestivalEvent event(DemoEventSeed seed, LocalDateTime startTime, LocalDateTime endTime) {
+        FestivalEvent event = new FestivalEvent(seed.title(), startTime, endTime, "예정", seed.imageUrl(), seed.imageCredit(), seed.imageFocus());
+        event.update(seed.title(), startTime, endTime, seed.imageUrl(), seed.imageCredit(), seed.imageFocus(), null, seed.liveMessage(), 0);
         return event;
+    }
+
+    private List<FestivalEvent> demoConcertLineup(LocalDateTime now) {
+        LocalDateTime base = now.withSecond(0).withNano(0);
+        int[] startOffsets = {10, 55, 115, 175, 235, 305, 375};
+        int[] durations = {25, 45, 50, 45, 45, 55, 60};
+        List<FestivalEvent> events = new ArrayList<>();
+        for (int i = 0; i < DEMO_EVENT_LINEUP.size(); i++) {
+            LocalDateTime startTime = base.plusMinutes(startOffsets[i]);
+            events.add(event(DEMO_EVENT_LINEUP.get(i), startTime, startTime.plusMinutes(durations[i])));
+        }
+        return events;
     }
 
     private void seedMissingDemoEvents(EventRepository eventRepository, List<FestivalEvent> demoEvents) {
@@ -199,6 +281,31 @@ public class DataInitializer {
         if (!missingEvents.isEmpty()) {
             eventRepository.saveAll(missingEvents);
         }
+    }
+
+    private void syncDemoConcertLineup(EventRepository eventRepository, LocalDateTime now) {
+        List<FestivalEvent> events = eventRepository.findAll().stream()
+                .sorted(Comparator.comparing(FestivalEvent::getStartTime))
+                .toList();
+        List<FestivalEvent> demoEvents = events.stream()
+                .filter(this::isDemoEvent)
+                .toList();
+        if (demoEvents.isEmpty()) {
+            return;
+        }
+
+        eventRepository.deleteAll(demoEvents);
+        eventRepository.saveAll(demoConcertLineup(now));
+    }
+
+    private boolean isDemoEvent(FestivalEvent event) {
+        String title = event.getTitle();
+        if (title == null || title.isBlank()) {
+            return false;
+        }
+        return DEMO_EVENT_LINEUP.stream().anyMatch(seed -> seed.title().equals(title))
+                || LEGACY_DEMO_EVENT_TITLES.contains(title)
+                || title.startsWith("테스트공연");
     }
 
     private void refreshStaleDemoEvents(EventRepository eventRepository, LocalDateTime now) {
@@ -278,13 +385,7 @@ public class DataInitializer {
     }
 
     private List<FestivalEvent> seedMoreScenarioEvents(LocalDateTime now) {
-        return List.of(
-                event("재즈 버스킹", now.plusMinutes(25), now.plusMinutes(55), "예정", "잔디광장 옆 소규모 공연이라 혼잡도가 낮습니다.", 0),
-                event("댄스 배틀 예선", now.plusHours(1), now.plusHours(1).plusMinutes(45), "예정", "관객이 배틀존으로 몰릴 수 있어 주변 동선 관리가 필요합니다.", 0),
-                event("동아리 랜덤 플레이댄스", now.plusHours(2).plusMinutes(20), now.plusHours(3), "예정", "참여형 공연으로 스테이지 전면 체류 시간이 길어질 수 있습니다.", 0),
-                event("심야 어쿠스틱", now.plusHours(5).plusMinutes(40), now.plusHours(6).plusMinutes(10), "예정", "DJ 이후 분산 관람을 유도하는 저혼잡 공연입니다.", 0),
-                event("셔틀 막차 안내 방송", now.plusHours(6).plusMinutes(30), now.plusHours(6).plusMinutes(40), "예정", "후문 셔틀 안내소 주변 일시 혼잡이 예상됩니다.", 0)
-        );
+        return List.of();
     }
 
     private void seedInitialAdmin(AdminUserRepository adminUserRepository, PasswordEncoder passwordEncoder) {
@@ -425,12 +526,7 @@ public class DataInitializer {
     }
 
     private List<FestivalEvent> seedEvents(LocalDateTime now) {
-        return List.of(
-                new FestivalEvent("오프닝 공연", now.plusMinutes(30), now.plusMinutes(70), "예정", null, null, null),
-                new FestivalEvent("밴드 라이브", now.plusHours(2), now.plusHours(3), "예정", null, null, null),
-                new FestivalEvent("댄스팀 쇼케이스", now.plusHours(3).plusMinutes(30), now.plusHours(4).plusMinutes(20), "예정", null, null, null),
-                new FestivalEvent("DJ 피날레", now.plusHours(5), now.plusHours(6), "예정", null, null, null)
-        );
+        return demoConcertLineup(now);
     }
 
     private void seedDemoNotices(NoticeRepository noticeRepository) {
@@ -884,5 +980,14 @@ public class DataInitializer {
         if (!updated.isEmpty()) {
             staffMemberRepository.saveAll(updated);
         }
+    }
+
+    private record DemoEventSeed(
+            String title,
+            String liveMessage,
+            String imageUrl,
+            String imageCredit,
+            String imageFocus
+    ) {
     }
 }

@@ -24,25 +24,27 @@ export const EVENT_STATUS = {
   REMINDER: "알림 설정",
 };
 
-const CONCERT_IMAGE = "https://images.pexels.com/photos/167636/pexels-photo-167636.jpeg?auto=compress&cs=tinysrgb&w=1200";
-const BUSKING_IMAGE = "https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=900&q=80";
-const CHEER_IMAGE = "https://images.pexels.com/photos/1190297/pexels-photo-1190297.jpeg?auto=compress&cs=tinysrgb&w=900";
-const FIREWORKS_IMAGE = "https://images.pexels.com/photos/949592/pexels-photo-949592.jpeg?auto=compress&cs=tinysrgb&w=900";
-const DJ_IMAGE = "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&q=80";
+const POSING_IMAGE = "https://commons.wikimedia.org/wiki/Special:Redirect/file/Jay_Cutler_Mr._Olympia_2006-2007-2009-2010.JPG?width=900";
+const AESPA_IMAGE = "https://commons.wikimedia.org/wiki/Special:Redirect/file/Aespa_2024_MMA_2.jpg?width=900";
+const BABYMONSTER_IMAGE = "https://commons.wikimedia.org/wiki/Special:Redirect/file/BABYMONSTER_in_Seattle.jpg?width=900";
+const HEARTS2HEARTS_IMAGE = "https://commons.wikimedia.org/wiki/Special:Redirect/file/Hearts2Hearts_250515.jpg?width=900";
+const IZNA_IMAGE = "https://commons.wikimedia.org/wiki/Special:Redirect/file/241125_izna.png?width=900";
+const NFLYING_IMAGE = "https://commons.wikimedia.org/wiki/Special:Redirect/file/180112_%EC%97%94%ED%94%8C%EB%9D%BC%EC%9E%89.jpg?width=900";
+const DAY6_IMAGE = "https://commons.wikimedia.org/wiki/Special:Redirect/file/180628_Day6.jpg?width=900";
 
 export const EVENT_PRESETS = [
   {
-    id: "opening-parade",
-    title: "오프닝 퍼레이드",
+    id: "posing-performance",
+    title: "득근득근 포징 공연",
     stage: "메인 스테이지",
-    startTime: "2026-05-30T17:20:00",
-    endTime: "2026-05-30T17:50:00",
+    startTime: "2026-05-30T17:10:00",
+    endTime: "2026-05-30T17:35:00",
     status: EVENT_STATUS.SCHEDULED,
-    imageUrl: CONCERT_IMAGE,
+    imageUrl: POSING_IMAGE,
     badge: "예정",
-    lead: "축제의 시작을 알리는 메인 퍼레이드",
-    description: "무대와 광장을 잇는 오프닝 퍼레이드로 축제 분위기를 가장 먼저 느낄 수 있어요.",
-    genre: "퍼레이드",
+    lead: "축제 시작 전 분위기를 여는 포징 퍼포먼스",
+    description: "메인 스테이지에서 진행되는 포징 퍼포먼스입니다. 짧고 임팩트 있는 오프닝 무대로 관객 유입이 빠르게 시작될 수 있어요.",
+    genre: "퍼포먼스",
     age: "전체 관람가",
     host: "축제 운영단",
     distance: "80m",
@@ -51,96 +53,143 @@ export const EVENT_PRESETS = [
     weather: "22°C",
   },
   {
-    id: "busking-relay",
-    title: "버스킹 릴레이",
-    stage: "보조 무대",
-    startTime: "2026-05-30T18:30:00",
-    endTime: "2026-05-30T19:10:00",
+    id: "aespa",
+    title: "에스파",
+    stage: "메인 스테이지",
+    startTime: "2026-05-30T18:00:00",
+    endTime: "2026-05-30T18:45:00",
     status: EVENT_STATUS.SOON,
-    imageUrl: BUSKING_IMAGE,
+    imageUrl: AESPA_IMAGE,
     badge: "10분 후 시작",
-    lead: "지금 이 순간, 놓치지 말아야 할 공연!",
-    description: "다양한 뮤지션들이 함께하는 릴레이 버스킹 공연! 감성 가득한 음악으로 축제를 더 뜨겁게 즐겨보세요.",
-    genre: "어쿠스틱, 인디",
+    lead: "메인 스테이지 K-pop 하이라이트",
+    description: "에스파 메인 공연입니다. 공연 전후 무대 앞 혼잡이 커질 수 있어 스테이지 진입 시간을 조금 앞당기는 것이 좋아요.",
+    genre: "K-pop",
     age: "전체 관람가",
     host: "축제 운영단",
     distance: "120m",
-    waitTime: "5분",
-    crowd: "보통",
-    weather: "22°C",
-  },
-  {
-    id: "cheer-stage",
-    title: "응원단 합동 무대",
-    stage: "잔디 광장",
-    startTime: "2026-05-30T19:35:00",
-    endTime: "2026-05-30T20:10:00",
-    status: EVENT_STATUS.LIVE,
-    imageUrl: CHEER_IMAGE,
-    badge: "진행 중",
-    lead: "잔디 광장에서 가장 뜨거운 응원 무대",
-    description: "아주 응원단과 동아리 팀이 함께 만드는 합동 무대입니다. 현장 반응이 가장 활발한 공연이에요.",
-    genre: "응원, 퍼포먼스",
-    age: "전체 관람가",
-    host: "아주 응원단",
-    distance: "150m",
     waitTime: "8분",
     crowd: "혼잡",
     weather: "22°C",
   },
   {
-    id: "fireworks",
-    title: "불꽃놀이",
+    id: "babymonster",
+    title: "베이비몬스터",
     stage: "메인 스테이지",
-    startTime: "2026-05-30T20:30:00",
-    endTime: "2026-05-30T20:50:00",
+    startTime: "2026-05-30T19:00:00",
+    endTime: "2026-05-30T19:50:00",
+    status: EVENT_STATUS.LIVE,
+    imageUrl: BABYMONSTER_IMAGE,
+    badge: "진행 중",
+    lead: "강한 퍼포먼스 중심의 메인 무대",
+    description: "베이비몬스터 공연입니다. 퍼포먼스 집중도가 높은 무대라 시작 직전 대기 인원이 빠르게 늘어날 수 있어요.",
+    genre: "K-pop",
+    age: "전체 관람가",
+    host: "축제 운영단",
+    distance: "150m",
+    waitTime: "10분",
+    crowd: "혼잡",
+    weather: "22°C",
+  },
+  {
+    id: "hearts2hearts",
+    title: "하츠투하트",
+    stage: "보조 무대",
+    startTime: "2026-05-30T20:10:00",
+    endTime: "2026-05-30T20:55:00",
     status: EVENT_STATUS.SCHEDULED,
-    imageUrl: FIREWORKS_IMAGE,
+    imageUrl: HEARTS2HEARTS_IMAGE,
     badge: "예정",
-    lead: "밤하늘을 채우는 축제 하이라이트",
-    description: "메인 스테이지 인근에서 진행되는 짧고 강한 불꽃 세션입니다. 관람 전 이동 동선을 미리 확인해 주세요.",
-    genre: "스페셜 이벤트",
+    lead: "신인 걸그룹 무대와 포토존 수요",
+    description: "하츠투하트 공연입니다. 보조 무대와 포토존 주변 체류가 함께 늘 수 있어 이동 동선을 미리 잡는 것이 좋아요.",
+    genre: "K-pop",
     age: "전체 관람가",
     host: "축제 운영단",
     distance: "95m",
-    waitTime: "3분",
+    waitTime: "5분",
     crowd: "보통",
     weather: "22°C",
   },
   {
-    id: "dj-party",
-    title: "DJ 파티",
+    id: "izna",
+    title: "이즈나",
     stage: "보조 무대",
-    startTime: "2026-05-30T21:00:00",
-    endTime: "2026-05-30T22:00:00",
+    startTime: "2026-05-30T21:05:00",
+    endTime: "2026-05-30T21:50:00",
     status: EVENT_STATUS.SCHEDULED,
-    imageUrl: DJ_IMAGE,
+    imageUrl: IZNA_IMAGE,
     badge: "예정",
-    lead: "축제 마지막을 끌어올리는 DJ 무대",
-    description: "보조 무대에서 이어지는 DJ 파티입니다. 공연 전후 보조 무대 주변 혼잡도가 빠르게 오를 수 있어요.",
-    genre: "EDM, DJ",
+    lead: "야간 댄스 퍼포먼스 무대",
+    description: "이즈나 공연입니다. 야간 시간대 보조 무대 앞 체류 시간이 길어질 수 있어 주변 부스 혼잡도도 같이 확인해 주세요.",
+    genre: "K-pop",
     age: "전체 관람가",
-    host: "DJ Flow",
+    host: "축제 운영단",
     distance: "130m",
     waitTime: "6분",
     crowd: "보통",
     weather: "22°C",
   },
+  {
+    id: "nflying",
+    title: "엔플라잉",
+    stage: "잔디 광장",
+    startTime: "2026-05-30T22:10:00",
+    endTime: "2026-05-30T23:05:00",
+    status: EVENT_STATUS.SCHEDULED,
+    imageUrl: NFLYING_IMAGE,
+    badge: "예정",
+    lead: "잔디 광장을 채우는 밴드 라이브",
+    description: "엔플라잉 밴드 라이브입니다. 공연 후 푸드존 이동 인원이 늘어날 수 있어 종료 직후 동선 분산이 필요해요.",
+    genre: "밴드",
+    age: "전체 관람가",
+    host: "축제 운영단",
+    distance: "160m",
+    waitTime: "7분",
+    crowd: "보통",
+    weather: "22°C",
+  },
+  {
+    id: "day6",
+    title: "데이식스",
+    stage: "메인 스테이지",
+    startTime: "2026-05-30T23:20:00",
+    endTime: "2026-05-31T00:20:00",
+    status: EVENT_STATUS.SCHEDULED,
+    imageUrl: DAY6_IMAGE,
+    badge: "예정",
+    lead: "축제 밤을 마무리하는 밴드 피날레",
+    description: "데이식스 피날레 공연입니다. 종료 후 귀가 동선이 몰릴 수 있어 셔틀과 후문 방향 안내를 함께 확인해 주세요.",
+    genre: "밴드",
+    age: "전체 관람가",
+    host: "축제 운영단",
+    distance: "100m",
+    waitTime: "9분",
+    crowd: "혼잡",
+    weather: "22°C",
+  },
 ];
 
-const SEED_TITLES = new Set([
+const LEGACY_EVENT_TITLES = new Set([
   "밴드 연습실",
   "DJ Awesome",
   "에일리",
   "싸이",
-  "득근득근 포징 공연",
   "하이키",
+  "키키",
   "오프닝 퍼레이드",
   "버스킹 릴레이",
   "응원단 합동 무대",
   "인디밴드 쇼케이스",
   "DJ 나이트",
   "폐막 불꽃 카운트다운",
+  "재즈 버스킹",
+  "댄스 배틀 예선",
+  "동아리 랜덤 플레이댄스",
+  "심야 어쿠스틱",
+  "셔틀 막차 안내 방송",
+  "오프닝 공연",
+  "밴드 라이브",
+  "댄스팀 쇼케이스",
+  "DJ 피날레",
 ]);
 
 export function readEventReminders() {
@@ -212,17 +261,17 @@ export function statusTone(status) {
 }
 
 export function normalizeEvents(events = []) {
-  const isSeedDataset =
+  const hasLegacyDemoEvents =
     Array.isArray(events)
     && events.length > 0
-    && events.some((event) => SEED_TITLES.has(event?.title) || `${event?.imageUrl || ""}`.includes("Bodybuilder"));
-  const source = Array.isArray(events) && events.length && !isSeedDataset ? events : EVENT_PRESETS;
+    && events.some((event) => LEGACY_EVENT_TITLES.has(event?.title) || `${event?.title || ""}`.startsWith("테스트공연"));
+  const source = Array.isArray(events) && events.length && !hasLegacyDemoEvents ? events : EVENT_PRESETS;
   return source.map((event, index) => normalizeEvent(event, index));
 }
 
 export function normalizeEvent(event, index = 0) {
   const preset = EVENT_PRESETS[index % EVENT_PRESETS.length];
-  const seedLike = !event || SEED_TITLES.has(event.title) || `${event.imageUrl || ""}`.includes("Bodybuilder");
+  const seedLike = !event || LEGACY_EVENT_TITLES.has(event.title) || `${event.title || ""}`.startsWith("테스트공연");
   const title = seedLike ? preset.title : event.title || preset.title;
   const stage = seedLike
     ? preset.stage

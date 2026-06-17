@@ -23061,6 +23061,41 @@ body,
   box-shadow: 0 13px 26px rgba(109, 40, 217, 0.24) !important;
 }
 
+.app-shell .events-mobile-header button:hover,
+.app-shell .events-mobile-header button:active,
+.app-shell .events-mobile-header button:focus-visible {
+  border-color: #93c5fd !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  box-shadow: 0 10px 22px rgba(37, 99, 235, 0.14) !important;
+}
+
+.app-shell .events-mobile-date-tabs button:hover,
+.app-shell .events-mobile-date-tabs button:active,
+.app-shell .events-mobile-date-tabs button:focus-visible,
+.app-shell .events-mobile-filter-tabs button:hover,
+.app-shell .events-mobile-filter-tabs button:active,
+.app-shell .events-mobile-filter-tabs button:focus-visible {
+  border-color: #93c5fd !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.12) !important;
+}
+
+.app-shell .events-mobile-date-tabs button.is-active,
+.app-shell .events-mobile-date-tabs button.is-active:hover,
+.app-shell .events-mobile-date-tabs button.is-active:active,
+.app-shell .events-mobile-date-tabs button.is-active:focus-visible,
+.app-shell .events-mobile-filter-tabs button.is-active,
+.app-shell .events-mobile-filter-tabs button.is-active:hover,
+.app-shell .events-mobile-filter-tabs button.is-active:active,
+.app-shell .events-mobile-filter-tabs button.is-active:focus-visible {
+  border-color: #6d28d9 !important;
+  background: linear-gradient(135deg, #6d28d9, #7c3aed) !important;
+  color: #ffffff !important;
+  box-shadow: 0 13px 26px rgba(109, 40, 217, 0.24) !important;
+}
+
 .app-shell .events-mobile-ai-card {
   position: relative;
   display: grid;
@@ -23160,6 +23195,17 @@ body,
   font-size: 0.75rem !important;
   font-weight: 950 !important;
   white-space: nowrap;
+}
+
+.app-shell .events-mobile-ai-card__body button:hover,
+.app-shell .events-mobile-ai-card__body button:active,
+.app-shell .events-mobile-ai-card__body button:focus-visible {
+  border: 0 !important;
+  background: #ffffff !important;
+  color: #6d28d9 !important;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.22),
+    0 12px 24px rgba(60, 23, 118, 0.18) !important;
 }
 
 .app-shell .events-mobile-message,
@@ -23318,6 +23364,44 @@ body,
   color: #6d28d9 !important;
 }
 
+.app-shell .events-mobile-row__main:hover,
+.app-shell .events-mobile-row__main:active,
+.app-shell .events-mobile-row__main:focus-visible {
+  background: transparent !important;
+  color: inherit !important;
+  box-shadow: none !important;
+}
+
+.app-shell .events-mobile-reminder:hover,
+.app-shell .events-mobile-reminder:active,
+.app-shell .events-mobile-reminder:focus-visible,
+.app-shell .events-timeline-bell:hover,
+.app-shell .events-timeline-bell:active,
+.app-shell .events-timeline-bell:focus-visible {
+  border-color: #93c5fd !important;
+  background: #eff6ff !important;
+  color: #1d4ed8 !important;
+  box-shadow: 0 8px 16px rgba(37, 99, 235, 0.12) !important;
+}
+
+.app-shell .events-mobile-reminder.is-active,
+.app-shell .events-mobile-reminder.is-active:hover,
+.app-shell .events-mobile-reminder.is-active:active,
+.app-shell .events-mobile-reminder.is-active:focus-visible,
+.app-shell .events-timeline-bell.is-active,
+.app-shell .events-timeline-bell.is-active:hover,
+.app-shell .events-timeline-bell.is-active:active,
+.app-shell .events-timeline-bell.is-active:focus-visible,
+.app-shell .event-detail-title-row button.is-active,
+.app-shell .event-detail-title-row button.is-active:hover,
+.app-shell .event-detail-title-row button.is-active:active,
+.app-shell .event-detail-title-row button.is-active:focus-visible {
+  border-color: #6d28d9 !important;
+  background: #6d28d9 !important;
+  color: #ffffff !important;
+  box-shadow: 0 10px 20px rgba(109, 40, 217, 0.2) !important;
+}
+
 .app-shell .event-detail-mobile-page {
   width: 100%;
   min-height: 100dvh;
@@ -23365,6 +23449,17 @@ body,
   color: #ffffff !important;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.18) !important;
   backdrop-filter: blur(12px);
+}
+
+.app-shell .event-detail-nav button:hover,
+.app-shell .event-detail-nav button:active,
+.app-shell .event-detail-nav button:focus-visible,
+.app-shell .event-detail-back:hover,
+.app-shell .event-detail-back:active,
+.app-shell .event-detail-back:focus-visible {
+  background: rgba(15, 23, 42, 0.56) !important;
+  color: #ffffff !important;
+  box-shadow: 0 12px 26px rgba(15, 23, 42, 0.24) !important;
 }
 
 .app-shell .event-detail-badge {
