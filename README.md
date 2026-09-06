@@ -165,6 +165,6 @@ docs/        AI Match 사용·관리자 설명서 · 기술 문서 · 다이어�
 
 ## 만든 사람
 
-정재훈 — 아주대학교. 다른 작업은 [포트폴리오 마을](https://my-portfolio-5ow2.vercel.app)과 [GitHub](https://github.com/toadsam) 에 있다.
+정재훈 — 아주대학교. 다른 작업은 [포트폴리오 마을](https://jaehun.co.kr)과 [GitHub](https://github.com/toadsam) 에 있다.
 
 코드와 화면은 포트폴리오 공개 목적이며, 별도 표기 전까지 무단 사용·복제·배포를 허용하지 않는다.
