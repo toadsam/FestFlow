@@ -1,0 +1,370 @@
+/* 사주 소개팅 전용 스타일. 접두사 saju- 로만 쓰고 기존 화면은 건드리지 않는다.
+   색은 축제 "바람" 컨셉을 따른다 — 하늘의 파랑, 노을의 노랑, 갈대의 갈색. */
+
+:root {
+  --saju-blue: #2b6de0;
+  --saju-blue-deep: #1b3f80;
+  --saju-blue-soft: #e9f0fd;
+  --saju-yellow: #f2b224;
+  --saju-yellow-soft: #fdf3dc;
+  --saju-brown: #9a7442;
+  --saju-brown-soft: #f5ede1;
+  --saju-ink: #23303f;
+  --saju-muted: #6d7c8d;
+  --saju-line: #e6dfd2;
+  --saju-paper: #fffdf8;
+}
+
+/* ---------- 사주 패널 ---------- */
+.saju-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--saju-line);
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(242, 178, 36, 0.14), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(120% 90% at 0% 0%, rgba(43, 109, 224, 0.1), rgba(255, 255, 255, 0) 55%),
+    var(--saju-paper);
+  color: var(--saju-ink);
+}
+
+.saju-panel__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.saju-panel__head > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.saju-panel__head strong {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.saju-panel__head small {
+  font-size: 12px;
+  color: var(--saju-muted);
+}
+
+.saju-zodiac {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--saju-yellow-soft);
+  border: 1px solid rgba(242, 178, 36, 0.45);
+  color: #8a5f10;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* ---------- 네 기둥 ---------- */
+.saju-pillars {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.saju-pillar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 4px;
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--saju-blue-deep), #16305f);
+  color: #fff;
+}
+
+.saju-pillar--unknown {
+  background: var(--saju-brown-soft);
+  color: var(--saju-muted);
+  border: 1px dashed var(--saju-line);
+}
+
+.saju-pillar__label {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.saju-pillar__value {
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.saju-note {
+  margin: 0;
+  font-size: 12px;
+  color: var(--saju-brown);
+}
+
+/* ---------- 일간 ---------- */
+.saju-daymaster {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--saju-blue-soft);
+}
+
+.saju-daymaster > span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--saju-muted);
+}
+
+.saju-daymaster strong {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--saju-blue-deep);
+}
+
+.saju-daymaster em {
+  font-style: normal;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--saju-brown);
+}
+
+/* ---------- 오행 막대 ---------- */
+.saju-elements {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 12px 6px 8px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid var(--saju-line);
+}
+
+.saju-element {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.saju-element__name {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--saju-ink);
+}
+
+.saju-element__bar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 18px;
+  height: 52px;
+  border-radius: 9px;
+  background: #f0ece4;
+  overflow: hidden;
+}
+
+.saju-element__bar i {
+  display: block;
+  width: 100%;
+  min-height: 4px;
+  border-radius: 9px;
+  background: var(--saju-blue);
+}
+
+.saju-element--목 .saju-element__bar i { background: #4f9d5d; }
+.saju-element--화 .saju-element__bar i { background: #e2603f; }
+.saju-element--토 .saju-element__bar i { background: var(--saju-brown); }
+.saju-element--금 .saju-element__bar i { background: #a9a29b; }
+.saju-element--수 .saju-element__bar i { background: var(--saju-blue); }
+
+.saju-element__count {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--saju-muted);
+}
+
+.saju-reading {
+  margin: 0;
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--saju-yellow-soft);
+  border: 1px solid rgba(242, 178, 36, 0.35);
+  font-size: 14px;
+  line-height: 1.7;
+  color: #6b4a11;
+  white-space: pre-line;
+}
+
+/* ---------- 궁합 ---------- */
+.saju-match {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--saju-line);
+  background:
+    radial-gradient(100% 80% at 0% 0%, rgba(43, 109, 224, 0.12), rgba(255, 255, 255, 0) 60%),
+    var(--saju-paper);
+}
+
+.saju-match__gauge {
+  position: relative;
+  flex: 0 0 auto;
+  width: 104px;
+  height: 104px;
+}
+
+.saju-match__track {
+  fill: none;
+  stroke: #ece5d9;
+  stroke-width: 9;
+}
+
+.saju-match__fill {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke: var(--saju-blue);
+  transition: stroke-dasharray 600ms ease-out;
+}
+
+.saju-match--high .saju-match__fill { stroke: var(--saju-blue); }
+.saju-match--mid .saju-match__fill { stroke: var(--saju-yellow); }
+.saju-match--low .saju-match__fill { stroke: var(--saju-brown); }
+
+.saju-match__score {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px;
+}
+
+.saju-match__score strong {
+  font-size: 30px;
+  font-weight: 800;
+  color: var(--saju-ink);
+  line-height: 1;
+}
+
+.saju-match__score span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--saju-muted);
+}
+
+.saju-match__body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.saju-match__grade {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: var(--saju-blue-deep);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.saju-match--mid .saju-match__grade { background: #b07d10; }
+.saju-match--low .saju-match__grade { background: var(--saju-brown); }
+
+.saju-match__headline {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  color: var(--saju-ink);
+}
+
+.saju-match__who {
+  font-size: 12px;
+  color: var(--saju-muted);
+}
+
+.saju-match__reasons {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.saju-match__reasons li {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--saju-muted);
+}
+
+/* ---------- 목록 배지 ---------- */
+.saju-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--saju-blue-soft);
+  color: var(--saju-blue-deep);
+  border: 1px solid rgba(43, 109, 224, 0.25);
+  letter-spacing: 0;
+}
+
+.saju-badge strong {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.saju-badge--mid {
+  background: var(--saju-yellow-soft);
+  color: #8a5f10;
+  border-color: rgba(242, 178, 36, 0.4);
+}
+
+.saju-badge--low {
+  background: var(--saju-brown-soft);
+  color: #6f5430;
+  border-color: rgba(154, 116, 66, 0.3);
+}
+
+/* ---------- 가입 폼의 사주 안내 ---------- */
+.saju-form-note {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--saju-blue-soft);
+  color: var(--saju-blue-deep);
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.saju-form-note strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 2px;
+}

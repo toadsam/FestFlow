@@ -8,7 +8,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Entity
 @Table(name = "ai_match_profiles")
@@ -50,6 +52,23 @@ public class AiMatchProfile {
 
     @Column(nullable = false)
     private LocalDateTime createdAt;
+
+    /**
+     * 사주용 실명. 다른 참가자에게도, 관리자 화면에도 내보내지 않는다.
+     * 기존 프로필에는 없으므로 null 을 허용한다.
+     */
+    @Column(length = 40)
+    private String realName;
+
+    /** 양력 생년월일. 사주를 세우는 데만 쓰고 공개하지 않는다. */
+    private LocalDate birthDate;
+
+    /** 태어난 시간. 모르면 null 이고 시주 없이 세 기둥만 나온다. */
+    private LocalTime birthTime;
+
+    /** AI가 쓴 사주 풀이. 매번 다시 부르지 않도록 저장해 둔다. */
+    @Column(length = 2000)
+    private String sajuReading;
 
     protected AiMatchProfile() {
     }
@@ -154,8 +173,41 @@ public class AiMatchProfile {
         }
     }
 
+    public String getRealName() {
+        return realName;
+    }
+
+    public LocalDate getBirthDate() {
+        return birthDate;
+    }
+
+    public LocalTime getBirthTime() {
+        return birthTime;
+    }
+
+    public String getSajuReading() {
+        return sajuReading;
+    }
+
+    /** 사주가 세워져 있는가. 기능이 생기기 전에 가입한 프로필은 없을 수 있다. */
+    public boolean hasSaju() {
+        return birthDate != null;
+    }
+
+    public void updateSaju(String realName, LocalDate birthDate, LocalTime birthTime, String sajuReading) {
+        this.realName = realName;
+        this.birthDate = birthDate;
+        this.birthTime = birthTime;
+        this.sajuReading = sajuReading;
+    }
+
     public void deactivate() {
         this.status = "DELETED";
         this.pinHash = null;
+        // 탈퇴하면 사주에 쓰인 실명과 생년월일도 함께 지운다.
+        this.realName = null;
+        this.birthDate = null;
+        this.birthTime = null;
+        this.sajuReading = null;
     }
 }

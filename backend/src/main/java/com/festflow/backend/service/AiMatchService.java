@@ -18,6 +18,9 @@ import com.festflow.backend.dto.AiMatchProfileResponseDto;
 import com.festflow.backend.dto.AiMatchProfileUpdateDto;
 import com.festflow.backend.dto.AiMatchRequestCreateDto;
 import com.festflow.backend.dto.AiMatchRequestResponseDto;
+import com.festflow.backend.dto.SajuCompatibilityDto;
+import com.festflow.backend.dto.SajuDto;
+import com.festflow.backend.service.saju.SajuPillars;
 import com.festflow.backend.entity.AiMatchFavorite;
 import com.festflow.backend.entity.AiMatchPhoneUsage;
 import com.festflow.backend.entity.AiMatchProfile;
@@ -36,7 +39,10 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
+import java.time.DateTimeException;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +67,7 @@ public class AiMatchService {
     private final AiImageGenerationService aiImageGenerationService;
     private final AiMatchSmsNotifier aiMatchSmsNotifier;
     private final PasswordEncoder passwordEncoder;
+    private final SajuService sajuService;
 
     public AiMatchService(
             AiMatchProfileRepository profileRepository,
@@ -70,8 +77,10 @@ public class AiMatchService {
             UploadStorageService uploadStorageService,
             AiImageGenerationService aiImageGenerationService,
             AiMatchSmsNotifier aiMatchSmsNotifier,
-            PasswordEncoder passwordEncoder
+            PasswordEncoder passwordEncoder,
+            SajuService sajuService
     ) {
+        this.sajuService = sajuService;
         this.profileRepository = profileRepository;
         this.requestRepository = requestRepository;
         this.favoriteRepository = favoriteRepository;
@@ -176,12 +185,18 @@ public class AiMatchService {
             boolean consent,
             MultipartFile file,
             String originalImageUrl,
-            String generatedImageUrl
+            String generatedImageUrl,
+            String realName,
+            String birthDate,
+            String birthTime
     ) throws IOException {
         if (!consent) {
             throw new ResponseStatusException(BAD_REQUEST, "프로필 공개 동의가 필요합니다.");
         }
 
+        String safeRealName = trimRequired(realName, "realName", 40);
+        LocalDate safeBirthDate = parseBirthDate(birthDate);
+        LocalTime safeBirthTime = parseBirthTime(birthTime);
         String safeNickname = trimRequired(nickname, "nickname", 40);
         String safeGender = normalizeGender(gender);
         String safeIntro = trimRequired(intro, "intro", 500);
@@ -233,6 +248,12 @@ public class AiMatchService {
                 safeGeneratedImageUrl,
                 true
         ));
+
+        // 사주 풀이는 실패해도 가입을 막지 않는다. SajuService 가 규칙 기반 풀이로 대신 내려준다.
+        SajuPillars pillars = sajuService.calculate(safeBirthDate, safeBirthTime);
+        String reading = sajuService.writeReading(pillars, safeNickname, safeGender);
+        saved.updateSaju(safeRealName, safeBirthDate, safeBirthTime, reading);
+
         return toProfileDto(saved);
     }
 
@@ -252,7 +273,7 @@ public class AiMatchService {
                 sentRequests.stream()
                         .map(this::toRequestDto)
                         .toList(),
-                getDiscoverableProfiles(profile.getId()),
+                getDiscoverableProfiles(profile.getId(), profile),
                 favoriteRepository.findActiveProfileIdsByRequesterProfileId(profile.getId())
         );
     }
@@ -349,6 +370,30 @@ public class AiMatchService {
                 safeOriginalImageUrl,
                 safeGeneratedImageUrl
         );
+
+        // 생년월일이 바뀌었거나(또는 처음 넣었으면) 사주를 다시 세운다. 안 바뀌었으면 기존 풀이를 그대로 둔다.
+        String updatedRealName = trimOrNull(requestDto.realName());
+        LocalDate updatedBirthDate = requestDto.birthDate() == null || requestDto.birthDate().isBlank()
+                ? null
+                : parseBirthDate(requestDto.birthDate());
+        LocalTime updatedBirthTime = parseBirthTime(requestDto.birthTime());
+        if (updatedBirthDate != null) {
+            boolean changed = !updatedBirthDate.equals(profile.getBirthDate())
+                    || !java.util.Objects.equals(updatedBirthTime, profile.getBirthTime());
+            if (changed || profile.getSajuReading() == null) {
+                SajuPillars pillars = sajuService.calculate(updatedBirthDate, updatedBirthTime);
+                String reading = sajuService.writeReading(pillars, safeNickname, safeGender);
+                profile.updateSaju(
+                        updatedRealName == null ? profile.getRealName() : updatedRealName,
+                        updatedBirthDate,
+                        updatedBirthTime,
+                        reading
+                );
+            } else if (updatedRealName != null) {
+                profile.updateSaju(updatedRealName, updatedBirthDate, updatedBirthTime, profile.getSajuReading());
+            }
+        }
+
         return toProfileDto(profile);
     }
 
@@ -573,9 +618,13 @@ public class AiMatchService {
     }
 
     private List<AiMatchProfileResponseDto> getDiscoverableProfiles(Long viewerProfileId) {
+        return getDiscoverableProfiles(viewerProfileId, null);
+    }
+
+    private List<AiMatchProfileResponseDto> getDiscoverableProfiles(Long viewerProfileId, AiMatchProfile viewer) {
         return profileRepository.findAllByStatusOrderByCreatedAtDesc("ACTIVE").stream()
                 .filter(profile -> !profile.getId().equals(viewerProfileId))
-                .map(this::toProfileDto)
+                .map(profile -> toProfileDto(profile, viewer))
                 .toList();
     }
 
@@ -631,6 +680,29 @@ public class AiMatchService {
     }
 
     private AiMatchProfileResponseDto toProfileDto(AiMatchProfile profile) {
+        return toProfileDto(profile, null);
+    }
+
+    /**
+     * 프로필을 응답으로 옮긴다. 실명과 생년월일은 절대 담지 않는다 — 사주를 세우는 데만 쓴다.
+     *
+     * @param viewer 이 프로필을 보고 있는 사람. 주면 궁합 점수를 함께 계산한다.
+     */
+    private AiMatchProfileResponseDto toProfileDto(AiMatchProfile profile, AiMatchProfile viewer) {
+        SajuDto saju = null;
+        SajuCompatibilityDto compatibility = null;
+
+        if (profile.hasSaju()) {
+            SajuPillars pillars = sajuService.calculate(profile.getBirthDate(), profile.getBirthTime());
+            saju = sajuService.toDto(pillars, profile.getSajuReading());
+
+            boolean otherPerson = viewer != null && !viewer.getId().equals(profile.getId());
+            if (otherPerson && viewer.hasSaju()) {
+                SajuPillars viewerPillars = sajuService.calculate(viewer.getBirthDate(), viewer.getBirthTime());
+                compatibility = sajuService.compatibility(viewerPillars, pillars);
+            }
+        }
+
         return new AiMatchProfileResponseDto(
                 profile.getId(),
                 profile.getNickname(),
@@ -639,7 +711,9 @@ public class AiMatchService {
                 profile.getMeetPlace(),
                 profile.getOriginalImageUrl(),
                 profile.getGeneratedImageUrl(),
-                profile.getCreatedAt()
+                profile.getCreatedAt(),
+                saju,
+                compatibility
         );
     }
 
@@ -824,6 +898,41 @@ public class AiMatchService {
         }
     }
 
+    /** 사주용 생년월일. 양력 기준이고 반드시 있어야 한다. */
+    private LocalDate parseBirthDate(String value) {
+        String trimmed = value == null ? "" : value.trim();
+        if (trimmed.isEmpty()) {
+            throw new ResponseStatusException(BAD_REQUEST, "생년월일을 입력해 주세요.");
+        }
+        LocalDate parsed;
+        try {
+            parsed = LocalDate.parse(trimmed);
+        } catch (DateTimeException exception) {
+            throw new ResponseStatusException(BAD_REQUEST, "생년월일 형식이 올바르지 않습니다. 예) 2003-05-15");
+        }
+        LocalDate today = LocalDate.now();
+        if (parsed.isAfter(today)) {
+            throw new ResponseStatusException(BAD_REQUEST, "생년월일이 오늘보다 뒤일 수 없습니다.");
+        }
+        if (parsed.isBefore(today.minusYears(120))) {
+            throw new ResponseStatusException(BAD_REQUEST, "생년월일을 다시 확인해 주세요.");
+        }
+        return parsed;
+    }
+
+    /** 태어난 시간. 모르면 비워도 되고, 그러면 시주 없이 세 기둥만 나온다. */
+    private LocalTime parseBirthTime(String value) {
+        String trimmed = value == null ? "" : value.trim();
+        if (trimmed.isEmpty()) {
+            return null;
+        }
+        try {
+            return LocalTime.parse(trimmed);
+        } catch (DateTimeException exception) {
+            throw new ResponseStatusException(BAD_REQUEST, "태어난 시간 형식이 올바르지 않습니다. 예) 14:30");
+        }
+    }
+
     private String trimRequired(String value, String field, int maxLength) {
         String trimmed = value == null ? "" : value.trim();
         if (trimmed.isEmpty()) {
@@ -841,6 +950,7 @@ public class AiMatchService {
     private String fieldLabel(String field) {
         return switch (field) {
             case "nickname" -> "닉네임";
+            case "realName" -> "이름";
             case "gender" -> "성별";
             case "intro" -> "자기소개";
             case "pin" -> "비밀번호";

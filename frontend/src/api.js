@@ -1154,6 +1154,10 @@ export async function createAiMatchProfile(form, file) {
   formData.append("phoneNumber", form.phoneNumber || "");
   formData.append("meetPlace", form.meetPlace || "");
   formData.append("consent", String(Boolean(form.consent)));
+  // 사주용. 실명과 생년월일은 저장만 되고 다른 참가자에게는 공개되지 않는다.
+  formData.append("realName", form.realName || "");
+  formData.append("birthDate", form.birthDate || "");
+  formData.append("birthTime", form.birthTime || "");
   if (form.originalImageUrl) {
     formData.append("originalImageUrl", form.originalImageUrl);
   }

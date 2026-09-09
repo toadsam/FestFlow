@@ -34,6 +34,7 @@ import {
   toggleAiMatchFavorite,
   updateAiMatchProfile,
 } from "../api";
+import { SajuCompatibilityPanel, SajuPanel, SajuScoreBadge } from "../components/SajuCard";
 
 const MEET_PLACES = ["총학생회 부스"];
 const MEET_PLACE_MAP_TARGET = {
@@ -662,6 +663,10 @@ export default function AiMatchPage() {
   const [phoneCheckResult, setPhoneCheckResult] = useState(null);
   const [phoneVerifiedKey, setPhoneVerifiedKey] = useState("");
   const [gender, setGender] = useState("여성");
+  // 사주용. 실명과 생년월일은 사주를 뽑는 데만 쓰고 다른 참가자에게 보이지 않는다.
+  const [realName, setRealName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [birthTime, setBirthTime] = useState("");
   const [mbti, setMbti] = useState("");
   const [intro, setIntro] = useState("");
   const [place, setPlace] = useState(MEET_PLACES[0]);
@@ -728,6 +733,11 @@ export default function AiMatchPage() {
   const pinConfirmMissing = !isEditingProfile && !pinConfirm.trim();
   const introMissing = !intro.trim();
   const consentMissing = !consent;
+  // 사주는 새로 가입할 때만 필수다. 기존 프로필 수정에서는 비워두면 사주를 그대로 둔다.
+  const realNameMissing = !isEditingProfile && !realName.trim();
+  const birthDateMissing = !isEditingProfile && !birthDate.trim();
+  const birthDateInvalid =
+    Boolean(birthDate.trim()) && (Number.isNaN(Date.parse(birthDate)) || new Date(birthDate) > new Date());
   const accessNicknameMissing = !accessNickname.trim();
   const accessPinMissing = !accessPin.trim();
   const accessPinInvalid = accessPin.length > 0 && (accessPin.length < 4 || accessPin.length > 10 || /\s/.test(accessPin));
@@ -736,6 +746,9 @@ export default function AiMatchPage() {
       !introMissing &&
       !imageMissing &&
       !consentMissing &&
+      !realNameMissing &&
+      !birthDateMissing &&
+      !birthDateInvalid &&
       !submitting &&
       !converting &&
       !hasDuplicateNickname &&
@@ -1235,6 +1248,9 @@ export default function AiMatchPage() {
     setPhoneCheckResult(null);
     setPhoneVerifiedKey("");
     setGender("여성");
+    setRealName("");
+    setBirthDate("");
+    setBirthTime("");
     setMbti("");
     setIntro("");
     setPlace(MEET_PLACES[0]);
@@ -1269,6 +1285,10 @@ export default function AiMatchPage() {
     setPhoneCheckResult(accessPhoneUsage || null);
     setPhoneVerifiedKey(getPhoneNumberKey(ownPhoneNumber));
     setGender(accessProfile.gender === "남성" ? "남성" : "여성");
+    // 실명과 생년월일은 서버가 돌려주지 않는다. 사주를 바꾸고 싶을 때만 다시 입력한다.
+    setRealName("");
+    setBirthDate("");
+    setBirthTime("");
     setMbti(parsed.mbti || "");
     setIntro(parsed.summary || "");
     setPlace(MEET_PLACES[0]);
@@ -1464,6 +1484,18 @@ export default function AiMatchPage() {
       setErrorMessage("자기소개를 입력해 주세요.");
       return;
     }
+    if (realNameMissing) {
+      setErrorMessage("사주를 뽑으려면 이름이 필요해요.");
+      return;
+    }
+    if (birthDateMissing) {
+      setErrorMessage("사주를 뽑으려면 생년월일이 필요해요.");
+      return;
+    }
+    if (birthDateInvalid) {
+      setErrorMessage("생년월일을 다시 확인해 주세요.");
+      return;
+    }
     if (consentMissing) {
       setErrorMessage("프로필 공개 동의가 필요합니다.");
       return;
@@ -1486,6 +1518,10 @@ export default function AiMatchPage() {
           originalImageUrl,
           generatedImageUrl,
           pin: accessPin,
+          // 비워두면 서버가 기존 사주를 그대로 둔다.
+          realName: realName.trim(),
+          birthDate: birthDate.trim(),
+          birthTime: birthTime.trim(),
         });
         setProfiles((current) => current.map((item) => (item.id === updatedProfile.id ? updatedProfile : item)));
         setAccessProfile(updatedProfile);
@@ -1507,6 +1543,9 @@ export default function AiMatchPage() {
             consent,
             originalImageUrl,
             generatedImageUrl,
+            realName: realName.trim(),
+            birthDate: birthDate.trim(),
+            birthTime: birthTime.trim(),
           },
           null,
         );
@@ -2048,7 +2087,54 @@ export default function AiMatchPage() {
 
           <div className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "4. MBTI" : "7. MBTI"}</span>
+              <span>{isEditingProfile ? "4. 사주" : "7. 사주"}</span>
+              <small>{isEditingProfile ? "바꿀 때만 입력" : "이름 · 생년월일"}</small>
+            </div>
+            <div className="saju-form-note">
+              <IconShield className="h-5 w-5" />
+              <div>
+                <strong>이름과 생년월일은 공개되지 않아요</strong>
+                사주를 뽑는 데만 쓰고, 다른 참가자에게는 닉네임과 사주 결과만 보여요.
+                {isEditingProfile ? " 비워두면 지금 사주를 그대로 둡니다." : ""}
+              </div>
+            </div>
+            {registerAttempted && realNameMissing ? (
+              <small className="ai-match-field-error">이름을 입력해 주세요.</small>
+            ) : null}
+            <input
+              value={realName}
+              maxLength={40}
+              onChange={(event) => setRealName(event.target.value)}
+              placeholder="이름 (예: 김바람)"
+              autoComplete="name"
+            />
+            {registerAttempted && birthDateMissing ? (
+              <small className="ai-match-field-error">생년월일을 입력해 주세요.</small>
+            ) : null}
+            {birthDateInvalid ? (
+              <small className="ai-match-field-error">생년월일을 다시 확인해 주세요.</small>
+            ) : null}
+            <input
+              type="date"
+              value={birthDate}
+              max={new Date().toISOString().slice(0, 10)}
+              onChange={(event) => setBirthDate(event.target.value)}
+              placeholder="생년월일 (양력)"
+            />
+            <input
+              type="time"
+              value={birthTime}
+              onChange={(event) => setBirthTime(event.target.value)}
+              placeholder="태어난 시간"
+            />
+            <small className="ai-match-field-hint">
+              생년월일은 양력으로 넣어 주세요. 태어난 시간은 몰라도 괜찮아요. 비워두면 시주 없이 세 기둥으로 봅니다.
+            </small>
+          </div>
+
+          <div className="ai-match-field">
+            <div className="ai-match-field-head">
+              <span>{isEditingProfile ? "5. MBTI" : "8. MBTI"}</span>
               <small>선택 사항</small>
             </div>
             <select value={mbti} onChange={(event) => setMbti(cleanMbtiValue(event.target.value))}>
@@ -2063,7 +2149,7 @@ export default function AiMatchPage() {
 
           <div className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "5. 관심사 태그" : "8. 관심사 태그"}</span>
+              <span>{isEditingProfile ? "6. 관심사 태그" : "9. 관심사 태그"}</span>
               <small>{selectedTags.length}/6 선택</small>
             </div>
             <div className="ai-match-tag-grid ai-match-tag-grid--register">
@@ -2086,7 +2172,7 @@ export default function AiMatchPage() {
 
           <label className="ai-match-field">
             <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "6. 자기소개" : "9. 자기소개"}</span>
+              <span>{isEditingProfile ? "7. 자기소개" : "10. 자기소개"}</span>
               <small>{intro.length}/120</small>
             </div>
             {introMissing ? <small className="ai-match-field-error">자기소개를 입력해 주세요.</small> : null}
@@ -2270,6 +2356,7 @@ export default function AiMatchPage() {
 
                       <div className="ai-match-person-footer">
                         <div className="ai-match-inline-tags">
+                          <SajuScoreBadge compatibility={profile.compatibility} />
                           {shouldShowPeopleRequestStatus(sentRequest?.status) ? (
                             <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(sentRequest.status, sentRequest.statusReason)}`}>
                               신청 {requestStatusLabel}
@@ -2437,6 +2524,22 @@ export default function AiMatchPage() {
             </button>
           </div>
         </section>
+
+        {accessProfile.saju ? (
+          <SajuPanel
+            saju={accessProfile.saju}
+            title="내 사주"
+            subtitle={accessProfile.saju.hourKnown ? "네 기둥" : "태어난 시간 없이 세 기둥"}
+          />
+        ) : (
+          <section className="ai-match-empty-card">
+            <strong>아직 사주가 없어요.</strong>
+            <p>프로필 수정에서 이름과 생년월일을 넣으면 사주와 궁합 점수를 볼 수 있어요.</p>
+            <button type="button" className="ai-match-secondary-button" onClick={startEditingProfile}>
+              사주 등록하기
+            </button>
+          </section>
+        )}
       </div>
     );
   }
@@ -2676,6 +2779,23 @@ export default function AiMatchPage() {
             ))}
           </div>
         </section>
+
+        <SajuCompatibilityPanel
+          compatibility={selectedDetailProfile.compatibility}
+          nickname={selectedDetailProfile.nickname}
+        />
+
+        {selectedDetailProfile.saju ? (
+          <SajuPanel
+            saju={selectedDetailProfile.saju}
+            title={`${selectedDetailProfile.nickname} 님의 사주`}
+            subtitle={selectedDetailProfile.saju.hourKnown ? "네 기둥" : "세 기둥"}
+          />
+        ) : null}
+
+        {selectedDetailProfile.saju && !selectedDetailProfile.compatibility && accessProfile && !accessProfile.saju ? (
+          <p className="ai-match-note">내 사주를 등록하면 궁합 점수도 볼 수 있어요. 내 프로필 수정에서 생년월일을 넣어 주세요.</p>
+        ) : null}
 
         <section className="ai-match-safety-card">
           <IconShield className="h-5 w-5" />
