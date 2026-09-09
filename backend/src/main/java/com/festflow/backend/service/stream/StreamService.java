@@ -18,6 +18,15 @@ public class StreamService {
     private final List<SseEmitter> staffEmitters = new CopyOnWriteArrayList<>();
     private final List<SseEmitter> lostItemEmitters = new CopyOnWriteArrayList<>();
     private final List<SseEmitter> reservationEmitters = new CopyOnWriteArrayList<>();
+    private final List<SseEmitter> orderEmitters = new CopyOnWriteArrayList<>();
+
+    public SseEmitter subscribeOrders() {
+        return createEmitter(orderEmitters);
+    }
+
+    public void publishOrders(Object payload) {
+        send(orderEmitters, "orders", payload);
+    }
 
     public SseEmitter subscribeCongestion() {
         return createEmitter(congestionEmitters);

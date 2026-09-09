@@ -12,6 +12,7 @@ import {
   updateOpsBoothReservationConfig,
 } from "../api";
 import CongestionBadge from "../components/CongestionBadge";
+import OpsBoothOrders from "../components/OpsBoothOrders";
 import {
   IconCalendar,
   IconClipboard,
@@ -1441,6 +1442,8 @@ export default function OpsBoothPage() {
           </div>
         </article>
       )}
+
+      {data && <OpsBoothOrders boothId={id} opsKey={key} />}
     </section>
   );
 }

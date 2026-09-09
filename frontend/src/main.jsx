@@ -19,6 +19,10 @@ import LostFoundPage from "./pages/LostFoundPage";
 import MorePage from "./pages/MorePage";
 import OpsBoothPage from "./pages/OpsBoothPage";
 import OpsSimulationPage from "./pages/OpsSimulationPage";
+import TableOrderPage from "./pages/order/TableOrderPage";
+import OrderCheckoutPage from "./pages/order/OrderCheckoutPage";
+import OrderStatusPage from "./pages/order/OrderStatusPage";
+import TableQrPage from "./pages/order/TableQrPage";
 import StaffPage from "./pages/StaffPage";
 import StageCrowdPage from "./pages/StageCrowdPage";
 import StageMapPage from "./pages/StageMapPage";
@@ -76,6 +80,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="ops/master" element={<Navigate to="/admin" replace />} />
             <Route path="ops/simulation" element={<Navigate to="/admin/simulation" replace />} />
             <Route path="ops/booth/:id" element={routeElement(OpsBoothPage)} />
+            <Route path="ops/booth/:id/table-qr" element={routeElement(TableQrPage)} />
+            <Route path="order/:boothId/:table" element={routeElement(TableOrderPage)} />
+            <Route path="order/:boothId/:table/checkout" element={routeElement(OrderCheckoutPage)} />
+            <Route path="orders/:orderId" element={routeElement(OrderStatusPage)} />
             <Route path="ai-match" element={routeElement(AiMatchPage)} />
             <Route path="ai-match/admin" element={routeElement(AiMatchAdminPage)} />
             <Route path="*" element={<Navigate to="/" replace />} />

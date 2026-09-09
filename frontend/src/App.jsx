@@ -41,14 +41,20 @@ export default function App() {
   const isOpsPanelRoute =
     location.pathname.startsWith("/ops") || location.pathname.startsWith("/admin/simulation");
   const isAiMatchRoute = location.pathname.startsWith("/ai-match");
+  // 테이블 QR 주문 흐름은 하단 탭 없이 전체 화면으로 쓴다.
+  const isOrderRoute = location.pathname.startsWith("/order/") || location.pathname.startsWith("/orders/");
 
   return (
-    <div className="app-shell festival-shell" data-route-scope={isOpsRoute ? "ops" : "public"}>
+    <div
+      className="app-shell festival-shell"
+      data-route-scope={isOpsRoute ? "ops" : "public"}
+      data-order-route={isOrderRoute ? "true" : undefined}
+    >
       <main className="festival-main">
         <Outlet />
       </main>
 
-      {!isOpsPanelRoute && !isAiMatchRoute && (
+      {!isOpsPanelRoute && !isAiMatchRoute && !isOrderRoute && (
         <nav className="festival-bottom-nav" aria-label="주요 메뉴">
           {navTabs.map((tab) => {
             const Icon = tab.icon;

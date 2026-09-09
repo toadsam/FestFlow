@@ -484,6 +484,55 @@ export function createReservationStream() {
   return new EventSource(`${API_BASE}/stream/reservations`);
 }
 
+// ---------- 테이블 QR 주문 ----------
+
+export function createOrderStream() {
+  return new EventSource(`${API_BASE}/stream/orders`);
+}
+
+export async function fetchOrderMenu(boothId, table) {
+  const query = table ? `?table=${encodeURIComponent(table)}` : "";
+  const response = await fetch(`${API_BASE}/booths/${boothId}/order-menu${query}`);
+  return parseJson(response, "메뉴를 불러오지 못했습니다.");
+}
+
+export async function createBoothOrder(boothId, payload) {
+  const response = await fetch(`${API_BASE}/booths/${boothId}/orders`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "주문 접수에 실패했습니다.");
+}
+
+export async function fetchOrder(orderId, key) {
+  const response = await fetch(`${API_BASE}/orders/${orderId}?key=${encodeURIComponent(key || "")}`);
+  return parseJson(response, "주문을 불러오지 못했습니다.");
+}
+
+export async function fetchOpsBoothOrders(boothId, key) {
+  const response = await fetch(opsUrl(`/ops/booth/${boothId}/orders`), { headers: opsHeaders(key) });
+  return parseJson(response, "주문 목록을 불러오지 못했습니다.");
+}
+
+export async function updateOpsBoothOrderConfig(boothId, payload, key) {
+  const response = await fetch(opsUrl(`/ops/booth/${boothId}/orders/config`), {
+    method: "PUT",
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "주문 설정 저장에 실패했습니다.");
+}
+
+export async function updateOpsBoothOrderStatus(boothId, orderId, status, key) {
+  const response = await fetch(opsUrl(`/ops/booth/${boothId}/orders/${orderId}/status`), {
+    method: "PUT",
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ status }),
+  });
+  return parseJson(response, "주문 상태 변경에 실패했습니다.");
+}
+
 export function downloadBoothCsv() {
   window.open(`${API_BASE}/export/booths.csv`, "_blank", "noopener,noreferrer");
 }

@@ -73,6 +73,16 @@ public class Booth {
 
     private Boolean reservationEnabled = true;
 
+    /** 테이블 QR 주문 접수 여부. null 이면 켜진 것으로 본다. */
+    private Boolean orderEnabled = true;
+
+    /** 계좌이체 입금 계좌 (예: "국민 000000-00-000000"). */
+    @Column(length = 200)
+    private String bankAccount;
+
+    @Column(length = 60)
+    private String bankHolder;
+
     protected Booth() {
     }
 
@@ -261,6 +271,26 @@ public class Booth {
 
     public Boolean getReservationEnabled() {
         return reservationEnabled;
+    }
+
+    public boolean isOrderEnabled() {
+        return orderEnabled == null || orderEnabled;
+    }
+
+    public String getBankAccount() {
+        return bankAccount;
+    }
+
+    public String getBankHolder() {
+        return bankHolder;
+    }
+
+    public void updateOrderConfig(Boolean orderEnabled, String bankAccount, String bankHolder) {
+        if (orderEnabled != null) {
+            this.orderEnabled = orderEnabled;
+        }
+        this.bankAccount = normalizeBlank(bankAccount);
+        this.bankHolder = normalizeBlank(bankHolder);
     }
 
     private String normalizeBlank(String value) {
