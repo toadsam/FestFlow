@@ -22,7 +22,7 @@ export function shouldShowSplash() {
 function dateLabel() {
   const [, m1, d1] = FESTIVAL.startDate.split("-");
   const [, m2, d2] = FESTIVAL.endDate.split("-");
-  return `${m1}.${d1} – ${m2}.${d2} · ${FESTIVAL.place}`;
+  return `${m1}.${d1} – ${m2}.${d2}`;
 }
 
 export default function Splash({ onDone }) {
