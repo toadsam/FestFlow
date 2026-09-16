@@ -5,6 +5,7 @@ public record OrderMenuItemDto(
         String description,
         String priceLabel,
         Integer price,
-        Boolean soldOut
+        Boolean soldOut,
+        String imageUrl
 ) {
 }

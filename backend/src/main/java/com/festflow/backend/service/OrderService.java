@@ -234,7 +234,7 @@ public class OrderService {
     }
 
     /**
-     * menuBoardJson: [{"name","price","description","soldOut"}] — price 는 "12,000원" 같은 문자열이라 숫자만 뽑는다.
+     * menuBoardJson: [{"name","price","description","soldOut","imageUrl"}] — price 는 "12,000원" 같은 문자열이라 숫자만 뽑는다.
      */
     List<OrderMenuItemDto> parseMenuBoard(String raw) {
         if (raw == null || raw.isBlank()) return List.of();
@@ -258,7 +258,8 @@ public class OrderService {
                     stringOf(row.get("description")).trim(),
                     priceLabel,
                     parsePrice(priceLabel),
-                    soldOut
+                    soldOut,
+                    stringOf(row.get("imageUrl")).trim()
             ));
         }
         return items;

@@ -10,6 +10,7 @@ import {
   fetchBoothById,
   fetchBoothReservations,
   fetchCongestion,
+  resolveApiAssetUrl,
   sendReservationAuthCode,
   verifyReservationAuthCode,
 } from "../api";
@@ -70,6 +71,7 @@ function parseMenuBoardJson(raw) {
         price: String(item?.price || "").trim(),
         description: String(item?.description || "").trim(),
         soldOut: Boolean(item?.soldOut),
+        imageUrl: String(item?.imageUrl || "").trim(),
       }))
       .filter((item) => item.name);
   } catch {
@@ -109,6 +111,27 @@ function parseTimeMs(value) {
   return Number.isNaN(parsed) ? 0 : parsed;
 }
 
+function relativeTime(at) {
+  if (!at) return "";
+  const seconds = Math.max(0, Math.round((Date.now() - at) / 1000));
+  if (seconds < 5) return "방금 갱신";
+  if (seconds < 60) return `${seconds}초 전 갱신`;
+  return `${Math.floor(seconds / 60)}분 전 갱신`;
+}
+
+/** "4인 테이블 2개 · 2인 1개" 처럼 빈 테이블을 크기별로 묶는다. */
+function freeTablesSummary(tables) {
+  const bySize = new Map();
+  tables.filter(canReserveTable).forEach((table) => {
+    const size = Math.max(1, Number(table.totalSeats) || tableSeats(table) || 1);
+    bySize.set(size, (bySize.get(size) || 0) + 1);
+  });
+  return [...bySize.entries()]
+    .sort((a, b) => b[0] - a[0])
+    .map(([size, count]) => `${size}인 테이블 ${count}개`)
+    .join(" · ");
+}
+
 function timerText(seconds) {
   const safe = Math.max(0, seconds);
   return `${String(Math.floor(safe / 60)).padStart(2, "0")}:${String(safe % 60).padStart(2, "0")}`;
@@ -141,6 +164,8 @@ export default function BoothDetailPage() {
   const [opsSheetOpen, setOpsSheetOpen] = useState(false);
   const [opsKeyInput, setOpsKeyInput] = useState("");
   const [nowTick, setNowTick] = useState(Date.now());
+  const [seatsUpdatedAt, setSeatsUpdatedAt] = useState(0);
+  const [dish, setDish] = useState(null);
 
   function applyReservationState(nextState) {
     const safe = nextState || createEmptyReservationState(booth?.maxReservationMinutes);
@@ -158,6 +183,7 @@ export default function BoothDetailPage() {
     try {
       const data = await fetchBoothReservations(id, token);
       applyReservationState(data);
+      setSeatsUpdatedAt(Date.now());
       setReservationError("");
     } catch (loadError) {
       if (token) {
@@ -270,6 +296,8 @@ export default function BoothDetailPage() {
   const noSeat = selectedTable && tableSeats(selectedTable) < requestedSeatCount;
   const tables = reservationState.tables || [];
   const availableTables = tables.filter(canReserveTable).length;
+  const freeSummary = freeTablesSummary(tables);
+  const seatsTone = tables.length === 0 ? "none" : availableTables === 0 ? "full" : "ok";
   const reservationOn = booth?.reservationEnabled !== false;
   const canReserve = Boolean(
     reservationToken && selectedTable && canReserveTable(selectedTable) && !myReservation && !penalty?.blocked && !noSeat,
@@ -421,29 +449,89 @@ export default function BoothDetailPage() {
         </div>
       </div>
 
+      {reservationOn && (
+        <div className={`v2-seats v2-seats--${seatsTone} v2-rise`} style={{ "--i": 2 }} aria-live="polite">
+          <div>
+            <span className="v2-seats__label">
+              지금 빈 자리
+              <small>· 현장 기준 {relativeTime(seatsUpdatedAt) || "확인 중"}</small>
+            </span>
+            <strong>
+              {tables.length === 0
+                ? "자리 정보 준비 중"
+                : availableTables === 0
+                  ? "지금은 만석이에요"
+                  : `테이블 ${availableTables}개 남음`}
+            </strong>
+            {tables.length > 0 ? (
+              <p>{availableTables === 0 ? "자리가 나면 여기서 바로 보여요." : freeSummary}</p>
+            ) : (
+              <p>운영진이 테이블을 등록하면 실시간으로 보여요.</p>
+            )}
+          </div>
+          {tables.length > 0 ? (
+            <div className="v2-seats__ring" style={{ "--ratio": Math.round((availableTables / tables.length) * 100) }}>
+              <span>
+                {availableTables}/{tables.length}
+              </span>
+            </div>
+          ) : null}
+        </div>
+      )}
+
       {menuItems.length > 0 && (
-        <section className="v2-section v2-rise" style={{ "--i": 2 }}>
+        <section className="v2-section v2-rise" style={{ "--i": 3 }}>
           <div className="v2-section__head">
             <h2>메뉴</h2>
             <span>{menuItems.length}개</span>
           </div>
-          <div className="v2-card v2-card--white v2-menu" style={{ padding: "0.4rem 1rem" }}>
+          <div className="v2-menu-grid">
             {menuItems.map((item, index) => (
-              <div key={`${item.name}-${index}`} className={`v2-menu__item${item.soldOut ? " v2-menu__item--soldout" : ""}`}>
-                <div>
-                  <strong>{item.name}</strong>
-                  {item.description ? <small>{item.description}</small> : null}
-                  {item.soldOut ? <small style={{ color: "var(--v2-red)" }}>품절</small> : null}
-                </div>
-                {item.price ? <span>{item.price}</span> : <span className="is-tbd">판매가 확정 전</span>}
-              </div>
+              <button
+                key={`${item.name}-${index}`}
+                type="button"
+                className={`v2-dish${item.soldOut ? " v2-dish--soldout" : ""}`}
+                onClick={() => setDish(item)}
+              >
+                {item.imageUrl ? (
+                  <span className="v2-dish__photo">
+                    <img src={resolveApiAssetUrl(item.imageUrl)} alt="" loading="lazy" />
+                    {item.soldOut ? <span className="v2-dish__soldout">품절</span> : null}
+                  </span>
+                ) : (
+                  <span className="v2-dish__photo v2-dish__photo--empty">
+                    {item.name.slice(0, 1)}
+                    {item.soldOut ? <span className="v2-dish__soldout">품절</span> : null}
+                  </span>
+                )}
+                <strong>{item.name}</strong>
+                {item.description ? <small>{item.description}</small> : null}
+                {item.price ? <em>{item.price}</em> : <em className="is-tbd">판매가 확정 전</em>}
+              </button>
             ))}
           </div>
-          <p className="v2-note v2-note--blue" style={{ marginTop: "0.75rem" }}>
+          <p className="v2-note v2-note--blue" style={{ marginTop: "0.9rem" }}>
             테이블에 있는 QR을 찍으면 자리에서 바로 주문할 수 있어요.
           </p>
         </section>
       )}
+
+      <BottomSheet open={Boolean(dish)} onClose={() => setDish(null)} title={dish?.name || ""} description={dish?.description || ""}>
+        {dish ? (
+          <>
+            {dish.imageUrl ? (
+              <div className="v2-dish-sheet__photo">
+                <img src={resolveApiAssetUrl(dish.imageUrl)} alt="" />
+              </div>
+            ) : null}
+            <div className="v2-dish-sheet__price">{dish.price || "판매가 확정 전"}</div>
+            {dish.soldOut ? <p className="v2-note v2-note--danger">지금은 품절이에요.</p> : null}
+            <button type="button" className="v2-btn v2-btn--gray" onClick={() => setDish(null)}>
+              닫기
+            </button>
+          </>
+        ) : null}
+      </BottomSheet>
 
       {booth?.menuImageUrl && menuItems.length === 0 && (
         <section className="v2-section v2-rise" style={{ "--i": 2 }}>
@@ -455,7 +543,7 @@ export default function BoothDetailPage() {
       )}
 
       {reservationOn && (
-        <section className="v2-section v2-rise" style={{ "--i": 3 }}>
+        <section className="v2-section v2-rise" style={{ "--i": 4 }}>
           <div className="v2-section__head">
             <h2>자리 예약</h2>
             <span>{tables.length ? `${availableTables}/${tables.length} 테이블 가능` : ""}</span>

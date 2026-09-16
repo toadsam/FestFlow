@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { fetchOrderMenu } from "../../api";
+import { fetchOrderMenu, resolveApiAssetUrl } from "../../api";
 import { IconArrowLeft, IconChevronRight } from "../../components/UxIcons";
 import { resolveBoothImageUrl } from "../../config/boothImages";
 import {
@@ -201,7 +201,9 @@ export default function TableOrderPage() {
               onClick={() => !disabled && openItem(item)}
               disabled={disabled}
             >
-              <div className="od-thumb">{initialOf(item.name)}</div>
+              <div className="od-thumb">
+                {item.imageUrl ? <img src={resolveApiAssetUrl(item.imageUrl)} alt="" loading="lazy" /> : initialOf(item.name)}
+              </div>
               <div className="od-menu-item__info">
                 <span className="od-menu-item__name">
                   {item.name}
@@ -238,7 +240,11 @@ export default function TableOrderPage() {
           <div className="od-sheet" role="dialog" aria-modal="true" aria-label={`${selected.name} 담기`}>
             <div className="od-sheet__grip" />
             <div className="od-sheet__image">
-              {initialOf(selected.name)}
+              {selected.imageUrl ? (
+                <img src={resolveApiAssetUrl(selected.imageUrl)} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                initialOf(selected.name)
+              )}
               {selected.name === bestName && <span className="od-badge">BEST</span>}
             </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>

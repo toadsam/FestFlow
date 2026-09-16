@@ -189,6 +189,9 @@ public class ReservationService {
             throw new ResponseStatusException(CONFLICT, "Selected table is already reserved or in use.");
         }
 
+        if (table.isWalkInOccupied()) {
+            throw new ResponseStatusException(CONFLICT, "지금 손님이 앉아 있는 테이블이에요.");
+        }
         int seatCount = requestDto.seatCount() == null ? 1 : Math.max(1, requestDto.seatCount());
         if (table.getAvailableSeats() < seatCount) {
             throw new ResponseStatusException(CONFLICT, "Not enough available seats in this table.");
@@ -230,10 +233,41 @@ public class ReservationService {
         return dto;
     }
 
+    /**
+     * 입구 스태프가 워크인 손님을 앉힐 때. 예약이 걸린 테이블은 먼저 체크인하거나 비워야 한다.
+     * 자리 현황 화면(한 손 조작)에서 쓴다.
+     */
+    @Transactional
+    public ReservationTableDto occupyTable(Long boothId, Long tableId) {
+        LocalDateTime now = LocalDateTime.now();
+        expireStaleReservations(now);
+
+        BoothReservationTable table = boothReservationTableRepository.findById(tableId)
+                .filter(found -> found.getBooth().getId().equals(boothId))
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Table not found."));
+        if (boothReservationRepository.existsByTableIdAndStatusIn(tableId, BLOCKING_STATUSES)) {
+            throw new ResponseStatusException(CONFLICT, "예약이 걸린 테이블이에요. 먼저 체크인하거나 비워 주세요.");
+        }
+        table.occupyWalkIn(now);
+        boothReservationTableRepository.save(table);
+        streamService.publishReservations(Map.of("boothId", boothId, "tableId", tableId, "status", "WALK_IN"));
+        return toTableDto(table);
+    }
+
     @Transactional
     public BoothReservationDto releaseTable(Long boothId, Long tableId) {
         LocalDateTime now = LocalDateTime.now();
         expireStaleReservations(now);
+
+        BoothReservationTable walkInTable = boothReservationTableRepository.findById(tableId)
+                .filter(found -> found.getBooth().getId().equals(boothId) && found.isWalkInOccupied())
+                .orElse(null);
+        if (walkInTable != null) {
+            walkInTable.clearWalkIn();
+            boothReservationTableRepository.save(walkInTable);
+            streamService.publishReservations(Map.of("boothId", boothId, "tableId", tableId, "status", "RELEASED"));
+            return null;
+        }
 
         BoothReservation reservation = boothReservationRepository
                 .findFirstByBoothIdAndTableIdAndStatusInOrderByReservedAtDesc(boothId, tableId, BLOCKING_STATUSES)
@@ -385,7 +419,7 @@ public class ReservationService {
     private ReservationTableDto toTableDto(BoothReservationTable table, BoothReservation blockingReservation) {
         String occupancyStatus = resolveOccupancyStatus(table, blockingReservation);
         String occupancyLabel = resolveOccupancyLabel(occupancyStatus);
-        int reservableSeats = blockingReservation == null ? table.getAvailableSeats() : 0;
+        int reservableSeats = (blockingReservation == null && !table.isWalkInOccupied()) ? table.getAvailableSeats() : 0;
 
         return new ReservationTableDto(
                 table.getId(),
@@ -413,6 +447,10 @@ public class ReservationService {
     }
 
     private String resolveOccupancyStatus(BoothReservationTable table, BoothReservation blockingReservation) {
+        // 워크인 손님이 앉아 있으면 예약 여부와 상관없이 이용 중이다.
+        if (table.isWalkInOccupied()) {
+            return "IN_USE";
+        }
         if (blockingReservation != null && blockingReservation.getStatus() == ReservationStatus.CHECKED_IN) {
             return "IN_USE";
         }

@@ -46,6 +46,14 @@ function festivalRange() {
   return `${formatDay(start)} ~ ${formatDay(end)}`;
 }
 
+function relativeTime(at) {
+  if (!at) return "확인 중";
+  const seconds = Math.max(0, Math.round((Date.now() - at) / 1000));
+  if (seconds < 5) return "방금";
+  if (seconds < 60) return `${seconds}초 전`;
+  return `${Math.floor(seconds / 60)}분 전`;
+}
+
 function eventState(event, now) {
   const start = toDate(event.startTime);
   const end = toDate(event.endTime);
@@ -63,13 +71,17 @@ export default function FestivalPage() {
   const [openNoticeId, setOpenNoticeId] = useState(null);
   const [posterOk, setPosterOk] = useState(Boolean(FESTIVAL.posterUrl));
   const [now, setNow] = useState(() => new Date());
+  const [boothsUpdatedAt, setBoothsUpdatedAt] = useState(0);
 
   useEffect(() => {
     let mounted = true;
     Promise.allSettled([fetchBooths(), fetchEvents(), fetchActiveNotices()]).then(
       ([boothResult, eventResult, noticeResult]) => {
         if (!mounted) return;
-        if (boothResult.status === "fulfilled" && Array.isArray(boothResult.value)) setBooths(boothResult.value);
+        if (boothResult.status === "fulfilled" && Array.isArray(boothResult.value)) {
+          setBooths(boothResult.value);
+          setBoothsUpdatedAt(Date.now());
+        }
         if (eventResult.status === "fulfilled" && Array.isArray(eventResult.value)) setEvents(eventResult.value);
         if (noticeResult.status === "fulfilled" && Array.isArray(noticeResult.value)) setNotices(noticeResult.value);
         setLoaded(true);
@@ -93,7 +105,10 @@ export default function FestivalPage() {
         // 스트림은 없어도 화면은 뜬다.
       }
     };
-    subscribe(createBoothStream, "booths", setBooths);
+    subscribe(createBoothStream, "booths", (next) => {
+      setBooths(next);
+      setBoothsUpdatedAt(Date.now());
+    });
     subscribe(createEventStream, "events", setEvents);
     subscribe(createNoticeStream, "notices", setNotices);
 
@@ -136,6 +151,13 @@ export default function FestivalPage() {
   }, [now]);
 
   const mainBooth = findMainBooth(booths);
+  // 테이블 기준 빈 자리. 부스 스트림이 밀어 주는 값이라 스태프가 현황판을 누르면 바로 바뀐다.
+  const mainBoothSeats = useMemo(() => {
+    const total = Number(mainBooth?.reservationTableCount) || 0;
+    if (!total) return null;
+    const used = (Number(mainBooth?.reservationReservedTables) || 0) + (Number(mainBooth?.reservationInUseTables) || 0);
+    return { total, free: Math.max(0, total - used) };
+  }, [mainBooth]);
   const activeNotices = notices.filter((notice) => notice.active !== false).slice(0, 3);
 
   return (
@@ -263,6 +285,12 @@ export default function FestivalPage() {
           <div>
             <strong>{mainBooth?.name || MAIN_BOOTH_FALLBACK.name}</strong>
             <p>{mainBooth?.description || mainBooth?.boothIntro || MAIN_BOOTH_FALLBACK.description}</p>
+            {mainBoothSeats ? (
+              <span className={`v2-main-booth__seats${mainBoothSeats.free === 0 ? " is-full" : ""}`}>
+                {mainBoothSeats.free === 0 ? "지금 만석" : `빈 테이블 ${mainBoothSeats.free}/${mainBoothSeats.total}`}
+                <small style={{ fontWeight: 500, color: "var(--v2-text-3)" }}>· {relativeTime(boothsUpdatedAt)}</small>
+              </span>
+            ) : null}
           </div>
         </Link>
       </section>

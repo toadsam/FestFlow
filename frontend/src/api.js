@@ -927,6 +927,25 @@ export async function completeOpsBoothReservation(boothId, reservationId, key) {
   return parseJson(response, "테이블 비우기에 실패했습니다.");
 }
 
+export async function occupyOpsBoothReservationTable(boothId, tableId, key) {
+  const response = await fetch(
+    opsUrl(`/ops/booth/${boothId}/reservations/tables/${tableId}/occupy`),
+    { method: "POST", headers: opsHeaders(key) },
+  );
+  return parseJson(response, "테이블을 이용 중으로 바꾸지 못했습니다.");
+}
+
+export async function uploadOpsBoothMenuItemImage(boothId, file, key) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const response = await fetch(opsUrl(`/ops/booth/${boothId}/menu-item-image`), {
+    method: "POST",
+    headers: opsHeaders(key),
+    body: formData,
+  });
+  return parseJson(response, "메뉴 사진 업로드에 실패했습니다.");
+}
+
 export async function releaseOpsBoothReservationTable(boothId, tableId, key) {
   const response = await fetch(
     opsUrl(`/ops/booth/${boothId}/reservations/tables/${tableId}/release`),

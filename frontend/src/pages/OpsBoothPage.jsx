@@ -8,6 +8,7 @@ import {
   fetchOpsBoothBootstrap,
   releaseOpsBoothReservationTable,
   uploadOpsBoothMenuImage,
+  uploadOpsBoothMenuItemImage,
   updateOpsBoothLiveStatus,
   updateOpsBoothReservationConfig,
 } from "../api";
@@ -105,6 +106,7 @@ function parseMenuBoardJson(raw) {
         price: String(item?.price || "").trim(),
         description: String(item?.description || "").trim(),
         soldOut: Boolean(item?.soldOut),
+        imageUrl: String(item?.imageUrl || "").trim(),
       }))
       .filter((item) => item.name);
   } catch {
@@ -447,6 +449,17 @@ export default function OpsBoothPage() {
           ? "예약 설정 저장 요청이 실패했습니다."
           : e.message,
       );
+    }
+  }
+
+  async function handleMenuItemImage(index, file) {
+    if (!file) return;
+    try {
+      const result = await uploadOpsBoothMenuItemImage(id, file, key);
+      updateMenuItem(index, { imageUrl: result?.imageUrl || "" });
+      setMessage("메뉴 사진을 올렸어요. 아래 저장 버튼을 눌러야 손님에게 보여요.");
+    } catch (e) {
+      setError(e.message === "Failed to fetch" ? "메뉴 사진 업로드가 실패했습니다." : e.message);
     }
   }
 
@@ -1038,6 +1051,27 @@ export default function OpsBoothPage() {
                         key={`menu-item-${index}`}
                         className="rounded border border-slate-200 bg-white p-2 space-y-2"
                       >
+                        <div className="flex items-center gap-2">
+                          {item.imageUrl ? (
+                            <img src={item.imageUrl} alt="" className="h-12 w-12 rounded object-cover" />
+                          ) : (
+                            <div className="h-12 w-12 rounded bg-slate-100" />
+                          )}
+                          <label className="rounded border border-cyan-500 px-2 py-1 text-[11px] font-semibold text-cyan-700 cursor-pointer">
+                            {item.imageUrl ? "사진 바꾸기" : "사진 올리기"}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleMenuItemImage(index, e.target.files?.[0] || null)}
+                            />
+                          </label>
+                          {item.imageUrl && (
+                            <button type="button" className="text-[11px] text-slate-500" onClick={() => updateMenuItem(index, { imageUrl: "" })}>
+                              사진 지우기
+                            </button>
+                          )}
+                        </div>
                         <div className="grid grid-cols-[1fr_auto] gap-2">
                           <input
                             className="border rounded px-2 py-1.5 text-sm"
@@ -1130,6 +1164,12 @@ export default function OpsBoothPage() {
                 </div>
               </div>
 
+              <a
+                href={`/ops/booth/${id}/tables`}
+                className="block rounded-xl bg-emerald-600 px-3 py-3 text-center text-sm font-bold text-white"
+              >
+                자리 현황판 열기 (입구 스태프용 · 큰 버튼)
+              </a>
               <div className="grid grid-cols-2 gap-2 rounded border border-emerald-200 bg-white p-2">
                 <div>
                   <p className="text-[11px] text-slate-600">테이블</p>

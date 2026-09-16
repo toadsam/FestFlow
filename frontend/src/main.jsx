@@ -10,6 +10,7 @@ import "./styles/v2.css";
 import "./styles/v2-overrides.css";
 import "./styles/v2-aimatch.css";
 import "./styles/v2-hero.css";
+import "./styles/v2-tables.css";
 import AiMatchPage from "./pages/AiMatchPage";
 import AiMatchAdminPage from "./pages/AiMatchAdminPage";
 import AdminPage from "./pages/AdminPage";
@@ -26,6 +27,7 @@ import LostFoundPage from "./pages/LostFoundPage";
 import MorePage from "./pages/MorePage";
 import OpsBoothPage from "./pages/OpsBoothPage";
 import OpsSimulationPage from "./pages/OpsSimulationPage";
+import OpsTableBoardPage from "./pages/OpsTableBoardPage";
 import TableOrderPage from "./pages/order/TableOrderPage";
 import OrderCheckoutPage from "./pages/order/OrderCheckoutPage";
 import OrderStatusPage from "./pages/order/OrderStatusPage";
@@ -93,6 +95,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="ops/simulation" element={<Navigate to="/admin/simulation" replace />} />
             <Route path="ops/booth/:id" element={routeElement(OpsBoothPage)} />
             <Route path="ops/booth/:id/table-qr" element={routeElement(TableQrPage)} />
+            <Route path="ops/booth/:id/tables" element={routeElement(OpsTableBoardPage)} />
             <Route path="order/:boothId/:table" element={routeElement(TableOrderPage)} />
             <Route path="order/:boothId/:table/checkout" element={routeElement(OrderCheckoutPage)} />
             <Route path="orders/:orderId" element={routeElement(OrderStatusPage)} />

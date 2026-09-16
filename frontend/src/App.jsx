@@ -34,11 +34,14 @@ function isActivePath(pathname, tab) {
 export default function App() {
   const location = useLocation();
   const isOpsRoute = ["/admin", "/ops"].some((path) => location.pathname.startsWith(path));
+  // 자리 현황판은 스태프가 한 손으로 쓰는 전체 화면이라 운영 탭도 손님 탭도 붙이지 않는다.
+  const isTableBoardRoute = /^\/ops\/booth\/[^/]+\/tables$/.test(location.pathname);
   const isOpsPanelRoute =
-    location.pathname.startsWith("/ops") || location.pathname.startsWith("/admin/simulation");
+    !isTableBoardRoute && (location.pathname.startsWith("/ops") || location.pathname.startsWith("/admin/simulation"));
   // 테이블 QR 주문 흐름은 하단 탭 없이 전체 화면으로 쓴다.
   const isOrderRoute = location.pathname.startsWith("/order/") || location.pathname.startsWith("/orders/");
   const isV2Shell = !isOpsPanelRoute && !isOrderRoute;
+  const showCustomerNav = isV2Shell && !isTableBoardRoute;
 
   return (
     <div
@@ -51,7 +54,7 @@ export default function App() {
         <Outlet />
       </main>
 
-      {isV2Shell && (
+      {showCustomerNav && (
         <nav className="v2-nav" aria-label="주요 메뉴">
           {navTabs.map((tab) => {
             const Icon = tab.icon;
