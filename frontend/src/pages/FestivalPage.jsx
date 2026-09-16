@@ -72,6 +72,8 @@ export default function FestivalPage() {
   const [posterOk, setPosterOk] = useState(Boolean(FESTIVAL.posterUrl));
   const [now, setNow] = useState(() => new Date());
   const [boothsUpdatedAt, setBoothsUpdatedAt] = useState(0);
+  // 공연 목록은 기본으로 접혀 있다. 지난 공연은 숨기고 진행 중 + 다음 몇 개만 보여 준다.
+  const [scheduleOpen, setScheduleOpen] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -138,6 +140,23 @@ export default function FestivalPage() {
 
   const liveCount = schedule.items.filter((event) => eventState(event, now) === "live").length;
 
+  // 접혔을 때 보이는 공연: 진행 중 전부 + 다음 공연 3개. 다 끝났으면 마지막 3개.
+  const scheduleParts = useMemo(() => {
+    const items = schedule.items.map((event) => ({ event, state: eventState(event, now) }));
+    const done = items.filter((entry) => entry.state === "done");
+    const live = items.filter((entry) => entry.state === "live");
+    const upcoming = items.filter((entry) => entry.state === "upcoming");
+    const keepUpcoming = Math.max(0, 3 - live.length);
+    let past = done;
+    let shown = [...live, ...upcoming.slice(0, keepUpcoming)];
+    let later = upcoming.slice(keepUpcoming);
+    if (!shown.length && done.length) {
+      past = done.slice(0, Math.max(0, done.length - 3));
+      shown = done.slice(-3);
+    }
+    return { past, shown, later, hiddenCount: past.length + later.length };
+  }, [schedule.items, now]);
+
   const festivalStatus = useMemo(() => {
     const start = toDate(`${FESTIVAL.startDate}T00:00:00`);
     const end = toDate(`${FESTIVAL.endDate}T23:59:59`);
@@ -159,6 +178,29 @@ export default function FestivalPage() {
     return { total, free: Math.max(0, total - used) };
   }, [mainBooth]);
   const activeNotices = notices.filter((notice) => notice.active !== false).slice(0, 3);
+
+  function renderEvent(event, state, index) {
+    return (
+      <div
+        key={event.id || `${event.title}-${index}`}
+        className={`v2-timeline__item v2-rise v2-timeline__item--${state}`}
+        style={{ "--i": Math.min(index, 6) }}
+      >
+        <span className="v2-timeline__time">{formatClock(event.start)}</span>
+        <div className="v2-timeline__body">
+          <strong>{event.title}</strong>
+          <small>
+            {event.end ? `${formatClock(event.start)} ~ ${formatClock(event.end)}` : "시간 확인 중"}
+            {event.artist ? ` · ${event.artist}` : ""}
+            {event.liveMessage ? ` · ${event.liveMessage}` : ""}
+            {Number(event.delayMinutes) > 0 ? ` · ${event.delayMinutes}분 지연` : ""}
+          </small>
+        </div>
+        {state === "live" ? <span className="v2-badge v2-badge--blue">LIVE</span> : null}
+        {state === "done" ? <span className="v2-badge">종료</span> : null}
+      </div>
+    );
+  }
 
   return (
     <section className="v2-page" data-i18n-skip>
@@ -306,31 +348,38 @@ export default function FestivalPage() {
             <div className="v2-skeleton" style={{ height: "3.2rem" }} />
           </div>
         ) : schedule.items.length ? (
-          <div className="v2-timeline">
-            {schedule.items.map((event, index) => {
-              const state = eventState(event, now);
-              return (
-                <div
-                  key={event.id || `${event.title}-${index}`}
-                  className={`v2-timeline__item v2-rise v2-timeline__item--${state}`}
-                  style={{ "--i": index + 7 }}
-                >
-                  <span className="v2-timeline__time">{formatClock(event.start)}</span>
-                  <div className="v2-timeline__body">
-                    <strong>{event.title}</strong>
-                    <small>
-                      {event.end ? `${formatClock(event.start)} ~ ${formatClock(event.end)}` : "시간 확인 중"}
-                      {event.artist ? ` · ${event.artist}` : ""}
-                      {event.liveMessage ? ` · ${event.liveMessage}` : ""}
-                      {Number(event.delayMinutes) > 0 ? ` · ${event.delayMinutes}분 지연` : ""}
-                    </small>
-                  </div>
-                  {state === "live" ? <span className="v2-badge v2-badge--blue">LIVE</span> : null}
-                  {state === "done" ? <span className="v2-badge">종료</span> : null}
+          <>
+            <div className="v2-timeline">
+              {scheduleParts.past.length > 0 ? (
+                <div className={`v2-collapse${scheduleOpen ? " v2-collapse--open" : ""}`}>
+                  <div>{scheduleParts.past.map((entry, index) => renderEvent(entry.event, entry.state, index))}</div>
                 </div>
-              );
-            })}
-          </div>
+              ) : null}
+              {!scheduleOpen && scheduleParts.past.length > 0 ? (
+                <button type="button" className="v2-timeline__more" onClick={() => setScheduleOpen(true)}>
+                  지난 공연 {scheduleParts.past.length}개 보기
+                </button>
+              ) : null}
+              {scheduleParts.shown.map((entry, index) => renderEvent(entry.event, entry.state, index))}
+              {scheduleParts.later.length > 0 ? (
+                <div className={`v2-collapse${scheduleOpen ? " v2-collapse--open" : ""}`}>
+                  <div>{scheduleParts.later.map((entry, index) => renderEvent(entry.event, entry.state, index))}</div>
+                </div>
+              ) : null}
+            </div>
+            {scheduleParts.hiddenCount > 0 ? (
+              <button
+                type="button"
+                className={`v2-btn v2-btn--gray v2-btn--sm v2-toggle${scheduleOpen ? " v2-toggle--open" : ""}`}
+                style={{ width: "100%", marginTop: "0.75rem" }}
+                onClick={() => setScheduleOpen((open) => !open)}
+                aria-expanded={scheduleOpen}
+              >
+                {scheduleOpen ? "접기" : `전체 ${schedule.items.length}개 공연 보기`}
+                <IconChevronRight className="v2-toggle__chev" />
+              </button>
+            ) : null}
+          </>
         ) : (
           <div className="v2-empty">
             <Mascot kind="flame" className="v2-empty__mascot" />
