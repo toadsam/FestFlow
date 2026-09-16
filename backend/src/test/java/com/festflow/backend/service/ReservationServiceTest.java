@@ -196,6 +196,72 @@ class ReservationServiceTest {
         verify(streamService).publishReservations(released);
     }
 
+    @Test
+    void occupyTableMarksWalkInAsInUseAndBlocksReservation() {
+        Booth booth = booth(1L);
+        BoothReservationTable table = table(10L, booth, "A", 4, 4);
+
+        given(boothReservationRepository.findByStatusAndExpiresAtBefore(eq(ReservationStatus.RESERVED), any()))
+                .willReturn(List.of());
+        given(boothReservationTableRepository.findById(10L)).willReturn(Optional.of(table));
+        given(boothReservationRepository.existsByTableIdAndStatusIn(eq(10L), anyList())).willReturn(false);
+
+        var occupied = reservationService.occupyTable(1L, 10L);
+
+        assertThat(table.isWalkInOccupied()).isTrue();
+        assertThat(occupied.occupancyStatus()).isEqualTo("IN_USE");
+        assertThat(occupied.reservableSeats()).isZero();
+        verify(boothReservationTableRepository).save(table);
+        verify(streamService).publishReservations(any());
+
+        // 앉아 있는 동안은 손님이 예약할 수 없다.
+        given(boothRepository.findById(1L)).willReturn(Optional.of(booth));
+        given(reservationAuthService.requireUserKey("token")).willReturn("01012345678");
+        given(reservationUserStateRepository.findByUserKey("01012345678")).willReturn(Optional.empty());
+        given(reservationUserStateRepository.save(any(ReservationUserState.class)))
+                .willAnswer(invocation -> invocation.getArgument(0));
+        given(boothReservationRepository.findFirstByUserKeyAndStatusInOrderByReservedAtDesc(eq("01012345678"), anyList()))
+                .willReturn(Optional.empty());
+        given(boothReservationTableRepository.findByIdForUpdate(10L)).willReturn(Optional.of(table));
+
+        assertThatThrownBy(() -> reservationService.createReservation(1L, new ReservationCreateRequestDto(10L, 2), "token"))
+                .isInstanceOf(ResponseStatusException.class);
+        verify(boothReservationRepository, never()).save(any(BoothReservation.class));
+    }
+
+    @Test
+    void occupyTableRejectsReservedTable() {
+        Booth booth = booth(1L);
+        BoothReservationTable table = table(10L, booth, "A", 4, 4);
+
+        given(boothReservationRepository.findByStatusAndExpiresAtBefore(eq(ReservationStatus.RESERVED), any()))
+                .willReturn(List.of());
+        given(boothReservationTableRepository.findById(10L)).willReturn(Optional.of(table));
+        given(boothReservationRepository.existsByTableIdAndStatusIn(eq(10L), anyList())).willReturn(true);
+
+        assertThatThrownBy(() -> reservationService.occupyTable(1L, 10L))
+                .isInstanceOf(ResponseStatusException.class);
+        assertThat(table.isWalkInOccupied()).isFalse();
+    }
+
+    @Test
+    void releaseTableClearsWalkInWithoutTouchingReservations() {
+        Booth booth = booth(1L);
+        BoothReservationTable table = table(10L, booth, "A", 4, 4);
+        table.occupyWalkIn(LocalDateTime.now());
+
+        given(boothReservationRepository.findByStatusAndExpiresAtBefore(eq(ReservationStatus.RESERVED), any()))
+                .willReturn(List.of());
+        given(boothReservationTableRepository.findById(10L)).willReturn(Optional.of(table));
+
+        var released = reservationService.releaseTable(1L, 10L);
+
+        assertThat(released).isNull();
+        assertThat(table.isWalkInOccupied()).isFalse();
+        verify(boothReservationTableRepository).save(table);
+        verify(boothReservationRepository, never()).findFirstByBoothIdAndTableIdAndStatusInOrderByReservedAtDesc(any(), any(), anyList());
+    }
+
     private Booth booth(Long id) {
         Booth booth = new Booth(
                 "Booth",

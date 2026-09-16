@@ -1,8 +1,13 @@
 package com.festflow.backend.controller.ops;
 
 import com.festflow.backend.dto.BoothLiveStatusRequestDto;
+import com.festflow.backend.dto.BoothOrderConfigRequestDto;
+import com.festflow.backend.dto.BoothOrderDto;
+import com.festflow.backend.dto.OpsBoothOrdersDto;
+import com.festflow.backend.dto.OrderStatusUpdateRequestDto;
 import com.festflow.backend.dto.BoothReservationConfigRequestDto;
 import com.festflow.backend.dto.BoothReservationDto;
+import com.festflow.backend.dto.ReservationTableDto;
 import com.festflow.backend.dto.BoothReservationStateDto;
 import com.festflow.backend.dto.BoothReorderRequestDto;
 import com.festflow.backend.dto.BoothResponseDto;
@@ -25,6 +30,7 @@ import com.festflow.backend.service.BoothService;
 import com.festflow.backend.service.EventService;
 import com.festflow.backend.service.NoticeService;
 import com.festflow.backend.service.OpsAiService;
+import com.festflow.backend.service.OrderService;
 import com.festflow.backend.service.ReservationService;
 import com.festflow.backend.service.SimulationService;
 import com.festflow.backend.service.UploadStorageService;
@@ -62,6 +68,7 @@ public class OpsController {
     private final UploadStorageService uploadStorageService;
     private final OpsAiService opsAiService;
     private final SimulationService simulationService;
+    private final OrderService orderService;
 
     public OpsController(
             BoothService boothService,
@@ -74,8 +81,10 @@ public class OpsController {
             ReservationService reservationService,
             UploadStorageService uploadStorageService,
             OpsAiService opsAiService,
-            SimulationService simulationService
+            SimulationService simulationService,
+            OrderService orderService
     ) {
+        this.orderService = orderService;
         this.boothService = boothService;
         this.eventService = eventService;
         this.noticeService = noticeService;
@@ -347,7 +356,36 @@ public class OpsController {
         ensureBoothAccess(authentication, id);
         BoothReservationDto released = reservationService.releaseTable(id, tableId);
         auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_TABLE_RELEASE", "BOOTH", id, "table " + tableId);
+        // 첫 화면 카드의 빈 테이블 수는 부스 스트림으로 받는다.
+        streamService.publishBooths(boothService.getAllBooths());
         return released;
+    }
+
+    /** 워크인 손님을 앉힘. 자리 현황 화면의 큰 버튼에서 부른다. */
+    @PostMapping("/booth/{id}/reservations/tables/{tableId}/occupy")
+    public ReservationTableDto occupyBoothReservationTable(
+            @PathVariable Long id,
+            @PathVariable Long tableId,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        ReservationTableDto occupied = reservationService.occupyTable(id, tableId);
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_TABLE_OCCUPY", "BOOTH", id, "table " + tableId);
+        streamService.publishBooths(boothService.getAllBooths());
+        return occupied;
+    }
+
+    /** 메뉴 항목 사진. 저장만 하고 URL 을 돌려준다. 콘솔이 menuBoardJson 의 imageUrl 에 넣어 저장한다. */
+    @PostMapping(value = "/booth/{id}/menu-item-image", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public java.util.Map<String, String> uploadBoothMenuItemImage(
+            @PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            Authentication authentication
+    ) throws IOException {
+        ensureBoothAccess(authentication, id);
+        String imageUrl = uploadStorageService.saveImage(file, "booth-menu-item-" + id);
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_MENU_ITEM_IMAGE", "BOOTH", id, imageUrl);
+        return java.util.Map.of("imageUrl", imageUrl);
     }
 
     @PostMapping("/booth/{id}/reservations/check-in/by-token")
@@ -360,6 +398,40 @@ public class OpsController {
         BoothReservationDto checkedIn = reservationService.checkInByToken(id, requestDto.token());
         auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_CHECKIN_TOKEN", "BOOTH", id, "token check-in");
         return checkedIn;
+    }
+
+    // ---------- 테이블 QR 주문 ----------
+
+    @GetMapping("/booth/{id}/orders")
+    public OpsBoothOrdersDto getBoothOrders(@PathVariable Long id, Authentication authentication) {
+        ensureBoothAccess(authentication, id);
+        return orderService.getOpsBoothOrders(id);
+    }
+
+    @PutMapping("/booth/{id}/orders/config")
+    public OpsBoothOrdersDto updateBoothOrderConfig(
+            @PathVariable Long id,
+            @Valid @RequestBody BoothOrderConfigRequestDto requestDto,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        OpsBoothOrdersDto updated = orderService.updateOrderConfig(id, requestDto);
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_ORDER_CONFIG", "BOOTH", id, "update order config");
+        return updated;
+    }
+
+    @PutMapping("/booth/{id}/orders/{orderId}/status")
+    public BoothOrderDto updateBoothOrderStatus(
+            @PathVariable Long id,
+            @PathVariable Long orderId,
+            @Valid @RequestBody OrderStatusUpdateRequestDto requestDto,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        BoothOrderDto updated = orderService.updateStatus(id, orderId, requestDto.status());
+        auditLogService.log(authentication.getName(), "OPS_BOOTH_ORDER_STATUS", "BOOTH", id,
+                "order " + orderId + " -> " + requestDto.status());
+        return updated;
     }
 
     private void ensureBoothAccess(Authentication authentication, Long requestedBoothId) {

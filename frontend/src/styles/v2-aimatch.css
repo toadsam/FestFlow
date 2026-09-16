@@ -1,0 +1,285 @@
+/*
+ * AI 사주 소개팅 화면에 ver2(토스풍) 스킨을 입힌다.
+ * AiMatchPage.jsx 는 3천 줄이라 구조는 건드리지 않고, 보라·분홍 색과 유리 효과만 파랑·흰색으로 바꾼다.
+ * 전역 4탭과 겹치지 않게 자체 하단 탭은 v2.css 에서 상단 세그먼트로 바꿔 두었다.
+ */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page {
+  color: var(--v2-text) !important;
+  background: #fff !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-redesigned::before,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-redesigned::after {
+  display: none !important;
+}
+
+/* 상단 바 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-topbar h1 {
+  color: var(--v2-text) !important;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-topbar button,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-topbar a {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--v2-text) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-topbar-favorite--active {
+  color: var(--v2-red) !important;
+}
+
+/* 히어로 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-hero-card {
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: linear-gradient(160deg, #e8f3ff 0%, #f4f9ff 60%, #fff7ea 100%) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-hero-copy h2 {
+  color: var(--v2-text) !important;
+  font-weight: 800 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-hero-copy p,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-hero-copy span {
+  color: var(--v2-text-2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-float-heart {
+  border: 0 !important;
+  background: #fff !important;
+  color: var(--v2-blue) !important;
+  box-shadow: 0 6px 16px rgba(49, 130, 246, 0.18) !important;
+}
+
+/* 카드류: 테두리 없이 연한 회색 면 또는 흰 면 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-section-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-detail-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-discovery-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-safety-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-empty-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-meetup-box,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-preview-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-phone-gate-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-phone-locked-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-qr-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-qr-panel,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-sheet,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-note,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-live-notice {
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: var(--v2-gray) !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-card,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-dialog,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-converting-panel {
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: #fff !important;
+  box-shadow: 0 2px 10px rgba(25, 31, 40, 0.05), 0 0 0 1px var(--v2-line) !important;
+  backdrop-filter: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-dialog {
+  border-radius: 24px 24px 0 0 !important;
+  box-shadow: 0 -12px 40px rgba(25, 31, 40, 0.18) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-row {
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-row > span {
+  border: 0 !important;
+  background: var(--v2-blue-soft) !important;
+  color: var(--v2-blue) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-row strong,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-card h3,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-section-head h2,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-section-head h3,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page h2,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page h3,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page strong {
+  color: var(--v2-text) !important;
+  text-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page p,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page small,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page label,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-section-head span,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-field-head span,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-field-hint,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-list-meta {
+  color: var(--v2-text-2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-field-error {
+  color: var(--v2-red) !important;
+}
+
+/* 버튼 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button {
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: var(--v2-blue) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button:active {
+  background: var(--v2-blue-dark) !important;
+  transform: scale(0.97) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button:disabled {
+  background: var(--v2-gray-2) !important;
+  color: var(--v2-text-4) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button *,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button span {
+  color: #fff !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button:disabled * {
+  color: var(--v2-text-4) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-secondary-button,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-button,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-upload-button,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-phone-check-button,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-map-icon-button,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-close {
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: var(--v2-gray) !important;
+  color: var(--v2-text) !important;
+  box-shadow: none !important;
+  font-weight: 700 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-secondary-button *,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-button * {
+  color: inherit !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-secondary-button--danger {
+  background: var(--v2-red-soft) !important;
+  color: var(--v2-red) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-favorite-button {
+  border: 0 !important;
+  background: #fff !important;
+  color: var(--v2-text-3) !important;
+  box-shadow: 0 2px 8px rgba(25, 31, 40, 0.1) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-favorite-button--active {
+  color: var(--v2-red) !important;
+}
+
+/* 칩 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-filter-chip,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-tag-chip,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-segment-button {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--v2-gray) !important;
+  color: var(--v2-text-2) !important;
+  box-shadow: none !important;
+  font-weight: 600 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-filter-chip.is-active,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-tag-chip.is-selected,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-segment-button.is-active {
+  background: var(--v2-text) !important;
+  color: #fff !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-segment-button {
+  border-radius: 14px !important;
+}
+
+/* 입력 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page :is(input, select, textarea) {
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: var(--v2-gray) !important;
+  color: var(--v2-text) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page :is(input, select, textarea):focus {
+  background: #fff !important;
+  box-shadow: 0 0 0 2px var(--v2-blue) !important;
+  outline: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page :is(input, textarea)::placeholder {
+  color: var(--v2-text-4) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-search-field {
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: var(--v2-gray) !important;
+  box-shadow: none !important;
+}
+
+/* 배너·모달 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-banner {
+  border: 0 !important;
+  border-radius: 14px !important;
+  box-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-banner--success {
+  background: var(--v2-green-soft) !important;
+  color: var(--v2-green) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-banner--error {
+  background: var(--v2-red-soft) !important;
+  color: var(--v2-red) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-modal {
+  background: rgba(25, 31, 40, 0.45) !important;
+  backdrop-filter: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-nav-badge {
+  background: var(--v2-red) !important;
+  color: #fff !important;
+}
+
+/* 사주 카드 색은 그대로 두되 테두리만 정리 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-panel,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-compat {
+  box-shadow: none !important;
+}

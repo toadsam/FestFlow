@@ -60,7 +60,10 @@ public class AiMatchController {
             @RequestParam("consent") boolean consent,
             @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "originalImageUrl", required = false) String originalImageUrl,
-            @RequestParam(value = "generatedImageUrl", required = false) String generatedImageUrl
+            @RequestParam(value = "generatedImageUrl", required = false) String generatedImageUrl,
+            @RequestParam("realName") String realName,
+            @RequestParam("birthDate") String birthDate,
+            @RequestParam(value = "birthTime", required = false) String birthTime
     ) throws IOException {
         return aiMatchService.createProfile(
                 nickname,
@@ -72,7 +75,10 @@ public class AiMatchController {
                 consent,
                 file,
                 originalImageUrl,
-                generatedImageUrl
+                generatedImageUrl,
+                realName,
+                birthDate,
+                birthTime
         );
     }
 

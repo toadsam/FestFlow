@@ -266,9 +266,12 @@ public class BoothService {
                 .collect(Collectors.toSet());
 
         int availableSeats = tables.stream()
-                .filter(table -> !blockedTableIds.contains(table.getId()))
+                .filter(table -> !blockedTableIds.contains(table.getId()) && !table.isWalkInOccupied())
                 .mapToInt(table -> Math.max(0, table.getAvailableSeats()))
                 .sum();
+        long walkInTables = tables.stream()
+                .filter(table -> table.isWalkInOccupied() && !blockedTableIds.contains(table.getId()))
+                .count();
 
         long reservedTables = activeReservations.stream()
                 .filter(reservation -> reservation.getStatus() == ReservationStatus.RESERVED)
@@ -285,7 +288,7 @@ public class BoothService {
                 tables.size(),
                 availableSeats,
                 (int) reservedTables,
-                (int) inUseTables
+                (int) (inUseTables + walkInTables)
         );
     }
 

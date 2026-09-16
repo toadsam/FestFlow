@@ -5,20 +5,33 @@ import App from "./App";
 import { LanguageProvider } from "./i18n";
 import "./index.css";
 import "leaflet/dist/leaflet.css";
+// ver2 스타일은 index.css 뒤에 와야 전역 !important 규칙을 이긴다.
+import "./styles/v2.css";
+import "./styles/v2-overrides.css";
+import "./styles/v2-aimatch.css";
+import "./styles/v2-hero.css";
+import "./styles/v2-tables.css";
 import AiMatchPage from "./pages/AiMatchPage";
 import AiMatchAdminPage from "./pages/AiMatchAdminPage";
 import AdminPage from "./pages/AdminPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import BoothDetailPage from "./pages/BoothDetailPage";
+import BoothListPage from "./pages/BoothListPage";
 import ChatPage from "./pages/ChatPage";
 import EventDetailPage from "./pages/EventDetailPage";
 import EventPage from "./pages/EventPage";
+import FestivalPage from "./pages/FestivalPage";
 import HomePage from "./pages/HomePage";
 import LineupPage from "./pages/LineupPage";
 import LostFoundPage from "./pages/LostFoundPage";
 import MorePage from "./pages/MorePage";
 import OpsBoothPage from "./pages/OpsBoothPage";
 import OpsSimulationPage from "./pages/OpsSimulationPage";
+import OpsTableBoardPage from "./pages/OpsTableBoardPage";
+import TableOrderPage from "./pages/order/TableOrderPage";
+import OrderCheckoutPage from "./pages/order/OrderCheckoutPage";
+import OrderStatusPage from "./pages/order/OrderStatusPage";
+import TableQrPage from "./pages/order/TableQrPage";
 import StaffPage from "./pages/StaffPage";
 import StageCrowdPage from "./pages/StageCrowdPage";
 import StageMapPage from "./pages/StageMapPage";
@@ -59,7 +72,12 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<App />}>
-            <Route index element={routeElement(HomePage)} />
+            {/* ver2: 첫 화면은 축제 살펴보기. 이전 홈은 지우지 않고 /home-v1 로 옮겨 두었다. */}
+            <Route index element={routeElement(FestivalPage)} />
+            <Route path="home-v1" element={routeElement(HomePage)} />
+            <Route path="booths" element={routeElement(BoothListPage)} />
+            {/* 이번 축제는 주점이 하나라 /booths 는 총학 주점으로 바로 간다. 전체 목록은 숨겨 두고 여기서만 연다. */}
+            <Route path="booths/all" element={routeElement(BoothListPage)} />
             <Route path="stage-map" element={routeElement(StageMapPage)} />
             <Route path="events" element={routeElement(EventPage)} />
             <Route path="events/lineup" element={routeElement(LineupPage)} />
@@ -76,6 +94,11 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="ops/master" element={<Navigate to="/admin" replace />} />
             <Route path="ops/simulation" element={<Navigate to="/admin/simulation" replace />} />
             <Route path="ops/booth/:id" element={routeElement(OpsBoothPage)} />
+            <Route path="ops/booth/:id/table-qr" element={routeElement(TableQrPage)} />
+            <Route path="ops/booth/:id/tables" element={routeElement(OpsTableBoardPage)} />
+            <Route path="order/:boothId/:table" element={routeElement(TableOrderPage)} />
+            <Route path="order/:boothId/:table/checkout" element={routeElement(OrderCheckoutPage)} />
+            <Route path="orders/:orderId" element={routeElement(OrderStatusPage)} />
             <Route path="ai-match" element={routeElement(AiMatchPage)} />
             <Route path="ai-match/admin" element={routeElement(AiMatchAdminPage)} />
             <Route path="*" element={<Navigate to="/" replace />} />
