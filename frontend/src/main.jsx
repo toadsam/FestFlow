@@ -11,6 +11,7 @@ import "./styles/v2-overrides.css";
 import "./styles/v2-aimatch.css";
 import "./styles/v2-hero.css";
 import "./styles/v2-tables.css";
+import "./styles/v2-splash.css";
 import AiMatchPage from "./pages/AiMatchPage";
 import AiMatchAdminPage from "./pages/AiMatchAdminPage";
 import AdminPage from "./pages/AdminPage";

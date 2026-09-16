@@ -1,3 +1,4 @@
+import { useCallback, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   IconBox,
@@ -5,6 +6,7 @@ import {
   IconSettings,
   IconUsers,
 } from "./components/UxIcons";
+import Splash, { shouldShowSplash } from "./components/v2/Splash";
 import { IconBeer, IconFlag, IconHeartSaju } from "./components/v2/V2Kit";
 
 /*
@@ -42,6 +44,9 @@ export default function App() {
   const isOrderRoute = location.pathname.startsWith("/order/") || location.pathname.startsWith("/orders/");
   const isV2Shell = !isOpsPanelRoute && !isOrderRoute;
   const showCustomerNav = isV2Shell && !isTableBoardRoute;
+  // 스플래시는 손님 화면에서 세션당 한 번. 운영 콘솔·QR 주문·현황판으로 바로 들어오면 안 띄운다.
+  const [splash, setSplash] = useState(() => showCustomerNav && shouldShowSplash());
+  const closeSplash = useCallback(() => setSplash(false), []);
 
   return (
     <div
@@ -53,6 +58,8 @@ export default function App() {
       <main className="festival-main">
         <Outlet />
       </main>
+
+      {splash ? <Splash onDone={closeSplash} /> : null}
 
       {showCustomerNav && (
         <nav className="v2-nav" aria-label="주요 메뉴">
