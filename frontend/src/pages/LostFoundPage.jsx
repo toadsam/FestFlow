@@ -2,8 +2,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { claimLostItem, createLostItem, createLostItemStream, fetchLostItems } from "../api";
-import { IconBox, IconCamera, IconSearch, IconX } from "../components/UxIcons";
-import { BottomSheet, IconPhone, IconPlus, useToast } from "../components/v2/V2Kit";
+import { IconCamera, IconSearch, IconX } from "../components/UxIcons";
+import { BottomSheet, IconPhone, IconPlus, Mascot, useToast } from "../components/v2/V2Kit";
 import { fallbackLostItems } from "../data/festivalUiData";
 
 const CATEGORY_TABS = ["전체", "전자기기", "지갑/카드", "학생증", "기타"];
@@ -272,9 +272,7 @@ export default function LostFoundPage() {
             ))}
         {!loading && visibleItems.length === 0 && (
           <div className="v2-empty">
-            <span className="v2-empty__icon">
-              <IconBox />
-            </span>
+            <Mascot kind="flame" className="v2-empty__mascot" />
             <strong>{query || tab !== "전체" ? "조건에 맞는 물건이 없어요" : "보관 중인 분실물이 없어요"}</strong>
             <p>{query || tab !== "전체" ? "검색어나 분류를 바꿔 보세요." : "주운 물건이 있다면 아래 버튼으로 등록해 주세요."}</p>
           </div>
@@ -282,9 +280,7 @@ export default function LostFoundPage() {
       </div>
 
       <div className="v2-card" style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem", alignItems: "center" }}>
-        <span className="v2-row__icon v2-row__icon--blue">
-          <IconBox />
-        </span>
+        <Mascot style={{ width: "3.2rem", height: "auto", flex: "0 0 auto" }} />
         <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--v2-text-2)", lineHeight: 1.45 }}>
           축제 본부 분실물 센터에서 사진을 확인한 뒤 받아 갈 수 있어요.
         </p>

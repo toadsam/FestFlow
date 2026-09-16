@@ -16,6 +16,7 @@ import {
 import { IconArrowLeft, IconClock, IconMapPin, IconUsers } from "../components/UxIcons";
 import { BottomSheet, IconPhone, useToast } from "../components/v2/V2Kit";
 import { resolveBoothImageUrl } from "../config/boothImages";
+import { MAIN_BOOTH_FALLBACK, isMainBooth } from "../config/festival";
 import { fallbackBooths } from "../data/festivalUiData";
 import {
   clearReservationAuth,
@@ -259,7 +260,12 @@ export default function BoothDetailPage() {
   const isAuthComplete = Boolean(reservationToken);
   const remainingSeconds = myReservation ? Math.floor((parseTimeMs(myReservation.expiresAt) - nowTick) / 1000) : 0;
   const qrRemainingSeconds = checkInQrExpiresAt ? Math.floor((parseTimeMs(checkInQrExpiresAt) - nowTick) / 1000) : 0;
-  const menuItems = useMemo(() => parseMenuBoardJson(booth?.menuBoardJson), [booth?.menuBoardJson]);
+  const menuItems = useMemo(() => {
+    const parsed = parseMenuBoardJson(booth?.menuBoardJson);
+    // 총학 주점에 메뉴판이 아직 없으면 config 의 기본 메뉴를 보여 준다.
+    if (!parsed.length && isMainBooth(booth)) return MAIN_BOOTH_FALLBACK.menu.map((item) => ({ ...item, soldOut: false }));
+    return parsed;
+  }, [booth]);
   const requestedSeatCount = Math.max(1, Number(seatCount) || 1);
   const noSeat = selectedTable && tableSeats(selectedTable) < requestedSeatCount;
   const tables = reservationState.tables || [];
@@ -373,7 +379,7 @@ export default function BoothDetailPage() {
       <div className="v2-detail-hero">
         <img src={imageUrl} alt="" />
         <header className="v2-topbar v2-topbar--overlay">
-          <Link to="/booths" aria-label="주점 목록으로">
+          <Link to="/" aria-label="축제 첫 화면으로">
             <IconArrowLeft />
           </Link>
           <span />
@@ -429,7 +435,7 @@ export default function BoothDetailPage() {
                   {item.description ? <small>{item.description}</small> : null}
                   {item.soldOut ? <small style={{ color: "var(--v2-red)" }}>품절</small> : null}
                 </div>
-                <span>{item.price}</span>
+                {item.price ? <span>{item.price}</span> : <span className="is-tbd">판매가 확정 전</span>}
               </div>
             ))}
           </div>

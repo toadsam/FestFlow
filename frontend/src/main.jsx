@@ -9,6 +9,7 @@ import "leaflet/dist/leaflet.css";
 import "./styles/v2.css";
 import "./styles/v2-overrides.css";
 import "./styles/v2-aimatch.css";
+import "./styles/v2-hero.css";
 import AiMatchPage from "./pages/AiMatchPage";
 import AiMatchAdminPage from "./pages/AiMatchAdminPage";
 import AdminPage from "./pages/AdminPage";
@@ -73,6 +74,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route index element={routeElement(FestivalPage)} />
             <Route path="home-v1" element={routeElement(HomePage)} />
             <Route path="booths" element={routeElement(BoothListPage)} />
+            {/* 이번 축제는 주점이 하나라 /booths 는 총학 주점으로 바로 간다. 전체 목록은 숨겨 두고 여기서만 연다. */}
+            <Route path="booths/all" element={routeElement(BoothListPage)} />
             <Route path="stage-map" element={routeElement(StageMapPage)} />
             <Route path="events" element={routeElement(EventPage)} />
             <Route path="events/lineup" element={routeElement(LineupPage)} />

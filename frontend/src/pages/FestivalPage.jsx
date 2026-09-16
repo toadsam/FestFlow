@@ -1,6 +1,6 @@
-// 축제 살펴보기. 바람 축제의 첫 화면. 일정·공지·오늘 공연·주점 몇 개를 한 번에 보여 준다.
+// 축제 살펴보기. 바람 축제의 첫 화면. 포스터 컨셉(뷰파인더·하늘·갈대·종이비행기) 위에 일정·공지·공연·주점을 얹는다.
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
   createBoothStream,
   createEventStream,
@@ -9,10 +9,11 @@ import {
   fetchBooths,
   fetchEvents,
 } from "../api";
-import { IconBox, IconChevronRight, IconClock } from "../components/UxIcons";
-import { Brand, CountUp, HeroReeds, IconBeer, IconHeartSaju } from "../components/v2/V2Kit";
+import { IconBox, IconChevronRight } from "../components/UxIcons";
+import { CountUp, HeroReeds, IconBeer, IconHeartSaju, Mascot, PaperPlane } from "../components/v2/V2Kit";
 import { resolveBoothImageUrl } from "../config/boothImages";
-import { fallbackBooths, fallbackEvents } from "../data/festivalUiData";
+import { FESTIVAL, MAIN_BOOTH_FALLBACK, findMainBooth } from "../config/festival";
+import { fallbackEvents } from "../data/festivalUiData";
 
 const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -29,15 +30,18 @@ function formatClock(date) {
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
 }
 
-function formatDay(date) {
-  return `${date.getMonth() + 1}월 ${date.getDate()}일 (${WEEKDAY[date.getDay()]})`;
+function formatDay(date, withWeekday = true) {
+  const base = `${date.getMonth() + 1}월 ${date.getDate()}일`;
+  return withWeekday ? `${base}(${WEEKDAY[date.getDay()]})` : base;
 }
 
-function formatRange(start, end) {
+function festivalRange() {
+  const start = toDate(`${FESTIVAL.startDate}T00:00:00`);
+  const end = toDate(`${FESTIVAL.endDate}T00:00:00`);
   if (!start) return "";
   if (!end || dayKey(start) === dayKey(end)) return formatDay(start);
   if (start.getMonth() === end.getMonth()) {
-    return `${start.getMonth() + 1}월 ${start.getDate()}일 ~ ${end.getDate()}일`;
+    return `${formatDay(start)} ~ ${end.getDate()}일(${WEEKDAY[end.getDay()]})`;
   }
   return `${formatDay(start)} ~ ${formatDay(end)}`;
 }
@@ -51,20 +55,13 @@ function eventState(event, now) {
   return "upcoming";
 }
 
-function waitLabel(booth) {
-  const value = Number(booth?.estimatedWaitMinutes);
-  if (!Number.isFinite(value)) return "대기 확인 중";
-  if (value <= 0) return "바로 입장";
-  return `대기 ${value}분`;
-}
-
 export default function FestivalPage() {
-  const navigate = useNavigate();
   const [booths, setBooths] = useState([]);
   const [events, setEvents] = useState([]);
   const [notices, setNotices] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [openNoticeId, setOpenNoticeId] = useState(null);
+  const [posterOk, setPosterOk] = useState(Boolean(FESTIVAL.posterUrl));
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -108,7 +105,6 @@ export default function FestivalPage() {
     };
   }, []);
 
-  const boothSource = booths.length ? booths : fallbackBooths;
   const eventSource = events.length ? events : fallbackEvents;
 
   const schedule = useMemo(() => {
@@ -116,72 +112,79 @@ export default function FestivalPage() {
       .map((event) => ({ ...event, start: toDate(event.startTime), end: toDate(event.endTime) }))
       .filter((event) => event.start)
       .sort((a, b) => a.start - b.start);
-    if (!dated.length) return { first: null, last: null, dayLabel: "", items: [], dayCount: 0 };
-
-    const first = dated[0].start;
-    const last = dated[dated.length - 1].end || dated[dated.length - 1].start;
+    if (!dated.length) return { dayLabel: "", items: [] };
     const days = [...new Set(dated.map((event) => dayKey(event.start)))];
     const today = dayKey(now);
-    let targetDay = days.includes(today) ? today : days.find((day) => day > today) || days[days.length - 1];
+    const targetDay = days.includes(today) ? today : days.find((day) => day > today) || days[days.length - 1];
     const items = dated.filter((event) => dayKey(event.start) === targetDay);
-    const dayLabel = targetDay === today ? "오늘" : formatDay(items[0].start);
-    return { first, last, dayLabel, items, dayCount: days.length };
+    const dayLabel = targetDay === today ? "오늘" : formatDay(items[0].start, false);
+    return { dayLabel, items };
   }, [eventSource, now]);
 
   const liveCount = schedule.items.filter((event) => eventState(event, now) === "live").length;
-  const dday = useMemo(() => {
-    if (!schedule.first) return null;
-    const startDay = new Date(schedule.first);
-    startDay.setHours(0, 0, 0, 0);
+
+  const festivalStatus = useMemo(() => {
+    const start = toDate(`${FESTIVAL.startDate}T00:00:00`);
+    const end = toDate(`${FESTIVAL.endDate}T23:59:59`);
+    if (!start) return { label: "일정 준비 중", dday: null };
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
-    return Math.round((startDay - today) / 86400000);
-  }, [schedule.first, now]);
+    const dday = Math.round((start - today) / 86400000);
+    if (dday > 0) return { label: `D-${dday}`, dday };
+    if (end && now > end) return { label: "축제 종료", dday: 0 };
+    return { label: "축제 진행 중", dday: 0 };
+  }, [now]);
 
-  const featuredBooths = useMemo(
-    () =>
-      [...boothSource]
-        .sort((a, b) => (Number(a.estimatedWaitMinutes) || 0) - (Number(b.estimatedWaitMinutes) || 0))
-        .slice(0, 3),
-    [boothSource],
-  );
-
+  const mainBooth = findMainBooth(booths);
   const activeNotices = notices.filter((notice) => notice.active !== false).slice(0, 3);
-
-  let ddayLabel = "축제 진행 중";
-  if (dday === null) ddayLabel = "일정 준비 중";
-  else if (dday > 0) ddayLabel = `D-${dday}`;
-  else if (dday === 0) ddayLabel = "오늘 시작";
-  else if (schedule.last && schedule.last < now) ddayLabel = "축제 종료";
 
   return (
     <section className="v2-page" data-i18n-skip>
       <header className="v2-hero">
-        <div className="v2-hero__sky" aria-hidden="true" />
-        <HeroReeds height={130} />
-        <div className="v2-hero__top">
-          <Brand />
-          <span className="v2-badge v2-badge--blue">{ddayLabel}</span>
+        {posterOk ? (
+          <img className="v2-hero__poster" src={FESTIVAL.posterUrl} alt="" onError={() => setPosterOk(false)} />
+        ) : (
+          <>
+            <div className="v2-hero__sky" aria-hidden="true" />
+            <HeroReeds height={160} />
+            <PaperPlane className="v2-hero__plane v2-hero__plane--small" />
+            <PaperPlane className="v2-hero__plane" />
+          </>
+        )}
+        <div className="v2-hero__fade" aria-hidden="true" />
+        <Mascot className="v2-hero__mascot v2-pop" />
+        <div className="v2-hero__frame" aria-hidden="true">
+          <span />
         </div>
+
+        <div className="v2-hero__top">
+          <span className="v2-hero__rec">REC</span>
+          <div className="v2-hero__meta">
+            <span>{FESTIVAL.title}</span>
+            <span>
+              {FESTIVAL.place} · @{FESTIVAL.instagram}
+            </span>
+          </div>
+        </div>
+
         <div className="v2-hero__body">
           <span className="v2-hero__eyebrow v2-rise" style={{ "--i": 0 }}>
-            아주대학교 축제
+            {festivalStatus.label}
           </span>
           <h1 className="v2-rise" style={{ "--i": 1 }}>
-            바람 부는 캠퍼스,
-            <br />
-            <em>오늘은 어디로 갈까요?</em>
+            {FESTIVAL.name}
+            <small>{FESTIVAL.tagline}</small>
           </h1>
           <p className="v2-rise" style={{ "--i": 2 }}>
-            {schedule.first ? formatRange(schedule.first, schedule.last) : "일정은 곧 공개돼요"}
-            {schedule.dayCount > 1 ? ` · ${schedule.dayCount}일간` : ""}
+            {festivalRange()} · {FESTIVAL.place}
           </p>
         </div>
+
         <div className="v2-hero__stats">
           <div className="v2-stat v2-rise" style={{ "--i": 3 }}>
-            <small>운영 부스</small>
+            <small>축제까지</small>
             <strong>
-              <CountUp value={boothSource.length} suffix="곳" />
+              {festivalStatus.dday > 0 ? <CountUp value={festivalStatus.dday} suffix="일" /> : festivalStatus.label}
             </strong>
           </div>
           <div className="v2-stat v2-rise" style={{ "--i": 4 }}>
@@ -204,7 +207,7 @@ export default function FestivalPage() {
           <span>
             <IconBeer />
           </span>
-          주점 보기
+          총학 주점
         </Link>
         <Link to="/ai-match" className="v2-quick__item v2-rise" style={{ "--i": 5 }}>
           <span>
@@ -249,6 +252,23 @@ export default function FestivalPage() {
 
       <section className="v2-section">
         <div className="v2-section__head">
+          <h2>총학 주점</h2>
+          <span>{FESTIVAL.place} 옆</span>
+        </div>
+        <Link to={mainBooth ? `/booths/${mainBooth.id}` : "/booths"} className="v2-main-booth v2-rise" style={{ "--i": 6 }}>
+          <img src={mainBooth ? resolveBoothImageUrl(mainBooth) : resolveBoothImageUrl(null)} alt="" />
+          <span className="v2-badge v2-badge--blue">
+            {mainBooth?.liveStatusMessage ? mainBooth.liveStatusMessage : "테이블 QR로 자리에서 주문"}
+          </span>
+          <div>
+            <strong>{mainBooth?.name || MAIN_BOOTH_FALLBACK.name}</strong>
+            <p>{mainBooth?.description || mainBooth?.boothIntro || MAIN_BOOTH_FALLBACK.description}</p>
+          </div>
+        </Link>
+      </section>
+
+      <section className="v2-section">
+        <div className="v2-section__head">
           <h2>{schedule.dayLabel ? `${schedule.dayLabel} 공연` : "공연"}</h2>
           {liveCount > 0 ? <span className="v2-badge v2-badge--blue v2-badge--live">진행 중</span> : null}
         </div>
@@ -285,9 +305,7 @@ export default function FestivalPage() {
           </div>
         ) : (
           <div className="v2-empty">
-            <span className="v2-empty__icon">
-              <IconClock />
-            </span>
+            <Mascot kind="flame" className="v2-empty__mascot" />
             <strong>공연 일정이 아직 없어요</strong>
             <p>일정이 올라오면 여기서 바로 보여드릴게요.</p>
           </div>
@@ -297,40 +315,30 @@ export default function FestivalPage() {
       <div className="v2-divider--thick" />
 
       <section className="v2-section" style={{ marginTop: 0 }}>
-        <div className="v2-section__head">
-          <h2>대기 짧은 주점</h2>
-          <button type="button" onClick={() => navigate("/booths")}>
-            전체 보기
-          </button>
-        </div>
-        <div className="v2-booth-list">
-          {featuredBooths.map((booth, index) => {
-            const wait = Number(booth.estimatedWaitMinutes) || 0;
-            return (
-              <Link
-                key={booth.id}
-                to={`/booths/${booth.id}`}
-                className="v2-booth v2-rise"
-                style={{ "--i": index + 8 }}
-              >
-                <span className="v2-booth__thumb">
-                  <img src={resolveBoothImageUrl(booth)} alt="" loading="lazy" />
-                </span>
-                <span className="v2-booth__body">
-                  <strong>{booth.name}</strong>
-                  <p>{booth.description || booth.boothIntro || booth.category || "축제 부스"}</p>
-                  <span className="v2-booth__meta">
-                    <em className={wait >= 30 ? "is-busy" : ""}>{waitLabel(booth)}</em>
-                    {booth.category ? <span>{booth.category}</span> : null}
-                  </span>
-                </span>
-                <span className="v2-row__trail">
-                  <IconChevronRight />
-                </span>
-              </Link>
-            );
-          })}
-        </div>
+        <Link to="/lost-found" className="v2-row">
+          <span className="v2-row__icon v2-row__icon--blue">
+            <IconBox />
+          </span>
+          <span className="v2-row__body">
+            <strong>물건을 잃어버렸다면</strong>
+            <small>분실물 센터에 들어온 물건을 바로 확인해요</small>
+          </span>
+          <span className="v2-row__trail">
+            <IconChevronRight />
+          </span>
+        </Link>
+        <Link to="/ai-match" className="v2-row">
+          <span className="v2-row__icon v2-row__icon--yellow">
+            <IconHeartSaju />
+          </span>
+          <span className="v2-row__body">
+            <strong>사주로 보는 축제 인연</strong>
+            <small>생년월일만 넣으면 궁합 점수까지 나와요</small>
+          </span>
+          <span className="v2-row__trail">
+            <IconChevronRight />
+          </span>
+        </Link>
       </section>
     </section>
   );

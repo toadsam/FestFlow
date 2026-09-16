@@ -1104,7 +1104,7 @@
 .app-shell[data-v2="true"] .v2-hero__stats {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   margin-top: 1.4rem;
 }
@@ -1134,7 +1134,7 @@
 
 .app-shell[data-v2="true"] .v2-quick {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.6rem;
 }
 
@@ -1309,6 +1309,7 @@
 /* ---------- 주점 목록 ---------- */
 .app-shell[data-v2="true"] .v2-booth-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.75rem;
 }
 
@@ -1389,6 +1390,7 @@
 
 .app-shell[data-v2="true"] .v2-booth__meta {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
   font-size: 0.8rem;
@@ -1472,7 +1474,7 @@
 
 .app-shell[data-v2="true"] .v2-info-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.5rem;
   margin-top: 1rem;
 }
@@ -1568,7 +1570,7 @@
 
 .app-shell[data-v2="true"] .v2-tables {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0.5rem;
 }
 
@@ -1704,6 +1706,7 @@
 /* ---------- 분실물 ---------- */
 .app-shell[data-v2="true"] .v2-lost-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.6rem;
 }
 

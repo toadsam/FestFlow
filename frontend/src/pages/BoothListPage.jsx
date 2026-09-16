@@ -1,10 +1,11 @@
 // 주점 탭. 부스 목록을 검색·카테고리로 고르고 상세로 들어간다.
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { createBoothStream, fetchBooths } from "../api";
 import { IconChevronRight, IconSearch, IconX } from "../components/UxIcons";
-import { IconBeer } from "../components/v2/V2Kit";
+import { IconBeer, Mascot } from "../components/v2/V2Kit";
 import { resolveBoothImageUrl } from "../config/boothImages";
+import { FESTIVAL, MAIN_BOOTH_FALLBACK, findMainBooth } from "../config/festival";
 import { fallbackBooths } from "../data/festivalUiData";
 
 function minutesOf(value) {
@@ -45,7 +46,43 @@ function seatLabel(booth) {
   return seats > 0 ? `예약 ${seats}석` : "예약 마감";
 }
 
+/** 서버에 총학 주점이 아직 없을 때 보여 주는 화면. 메뉴는 config/festival.js 의 기본값. */
+function MainBoothPreview() {
+  return (
+    <section className="v2-page" data-i18n-skip>
+      <div className="v2-title">
+        <h1>{MAIN_BOOTH_FALLBACK.name}</h1>
+        <p>{MAIN_BOOTH_FALLBACK.description}</p>
+      </div>
+      <Mascot style={{ width: "5.5rem", height: "auto", display: "block", margin: "0 auto 0.5rem" }} />
+      <p className="v2-note v2-note--blue">
+        운영 콘솔에서 이름에 &quot;{FESTIVAL.mainBoothKeyword}&quot;이 들어간 부스를 만들면 이 자리에 실제 메뉴판과 자리 예약이 붙어요.
+      </p>
+      <section className="v2-section">
+        <div className="v2-section__head">
+          <h2>메뉴</h2>
+          <span>{MAIN_BOOTH_FALLBACK.menu.length}개</span>
+        </div>
+        <div className="v2-card v2-card--white v2-menu" style={{ padding: "0.4rem 1rem" }}>
+          {MAIN_BOOTH_FALLBACK.menu.map((item, index) => (
+            <div key={item.name} className="v2-menu__item v2-rise" style={{ "--i": index }}>
+              <div>
+                <strong>{item.name}</strong>
+                {item.description ? <small>{item.description}</small> : null}
+              </div>
+              {item.price ? <span>{item.price}</span> : <span className="is-tbd">판매가 확정 전</span>}
+            </div>
+          ))}
+        </div>
+      </section>
+    </section>
+  );
+}
+
 export default function BoothListPage() {
+  const location = useLocation();
+  // 이번 축제는 주점이 하나라 /booths 는 총학 주점으로 바로 간다. /booths/all 만 전체 목록.
+  const showAll = location.pathname.endsWith("/all");
   const [booths, setBooths] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -120,6 +157,20 @@ export default function BoothListPage() {
   }, [source, category, query]);
 
   const openCount = source.filter((booth) => isOpenNow(booth, now) !== false).length;
+  const mainBooth = findMainBooth(booths);
+
+  if (!showAll) {
+    if (mainBooth) return <Navigate to={`/booths/${mainBooth.id}`} replace />;
+    if (loaded) return <MainBoothPreview />;
+    return (
+      <section className="v2-page" data-i18n-skip>
+        <div className="v2-title">
+          <div className="v2-skeleton" style={{ height: "2rem", width: "8rem" }} />
+        </div>
+        <div className="v2-skeleton" style={{ height: "12rem", borderRadius: 22 }} />
+      </section>
+    );
+  }
 
   return (
     <section className="v2-page" data-i18n-skip>

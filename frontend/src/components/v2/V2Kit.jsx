@@ -62,6 +62,28 @@ export function IconPhone(props) {
   );
 }
 
+export function IconPlane(props) {
+  return (
+    <svg {...svgProps(props)}>
+      <path d="M21 3 3 10.5l7.5 2.5L13 21l8-18z" />
+      <path d="M10.5 13 21 3" />
+    </svg>
+  );
+}
+
+/** 포스터의 종이비행기. 히어로에 띄운다. */
+export function PaperPlane({ className = "" }) {
+  return (
+    <svg viewBox="0 0 140 90" className={className} aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 46 132 6 92 84 66 58z" fill="#f7f9fc" />
+      <path d="M6 46 66 58 132 6z" fill="#e3e9f1" />
+      <path d="M66 58 92 84 132 6z" fill="#ffffff" />
+      <path d="M66 58 62 82 78 70z" fill="#cfd8e3" />
+      <path d="M6 46 132 6M66 58 132 6M66 58 92 84" stroke="#b8c4d3" strokeWidth="1.2" fill="none" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconWind(props) {
   return (
     <svg {...svgProps(props)}>
@@ -79,7 +101,7 @@ export function Brand({ caption = "아주대학교 축제" }) {
   return (
     <div className="v2-brand">
       <span className="v2-brand__mark">
-        <IconWind />
+        <IconPlane />
       </span>
       <span className="v2-brand__name">
         바람
@@ -93,6 +115,17 @@ export function Brand({ caption = "아주대학교 축제" }) {
 function portalTarget() {
   if (typeof document === "undefined") return null;
   return document.querySelector(".app-shell") || document.body;
+}
+
+/**
+ * 아주대 공식 마스코트 치토. 파일은 public/images/chito.png, chito-flame.png (출처: ajou.ac.kr 캐릭터 페이지).
+ * 교내·비영리 용도로만 쓸 수 있다. 파일이 없으면 아무것도 그리지 않는다.
+ */
+export function Mascot({ kind = "chito", className = "", style }) {
+  const [ok, setOk] = useState(true);
+  if (!ok) return null;
+  const src = kind === "flame" ? "/images/chito-flame.png" : "/images/chito.png";
+  return <img className={`v2-mascot v2-mascot--${kind} ${className}`} src={src} alt="" style={style} onError={() => setOk(false)} />;
 }
 
 export function HeroReeds({ height = 120 }) {
