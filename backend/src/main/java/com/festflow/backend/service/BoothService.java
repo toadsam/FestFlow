@@ -74,7 +74,9 @@ public class BoothService {
                 ? requestDto.displayOrder()
                 : boothRepository.findTopByOrderByDisplayOrderDesc().map(Booth::getDisplayOrder).orElse(0) + 1;
 
-        Booth saved = boothRepository.save(new Booth(
+        // save() 뒤에 setter 를 부르면 트랜잭션이 없어 저장되지 않는다(메뉴판·운영 시간이 비던 원인).
+        // 값을 다 채운 뒤 한 번만 저장한다.
+        Booth booth = new Booth(
                 requestDto.name(),
                 requestDto.latitude(),
                 requestDto.longitude(),
@@ -85,11 +87,11 @@ public class BoothService {
                 requestDto.remainingStock(),
                 requestDto.liveStatusMessage(),
                 LocalDateTime.now()
-        ));
-        saved.setBoothIntro(requestDto.boothIntro());
-        saved.setMenuImageUrl(requestDto.menuImageUrl());
-        saved.setMenuBoardJson(requestDto.menuBoardJson());
-        saved.updateContentInfo(
+        );
+        booth.setBoothIntro(requestDto.boothIntro());
+        booth.setMenuImageUrl(requestDto.menuImageUrl());
+        booth.setMenuBoardJson(requestDto.menuBoardJson());
+        booth.updateContentInfo(
                 requestDto.category(),
                 requestDto.dayPart(),
                 requestDto.openTime(),
@@ -98,6 +100,7 @@ public class BoothService {
                 requestDto.contentJson(),
                 requestDto.reservationEnabled()
         );
+        Booth saved = boothRepository.save(booth);
         return toDto(saved);
     }
 

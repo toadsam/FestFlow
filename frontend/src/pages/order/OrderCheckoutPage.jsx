@@ -132,6 +132,14 @@ export default function OrderCheckoutPage() {
               <small>테이블 {table}</small>
             </div>
           </div>
+          <div className="od-table-confirm">
+            <span>
+              <strong>{table}</strong> 테이블 맞으신가요?
+            </span>
+            <button type="button" onClick={() => navigate(`/order/${boothId}`)}>
+              아니에요, 바꿀게요
+            </button>
+          </div>
           <div className="od-divider" />
           {lines.length === 0 && <span className="od-muted">담긴 메뉴가 없어요. 메뉴로 돌아가서 담아 주세요.</span>}
           {lines.map((line) => (

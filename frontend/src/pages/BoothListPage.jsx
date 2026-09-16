@@ -48,7 +48,7 @@ function seatLabel(booth) {
 }
 
 /** 서버에 총학 주점이 아직 없을 때 보여 주는 화면. 메뉴는 config/festival.js 의 기본값. */
-function MainBoothPreview() {
+function MainBoothPreview({ loading = false }) {
   const [dish, setDish] = useState(null);
   return (
     <section className="v2-page" data-i18n-skip>
@@ -62,8 +62,8 @@ function MainBoothPreview() {
       <div className="v2-seats v2-seats--none">
         <div>
           <span className="v2-seats__label">지금 빈 자리</span>
-          <strong>자리 정보 준비 중</strong>
-          <p>운영진이 테이블을 등록하면 실시간으로 보여요.</p>
+          <strong>{loading ? "불러오는 중…" : "자리 정보 준비 중"}</strong>
+          <p>{loading ? "서버에서 자리 정보를 받아오고 있어요." : "운영진이 테이블을 등록하면 실시간으로 보여요."}</p>
         </div>
       </div>
       <section className="v2-section">
@@ -163,15 +163,8 @@ export default function BoothListPage() {
 
   if (!showAll) {
     if (mainBooth) return <Navigate to={`/booths/${mainBooth.id}`} replace />;
-    if (loaded) return <MainBoothPreview />;
-    return (
-      <section className="v2-page" data-i18n-skip>
-        <div className="v2-title">
-          <div className="v2-skeleton" style={{ height: "2rem", width: "8rem" }} />
-        </div>
-        <div className="v2-skeleton" style={{ height: "12rem", borderRadius: 22 }} />
-      </section>
-    );
+    // 서버가 느리거나 죽어도 화면이 비지 않게, 기다리는 동안에도 미리보기를 먼저 보여 준다.
+    return <MainBoothPreview loading={!loaded} />;
   }
 
   return (
