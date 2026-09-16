@@ -43,7 +43,7 @@ const MEET_PLACE_MAP_TARGET = {
   lng: 127.0444,
 };
 const SCREEN_COPY = {
-  intro: "AI 소개팅 부스",
+  intro: "AI 사주 소개팅",
   register: "프로필 등록하기",
   people: "등록된 사람들",
   requests: "데이트 신청 현황",
@@ -1777,8 +1777,8 @@ export default function AiMatchPage() {
         <section className="ai-match-hero-card">
           <div className="ai-match-hero-copy">
             <p>AI 프로필을 만들고 축제에서 어울릴 사람을 찾아보세요!</p>
-            <h2>AI 소개팅 부스</h2>
-            <span>축제에서 같이 걸을 사람을 빠르게 찾는 현장 매칭</span>
+            <h2>AI 사주 소개팅</h2>
+            <span>사주 궁합까지 보고 축제에서 같이 걸을 사람을 찾는 현장 매칭</span>
           </div>
           <div className="ai-match-float-heart ai-match-float-heart--a" aria-hidden>
             <IconHeart className="h-5 w-5" />
@@ -2983,8 +2983,6 @@ export default function AiMatchPage() {
         {renderLiveNotice()}
 
         {renderDetailScreen()}
-
-        {renderBottomNav()}
       </section>
     );
   }
@@ -3014,6 +3012,8 @@ export default function AiMatchPage() {
         )}
       </header>
 
+      {renderBottomNav()}
+
       {bannerText ? (
         <p className={errorMessage ? "ai-match-banner ai-match-banner--error" : "ai-match-banner ai-match-banner--success"} aria-live="polite">
           {bannerText}
@@ -3027,8 +3027,6 @@ export default function AiMatchPage() {
       {activeScreen === "requests" ? renderRequestsScreen() : null}
       {activeScreen === "my" ? renderMyScreen() : null}
       {activeScreen === "inquiry" ? renderInquiryScreen() : null}
-
-      {renderBottomNav()}
 
       {accessModalOpen ? (
         <div className="ai-match-modal" role="dialog" aria-modal="true" aria-labelledby="ai-match-access-title">
