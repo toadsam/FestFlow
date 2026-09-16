@@ -10,11 +10,11 @@ import {
   fetchBoothById,
   fetchBoothReservations,
   fetchCongestion,
-  resolveApiAssetUrl,
   sendReservationAuthCode,
   verifyReservationAuthCode,
 } from "../api";
 import { IconArrowLeft, IconClock, IconMapPin, IconUsers } from "../components/UxIcons";
+import { DishGrid, DishSheet } from "../components/v2/DishGrid";
 import { BottomSheet, IconPhone, useToast } from "../components/v2/V2Kit";
 import { resolveBoothImageUrl } from "../config/boothImages";
 import { MAIN_BOOTH_FALLBACK, isMainBooth } from "../config/festival";
@@ -485,53 +485,14 @@ export default function BoothDetailPage() {
             <h2>메뉴</h2>
             <span>{menuItems.length}개</span>
           </div>
-          <div className="v2-menu-grid">
-            {menuItems.map((item, index) => (
-              <button
-                key={`${item.name}-${index}`}
-                type="button"
-                className={`v2-dish${item.soldOut ? " v2-dish--soldout" : ""}`}
-                onClick={() => setDish(item)}
-              >
-                {item.imageUrl ? (
-                  <span className="v2-dish__photo">
-                    <img src={resolveApiAssetUrl(item.imageUrl)} alt="" loading="lazy" />
-                    {item.soldOut ? <span className="v2-dish__soldout">품절</span> : null}
-                  </span>
-                ) : (
-                  <span className="v2-dish__photo v2-dish__photo--empty">
-                    {item.name.slice(0, 1)}
-                    {item.soldOut ? <span className="v2-dish__soldout">품절</span> : null}
-                  </span>
-                )}
-                <strong>{item.name}</strong>
-                {item.description ? <small>{item.description}</small> : null}
-                {item.price ? <em>{item.price}</em> : <em className="is-tbd">판매가 확정 전</em>}
-              </button>
-            ))}
-          </div>
+          <DishGrid items={menuItems} onSelect={setDish} />
           <p className="v2-note v2-note--blue" style={{ marginTop: "0.9rem" }}>
             테이블에 있는 QR을 찍으면 자리에서 바로 주문할 수 있어요.
           </p>
         </section>
       )}
 
-      <BottomSheet open={Boolean(dish)} onClose={() => setDish(null)} title={dish?.name || ""} description={dish?.description || ""}>
-        {dish ? (
-          <>
-            {dish.imageUrl ? (
-              <div className="v2-dish-sheet__photo">
-                <img src={resolveApiAssetUrl(dish.imageUrl)} alt="" />
-              </div>
-            ) : null}
-            <div className="v2-dish-sheet__price">{dish.price || "판매가 확정 전"}</div>
-            {dish.soldOut ? <p className="v2-note v2-note--danger">지금은 품절이에요.</p> : null}
-            <button type="button" className="v2-btn v2-btn--gray" onClick={() => setDish(null)}>
-              닫기
-            </button>
-          </>
-        ) : null}
-      </BottomSheet>
+      <DishSheet dish={dish} onClose={() => setDish(null)} />
 
       {booth?.menuImageUrl && menuItems.length === 0 && (
         <section className="v2-section v2-rise" style={{ "--i": 2 }}>

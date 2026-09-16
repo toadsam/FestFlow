@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { createBoothStream, fetchBooths } from "../api";
 import { IconChevronRight, IconSearch, IconX } from "../components/UxIcons";
+import { DishGrid, DishSheet } from "../components/v2/DishGrid";
 import { IconBeer, Mascot } from "../components/v2/V2Kit";
 import { resolveBoothImageUrl } from "../config/boothImages";
 import { FESTIVAL, MAIN_BOOTH_FALLBACK, findMainBooth } from "../config/festival";
@@ -48,33 +49,34 @@ function seatLabel(booth) {
 
 /** 서버에 총학 주점이 아직 없을 때 보여 주는 화면. 메뉴는 config/festival.js 의 기본값. */
 function MainBoothPreview() {
+  const [dish, setDish] = useState(null);
   return (
     <section className="v2-page" data-i18n-skip>
-      <div className="v2-title">
-        <h1>{MAIN_BOOTH_FALLBACK.name}</h1>
-        <p>{MAIN_BOOTH_FALLBACK.description}</p>
+      <div className="v2-title v2-title--row">
+        <div>
+          <h1>{MAIN_BOOTH_FALLBACK.name}</h1>
+          <p>{MAIN_BOOTH_FALLBACK.description}</p>
+        </div>
+        <Mascot style={{ width: "3.6rem", height: "auto", flex: "0 0 auto" }} />
       </div>
-      <Mascot style={{ width: "5.5rem", height: "auto", display: "block", margin: "0 auto 0.5rem" }} />
-      <p className="v2-note v2-note--blue">
-        운영 콘솔에서 이름에 &quot;{FESTIVAL.mainBoothKeyword}&quot;이 들어간 부스를 만들면 이 자리에 실제 메뉴판과 자리 예약이 붙어요.
-      </p>
+      <div className="v2-seats v2-seats--none">
+        <div>
+          <span className="v2-seats__label">지금 빈 자리</span>
+          <strong>자리 정보 준비 중</strong>
+          <p>운영진이 테이블을 등록하면 실시간으로 보여요.</p>
+        </div>
+      </div>
       <section className="v2-section">
         <div className="v2-section__head">
           <h2>메뉴</h2>
           <span>{MAIN_BOOTH_FALLBACK.menu.length}개</span>
         </div>
-        <div className="v2-card v2-card--white v2-menu" style={{ padding: "0.4rem 1rem" }}>
-          {MAIN_BOOTH_FALLBACK.menu.map((item, index) => (
-            <div key={item.name} className="v2-menu__item v2-rise" style={{ "--i": index }}>
-              <div>
-                <strong>{item.name}</strong>
-                {item.description ? <small>{item.description}</small> : null}
-              </div>
-              {item.price ? <span>{item.price}</span> : <span className="is-tbd">판매가 확정 전</span>}
-            </div>
-          ))}
-        </div>
+        <DishGrid items={MAIN_BOOTH_FALLBACK.menu} onSelect={setDish} />
+        <p className="v2-note" style={{ marginTop: "0.9rem" }}>
+          운영 콘솔에서 이름에 &quot;{FESTIVAL.mainBoothKeyword}&quot;이 들어간 부스를 만들면 실제 메뉴판·사진·자리 예약이 이 자리에 붙어요.
+        </p>
       </section>
+      <DishSheet dish={dish} onClose={() => setDish(null)} />
     </section>
   );
 }
