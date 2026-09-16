@@ -1,19 +1,19 @@
 // 앱을 처음 열 때 1.8초 동안 뜨는 스플래시. 하늘 + 종이비행기 + 치토(주인공) + 바람.
-// 세션당 한 번만 보여 주고, 그 사이에 부스·공연 데이터를 미리 받아 둔다.
+// 페이지를 새로 열 때마다(새로고침 포함) 보여 준다. 탭 이동은 페이지를 다시 안 여니 안 뜬다.
+// 그 사이에 부스·공연 데이터를 미리 받아 둔다.
 import { useEffect, useState } from "react";
 import { fetchBooths, fetchEvents } from "../../api";
 import { FESTIVAL } from "../../config/festival";
 import { Reeds } from "../order/SkyReeds";
 import { PaperPlane } from "./V2Kit";
 
-const SEEN_KEY = "baram_splash_seen";
 const SHOW_MS = 1800;
 const FADE_MS = 450;
 
 export function shouldShowSplash() {
   try {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return false;
-    return sessionStorage.getItem(SEEN_KEY) !== "1";
+    return true;
   } catch {
     return false;
   }
@@ -29,11 +29,6 @@ export default function Splash({ onDone }) {
   const [phase, setPhase] = useState("in");
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem(SEEN_KEY, "1");
-    } catch {
-      // 저장이 안 돼도 이번 한 번은 보여 준다.
-    }
     // 화면이 떠 있는 동안 첫 화면 데이터를 미리 데워 둔다. 실패해도 스플래시는 그냥 지나간다.
     fetchBooths().catch(() => {});
     fetchEvents().catch(() => {});
