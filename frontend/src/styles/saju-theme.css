@@ -609,3 +609,11 @@
     display: none;
   }
 }
+
+/* 데스크톱에서 마우스를 올리면 index.css 의 분홍 :hover 규칙(특이도 0,5,1)이 이기던 문제 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button:hover,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button:focus-visible {
+  background: linear-gradient(135deg, #7457dc 0%, #5b3fb0 100%) !important;
+  box-shadow: 0 10px 22px rgba(91, 63, 176, 0.32) !important;
+  color: #fff !important;
+}
