@@ -217,7 +217,7 @@
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-filter-chip.is-active,
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-tag-chip.is-selected,
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-segment-button.is-active {
-  background: var(--v2-text) !important;
+  background: var(--v2-blue) !important;
   color: #fff !important;
 }
 
@@ -403,7 +403,7 @@
   width: 24px;
   height: 24px;
   border-radius: 8px;
-  background: var(--v2-text);
+  background: var(--v2-blue);
   color: #fff !important;
   font-size: 12px;
   font-weight: 800;
@@ -684,7 +684,7 @@
   gap: 8px;
   height: 50px;
   border-radius: 14px;
-  background: var(--v2-text) !important;
+  background: var(--v2-blue) !important;
   color: #fff !important;
   font-size: 15px;
   font-weight: 700;
@@ -885,8 +885,8 @@
 }
 
 .app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__chips .am-chip.is-on {
-  background: var(--v2-text) !important;
-  border-color: var(--v2-text) !important;
+  background: var(--v2-blue) !important;
+  border-color: var(--v2-blue) !important;
   color: #fff !important;
 }
 

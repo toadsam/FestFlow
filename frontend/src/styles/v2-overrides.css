@@ -92,7 +92,7 @@
 .app-shell[data-v2="true"] :is(.v2-page, .v2-sheet) .v2-btn--danger { background: var(--v2-red-soft) !important; color: var(--v2-red) !important; }
 
 .app-shell[data-v2="true"] :is(.v2-page, .v2-sheet) .v2-chip { background: var(--v2-gray) !important; color: var(--v2-text-2) !important; font-weight: 600; }
-.app-shell[data-v2="true"] :is(.v2-page, .v2-sheet) .v2-chip--active { background: var(--v2-text) !important; color: #fff !important; }
+.app-shell[data-v2="true"] :is(.v2-page, .v2-sheet) .v2-chip--active { background: var(--v2-blue) !important; color: #fff !important; }
 
 .app-shell[data-v2="true"] :is(.v2-page, .v2-sheet) .v2-table { border: 2px solid transparent !important; background: var(--v2-gray) !important; color: var(--v2-text) !important; }
 .app-shell[data-v2="true"] :is(.v2-page, .v2-sheet) .v2-table--selected { border-color: var(--v2-blue) !important; background: var(--v2-blue-soft) !important; color: var(--v2-blue) !important; }

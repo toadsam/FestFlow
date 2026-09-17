@@ -45,7 +45,9 @@ export default function App() {
   // 테이블 QR 주문 흐름은 하단 탭 없이 전체 화면으로 쓴다.
   const isOrderRoute = location.pathname.startsWith("/order/") || location.pathname.startsWith("/orders/");
   const isV2Shell = !isOpsPanelRoute && !isOrderRoute;
-  const showCustomerNav = isV2Shell && !isTableBoardRoute;
+  // 관리자 페이지(/admin)는 자체 사이드바가 있어 손님 하단 탭을 붙이지 않는다.
+  const isAdminRoute = location.pathname.startsWith("/admin");
+  const showCustomerNav = isV2Shell && !isTableBoardRoute && !isAdminRoute;
   // 스플래시는 손님 화면에서 세션당 한 번. 운영 콘솔·QR 주문·현황판으로 바로 들어오면 안 띄운다.
   const [splash, setSplash] = useState(() => showCustomerNav && shouldShowSplash());
   const closeSplash = useCallback(() => setSplash(false), []);

@@ -467,7 +467,7 @@
 }
 
 .app-shell[data-v2="true"] .v2-chip--active {
-  background: var(--v2-text);
+  background: var(--v2-blue);
   color: #fff;
 }
 

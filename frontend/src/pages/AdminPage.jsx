@@ -27,6 +27,7 @@ import {
   updateNotice,
   uploadBoothImage,
 } from "../api";
+import AdminLostItems from "../components/admin/AdminLostItems";
 import {
   IconAlert,
   IconBell,
@@ -723,6 +724,7 @@ export default function AdminPage() {
     { id: "booths", label: "부스 관리", icon: IconBox },
     { id: "events", label: "공연 관리", icon: IconCalendar },
     { id: "notices", label: "긴급 공지", icon: IconAlert },
+    { id: "lost", label: "분실물 관리", icon: IconBox },
     { id: "ai", label: "혼잡도 모니터링", icon: IconChart },
     { id: "master", label: "통합 운영", icon: IconSettings },
     { id: "staff", label: "사용자 관리", icon: IconUsers },
@@ -766,6 +768,14 @@ export default function AdminPage() {
       meta: `${activeNoticeCount}개`,
     },
     {
+      id: "lost",
+      title: "분실물 관리",
+      description: "주운 물건 등록, 주인 확인, 반환 처리",
+      icon: IconBox,
+      tone: "blue",
+      meta: "본부 접수",
+    },
+    {
       id: "logs",
       title: "운영 로그",
       description: "시스템 로그 및 활동 기록 확인",
@@ -798,10 +808,11 @@ export default function AdminPage() {
         <div className="auth-entry-orb auth-entry-orb--violet" aria-hidden="true" />
         <div className="auth-entry-orb auth-entry-orb--cyan" aria-hidden="true" />
         <form className="auth-entry-card" onSubmit={handleLogin}>
-          <p className="auth-entry-brand">Fest-A</p>
+          <img className="auth-entry-mascot" src="/images/chito-wave.png" alt="" onError={(e) => { e.currentTarget.src = "/images/chito.png"; }} />
+          <p className="auth-entry-brand">FestFlow · 운영진</p>
           <div className="auth-entry-copy">
-            <h1>관리자 전용 페이지</h1>
-            <p>안전하고 체계적인 축제 운영을 위한 관리자 시스템입니다.</p>
+            <h1>관리자 로그인</h1>
+            <p>축제 운영진만 들어올 수 있어요.</p>
           </div>
           <div className="auth-entry-field">
             <input
@@ -841,7 +852,7 @@ export default function AdminPage() {
           </button>
           {message && !isLoginPending && <p className="auth-entry-message">{message}</p>}
           <p className="auth-entry-helper">
-            관리자 계정이 없으신가요? <strong>문의하기</strong>
+            계정은 <strong>총학생회 운영진</strong>에게 받아요.
           </p>
         </form>
       </section>
@@ -1180,6 +1191,8 @@ export default function AdminPage() {
         )}
       </article>
         )}
+
+        {activeAdminView === "lost" && <AdminLostItems onMessage={setMessage} />}
 
         {activeAdminView === "notices" && (
       <article id="admin-notices" className="admin-console-panel admin-console-panel--notice">
