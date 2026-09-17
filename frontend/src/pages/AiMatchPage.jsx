@@ -690,6 +690,7 @@ export default function AiMatchPage() {
   const [activeFilter, setActiveFilter] = useState("전체");
   const [searchQuery, setSearchQuery] = useState("");
   const [peopleTagFilters, setPeopleTagFilters] = useState([]);
+  const [peopleFiltersOpen, setPeopleFiltersOpen] = useState(false);
   const [peopleMbtiFilter, setPeopleMbtiFilter] = useState("");
   const [favoriteProfileIds, setFavoriteProfileIds] = useState([]);
   const [expandedTagProfileIds, setExpandedTagProfileIds] = useState([]);
@@ -2350,69 +2351,81 @@ export default function AiMatchPage() {
 
     return (
       <div className="ai-match-flow">
-        <section className="ai-match-discovery-card">
-          <div className="ai-match-field ai-match-field--compact ai-match-profile-filter-field">
-            <div className="ai-match-field-head">
-              <span>프로필 필터</span>
-            </div>
-            <div className="ai-match-filter-bar ai-match-filter-bar--inside">
-              {PROFILE_FILTERS.map((filter) => (
-                <button
-                  key={filter}
-                  type="button"
-                  className={`ai-match-filter-chip ai-match-filter-chip--${getFilterTone(filter)}${activeFilter === filter ? " is-active" : ""}`}
-                  style={activeFilter === filter ? ACTIVE_FILTER_TAG_STYLE : undefined}
-                  aria-pressed={activeFilter === filter}
-                  onClick={() => setActiveFilter(filter)}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
+        <section className="am-disc">
+          <div className="am-disc__chips" role="tablist" aria-label="프로필 필터">
+            {PROFILE_FILTERS.map((filter) => (
+              <button
+                key={filter}
+                type="button"
+                role="tab"
+                className={`am-chip${activeFilter === filter ? " is-on" : ""}`}
+                aria-selected={activeFilter === filter}
+                onClick={() => setActiveFilter(filter)}
+              >
+                {filter}
+              </button>
+            ))}
           </div>
 
-          <label className="search-field ai-match-search-field">
+          <label className="am-disc__search">
             <IconSearch className="h-4 w-4" />
             <input
               value={searchQuery}
               onChange={(event) => setSearchQuery(event.target.value)}
               placeholder="닉네임, 소개, 장소, MBTI 검색"
             />
+            {searchQuery ? (
+              <button type="button" className="am-disc__clear" aria-label="검색어 지우기" onClick={() => setSearchQuery("")}>
+                ×
+              </button>
+            ) : null}
           </label>
 
-          <label className="ai-match-field ai-match-field--compact">
-            <div className="ai-match-field-head">
-              <span>MBTI 필터</span>
-            </div>
-            <select value={peopleMbtiFilter} onChange={(event) => setPeopleMbtiFilter(cleanMbtiValue(event.target.value))}>
-              <option value="">전체</option>
-              {MBTI_OPTIONS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="am-disc__row">
+            <label className="am-disc__select">
+              <span>MBTI</span>
+              <select value={peopleMbtiFilter} onChange={(event) => setPeopleMbtiFilter(cleanMbtiValue(event.target.value))}>
+                <option value="">전체</option>
+                {MBTI_OPTIONS.map((item) => (
+                  <option key={item} value={item}>
+                    {item}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <button
+              type="button"
+              className={`am-chip am-chip--more${peopleFiltersOpen || peopleTagFilters.length ? " is-on" : ""}`}
+              aria-expanded={peopleFiltersOpen}
+              onClick={() => setPeopleFiltersOpen((open) => !open)}
+            >
+              관심사{peopleTagFilters.length ? ` ${peopleTagFilters.length}` : ""}
+              <svg viewBox="0 0 24 24" className={`am-disc__chev${peopleFiltersOpen ? " is-open" : ""}`} aria-hidden="true">
+                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
 
-          <div className="ai-match-field ai-match-field--compact">
-            <div className="ai-match-field-head">
-              <span>관심사 필터</span>
-              <small>{peopleTagFilters.length ? `${peopleTagFilters.length}개 선택` : "복수 선택 가능"}</small>
-            </div>
-            <div className="ai-match-tag-grid ai-match-tag-grid--filter">
+          {peopleFiltersOpen ? (
+            <div className="am-chips">
               {REGISTRATION_TAGS.map((tag) => (
                 <button
                   key={tag}
                   type="button"
-                  className={`ai-match-tag-chip${peopleTagFilters.includes(tag) ? " is-selected" : ""}`}
-                  style={peopleTagFilters.includes(tag) ? ACTIVE_FILTER_TAG_STYLE : undefined}
+                  className={`am-chip${peopleTagFilters.includes(tag) ? " is-on" : ""}`}
+                  aria-pressed={peopleTagFilters.includes(tag)}
                   onClick={() => togglePeopleTagFilter(tag)}
                 >
-                  <span>{tag}</span>
+                  {tag}
                 </button>
               ))}
+              {peopleTagFilters.length ? (
+                <button type="button" className="am-chip am-chip--ghost" onClick={() => setPeopleTagFilters([])}>
+                  모두 해제
+                </button>
+              ) : null}
             </div>
-          </div>
+          ) : null}
         </section>
 
         <section className="ai-match-list-meta">

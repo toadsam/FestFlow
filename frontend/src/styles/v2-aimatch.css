@@ -854,3 +854,152 @@
   padding: 0 !important;
   margin: 0 !important;
 }
+
+/* ---------- 등록된 사람들: 필터 카드(am-disc) ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 14px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid var(--v2-line) !important;
+  box-shadow: var(--v2-shadow);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__chips {
+  display: flex;
+  gap: 6px;
+  margin: 0 -14px;
+  padding: 0 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__chips::-webkit-scrollbar {
+  display: none;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__chips .am-chip {
+  flex: 0 0 auto;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__chips .am-chip.is-on {
+  background: var(--v2-text) !important;
+  border-color: var(--v2-text) !important;
+  color: #fff !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 12px;
+  border-radius: 14px;
+  background: var(--v2-gray);
+  color: var(--v2-text-3);
+  border: 1.5px solid transparent;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__search:focus-within {
+  border-color: var(--v2-blue);
+  background: #fff;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__search svg {
+  flex: 0 0 auto;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0 !important;
+  height: 100%;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  font-size: 15px !important;
+  color: var(--v2-text) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__clear {
+  width: 24px;
+  height: 24px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--v2-line-strong) !important;
+  color: var(--v2-text-2) !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__clear::before {
+  content: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__select {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 10px 0 12px;
+  border-radius: 12px;
+  background: var(--v2-gray);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__select > span {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--v2-text-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__select select {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0 !important;
+  height: 100%;
+  padding: 0 24px 0 0 !important;
+  border: 0 !important;
+  background-color: transparent !important;
+  box-shadow: none !important;
+  font-size: 14px !important;
+  font-weight: 700;
+  color: var(--v2-text) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-chip--more {
+  height: 40px;
+  gap: 4px;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-chip--ghost {
+  background: transparent !important;
+  color: var(--v2-text-3) !important;
+  text-decoration: underline;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__chev {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.25s var(--v2-spring);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__chev.is-open {
+  transform: rotate(180deg);
+}
