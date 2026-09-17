@@ -1,6 +1,6 @@
 // 테이블 자리 현황을 그림으로. 손님 주점 화면, 첫 화면 카드, 운영 콘솔이 같이 쓴다.
 // 테이블마다 작은 테이블 그림(의자 개수 = 좌석 수)을 그리고 상태별로 색을 바꾼다. 스타일은 styles/v2-tables.css.
-// collapsible 이면 띠와 범례만 남기고 그림을 접을 수 있다. 접은 상태는 storageKey 로 기억한다.
+// collapsible 이면 띠와 범례만 남기고 그림을 접을 수 있다. 기본은 접힘(사용자 요청), 펼친 상태는 storageKey 로 기억한다.
 import { useState } from "react";
 
 function statusOf(table) {

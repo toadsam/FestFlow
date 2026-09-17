@@ -479,7 +479,7 @@ export default function BoothDetailPage() {
             </div>
           ) : null}
         </div>
-        {tables.length > 0 ? <TableMap tables={tables} compact collapsible storageKey="booth" toggleClass="v2-btn v2-btn--gray v2-btn--xs" /> : null}
+        {tables.length > 0 ? <TableMap tables={tables} compact collapsible defaultOpen={false} storageKey="booth" toggleClass="v2-btn v2-btn--gray v2-btn--xs" /> : null}
       </div>
 
       {menuItems.length > 0 && (
