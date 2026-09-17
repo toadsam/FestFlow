@@ -435,79 +435,7 @@
   }
 }
 
-/* ---------- 2차: 카드에 구름 문양·별 + 사람 카드 사진 여백 ---------- */
-.app-shell.festival-shell[data-v2="true"] .ai-match-page {
-  --saju-cloud: url("/images/saju/cloud.png");
-  --saju-stars: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 120'%3E%3Cg fill='%23d9b45a'%3E%3Cpath d='M30 18l2.2 6.8L39 27l-6.8 2.2L30 36l-2.2-6.8L21 27l6.8-2.2z'/%3E%3Cpath d='M172 78l1.6 5 5 1.6-5 1.6-1.6 5-1.6-5-5-1.6 5-1.6z'/%3E%3Ccircle cx='120' cy='14' r='1.6'/%3E%3Ccircle cx='62' cy='100' r='1.3'/%3E%3Ccircle cx='150' cy='44' r='1.2'/%3E%3C/g%3E%3Cg fill='%236d4fd2'%3E%3Cpath d='M100 62l1.3 4 4 1.3-4 1.3-1.3 4-1.3-4-4-1.3 4-1.3z'/%3E%3Ccircle cx='22' cy='72' r='1.4'/%3E%3Ccircle cx='186' cy='24' r='1.1'/%3E%3C/g%3E%3C/svg%3E");
-}
-
-/* 구름은 오른쪽 위, 별은 카드 전체에 드문드문. 내용보다 뒤에 깔린다. */
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-card,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-card,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-top,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-summary,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-detail-card,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-card,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-report {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-}
-
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-card::before,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-card::before,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc::before,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-top::before,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-summary::before,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-detail-card::before,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-card::before,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-report::before {
-  content: "" !important;
-  display: block !important;
-  position: absolute;
-  top: 10px;
-  right: -14px;
-  width: 132px;
-  height: 67px;
-  background: var(--saju-cloud) center / contain no-repeat;
-  opacity: 0.55;
-  z-index: -1;
-  pointer-events: none;
-  inset-inline-start: auto;
-  inset-block-end: auto;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  transform: none;
-  animation: none;
-}
-
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-card::after,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-card::after,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc::after,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-top::after,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-summary::after,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-detail-card::after,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-card::after,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-report::after {
-  content: "" !important;
-  display: block !important;
-  position: absolute;
-  inset: 0;
-  background: var(--saju-stars) right top / 220px 132px no-repeat;
-  opacity: 0.75;
-  z-index: -1;
-  pointer-events: none;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  transform: none;
-  animation: none;
-  width: auto;
-  height: auto;
-}
-
+/* ---------- 2차: 사람 카드 사진이 글 높이만큼 늘어난다 ---------- */
 /* 사람 카드: 흰 바탕에 아주 옅은 연보라 빛 */
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-card {
   background:
@@ -546,30 +474,4 @@
 /* 카드 안 궁합 블록은 위아래 여백을 줄인다(사진 높이를 덜 늘리려고) */
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-copy .sm-card {
   margin: 6px 0 0;
-}
-
-/* 4단계 카드·필터 카드 구름은 조금 더 연하게 */
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-card::before,
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc::before {
-  opacity: 0.42;
-  top: 6px;
-}
-
-/* 신청함 요약 카드는 보라 그라데이션 위라 구름·별을 흰색으로 */
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-summary::before {
-  filter: brightness(0) invert(1);
-  opacity: 0.35;
-}
-
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-summary::after {
-  filter: brightness(0) invert(1);
-  opacity: 0.5;
-}
-
-/* 사람 카드는 하트 버튼 아래, 이름 오른쪽 빈 자리에 구름 */
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-card::before {
-  top: 48px;
-  right: -22px;
-  width: 124px;
-  opacity: 0.6;
 }
