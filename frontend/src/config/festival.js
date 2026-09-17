@@ -13,6 +13,8 @@ export const FESTIVAL = {
   mainBoothKeyword: "총학",
   // 이번 축제는 자리 예약을 안 받는다. 손님 화면의 예약 칸과 운영 콘솔의 예약 구역을 숨긴다(빈 자리 표시는 그대로).
   reservations: false,
+  // 분실물 등록은 본부 스태프 화면(/staff)에서만. 손님은 목록을 보고 '내 물건이에요' 만 보낸다.
+  lostFoundPublicRegister: false,
 };
 
 /**

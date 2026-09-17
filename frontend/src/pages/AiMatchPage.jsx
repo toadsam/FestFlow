@@ -22,7 +22,9 @@ import {
   acceptAiMatchRequest,
   accessAiMatchProfile,
   cancelAiMatchRequest,
+  checkAiMatchNickname,
   checkAiMatchPhoneNumber,
+  previewAiMatchSaju,
   confirmAiMatchMeetup,
   createAiMatchImagePreview,
   deleteAiMatchProfile,
@@ -77,10 +79,14 @@ const MBTI_OPTIONS = [
   "ENTJ",
 ];
 const STEP_ITEMS = [
-  { number: "01", title: "전화번호 확인", copy: "관리자 조율용으로만 써요" },
-  { number: "02", title: "AI 변환", copy: "성공 기준 최대 2회예요" },
-  { number: "03", title: "소개 등록", copy: "프로필을 완성해요" },
+  { number: "01", title: "전화번호 확인", copy: "중복 가입 방지용, 공개 안 돼요" },
+  { number: "02", title: "사진 AI 변환", copy: "웹툰 얼굴로 바꿔 줘요 · 최대 2회" },
+  { number: "03", title: "생년월일로 사주", copy: "이름·생년월일은 사주에만 쓰고 비공개" },
+  { number: "04", title: "궁합 보고 신청", copy: "상대와 사주 궁합 점수를 보고 골라요" },
 ];
+
+// 가입 화면 단계 표시용
+const REGISTER_STEPS = ["전화번호", "사진", "계정", "사주", "소개"];
 
 const ACTIVE_FILTER_TAG_STYLE = {
   borderColor: "#d8b4fe",
@@ -694,6 +700,13 @@ export default function AiMatchPage() {
   const [successMessage, setSuccessMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [registerAttempted, setRegisterAttempted] = useState(false);
+  // 가입 화면 즉시 검사: 닉네임 중복, 전화번호 자동 확인, 사주 미리보기, 손댄 칸
+  const [nicknameCheck, setNicknameCheck] = useState({ status: "idle", message: "" });
+  const [sajuPreview, setSajuPreview] = useState(null);
+  const [sajuPreviewError, setSajuPreviewError] = useState("");
+  const [touched, setTouched] = useState({});
+  const nicknameCheckSeq = useRef(0);
+  const phoneAutoCheckedKeyRef = useRef("");
   const [accessAttempted, setAccessAttempted] = useState(false);
   const accessSessionSeqRef = useRef(0);
   const accessSessionRestoredRef = useRef(false);
@@ -718,6 +731,8 @@ export default function AiMatchPage() {
           profile.id !== editingProfileId,
       ),
   );
+  const nicknameInvalid = Boolean(nickname.trim()) && (nickname.trim().length < 2 || /\s/.test(nickname.trim()));
+  const nicknameTaken = hasDuplicateNickname || nicknameCheck.status === "taken";
   const pinMismatch = !isEditingProfile && pin.length > 0 && pinConfirm.length > 0 && pin !== pinConfirm;
   const pinInvalid = !isEditingProfile && pin.length > 0 && (pin.length < 4 || pin.length > 10 || /\s/.test(pin));
   const phoneDigits = phoneNumber.replace(/\D/g, "");
@@ -751,7 +766,9 @@ export default function AiMatchPage() {
       !birthDateInvalid &&
       !submitting &&
       !converting &&
-      !hasDuplicateNickname &&
+      !nicknameTaken &&
+      !nicknameInvalid &&
+      nicknameCheck.status !== "checking" &&
       phoneVerifiedForCurrentNumber &&
       (!phoneMissing && !phoneInvalid) &&
       (isEditingProfile || (pin.length >= 4 && pin.length <= 10 && !/\s/.test(pin) && pin === pinConfirm)),
@@ -778,6 +795,69 @@ export default function AiMatchPage() {
   const meetupTimeOptions = buildMeetupTimeOptions();
   const convertingStatus = getConvertingStatus(convertSeconds);
   const activeScreenTitle = activeScreen === "intro" && accessProfile ? SCREEN_COPY.people : SCREEN_COPY[activeScreen];
+
+  // 닉네임: 치는 대로 서버에 물어본다(0.45초 뒤). 수정 중이고 지금 닉네임 그대로면 안 물어본다.
+  useEffect(() => {
+    if (activeScreen !== "register") return undefined;
+    const value = nickname.trim();
+    if (!value || value.length < 2 || /\s/.test(value)) {
+      setNicknameCheck({ status: "idle", message: "" });
+      return undefined;
+    }
+    if (isEditingProfile && accessProfile && value.toLowerCase() === `${accessProfile.nickname || ""}`.trim().toLowerCase()) {
+      setNicknameCheck({ status: "ok", message: "지금 쓰는 닉네임이에요." });
+      return undefined;
+    }
+    const seq = ++nicknameCheckSeq.current;
+    setNicknameCheck({ status: "checking", message: "확인 중…" });
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await checkAiMatchNickname(value, editingProfileId);
+        if (seq !== nicknameCheckSeq.current) return;
+        setNicknameCheck({ status: result.available ? "ok" : "taken", message: result.message || "" });
+      } catch {
+        if (seq !== nicknameCheckSeq.current) return;
+        setNicknameCheck({ status: "unknown", message: "지금은 중복 확인이 안 돼요. 등록할 때 다시 확인해요." });
+      }
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [nickname, activeScreen, isEditingProfile, editingProfileId, accessProfile]);
+
+  // 전화번호: 숫자 10~11자리가 되면 버튼 없이 바로 확인한다(0.6초 뒤). 같은 번호는 한 번만.
+  useEffect(() => {
+    if (activeScreen !== "register" || isEditingProfile) return undefined;
+    const digits = phoneNumber.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 11 || phoneInvalid) return undefined;
+    if (phoneAutoCheckedKeyRef.current === digits) return undefined;
+    const timer = window.setTimeout(() => {
+      phoneAutoCheckedKeyRef.current = digits;
+      handlePhoneCheck({ silent: true });
+    }, 600);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phoneNumber, activeScreen, isEditingProfile]);
+
+  // 사주: 이름과 생년월일이 들어오면 바로 뽑아 보여 준다(0.5초 뒤). 저장은 등록할 때.
+  useEffect(() => {
+    if (activeScreen !== "register") return undefined;
+    const date = birthDate.trim();
+    if (!date || birthDateInvalid) {
+      setSajuPreview(null);
+      setSajuPreviewError("");
+      return undefined;
+    }
+    const timer = window.setTimeout(async () => {
+      try {
+        const preview = await previewAiMatchSaju(date, birthTime.trim(), nickname.trim() || realName.trim());
+        setSajuPreview(preview);
+        setSajuPreviewError("");
+      } catch (error) {
+        setSajuPreview(null);
+        setSajuPreviewError(error.message || "사주를 미리 볼 수 없어요.");
+      }
+    }, 500);
+    return () => window.clearTimeout(timer);
+  }, [birthDate, birthTime, nickname, realName, activeScreen, birthDateInvalid]);
 
   async function loadData() {
     setLoading(false);
@@ -1238,6 +1318,11 @@ export default function AiMatchPage() {
 
   function resetRegistrationForm() {
     setRegisterAttempted(false);
+    setNicknameCheck({ status: "idle", message: "" });
+    setSajuPreview(null);
+    setSajuPreviewError("");
+    setTouched({});
+    phoneAutoCheckedKeyRef.current = "";
     setEditingProfileId(null);
     setNickname("");
     setPin("");
@@ -1313,19 +1398,22 @@ export default function AiMatchPage() {
     setSuccessMessage("");
   }
 
-  async function handlePhoneCheck() {
+  async function handlePhoneCheck(options = {}) {
+    const silent = Boolean(options.silent);
     setPhoneCheckAttempted(true);
     setPhoneVerifiedKey("");
     setPhoneCheckResult(null);
-    setErrorMessage("");
-    setSuccessMessage("");
+    if (!silent) {
+      setErrorMessage("");
+      setSuccessMessage("");
+    }
 
     if (phoneMissing) {
-      setErrorMessage("전화번호를 먼저 입력해 주세요.");
+      if (!silent) setErrorMessage("전화번호를 먼저 입력해 주세요.");
       return;
     }
     if (phoneInvalid) {
-      setErrorMessage("전화번호 형식이 올바르지 않습니다.");
+      if (!silent) setErrorMessage("전화번호 형식이 올바르지 않습니다.");
       return;
     }
 
@@ -1335,12 +1423,13 @@ export default function AiMatchPage() {
       setPhoneCheckResult(result);
       if (result.available) {
         setPhoneVerifiedKey(result.phoneNumber || phoneNumberKey);
-        setSuccessMessage(result.message || "전화번호 확인이 완료되었습니다.");
-      } else {
+        if (!silent) setSuccessMessage(result.message || "전화번호 확인이 완료되었습니다.");
+      } else if (!silent) {
         setErrorMessage(result.message || "이 전화번호는 사용할 수 없습니다.");
       }
     } catch (error) {
-      setErrorMessage(error.message || "전화번호 확인에 실패했습니다.");
+      if (!silent) setErrorMessage(error.message || "전화번호 확인에 실패했습니다.");
+      else setPhoneCheckResult({ available: false, message: "지금은 확인이 안 돼요. 잠시 뒤 다시 시도해 주세요." });
     } finally {
       setPhoneChecking(false);
     }
@@ -1452,8 +1541,12 @@ export default function AiMatchPage() {
       setErrorMessage("닉네임을 입력해 주세요.");
       return;
     }
-    if (hasDuplicateNickname) {
+    if (nicknameTaken) {
       setErrorMessage("이미 사용 중인 닉네임입니다.");
+      return;
+    }
+    if (nicknameInvalid) {
+      setErrorMessage("닉네임은 2~12자, 띄어쓰기 없이 적어 주세요.");
       return;
     }
     if (!isEditingProfile && pinMissing) {
@@ -1789,7 +1882,7 @@ export default function AiMatchPage() {
         </section>
 
         <section className="ai-match-step-card">
-          <h3>간단한 3단계로 등록 완료!</h3>
+          <h3>4단계면 끝나요</h3>
           <div className="ai-match-step-list">
             {STEP_ITEMS.map((item) => (
               <article key={item.number} className="ai-match-step-row">
@@ -1830,395 +1923,413 @@ export default function AiMatchPage() {
     );
   }
 
+  // 가입·수정 화면. 칸마다 치는 즉시 아래에 결과가 뜬다(닉네임 중복은 서버에 물어본다). 스타일은 v2-aimatch.css 의 am-*.
   function renderRegisterScreen() {
+    const mark = (key) => setTouched((prev) => (prev[key] ? prev : { ...prev, [key]: true }));
+    const shown = (key) => registerAttempted || Boolean(touched[key]);
+    const Msg = ({ tone, children }) =>
+      children ? (
+        <small className={`am-msg am-msg--${tone}`} role={tone === "error" ? "alert" : undefined}>
+          {tone === "ok" ? <IconCheckSmall /> : null}
+          {children}
+        </small>
+      ) : null;
+
+    const phoneDigits = phoneNumber.replace(/\D/g, "");
+    const phoneMsg = (() => {
+      if (isEditingProfile) return ["hint", "가입 후에는 바꿀 수 없어요."];
+      if (!phoneNumber.trim()) return shown("phone") ? ["error", "전화번호를 입력해 주세요."] : ["hint", "숫자만 넣어도 돼요. 다른 사람에게 보이지 않아요."];
+      if (phoneInvalid || phoneDigits.length < 10) return ["error", "숫자 10~11자리로 넣어 주세요."];
+      if (phoneChecking) return ["checking", "확인 중…"];
+      if (phoneCheckResult && phoneVerifiedForCurrentNumber) return ["ok", phoneCheckResult.message || "사용할 수 있는 번호예요."];
+      if (phoneCheckResult && !phoneCheckResult.available) return ["error", phoneCheckResult.message || "이 번호는 쓸 수 없어요."];
+      return ["hint", "잠시 뒤 자동으로 확인해요."];
+    })();
+
+    const nicknameMsg = (() => {
+      const value = nickname.trim();
+      if (!value) return shown("nickname") ? ["error", "닉네임을 입력해 주세요."] : ["hint", "2~12자, 띄어쓰기 없이"];
+      if (nicknameInvalid) return ["error", value.length < 2 ? "닉네임은 2자 이상이어야 해요." : "닉네임에는 띄어쓰기를 넣을 수 없어요."];
+      if (nicknameTaken) return ["error", "이미 사용 중인 닉네임이에요."];
+      if (nicknameCheck.status === "checking") return ["checking", "확인 중…"];
+      if (nicknameCheck.status === "ok") return ["ok", nicknameCheck.message || "사용할 수 있는 닉네임이에요."];
+      if (nicknameCheck.status === "unknown") return ["hint", nicknameCheck.message];
+      return ["hint", "2~12자, 띄어쓰기 없이"];
+    })();
+
+    const pinMsg = (() => {
+      if (!pin) return shown("pin") ? ["error", "비밀번호를 입력해 주세요."] : ["hint", "4~10자, 띄어쓰기 없이. 생일·전화번호는 피해 주세요."];
+      if (pinInvalid) return ["error", "비밀번호는 4~10자여야 해요."];
+      return ["ok", "좋아요."];
+    })();
+
+    const pinConfirmMsg = (() => {
+      if (!pinConfirm) return shown("pinConfirm") ? ["error", "비밀번호를 한 번 더 입력해 주세요."] : ["hint", "같은 비밀번호를 한 번 더"];
+      if (pinMismatch) return ["error", "비밀번호가 서로 달라요."];
+      if (pin && !pinInvalid) return ["ok", "일치해요."];
+      return ["hint", ""];
+    })();
+
+    const realNameMsg = (() => {
+      if (!realName.trim()) return !isEditingProfile && shown("realName") ? ["error", "이름을 입력해 주세요."] : ["hint", isEditingProfile ? "바꿀 때만 입력해요." : "사주를 뽑는 데만 쓰고 공개하지 않아요."];
+      return ["ok", "공개되지 않아요."];
+    })();
+
+    const birthDateMsg = (() => {
+      if (!birthDate.trim()) return !isEditingProfile && shown("birthDate") ? ["error", "생년월일을 입력해 주세요."] : ["hint", "양력으로 넣어 주세요."];
+      if (birthDateInvalid) return ["error", "생년월일을 다시 확인해 주세요."];
+      return ["ok", sajuPreview ? "아래에 사주가 떴어요." : "사주를 뽑는 중…"];
+    })();
+
+    const introMsg = (() => {
+      if (!intro.trim()) return shown("intro") ? ["error", "자기소개를 입력해 주세요."] : ["hint", "한두 문장이면 충분해요."];
+      return ["ok", `${intro.length}/120`];
+    })();
+
+    const stepDone = [
+      isEditingProfile || phoneVerifiedForCurrentNumber,
+      Boolean(generatedImageUrl),
+      Boolean(nickname.trim()) && !nicknameInvalid && !nicknameTaken && (isEditingProfile || (pin.length >= 4 && !pinInvalid && pin === pinConfirm)),
+      isEditingProfile || (Boolean(realName.trim()) && Boolean(birthDate.trim()) && !birthDateInvalid),
+      Boolean(intro.trim()) && consent,
+    ];
+    const currentStep = stepDone.findIndex((done) => !done);
+    const missing = [];
+    if (!isEditingProfile && !phoneVerifiedForCurrentNumber) missing.push("전화번호 확인");
+    if (imageMissing) missing.push("사진");
+    if (!nickname.trim() || nicknameInvalid || nicknameTaken) missing.push("닉네임");
+    if (!isEditingProfile && (pin.length < 4 || pinInvalid || pin !== pinConfirm)) missing.push("비밀번호");
+    if (!isEditingProfile && (!realName.trim() || !birthDate.trim() || birthDateInvalid)) missing.push("사주 정보");
+    if (!intro.trim()) missing.push("자기소개");
+    if (!consent) missing.push("공개 동의");
+
+    const remaining = Math.max(0, Number(phoneCheckResult?.remainingImageConversions ?? 2));
+
     return (
-      <form className="ai-match-flow" onSubmit={handleRegister}>
+      <form className="am-reg" onSubmit={handleRegister} noValidate>
         {isEditingProfile ? (
-          <section className="ai-match-section-card">
-            <div className="ai-match-section-head">
-              <h2>내 프로필 수정</h2>
-              <span>{accessProfile?.nickname}</span>
-            </div>
-            <p className="ai-match-note">신청함에서 인증된 비밀번호로 수정이 진행됩니다.</p>
-          </section>
-        ) : null}
-
-        {!isEditingProfile ? (
-          <section className="ai-match-section-card ai-match-phone-gate-card">
-            <div className="ai-match-section-head">
-              <h2>1. 전화번호 확인</h2>
-              <span>관리자만 확인</span>
-            </div>
-            <div className="ai-match-phone-privacy">
-              <IconShield className="h-5 w-5" />
-              <div>
-                <strong>만남 조율을 위해 먼저 확인해요</strong>
-                <p>전화번호는 소개팅 매칭 성사 후 관리자 연락과 만남 조율에만 사용되며, 다른 참가자에게 공개되지 않습니다.</p>
-              </div>
-            </div>
-            <div className="ai-match-phone-rules">
-              <span>AI 변환은 전화번호당 성공 기준 최대 2회</span>
-              <span>삭제한 전화번호는 재가입 불가</span>
-            </div>
-            <label className="ai-match-field">
-              <div className="ai-match-field-head">
-                <span>전화번호</span>
-                <small>예) 010-1234-5678</small>
-              </div>
-              {phoneCheckAttempted && phoneMissing ? <small className="ai-match-field-error">전화번호를 입력해 주세요.</small> : null}
-              {phoneCheckAttempted && phoneInvalid ? <small className="ai-match-field-error">전화번호 형식이 올바르지 않습니다.</small> : null}
-              <input
-                value={phoneNumber}
-                inputMode="tel"
-                maxLength={30}
-                onChange={(event) => handlePhoneNumberInput(event.target.value)}
-                placeholder="010-1234-5678"
-              />
-            </label>
-            {phoneCheckResult ? (
-              <div className={`ai-match-phone-status${phoneVerifiedForCurrentNumber ? " is-success" : " is-error"}`}>
-                <strong>{phoneVerifiedForCurrentNumber ? "확인 완료" : "사용 불가"}</strong>
-                <span>{phoneCheckResult.message}</span>
-              </div>
-            ) : null}
-            <button
-              type="button"
-              className="ai-match-primary-button ai-match-primary-button--form ai-match-phone-check-button"
-              onClick={handlePhoneCheck}
-              disabled={phoneChecking || converting || submitting}
-            >
-              <span className="ai-match-primary-button__icon">
-                <IconShield className="h-4 w-4" />
-              </span>
-              <span className="ai-match-primary-button__label">
-                {phoneChecking ? "확인 중..." : phoneVerifiedForCurrentNumber ? "다시 확인" : "전화번호 확인"}
-              </span>
-            </button>
-          </section>
-        ) : null}
-
-        {!isEditingProfile && !phoneVerifiedForCurrentNumber ? (
-          <section className="ai-match-section-card ai-match-phone-locked-card">
-            <IconSparkles className="h-6 w-6" />
-            <strong>전화번호 확인 후 AI 변환을 시작할 수 있어요.</strong>
-            <p>중복 가입과 AI 과사용을 막기 위해 전화번호를 먼저 확인합니다.</p>
+          <section className="am-card am-card--tint">
+            <strong>내 프로필 수정</strong>
+            <p>{accessProfile?.nickname} · 신청함에서 인증된 비밀번호로 저장돼요.</p>
           </section>
         ) : (
-          <>
-        <section className="ai-match-section-card">
-          <div className="ai-match-section-head">
-            <h2>{isEditingProfile ? "1. 사진 업로드" : "2. 사진 업로드"}</h2>
-            <span>정면 사진</span>
+          <div className="am-progress" aria-label="가입 진행">
+            {REGISTER_STEPS.map((label, index) => (
+              <span
+                key={label}
+                className={`am-progress__step${stepDone[index] ? " is-done" : ""}${currentStep === index ? " is-current" : ""}`}
+              >
+                <i>{stepDone[index] ? <IconCheckSmall /> : index + 1}</i>
+                {label}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* 1. 전화번호 */}
+        {!isEditingProfile ? (
+          <section className="am-card">
+            <div className="am-card__head">
+              <span className="am-card__num">1</span>
+              <div>
+                <h2>전화번호</h2>
+                <p>중복 가입과 AI 과사용을 막는 용도예요. 매칭이 성사됐을 때 본부에서만 봐요.</p>
+              </div>
+            </div>
+            <label className="am-field">
+              <span className="am-field__label">전화번호</span>
+              <div className={`am-input${phoneMsg[0] === "error" ? " is-error" : phoneMsg[0] === "ok" ? " is-ok" : ""}`}>
+                <input
+                  value={phoneNumber}
+                  inputMode="tel"
+                  autoComplete="tel"
+                  maxLength={30}
+                  onChange={(event) => handlePhoneNumberInput(event.target.value)}
+                  onBlur={() => mark("phone")}
+                  placeholder="010-1234-5678"
+                />
+                {phoneChecking ? <span className="am-spinner" aria-hidden="true" /> : null}
+              </div>
+              <Msg tone={phoneMsg[0]}>{phoneMsg[1]}</Msg>
+            </label>
+            {phoneCheckResult && !phoneVerifiedForCurrentNumber && !phoneChecking && phoneDigits.length >= 10 ? (
+              <button type="button" className="am-link" onClick={() => handlePhoneCheck()}>
+                다시 확인하기
+              </button>
+            ) : null}
+          </section>
+        ) : null}
+
+        {/* 2. 사진 */}
+        <section className={`am-card${!isEditingProfile && !phoneVerifiedForCurrentNumber ? " am-card--locked" : ""}`}>
+          <div className="am-card__head">
+            <span className="am-card__num">{isEditingProfile ? 1 : 2}</span>
+            <div>
+              <h2>사진</h2>
+              <p>정면 사진을 올리면 AI가 웹툰 얼굴로 바꿔 줘요. 올린 원본은 목록에 나오지 않아요.</p>
+            </div>
+            {phoneCheckResult ? <span className={`am-pill${remaining > 0 ? "" : " am-pill--red"}`}>AI 변환 {remaining}회 남음</span> : null}
           </div>
 
-          {phoneCheckResult ? (
-            <div
-              className={`ai-match-ai-usage-meter ai-match-ai-usage-meter--in-photo${
-                phoneCheckResult.available && phoneVerifiedForCurrentNumber ? " is-success" : " is-error"
-              }`}
-            >
-              <span>AI 변환 가능 횟수</span>
-              <strong>
-                {`${Math.max(0, phoneCheckResult.remainingImageConversions || 0)}회 남음`}
-              </strong>
-              <small>
-                {`성공한 변환 ${phoneCheckResult.usedImageConversions || 0}회 사용`}
-              </small>
+          {!isEditingProfile && !phoneVerifiedForCurrentNumber ? (
+            <div className="am-locked">
+              <IconShield className="h-5 w-5" />
+              <span>전화번호 확인이 끝나면 열려요.</span>
             </div>
-          ) : null}
-
-          <div className="ai-match-preview-row">
-            <div className="ai-match-preview-card">
-              {originalImageUrl ? (
-                <img src={resolveApiAssetUrl(originalImageUrl)} alt="" />
-              ) : (
-                <span>
-                  <IconCamera className="h-7 w-7" />
-                </span>
-              )}
-              <em>원본</em>
-            </div>
-
-            <div className="ai-match-preview-arrow" aria-hidden="true">
-              <IconChevronRight className="h-4 w-4" />
-            </div>
-
-            <div className="ai-match-preview-card ai-match-preview-card--generated">
-              {previewUrl ? (
-                <img src={previewUrl} alt="" />
-              ) : (
-                <span>
-                  <IconSparkles className="h-7 w-7" />
-                </span>
-              )}
-              <em>{converting ? "변환 중" : generatedImageUrl ? "AI 변환 미리보기" : "AI 변환 미리보기"}</em>
+          ) : (
+            <>
+              <div className="am-photos">
+                <div className="am-photo">
+                  {originalImageUrl ? <img src={resolveApiAssetUrl(originalImageUrl)} alt="" /> : <IconCamera className="h-7 w-7" />}
+                  <em>원본</em>
+                </div>
+                <IconChevronRight className="am-photos__arrow h-5 w-5" aria-hidden="true" />
+                <div className={`am-photo am-photo--ai${converting ? " is-busy" : ""}`}>
+                  {previewUrl ? <img src={previewUrl} alt="" /> : <IconSparkles className="h-7 w-7" />}
+                  <em>{converting ? `변환 중 · ${convertSeconds}초` : "AI 웹툰"}</em>
+                  {converting ? <span className="am-spinner am-spinner--big" aria-hidden="true" /> : null}
+                </div>
+              </div>
               {converting ? (
-                <div className="ai-match-converting-overlay" role="status" aria-live="polite">
-                  <span className="ai-match-converting-spinner" aria-hidden="true" />
-                  <strong>AI 변환 중</strong>
-                  <small>{convertSeconds}초 경과</small>
+                <div className="am-converting" role="status" aria-live="polite">
+                  <strong>{convertingStatus.title}</strong>
+                  <p>{convertingStatus.copy} · 보통 20~60초 걸려요.</p>
+                  <div className="am-converting__bar"><span /></div>
                 </div>
               ) : null}
-            </div>
-          </div>
-
-          {converting ? (
-            <div className="ai-match-converting-panel" role="status" aria-live="polite">
-              <div className="ai-match-converting-panel__top">
-                <span className="ai-match-converting-pulse" aria-hidden="true" />
-                <div>
-                  <strong>{convertingStatus.title}</strong>
-                  <p>{convertingStatus.copy}</p>
-                </div>
-              </div>
-              <div className="ai-match-converting-progress" aria-hidden="true">
-                <span />
-              </div>
-              <div className="ai-match-converting-steps" aria-label="AI 변환 진행 단계">
-                {CONVERTING_STEPS.map((step, index) => (
-                  <span
-                    key={step}
-                    className={index <= convertingStatus.stepIndex ? "is-active" : ""}
-                  >
-                    {step}
-                  </span>
-                ))}
-              </div>
-              <small>{convertSeconds}초 경과 · 완료까지 보통 20~60초 정도 걸립니다.</small>
-            </div>
-          ) : null}
-
-          <label className={`ai-match-upload-button${converting ? " is-disabled" : ""}`}>
-            {converting ? "변환 중..." : generatedImageUrl ? "다른 사진 올리기" : "사진 업로드"}
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} disabled={converting} />
-          </label>
-          {imageMissing ? (
-            <small className="ai-match-field-error">프로필 사진을 먼저 업로드해 주세요.</small>
-          ) : null}
+              <label className={`am-upload${converting ? " is-disabled" : ""}`}>
+                <IconCamera className="h-5 w-5" />
+                {converting ? "변환 중…" : generatedImageUrl ? "다른 사진으로 바꾸기" : "사진 올리기"}
+                <input type="file" accept="image/jpeg,image/png,image/webp" onChange={handleImageChange} disabled={converting} />
+              </label>
+              {imageMissing && registerAttempted ? <Msg tone="error">사진을 올려 주세요.</Msg> : null}
+              {generatedImageUrl && !converting ? <Msg tone="ok">변환이 끝났어요. 이 얼굴로 등록돼요.</Msg> : null}
+            </>
+          )}
         </section>
 
-        <section className="ai-match-section-card">
-          <label className="ai-match-field">
-            <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "2. 닉네임을 입력해주세요" : "3. 닉네임을 입력해주세요"}</span>
-              <small>{nickname.length}/12</small>
+        {/* 3. 계정 */}
+        <section className="am-card">
+          <div className="am-card__head">
+            <span className="am-card__num">{isEditingProfile ? 2 : 3}</span>
+            <div>
+              <h2>계정</h2>
+              <p>닉네임은 다른 참가자에게 보여요. 비밀번호는 신청함에 들어갈 때 써요.</p>
             </div>
-            {nicknameMissing ? <small className="ai-match-field-error">닉네임을 입력해 주세요.</small> : null}
-            {hasDuplicateNickname ? <small className="ai-match-field-error">이미 사용 중인 닉네임입니다.</small> : null}
-            <input
-              value={nickname}
-              maxLength={12}
-              onChange={(event) => setNickname(event.target.value)}
-              placeholder="예) 공대카리나"
-            />
+          </div>
+          <label className="am-field">
+            <span className="am-field__label">
+              닉네임 <small>{nickname.length}/12</small>
+            </span>
+            <div className={`am-input${nicknameMsg[0] === "error" ? " is-error" : nicknameMsg[0] === "ok" ? " is-ok" : ""}`}>
+              <input
+                value={nickname}
+                maxLength={12}
+                autoComplete="off"
+                onChange={(event) => setNickname(event.target.value)}
+                onBlur={() => mark("nickname")}
+                placeholder="예) 공대카리나"
+              />
+              {nicknameCheck.status === "checking" ? <span className="am-spinner" aria-hidden="true" /> : null}
+            </div>
+            <Msg tone={nicknameMsg[0]}>{nicknameMsg[1]}</Msg>
           </label>
 
           {!isEditingProfile ? (
-            <>
-              <label className="ai-match-field">
-                <div className="ai-match-field-head">
-                  <span>4. 비밀번호</span>
-                  <small>4~10자</small>
+            <div className="am-grid-2">
+              <label className="am-field">
+                <span className="am-field__label">비밀번호</span>
+                <div className={`am-input${pinMsg[0] === "error" ? " is-error" : pinMsg[0] === "ok" ? " is-ok" : ""}`}>
+                  <input
+                    type="password"
+                    value={pin}
+                    maxLength={10}
+                    autoComplete="new-password"
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      if (PASSWORD_INPUT_PATTERN.test(nextValue)) setPin(nextValue);
+                    }}
+                    onBlur={() => mark("pin")}
+                    placeholder="4~10자"
+                  />
                 </div>
-                <small className="ai-match-field-hint">보안을 위해 생일, 전화번호처럼 쉽게 맞힐 수 있는 숫자는 피해주세요.</small>
-                {pinMissing ? <small className="ai-match-field-error">비밀번호를 입력해 주세요.</small> : null}
-                {pinInvalid ? <small className="ai-match-field-error">비밀번호는 4~10자여야 합니다.</small> : null}
-                <input
-                  type="password"
-                  value={pin}
-                  maxLength={10}
-                  onChange={(event) => {
-                    const nextValue = event.target.value;
-                    if (PASSWORD_INPUT_PATTERN.test(nextValue)) {
-                      setPin(nextValue);
-                    }
-                  }}
-                  placeholder="예) run24me"
-                />
+                <Msg tone={pinMsg[0]}>{pinMsg[1]}</Msg>
               </label>
-
-              <label className="ai-match-field">
-                <div className="ai-match-field-head">
-                  <span>5. 비밀번호 확인</span>
+              <label className="am-field">
+                <span className="am-field__label">비밀번호 확인</span>
+                <div className={`am-input${pinConfirmMsg[0] === "error" ? " is-error" : pinConfirmMsg[0] === "ok" ? " is-ok" : ""}`}>
+                  <input
+                    type="password"
+                    value={pinConfirm}
+                    maxLength={10}
+                    autoComplete="new-password"
+                    onChange={(event) => {
+                      const nextValue = event.target.value;
+                      if (PASSWORD_INPUT_PATTERN.test(nextValue)) setPinConfirm(nextValue);
+                    }}
+                    onBlur={() => mark("pinConfirm")}
+                    placeholder="한 번 더"
+                  />
                 </div>
-                {pinConfirmMissing ? <small className="ai-match-field-error">비밀번호 확인을 입력해 주세요.</small> : null}
-                {pinMismatch ? <small className="ai-match-field-error">비밀번호가 서로 일치하지 않습니다.</small> : null}
-                <input
-                  type="password"
-                  value={pinConfirm}
-                  maxLength={10}
-                  onChange={(event) => {
-                    const nextValue = event.target.value;
-                    if (PASSWORD_INPUT_PATTERN.test(nextValue)) {
-                      setPinConfirm(nextValue);
-                    }
-                  }}
-                  placeholder="비밀번호를 다시 입력해주세요"
-                />
+                <Msg tone={pinConfirmMsg[0]}>{pinConfirmMsg[1]}</Msg>
               </label>
-            </>
-          ) : null}
-
-          {isEditingProfile ? (
-            <p className="ai-match-note">
-              <IconShield className="h-4 w-4" />
-              AI 과사용 방지를 위해 전화번호는 가입 후 변경할 수 없습니다.
-            </p>
-          ) : null}
-
-          <div className="ai-match-field">
-            <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "3. 성별" : "6. 성별"}</span>
             </div>
-            <div className="ai-match-gender-grid">
+          ) : (
+            <p className="am-note">
+              <IconShield className="h-4 w-4" />
+              전화번호는 가입 후 바꿀 수 없어요.
+            </p>
+          )}
+        </section>
+
+        {/* 4. 사주 */}
+        <section className="am-card am-card--saju">
+          <div className="am-card__head">
+            <span className="am-card__num">{isEditingProfile ? 3 : 4}</span>
+            <div>
+              <h2>사주</h2>
+              <p>이름과 생년월일은 사주를 세우는 데만 쓰고, 다른 참가자에게는 사주 결과와 궁합 점수만 보여요.</p>
+            </div>
+          </div>
+          <div className="am-grid-2">
+            <label className="am-field">
+              <span className="am-field__label">이름</span>
+              <div className={`am-input${realNameMsg[0] === "error" ? " is-error" : realNameMsg[0] === "ok" ? " is-ok" : ""}`}>
+                <input value={realName} maxLength={40} autoComplete="name" onChange={(event) => setRealName(event.target.value)} onBlur={() => mark("realName")} placeholder="예) 김바람" />
+              </div>
+              <Msg tone={realNameMsg[0]}>{realNameMsg[1]}</Msg>
+            </label>
+            <label className="am-field">
+              <span className="am-field__label">생년월일 <small>양력</small></span>
+              <div className={`am-input${birthDateMsg[0] === "error" ? " is-error" : birthDateMsg[0] === "ok" ? " is-ok" : ""}`}>
+                <input type="date" value={birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setBirthDate(event.target.value)} onBlur={() => mark("birthDate")} />
+              </div>
+              <Msg tone={birthDateMsg[0]}>{birthDateMsg[1]}</Msg>
+            </label>
+          </div>
+          <label className="am-field">
+            <span className="am-field__label">태어난 시간 <small>몰라도 돼요</small></span>
+            <div className="am-input">
+              <input type="time" value={birthTime} onChange={(event) => setBirthTime(event.target.value)} />
+            </div>
+            <Msg tone="hint">비워 두면 시주 없이 세 기둥으로 봐요.</Msg>
+          </label>
+
+          {sajuPreview ? (
+            <div className="am-saju-preview">
+              <SajuPanel saju={sajuPreview} title="미리 보는 내 사주" subtitle={sajuPreview.hourKnown ? "네 기둥" : "태어난 시간 없이 세 기둥"} />
+              <p className="am-note">등록하면 AI가 풀이를 더 길게 써 주고, 다른 사람과의 궁합 점수도 나와요.</p>
+            </div>
+          ) : sajuPreviewError ? (
+            <Msg tone="error">{sajuPreviewError}</Msg>
+          ) : null}
+        </section>
+
+        {/* 5. 소개 */}
+        <section className="am-card">
+          <div className="am-card__head">
+            <span className="am-card__num">{isEditingProfile ? 4 : 5}</span>
+            <div>
+              <h2>소개</h2>
+              <p>목록 카드에 그대로 보여요.</p>
+            </div>
+          </div>
+
+          <div className="am-field">
+            <span className="am-field__label">성별</span>
+            <div className="am-seg">
               {["남성", "여성"].map((item) => (
-                <button
-                  key={item}
-                  type="button"
-                  className={`ai-match-segment-button ai-match-segment-button--${getGenderButtonTone(item)}${gender === item ? " is-active" : ""}`}
-                  aria-pressed={gender === item}
-                  onClick={() => setGender(item)}
-                >
+                <button key={item} type="button" className={`am-seg__btn${gender === item ? " is-on" : ""}`} aria-pressed={gender === item} onClick={() => setGender(item)}>
                   {getProfileGenderLabel(item)}
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="ai-match-field">
-            <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "4. 사주" : "7. 사주"}</span>
-              <small>{isEditingProfile ? "바꿀 때만 입력" : "이름 · 생년월일"}</small>
+          <label className="am-field">
+            <span className="am-field__label">MBTI <small>선택</small></span>
+            <div className="am-input">
+              <select value={mbti} onChange={(event) => setMbti(cleanMbtiValue(event.target.value))}>
+                <option value="">선택 안 함</option>
+                {MBTI_OPTIONS.map((item) => (
+                  <option key={item} value={item}>{item}</option>
+                ))}
+              </select>
             </div>
-            <div className="saju-form-note">
-              <IconShield className="h-5 w-5" />
-              <div>
-                <strong>이름과 생년월일은 공개되지 않아요</strong>
-                사주를 뽑는 데만 쓰고, 다른 참가자에게는 닉네임과 사주 결과만 보여요.
-                {isEditingProfile ? " 비워두면 지금 사주를 그대로 둡니다." : ""}
-              </div>
-            </div>
-            {registerAttempted && realNameMissing ? (
-              <small className="ai-match-field-error">이름을 입력해 주세요.</small>
-            ) : null}
-            <input
-              value={realName}
-              maxLength={40}
-              onChange={(event) => setRealName(event.target.value)}
-              placeholder="이름 (예: 김바람)"
-              autoComplete="name"
-            />
-            {registerAttempted && birthDateMissing ? (
-              <small className="ai-match-field-error">생년월일을 입력해 주세요.</small>
-            ) : null}
-            {birthDateInvalid ? (
-              <small className="ai-match-field-error">생년월일을 다시 확인해 주세요.</small>
-            ) : null}
-            <input
-              type="date"
-              value={birthDate}
-              max={new Date().toISOString().slice(0, 10)}
-              onChange={(event) => setBirthDate(event.target.value)}
-              placeholder="생년월일 (양력)"
-            />
-            <input
-              type="time"
-              value={birthTime}
-              onChange={(event) => setBirthTime(event.target.value)}
-              placeholder="태어난 시간"
-            />
-            <small className="ai-match-field-hint">
-              생년월일은 양력으로 넣어 주세요. 태어난 시간은 몰라도 괜찮아요. 비워두면 시주 없이 세 기둥으로 봅니다.
-            </small>
-          </div>
+          </label>
 
-          <div className="ai-match-field">
-            <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "5. MBTI" : "8. MBTI"}</span>
-              <small>선택 사항</small>
-            </div>
-            <select value={mbti} onChange={(event) => setMbti(cleanMbtiValue(event.target.value))}>
-              <option value="">선택 안 함</option>
-              {MBTI_OPTIONS.map((item) => (
-                <option key={item} value={item}>
-                  {item}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="ai-match-field">
-            <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "6. 관심사 태그" : "9. 관심사 태그"}</span>
-              <small>{selectedTags.length}/6 선택</small>
-            </div>
-            <div className="ai-match-tag-grid ai-match-tag-grid--register">
+          <div className="am-field">
+            <span className="am-field__label">관심사 <small>{selectedTags.length}/6</small></span>
+            <div className="am-chips">
               {REGISTRATION_TAGS.map((tag) => {
                 const isSelected = selectedTags.includes(tag);
                 return (
-                  <button
-                    key={tag}
-                    type="button"
-                    aria-pressed={isSelected}
-                    className={`ai-match-tag-chip${isSelected ? " is-selected" : ""}`}
-                    onClick={() => toggleTag(tag)}
-                  >
-                    <span>{tag}</span>
+                  <button key={tag} type="button" aria-pressed={isSelected} className={`am-chip${isSelected ? " is-on" : ""}`} onClick={() => toggleTag(tag)}>
+                    {tag}
                   </button>
                 );
               })}
             </div>
           </div>
 
-          <label className="ai-match-field">
-            <div className="ai-match-field-head">
-              <span>{isEditingProfile ? "7. 자기소개" : "10. 자기소개"}</span>
-              <small>{intro.length}/120</small>
+          <label className="am-field">
+            <span className="am-field__label">자기소개</span>
+            <div className={`am-input${introMsg[0] === "error" ? " is-error" : ""}`}>
+              <textarea
+                value={intro}
+                maxLength={120}
+                rows={3}
+                onChange={(event) => setIntro(event.target.value)}
+                onBlur={() => mark("intro")}
+                placeholder="예) 키는 작지만 러닝 뛰는 걸 좋아해요!"
+              />
             </div>
-            {introMissing ? <small className="ai-match-field-error">자기소개를 입력해 주세요.</small> : null}
-            <textarea
-              value={intro}
-              maxLength={120}
-              onChange={(event) => setIntro(event.target.value)}
-              placeholder="나를 간단히 소개해주세요. 예) 키는 작지만 러닝 뛰는 걸 좋아해요!"
-            />
+            <Msg tone={introMsg[0]}>{introMsg[1]}</Msg>
           </label>
 
-          <label className="ai-match-field">
-            <div className="ai-match-field-head">
-              <span>기본 만남 장소</span>
+          <label className="am-field">
+            <span className="am-field__label">만나고 싶은 곳</span>
+            <div className="am-input">
+              <select value={place} onChange={(event) => setPlace(event.target.value)}>
+                {MEET_PLACES.map((item) => (
+                  <option key={item}>{item}</option>
+                ))}
+              </select>
             </div>
-            <select value={place} onChange={(event) => setPlace(event.target.value)}>
-              {MEET_PLACES.map((item) => (
-                <option key={item}>{item}</option>
-              ))}
-            </select>
           </label>
 
-          <label className="ai-match-consent-row">
+          <label className={`am-consent${consentMissing && registerAttempted ? " is-error" : ""}`}>
             <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
-            <span>사진과 소개가 공개 목록에 표시되는 것에 동의합니다.</span>
+            <span className="am-consent__box" aria-hidden="true"><IconCheckSmall /></span>
+            <span>사진과 소개가 공개 목록에 보이는 것에 동의해요.</span>
           </label>
-          {consentMissing ? (
-            <small className="ai-match-field-error">프로필 공개 동의가 필요합니다.</small>
-          ) : null}
+          {consentMissing && registerAttempted ? <Msg tone="error">동의가 필요해요.</Msg> : null}
         </section>
 
-        <button
-          type="submit"
-          className={`ai-match-primary-button ai-match-primary-button--form${registerSubmitDisabled ? " is-form-disabled" : ""}`}
-          disabled={registerSubmitDisabled}
-        >
-          <span className="ai-match-primary-button__icon">
-            <IconHeartFilled className="h-4 w-4" />
-          </span>
-          <span className="ai-match-primary-button__label">
-            {submitting ? (isEditingProfile ? "수정 중..." : "등록 중...") : converting ? "AI 변환 중..." : isEditingProfile ? "수정 저장" : "등록하기"}
-          </span>
-        </button>
-          </>
-        )}
+        <div className="am-submit">
+          {missing.length && !submitting ? (
+            <p className="am-submit__todo">남은 것 · {missing.join(" · ")}</p>
+          ) : (
+            <p className="am-submit__todo is-ready">{isEditingProfile ? "바꾼 내용을 저장할 수 있어요." : "다 채웠어요. 등록하면 바로 목록에 올라가요."}</p>
+          )}
+          <button type="submit" className="ai-match-primary-button ai-match-primary-button--form" disabled={registerSubmitDisabled}>
+            <span className="ai-match-primary-button__icon">
+              <IconHeartFilled className="h-4 w-4" />
+            </span>
+            <span className="ai-match-primary-button__label">
+              {submitting ? (isEditingProfile ? "저장 중…" : "등록 중…") : converting ? "AI 변환 중…" : isEditingProfile ? "수정 저장" : "등록하기"}
+            </span>
+          </button>
+        </div>
       </form>
+    );
+  }
+
+  function IconCheckSmall() {
+    return (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M5 12l5 5L20 7" />
+      </svg>
     );
   }
 

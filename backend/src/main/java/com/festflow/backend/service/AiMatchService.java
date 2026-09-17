@@ -19,6 +19,7 @@ import com.festflow.backend.dto.AiMatchProfileUpdateDto;
 import com.festflow.backend.dto.AiMatchRequestCreateDto;
 import com.festflow.backend.dto.AiMatchRequestResponseDto;
 import com.festflow.backend.dto.SajuCompatibilityDto;
+import com.festflow.backend.dto.AiMatchNicknameCheckDto;
 import com.festflow.backend.dto.SajuDto;
 import com.festflow.backend.service.saju.SajuPillars;
 import com.festflow.backend.entity.AiMatchFavorite;
@@ -92,6 +93,42 @@ public class AiMatchService {
     }
 
     @Transactional(readOnly = true)
+    /** 가입 화면용. 비었거나 길거나 공백이 있거나 이미 쓰이면 사유를 돌려준다. profileId 가 있으면 그 프로필은 제외(수정 중). */
+    public AiMatchNicknameCheckDto checkNickname(String nickname, Long profileId) {
+        String trimmed = nickname == null ? "" : nickname.trim();
+        if (trimmed.isEmpty()) {
+            return new AiMatchNicknameCheckDto(trimmed, false, "닉네임을 입력해 주세요.");
+        }
+        if (trimmed.length() < 2) {
+            return new AiMatchNicknameCheckDto(trimmed, false, "닉네임은 2자 이상이어야 해요.");
+        }
+        if (trimmed.length() > 12) {
+            return new AiMatchNicknameCheckDto(trimmed, false, "닉네임은 12자 이하로 적어 주세요.");
+        }
+        if (trimmed.matches(".*\\s.*")) {
+            return new AiMatchNicknameCheckDto(trimmed, false, "닉네임에는 띄어쓰기를 넣을 수 없어요.");
+        }
+        boolean duplicated = profileId == null
+                ? profileRepository.existsByNicknameIgnoreCaseAndStatus(trimmed, "ACTIVE")
+                : profileRepository.existsByNicknameIgnoreCaseAndStatusAndIdNot(trimmed, "ACTIVE", profileId);
+        if (duplicated) {
+            return new AiMatchNicknameCheckDto(trimmed, false, "이미 사용 중인 닉네임이에요.");
+        }
+        return new AiMatchNicknameCheckDto(trimmed, true, "사용할 수 있는 닉네임이에요.");
+    }
+
+    /**
+     * 가입 화면에서 생년월일을 넣자마자 보여 주는 사주. 저장하지 않고, 풀이는 규칙 기반 짧은 글만 붙인다
+     * (OpenAI 풀이는 가입 저장 때 한 번만 만든다).
+     */
+    public SajuDto previewSaju(String birthDate, String birthTime, String nickname) {
+        LocalDate safeBirthDate = parseBirthDate(birthDate);
+        LocalTime safeBirthTime = parseBirthTime(birthTime);
+        SajuPillars pillars = sajuService.calculate(safeBirthDate, safeBirthTime);
+        String name = nickname == null || nickname.isBlank() ? "당신" : nickname.trim();
+        return sajuService.toDto(pillars, sajuService.previewReading(pillars, name));
+    }
+
     public AiMatchPhoneCheckDto checkPhoneNumber(String phoneNumber) {
         String phoneNumberKey = normalizePhoneNumberKey(phoneNumber, true);
         AiMatchPhoneUsage phoneUsage = phoneUsageRepository.findByPhoneNumber(phoneNumberKey).orElse(null);

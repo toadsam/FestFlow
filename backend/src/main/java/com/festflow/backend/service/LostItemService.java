@@ -13,6 +13,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 
 @Service
@@ -115,7 +116,11 @@ public class LostItemService {
         LostItem item = lostItemRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Lost item not found."));
         if ("RETURNED".equals(item.getStatus())) {
-            throw new ResponseStatusException(BAD_REQUEST, "Already returned item cannot be claimed.");
+            throw new ResponseStatusException(BAD_REQUEST, "이미 주인에게 돌아간 물건이에요.");
+        }
+        if ("OWNER_CLAIMED".equals(item.getStatus())) {
+            // 먼저 온 요청을 다른 사람이 덮어쓰지 못하게 한다. 본부에서 확인 후 상태를 바꾸면 다시 열린다.
+            throw new ResponseStatusException(CONFLICT, "이미 주인 확인 요청이 들어와 있어요. 본부에 직접 문의해 주세요.");
         }
 
         String claimantName = trimRequired(requestDto.claimantName(), "claimantName");
@@ -124,7 +129,7 @@ public class LostItemService {
 
         item.markClaim(claimantName, claimantContact, claimantNote, "OWNER_CLAIMED");
         LostItem saved = lostItemRepository.save(item);
-        return toDto(saved);
+        return toDto(saved, true);
     }
 
     @Transactional
@@ -190,9 +195,10 @@ public class LostItemService {
                 item.getReporterType(),
                 item.getReporterRef(),
                 item.getResolveNote(),
-                item.getClaimantName(),
-                maskContacts ? maskContact(item.getClaimantContact()) : item.getClaimantContact(),
-                item.getClaimantNote(),
+                // 신청자 정보는 본부(스태프·관리자)만 본다. 공개 응답에는 아예 싣지 않는다.
+                maskContacts ? null : item.getClaimantName(),
+                maskContacts ? null : item.getClaimantContact(),
+                maskContacts ? null : item.getClaimantNote(),
                 item.getClaimedAt(),
                 item.getCreatedAt(),
                 item.getUpdatedAt()

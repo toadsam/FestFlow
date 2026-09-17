@@ -6,7 +6,9 @@ import com.festflow.backend.dto.AiMatchProfileDeleteDto;
 import com.festflow.backend.dto.AiMatchFavoriteResponseDto;
 import com.festflow.backend.dto.AiMatchImagePreviewDto;
 import com.festflow.backend.dto.AiMatchMeetupProposalDto;
+import com.festflow.backend.dto.AiMatchNicknameCheckDto;
 import com.festflow.backend.dto.AiMatchPhoneCheckDto;
+import com.festflow.backend.dto.SajuDto;
 import com.festflow.backend.dto.AiMatchProfileResponseDto;
 import com.festflow.backend.dto.AiMatchProfileUpdateDto;
 import com.festflow.backend.dto.AiMatchRequestCreateDto;
@@ -32,6 +34,23 @@ public class AiMatchController {
 
     public AiMatchController(AiMatchService aiMatchService) {
         this.aiMatchService = aiMatchService;
+    }
+
+    @GetMapping("/nickname-check")
+    public AiMatchNicknameCheckDto checkNickname(
+            @RequestParam("nickname") String nickname,
+            @RequestParam(value = "profileId", required = false) Long profileId
+    ) {
+        return aiMatchService.checkNickname(nickname, profileId);
+    }
+
+    @GetMapping("/saju-preview")
+    public SajuDto previewSaju(
+            @RequestParam("birthDate") String birthDate,
+            @RequestParam(value = "birthTime", required = false) String birthTime,
+            @RequestParam(value = "nickname", required = false) String nickname
+    ) {
+        return aiMatchService.previewSaju(birthDate, birthTime, nickname);
     }
 
     @GetMapping("/phone-check")

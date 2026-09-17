@@ -118,6 +118,11 @@ public class SajuService {
         }
     }
 
+    /** 가입 화면 미리보기용. OpenAI 를 부르지 않고 규칙 기반 짧은 풀이만 돌려준다. */
+    public String previewReading(SajuPillars pillars, String nickname) {
+        return ruleBasedReading(pillars, nickname);
+    }
+
     public SajuDto toDto(SajuPillars pillars, String reading) {
         int dayElement = SajuCalculator.stemElement(pillars.dayStem());
         return new SajuDto(

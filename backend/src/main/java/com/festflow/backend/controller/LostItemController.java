@@ -70,7 +70,8 @@ public class LostItemController {
             @RequestHeader(value = "X-Staff-Token", required = false) String staffToken,
             Authentication authentication
         ) throws IOException {
-        Reporter reporter = resolveCreateReporter(authentication, staffToken);
+        // 이번 축제는 본부 스태프·관리자만 등록한다. 손님은 목록을 보고 '내 물건이에요' 만 보낸다.
+        Reporter reporter = resolveReporter(authentication, staffToken);
         String imageUrl = file == null || file.isEmpty() ? null : uploadStorageService.saveImage(file, "lost-item");
         LostItemResponseDto created = lostItemService.create(
                 title,
@@ -82,7 +83,7 @@ public class LostItemController {
                 reporter.type(),
                 reporter.ref()
         );
-        streamService.publishLostItems(lostItemService.getAll());
+        streamService.publishLostItems(lostItemService.getAll(true));
         return created;
     }
 
@@ -95,7 +96,7 @@ public class LostItemController {
     ) {
         resolveReporter(authentication, staffToken);
         LostItemResponseDto updated = lostItemService.updateStatus(id, requestDto);
-        streamService.publishLostItems(lostItemService.getAll());
+        streamService.publishLostItems(lostItemService.getAll(true));
         return updated;
     }
 
@@ -108,7 +109,7 @@ public class LostItemController {
     ) {
         resolveReporter(authentication, staffToken);
         LostItemResponseDto updated = lostItemService.update(id, requestDto);
-        streamService.publishLostItems(lostItemService.getAll());
+        streamService.publishLostItems(lostItemService.getAll(true));
         return updated;
     }
 
@@ -117,8 +118,9 @@ public class LostItemController {
             @PathVariable Long id,
             @RequestBody LostItemClaimRequestDto requestDto
     ) {
+        // 손님에게 돌아가는 응답이라 연락처를 가린 형태로 준다.
         LostItemResponseDto updated = lostItemService.claim(id, requestDto);
-        streamService.publishLostItems(lostItemService.getAll());
+        streamService.publishLostItems(lostItemService.getAll(true));
         return updated;
     }
 
@@ -130,7 +132,7 @@ public class LostItemController {
     ) {
         resolveReporter(authentication, staffToken);
         lostItemService.delete(id);
-        streamService.publishLostItems(lostItemService.getAll());
+        streamService.publishLostItems(lostItemService.getAll(true));
     }
 
     private Reporter resolveReporter(Authentication authentication, String staffToken) {
@@ -142,17 +144,6 @@ public class LostItemController {
             return new Reporter("STAFF", staff.staffNo());
         }
         throw new ResponseStatusException(FORBIDDEN, "Only admin or staff can modify lost items.");
-    }
-
-    private Reporter resolveCreateReporter(Authentication authentication, String staffToken) {
-        if (hasAdminRole(authentication)) {
-            return new Reporter("ADMIN", authentication.getName());
-        }
-        if (staffToken != null && !staffToken.isBlank()) {
-            StaffMemberResponseDto staff = staffService.authenticateByToken(staffToken);
-            return new Reporter("STAFF", staff.staffNo());
-        }
-        return new Reporter("PUBLIC", "visitor");
     }
 
     private boolean hasAdminRole(Authentication authentication) {

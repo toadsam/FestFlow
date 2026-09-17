@@ -415,7 +415,8 @@ export default function StaffPage() {
       lostStream.addEventListener("lost-items", (event) => {
         try {
           const next = JSON.parse(event.data);
-          if (Array.isArray(next)) setLostItems(next);
+          // 스트림은 손님용으로 신청자 정보를 가린 목록이라, 신호로만 쓰고 토큰으로 다시 읽는다.
+          if (Array.isArray(next)) fetchLostItems(staffToken).then((data) => setLostItems(data || [])).catch(() => {});
         } catch {
           // Ignore malformed stream payloads.
         }

@@ -1146,6 +1146,22 @@ export async function fetchTranslateMetrics() {
   return parseJson(response, "통역 지표를 불러오지 못했습니다.");
 }
 
+export async function checkAiMatchNickname(nickname, profileId) {
+  const params = new URLSearchParams({ nickname: nickname || "" });
+  if (profileId) params.set("profileId", String(profileId));
+  const response = await fetch(`${API_BASE}/ai-match/nickname-check?${params.toString()}`);
+  return parseJson(response, "닉네임 확인에 실패했습니다.");
+}
+
+// 가입 화면에서 생년월일을 넣자마자 보여 주는 사주. 저장하지 않는다.
+export async function previewAiMatchSaju(birthDate, birthTime, nickname) {
+  const params = new URLSearchParams({ birthDate: birthDate || "" });
+  if (birthTime) params.set("birthTime", birthTime);
+  if (nickname) params.set("nickname", nickname);
+  const response = await fetch(`${API_BASE}/ai-match/saju-preview?${params.toString()}`);
+  return parseJson(response, "사주를 미리 볼 수 없습니다.");
+}
+
 export async function checkAiMatchPhoneNumber(phoneNumber) {
   const params = new URLSearchParams({ phoneNumber: phoneNumber || "" });
   const response = await fetch(`${API_BASE}/ai-match/phone-check?${params.toString()}`);

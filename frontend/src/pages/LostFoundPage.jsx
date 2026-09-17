@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { claimLostItem, createLostItem, createLostItemStream, fetchLostItems } from "../api";
+import { FESTIVAL } from "../config/festival";
 import { IconCamera, IconSearch, IconX } from "../components/UxIcons";
 import { BottomSheet, IconPhone, IconPlus, Mascot, useToast } from "../components/v2/V2Kit";
 import { fallbackLostItems } from "../data/festivalUiData";
@@ -207,7 +208,8 @@ export default function LostFoundPage() {
     }
   }
 
-  const selectedPhone = selected ? telHref(selected.finderContact) : "";
+  // 공개 응답은 연락처를 가려 보내므로(*), 가려진 번호로는 전화 버튼을 만들지 않는다.
+  const selectedPhone = selected && !`${selected.finderContact || ""}`.includes("*") ? telHref(selected.finderContact) : "";
 
   return (
     <section className="v2-page" data-i18n-skip>
@@ -274,7 +276,7 @@ export default function LostFoundPage() {
           <div className="v2-empty">
             <Mascot kind="flame" className="v2-empty__mascot" />
             <strong>{query || tab !== "전체" ? "조건에 맞는 물건이 없어요" : "보관 중인 분실물이 없어요"}</strong>
-            <p>{query || tab !== "전체" ? "검색어나 분류를 바꿔 보세요." : "주운 물건이 있다면 아래 버튼으로 등록해 주세요."}</p>
+            <p>{query || tab !== "전체" ? "검색어나 분류를 바꿔 보세요." : "주운 물건은 축제 본부(총학생회 부스)에 맡겨 주세요."}</p>
           </div>
         )}
       </div>
@@ -286,10 +288,12 @@ export default function LostFoundPage() {
         </p>
       </div>
 
+      {FESTIVAL.lostFoundPublicRegister !== false && (
       <button type="button" className="v2-fab" onClick={() => setRegisterOpen(true)}>
         <IconPlus />
         주운 물건 등록
       </button>
+      )}
 
       <BottomSheet
         open={Boolean(selected)}
