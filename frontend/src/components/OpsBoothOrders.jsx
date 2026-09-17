@@ -1,3 +1,4 @@
+// 부스 운영 콘솔의 "주문" 구역. 주문 받기 설정 + 실시간 주문 목록. 스타일은 styles/v2-ops.css.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -6,7 +7,6 @@ import {
   updateOpsBoothOrderConfig,
   updateOpsBoothOrderStatus,
 } from "../api";
-import { IconClipboard } from "./UxIcons";
 import { formatWon } from "../utils/orderCart";
 
 const STATUS_LABEL = {
@@ -18,25 +18,25 @@ const STATUS_LABEL = {
   CANCELED: "취소",
 };
 
-const STATUS_CLASS = {
-  PENDING_PAYMENT: "bg-amber-50 text-amber-800 border-amber-200",
-  PAID: "bg-sky-50 text-sky-800 border-sky-200",
-  PREPARING: "bg-indigo-50 text-indigo-800 border-indigo-200",
-  READY: "bg-emerald-50 text-emerald-800 border-emerald-200",
-  COMPLETED: "bg-slate-100 text-slate-600 border-slate-200",
-  CANCELED: "bg-rose-50 text-rose-700 border-rose-200",
+const STATUS_TONE = {
+  PENDING_PAYMENT: "yellow",
+  PAID: "blue",
+  PREPARING: "violet",
+  READY: "green",
+  COMPLETED: "",
+  CANCELED: "red",
 };
 
 const NEXT_ACTION = {
   PENDING_PAYMENT: { status: "PAID", label: "입금 확인" },
   PAID: { status: "PREPARING", label: "조리 시작" },
   PREPARING: { status: "READY", label: "준비 완료" },
-  READY: { status: "COMPLETED", label: "완료 처리" },
+  READY: { status: "COMPLETED", label: "완료" },
 };
 
 function formatTime(value) {
   if (!value) return "-";
-  return String(value).replace("T", " ").slice(5, 16);
+  return String(value).replace("T", " ").slice(11, 16);
 }
 
 function playChime() {
@@ -59,21 +59,20 @@ function playChime() {
   }
 }
 
-/**
- * 부스 운영 콘솔의 "테이블 QR 주문" 섹션.
- * OpsBoothPage 안에 끼워 넣는 독립 컴포넌트라 페이지 본체를 거의 건드리지 않는다.
- */
-export default function OpsBoothOrders({ boothId, opsKey }) {
+export default function OpsBoothOrders({ boothId, opsKey, notify, onSummary }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+  const [flash, setFlash] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [config, setConfig] = useState({ orderEnabled: true, bankAccount: "", bankHolder: "" });
+  const [savedConfig, setSavedConfig] = useState("");
   const [savingConfig, setSavingConfig] = useState(false);
-  const [qrCount, setQrCount] = useState(10);
   const knownIds = useRef(new Set());
+  const freshIds = useRef(new Set());
+
+  const say = (text, tone) => (notify ? notify(text, tone) : undefined);
 
   async function load(silent = false) {
     if (!boothId || !opsKey) return;
@@ -81,14 +80,16 @@ export default function OpsBoothOrders({ boothId, opsKey }) {
     try {
       const next = await fetchOpsBoothOrders(boothId, opsKey);
       setData(next);
-      setConfig({
+      const nextConfig = {
         orderEnabled: next.orderEnabled ?? true,
         bankAccount: next.bankAccount ?? "",
         bankHolder: next.bankHolder ?? "",
-      });
+      };
+      setConfig(nextConfig);
+      setSavedConfig(JSON.stringify(nextConfig));
       setError("");
     } catch (e) {
-      setError(e.message || "주문 목록을 불러오지 못했습니다.");
+      setError(e.message || "주문을 불러오지 못했어요.");
     } finally {
       setLoading(false);
     }
@@ -114,10 +115,12 @@ export default function OpsBoothOrders({ boothId, opsKey }) {
         if (String(order.boothId) !== String(boothId)) return;
         if (order.status === "PENDING_PAYMENT" && !knownIds.current.has(order.id)) {
           knownIds.current.add(order.id);
-          setMessage(`새 주문 #${order.orderNo || order.id} · 테이블 ${order.tableLabel} · ${formatWon(order.totalAmount)}`);
+          freshIds.current.add(order.id);
+          window.setTimeout(() => freshIds.current.delete(order.id), 60000);
+          setFlash(`새 주문 · ${order.tableLabel} 테이블 · ${formatWon(order.totalAmount)}`);
           playChime();
           if (timer) window.clearTimeout(timer);
-          timer = window.setTimeout(() => setMessage(""), 8000);
+          timer = window.setTimeout(() => setFlash(""), 8000);
         }
         load(true);
       } catch {
@@ -131,23 +134,29 @@ export default function OpsBoothOrders({ boothId, opsKey }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [boothId, opsKey]);
 
-  const orders = useMemo(() => {
-    const list = data?.orders || [];
-    if (showAll) return list;
-    return list.filter((order) => order.status !== "COMPLETED" && order.status !== "CANCELED");
-  }, [data, showAll]);
+  const allOrders = data?.orders || [];
+  const orders = useMemo(
+    () => (showAll ? allOrders : allOrders.filter((order) => order.status !== "COMPLETED" && order.status !== "CANCELED")),
+    [allOrders, showAll],
+  );
 
-  const pendingCount = (data?.orders || []).filter((o) => o.status === "PENDING_PAYMENT").length;
-  const cookingCount = (data?.orders || []).filter((o) => o.status === "PAID" || o.status === "PREPARING").length;
+  const pendingCount = allOrders.filter((o) => o.status === "PENDING_PAYMENT").length;
+  const cookingCount = allOrders.filter((o) => o.status === "PAID" || o.status === "PREPARING").length;
+  const readyCount = allOrders.filter((o) => o.status === "READY").length;
+
+  useEffect(() => {
+    onSummary?.({ pending: pendingCount, cooking: cookingCount, ready: readyCount });
+  }, [pendingCount, cookingCount, readyCount, onSummary]);
 
   async function changeStatus(order, status) {
-    if (status === "CANCELED" && !window.confirm(`주문 #${order.orderNo || order.id} (테이블 ${order.tableLabel})을 취소할까요?`)) return;
+    if (status === "CANCELED" && !window.confirm(`${order.tableLabel} 테이블 주문 #${order.orderNo || order.id}을 취소할까요?`)) return;
     setBusyId(order.id);
     try {
       await updateOpsBoothOrderStatus(boothId, order.id, status, opsKey);
       await load(true);
+      say(`${order.tableLabel} 테이블 · ${STATUS_LABEL[status] || status}`, "success");
     } catch (e) {
-      setError(e.message || "상태 변경에 실패했습니다.");
+      say(e.message || "상태를 바꾸지 못했어요.", "error");
     } finally {
       setBusyId(null);
     }
@@ -162,11 +171,11 @@ export default function OpsBoothOrders({ boothId, opsKey }) {
         opsKey,
       );
       setData(next);
-      setMessage("주문 설정을 저장했습니다.");
-      window.setTimeout(() => setMessage(""), 3000);
+      setSavedConfig(JSON.stringify(config));
       setError("");
+      say("주문 설정을 저장했어요.", "success");
     } catch (e) {
-      setError(e.message || "주문 설정 저장에 실패했습니다.");
+      say(e.message || "주문 설정을 저장하지 못했어요.", "error");
     } finally {
       setSavingConfig(false);
     }
@@ -174,161 +183,121 @@ export default function OpsBoothOrders({ boothId, opsKey }) {
 
   if (!boothId || !opsKey) return null;
 
+  const configDirty = savedConfig && JSON.stringify(config) !== savedConfig;
+
   return (
-    <article className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-      {message && (
-        <div className="border-b border-sky-200 bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-800">{message}</div>
-      )}
-      <div className="p-3 space-y-4">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-base font-bold text-role-ops inline-flex items-center gap-1.5">
-            <IconClipboard className="h-4 w-4 icon-role-ops" />
-            테이블 QR 주문
-          </h3>
-          <div className="flex items-center gap-1.5 text-[11px]">
-            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 font-semibold text-amber-800">입금 대기 {pendingCount}</span>
-            <span className="rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 font-semibold text-indigo-800">조리 {cookingCount}</span>
+    <>
+      <article className="ops-card">
+        <div className="ops-card__head">
+          <div>
+            <h2>주문</h2>
+            <p>손님이 테이블 QR로 넣은 주문이 바로 떠요. 입금 확인 → 조리 → 준비 완료 순서로 눌러요.</p>
+          </div>
+          <div className="ops-card__actions">
+            <span className="ops-chip ops-chip--yellow">대기 {pendingCount}</span>
+            <span className="ops-chip ops-chip--violet">조리 {cookingCount}</span>
+            <span className="ops-chip ops-chip--green">준비 {readyCount}</span>
           </div>
         </div>
 
-        {error && <p className="text-sm text-rose-600">{error}</p>}
-        {loading && !data && <p className="text-sm text-slate-500">불러오는 중...</p>}
+        {flash && <div className="ops-banner">{flash}</div>}
+        {error && <div className="ops-banner ops-banner--red">{error}</div>}
 
-        {/* 설정 */}
-        <section className="rounded-lg border border-slate-200 bg-slate-50 p-3 space-y-2">
-          <p className="text-xs font-semibold text-slate-700">주문 받기 · 입금 계좌</p>
-          <label className="inline-flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={config.orderEnabled}
-              onChange={(e) => setConfig((c) => ({ ...c, orderEnabled: e.target.checked }))}
-            />
-            QR 주문 받기
-          </label>
-          <div className="grid grid-cols-[1fr_auto] gap-2">
-            <input
-              className="border rounded px-2 py-1.5 text-sm"
-              placeholder="계좌 (예: 국민 000000-00-000000)"
-              value={config.bankAccount}
-              onChange={(e) => setConfig((c) => ({ ...c, bankAccount: e.target.value }))}
-              maxLength={200}
-            />
-            <input
-              className="border rounded px-2 py-1.5 text-sm w-28"
-              placeholder="예금주"
-              value={config.bankHolder}
-              onChange={(e) => setConfig((c) => ({ ...c, bankHolder: e.target.value }))}
-              maxLength={60}
-            />
+        <div className="ops-row ops-row--between ops-row--wrap">
+          <div className="ops-seg">
+            <button type="button" className={!showAll ? "ops-seg--on" : ""} onClick={() => setShowAll(false)}>처리 중</button>
+            <button type="button" className={showAll ? "ops-seg--on" : ""} onClick={() => setShowAll(true)}>오늘 전체</button>
           </div>
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-[11px] text-slate-500">메뉴 가격은 위 메뉴판의 숫자를 그대로 씁니다 (예: 12000원).</p>
-            <button
-              type="button"
-              onClick={saveConfig}
-              disabled={savingConfig}
-              className="rounded border border-cyan-500 px-3 py-1.5 text-xs font-semibold text-cyan-700 disabled:opacity-50"
-            >
-              {savingConfig ? "저장 중..." : "설정 저장"}
-            </button>
-          </div>
-          <div className="flex items-center gap-2 pt-1">
-            <label className="text-xs text-slate-600">
-              테이블 수{" "}
-              <input
-                type="number"
-                min="1"
-                max="60"
-                value={qrCount}
-                onChange={(e) => setQrCount(Math.min(60, Math.max(1, Number(e.target.value) || 1)))}
-                className="w-16 border rounded px-2 py-1 text-sm"
-              />
-            </label>
-            <Link
-              to={`/ops/booth/${boothId}/table-qr?count=${qrCount}`}
-              className="rounded border px-3 py-1.5 text-xs font-semibold text-slate-700"
-            >
-              테이블 QR 인쇄
-            </Link>
-          </div>
-        </section>
+          <Link to={`/ops/booth/${boothId}/table-qr`} className="ops-btn ops-btn--ghost ops-btn--sm">주문 QR 인쇄</Link>
+        </div>
 
-        {/* 주문 목록 */}
-        <section className="space-y-2">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-slate-700">{showAll ? "오늘 주문 전체" : "처리 중인 주문"}</p>
-            <button type="button" onClick={() => setShowAll((v) => !v)} className="text-[11px] text-slate-500 underline">
-              {showAll ? "처리 중만 보기" : "완료·취소 포함"}
-            </button>
+        {loading && !data && <div className="ops-skeleton" style={{ height: 120 }} />}
+
+        {data && orders.length === 0 && (
+          <div className="ops-empty">
+            {showAll ? "오늘 들어온 주문이 없어요." : "처리 중인 주문이 없어요. 손님이 QR로 주문하면 여기 바로 떠요."}
           </div>
+        )}
 
-          {data && orders.length === 0 && (
-            <p className="text-[11px] text-slate-500">
-              {showAll ? "오늘 들어온 주문이 없습니다." : "처리 중인 주문이 없습니다. 손님이 테이블 QR로 주문하면 여기에 바로 뜹니다."}
-            </p>
-          )}
-
-          {orders.map((order) => {
-            const next = NEXT_ACTION[order.status];
-            const active = order.status !== "COMPLETED" && order.status !== "CANCELED";
-            const busy = busyId === order.id;
-            return (
-              <div key={order.id} className="rounded-lg border border-slate-200 bg-white p-2.5 space-y-2">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="space-y-0.5">
-                    <p className="text-sm font-bold text-slate-900">
-                      #{order.orderNo || order.id} · 테이블 {order.tableLabel}
-                    </p>
-                    <p className="text-[11px] text-slate-500">
-                      {formatTime(order.createdAt)} · 입금자 {order.depositorName}
-                      {order.phoneNumber ? ` · ${order.phoneNumber}` : ""}
-                    </p>
-                  </div>
-                  <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${STATUS_CLASS[order.status] || ""}`}>
-                    {STATUS_LABEL[order.status] || order.status}
-                  </span>
-                </div>
-                <ul className="text-xs text-slate-700 space-y-0.5">
-                  {order.items?.map((item) => (
-                    <li key={`${order.id}-${item.name}`} className="flex justify-between gap-2">
-                      <span>
-                        {item.name} <span className="text-slate-400">× {item.quantity}</span>
-                      </span>
-                      <span>{formatWon(item.lineTotal)}</span>
-                    </li>
-                  ))}
-                </ul>
-                {order.request && <p className="text-[11px] text-amber-800 bg-amber-50 rounded px-2 py-1">요청: {order.request}</p>}
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-sm font-bold">{formatWon(order.totalAmount)}</span>
-                  {active && (
-                    <div className="flex gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => changeStatus(order, "CANCELED")}
-                        disabled={busy}
-                        className="rounded border px-2 py-1 text-[11px] text-rose-600 disabled:opacity-50"
-                      >
-                        취소
-                      </button>
-                      {next && (
-                        <button
-                          type="button"
-                          onClick={() => changeStatus(order, next.status)}
-                          disabled={busy}
-                          className="rounded bg-slate-900 px-3 py-1 text-[11px] font-semibold text-white disabled:opacity-50"
-                        >
-                          {busy ? "처리 중" : next.label}
-                        </button>
-                      )}
+        {orders.length > 0 && (
+          <div className="ops-orders">
+            {orders.map((order) => {
+              const next = NEXT_ACTION[order.status];
+              const active = order.status !== "COMPLETED" && order.status !== "CANCELED";
+              const busy = busyId === order.id;
+              const fresh = freshIds.current.has(order.id) && order.status === "PENDING_PAYMENT";
+              return (
+                <div key={order.id} className={`ops-order${fresh ? " ops-order--new" : ""}${active ? "" : " ops-order--done"}`}>
+                  <div className="ops-order__head">
+                    <div>
+                      <div className="ops-order__table">{order.tableLabel} 테이블</div>
+                      <div className="ops-order__meta">
+                        #{order.orderNo || order.id} · {formatTime(order.createdAt)} · {order.depositorName}
+                        {order.phoneNumber ? ` · ${order.phoneNumber}` : ""}
+                      </div>
                     </div>
-                  )}
+                    <span className={`ops-chip ops-chip--dot ops-chip--${STATUS_TONE[order.status] || ""}`}>{STATUS_LABEL[order.status] || order.status}</span>
+                  </div>
+                  <ul className="ops-order__items">
+                    {order.items?.map((item) => (
+                      <li key={`${order.id}-${item.name}`}>
+                        <span>{item.name}<em>× {item.quantity}</em></span>
+                        <span>{formatWon(item.lineTotal)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  {order.request && <div className="ops-order__request">요청 · {order.request}</div>}
+                  <div className="ops-order__foot">
+                    <span className="ops-order__total">{formatWon(order.totalAmount)}</span>
+                    {active && (
+                      <div className="ops-row">
+                        <button type="button" className="ops-btn ops-btn--danger ops-btn--sm" disabled={busy} onClick={() => changeStatus(order, "CANCELED")}>취소</button>
+                        {next && (
+                          <button type="button" className="ops-btn ops-btn--primary ops-btn--sm" disabled={busy} onClick={() => changeStatus(order, next.status)}>
+                            {busy ? "처리 중…" : next.label}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </section>
-      </div>
-    </article>
+              );
+            })}
+          </div>
+        )}
+      </article>
+
+      <article className="ops-card">
+        <div className="ops-card__head">
+          <div>
+            <h2>주문 받기</h2>
+            <p>계좌는 손님 결제 화면에 그대로 보여요. 메뉴 가격은 메뉴판의 숫자를 써요.</p>
+          </div>
+          <div className="ops-card__actions">
+            <button type="button" className={`ops-btn ops-btn--sm ${configDirty ? "ops-btn--primary" : "ops-btn--ghost"}`} disabled={savingConfig || !configDirty} onClick={saveConfig}>
+              {savingConfig ? "저장 중…" : configDirty ? "설정 저장" : "저장됨"}
+            </button>
+          </div>
+        </div>
+        <label className="ops-switch">
+          <span className="ops-switch__text">
+            <strong>QR 주문 받기</strong>
+            <small>끄면 손님 QR 화면에 "주문을 받지 않아요"가 떠요.</small>
+          </span>
+          <input type="checkbox" checked={config.orderEnabled} onChange={(e) => setConfig((c) => ({ ...c, orderEnabled: e.target.checked }))} />
+          <span className="ops-switch__knob" />
+        </label>
+        <div className="ops-grid-2">
+          <label className="ops-field">
+            <span>입금 계좌</span>
+            <input value={config.bankAccount} onChange={(e) => setConfig((c) => ({ ...c, bankAccount: e.target.value }))} placeholder="예) 국민 000000-00-000000" maxLength={200} />
+          </label>
+          <label className="ops-field">
+            <span>예금주</span>
+            <input value={config.bankHolder} onChange={(e) => setConfig((c) => ({ ...c, bankHolder: e.target.value }))} placeholder="예) 아주대 총학생회" maxLength={60} />
+          </label>
+        </div>
+      </article>
+    </>
   );
 }

@@ -1,5 +1,7 @@
-﻿import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+// 부스 운영 콘솔. 폰에서는 한 줄, 데스크톱에서는 왼쪽 사이드바 + 본문.
+// 여섯 구역: 현황 · 주문 · 자리 · 메뉴판 · 예약 · 설정. 스타일은 styles/v2-ops.css.
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import {
   checkInOpsBoothReservation,
   checkInOpsBoothReservationByToken,
@@ -7,29 +9,47 @@ import {
   createReservationStream,
   fetchOpsBoothBootstrap,
   releaseOpsBoothReservationTable,
+  resolveApiAssetUrl,
   uploadOpsBoothMenuImage,
   uploadOpsBoothMenuItemImage,
   updateOpsBoothLiveStatus,
   updateOpsBoothReservationConfig,
 } from "../api";
-import CongestionBadge from "../components/CongestionBadge";
 import OpsBoothOrders from "../components/OpsBoothOrders";
-import {
-  IconCalendar,
-  IconClipboard,
-  IconMapPin,
-  IconSettings,
-  IconShield,
-  IconUsers,
-} from "../components/UxIcons";
 import { resolveBoothImageUrl } from "../config/boothImages";
 
 const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
 const BOOTH_CATEGORIES = ["주점", "음식", "체험", "이벤트", "굿즈", "안내", "응급", "포토존", "플리마켓", "기타"];
 const BOOTH_DAY_PARTS = ["상시", "주간", "야간"];
 
+const SECTIONS = [
+  { id: "overview", label: "현황" },
+  { id: "orders", label: "주문" },
+  { id: "tables", label: "자리" },
+  { id: "menu", label: "메뉴판" },
+  { id: "reservations", label: "예약" },
+  { id: "settings", label: "설정" },
+];
+
+/* ---------- 작은 아이콘 ---------- */
+const svgProps = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
+const Icons = {
+  overview: (p) => <svg {...svgProps} {...p}><path d="M3 12l9-8 9 8" /><path d="M5 10v10h14V10" /></svg>,
+  orders: (p) => <svg {...svgProps} {...p}><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z" /><path d="M9 8h6M9 12h6" /></svg>,
+  tables: (p) => <svg {...svgProps} {...p}><rect x="3" y="7" width="18" height="6" rx="2" /><path d="M6 13v5M18 13v5" /></svg>,
+  menu: (p) => <svg {...svgProps} {...p}><path d="M4 4h16v16H4z" /><path d="M8 9h8M8 13h5" /></svg>,
+  reservations: (p) => <svg {...svgProps} {...p}><path d="M4 7a2 2 0 012-2h12a2 2 0 012 2v3a2 2 0 000 4v3a2 2 0 01-2 2H6a2 2 0 01-2-2v-3a2 2 0 000-4z" /><path d="M12 5v14" strokeDasharray="2 3" /></svg>,
+  settings: (p) => <svg {...svgProps} {...p}><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z" /></svg>,
+  arrow: (p) => <svg {...svgProps} {...p}><path d="M5 12h14M13 6l6 6-6 6" /></svg>,
+  plus: (p) => <svg {...svgProps} {...p}><path d="M12 5v14M5 12h14" /></svg>,
+  camera: (p) => <svg {...svgProps} {...p}><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>,
+  logout: (p) => <svg {...svgProps} {...p}><path d="M10 4H5v16h5M14 8l5 4-5 4M19 12H9" /></svg>,
+  print: (p) => <svg {...svgProps} {...p}><path d="M7 8V3h10v5M7 17H4v-6h16v6h-3" /><path d="M7 14h10v7H7z" /></svg>,
+};
+
+/* ---------- 헬퍼 ---------- */
 function confirmAction(message) {
-  return window.confirm(`실행할까요?\n\n${message}`);
+  return window.confirm(message);
 }
 
 function clampNumber(value, min, fallback = min) {
@@ -40,7 +60,7 @@ function clampNumber(value, min, fallback = min) {
 
 function formatTime(value) {
   if (!value) return "-";
-  return value.replace("T", " ").slice(5, 16);
+  return String(value).replace("T", " ").slice(5, 16);
 }
 
 function reservationStatusLabel(status) {
@@ -73,25 +93,25 @@ function tableOccupancyLabel(table) {
     case "FULL":
       return "마감";
     default:
-      return "예약 가능";
+      return "빈 자리";
   }
 }
 
-function statusBadgeClass(status) {
+function statusTone(status) {
   switch (status) {
     case "IN_USE":
     case "CHECKED_IN":
-      return "border-violet-200 bg-violet-100 text-violet-800";
+      return "violet";
     case "RESERVED":
-      return "border-amber-200 bg-amber-100 text-amber-800";
+      return "yellow";
     case "FULL":
     case "EXPIRED":
-      return "border-rose-200 bg-rose-100 text-rose-700";
+      return "red";
     case "COMPLETED":
     case "CANCELLED":
-      return "border-slate-200 bg-slate-100 text-slate-700";
+      return "";
     default:
-      return "border-emerald-200 bg-emerald-100 text-emerald-700";
+      return "green";
   }
 }
 
@@ -114,108 +134,121 @@ function parseMenuBoardJson(raw) {
   }
 }
 
-function TableSeatLayout({ tableName, totalSeats, availableSeats, onSeatClick }) {
-  const seatCount = Math.max(1, Number(totalSeats) || 1);
-  const activeSeats = Math.min(seatCount, Math.max(0, Number(availableSeats) || 0));
-  const visibleCount = Math.min(16, seatCount);
-  const visibleActiveCount = Math.min(visibleCount, activeSeats);
-  const hiddenCount = Math.max(0, seatCount - visibleCount);
-  const arenaSize = 196;
-  const tableSize = 86;
-  const seatSize = 28;
-  const seatRadius =
-    visibleActiveCount <= 4 ? 62 : visibleActiveCount <= 8 ? 68 : 72;
+function friendlyError(e, fallback) {
+  return e?.message === "Failed to fetch" ? fallback : e?.message || fallback;
+}
 
+/* ---------- 토스트 ---------- */
+function useOpsToast() {
+  const [toast, setToast] = useState(null);
+  const timerRef = useRef(0);
+  const notify = useCallback((text, tone = "default") => {
+    if (!text) return;
+    window.clearTimeout(timerRef.current);
+    setToast({ text, tone, key: Date.now() });
+    timerRef.current = window.setTimeout(() => setToast(null), 2800);
+  }, []);
+  useEffect(() => () => window.clearTimeout(timerRef.current), []);
+  const node = toast ? (
+    <div key={toast.key} className={`ops-toast ops-toast--${toast.tone}`} role="status" aria-live="polite">
+      {toast.text}
+    </div>
+  ) : null;
+  return [notify, node];
+}
+
+/* ---------- 조각 ---------- */
+function Card({ title, desc, actions, children }) {
   return (
-    <div
-      className="border border-slate-200 bg-slate-50 p-2"
-      style={{ borderRadius: "10px" }}
-    >
-      <div
-        className="relative mx-auto overflow-visible"
-        style={{ width: `${arenaSize}px`, height: `${arenaSize}px` }}
-      >
-        <div
-          className="absolute rounded-full border-2 border-slate-400 bg-white text-center shadow-sm"
-          style={{
-            width: `${tableSize}px`,
-            height: `${tableSize}px`,
-            left: "50%",
-            top: "50%",
-            transform: "translate(-50%, -50%)",
-          }}
-        >
-          <div className="flex h-full w-full flex-col items-center justify-center">
-            <p className="text-[11px] text-slate-500">TABLE</p>
-            <p className="mt-0.5 max-w-[72px] line-clamp-1 text-sm font-bold text-slate-800">
-              {tableName}
-            </p>
-            <p className="mt-1 text-[11px] text-slate-600">
-              {activeSeats}/{seatCount}
-            </p>
+    <article className="ops-card">
+      {(title || actions) && (
+        <div className="ops-card__head">
+          <div>
+            {title && <h2>{title}</h2>}
+            {desc && <p>{desc}</p>}
           </div>
+          {actions && <div className="ops-card__actions">{actions}</div>}
         </div>
-
-        <div className="pointer-events-none absolute inset-2 rounded-full border border-dashed border-slate-300/80" />
-
-        {Array.from({ length: visibleActiveCount }, (_, idx) => {
-          const count = Math.max(visibleActiveCount, 1);
-          const angle = (360 / count) * idx - 90;
-          return (
-            <div
-              key={`seat-circle-${idx}`}
-              className="absolute left-1/2 top-1/2"
-              style={{
-                transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-${seatRadius}px)`,
-              }}
-            >
-              <button
-                type="button"
-                onClick={() => onSeatClick?.(idx)}
-                className="rounded-full border border-emerald-300 bg-emerald-500 text-[10px] font-bold text-white"
-                style={{
-                  width: `${seatSize}px`,
-                  height: `${seatSize}px`,
-                  transform: `rotate(${-angle}deg)`,
-                }}
-                title={`${idx + 1}번 의자 사용 가능`}
-              >
-                {idx + 1}
-              </button>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="mt-2 rounded-md border border-slate-200 bg-white px-2 py-1.5">
-        <p className="text-[11px] text-slate-600">
-          {visibleActiveCount === 0
-            ? "가용 좌석이 없습니다. + 버튼이나 슬라이더로 추가해 주세요."
-            : "의자를 누르면 가용 좌석 수를 줄일 수 있어요."}
-        </p>
-      </div>
-
-      {hiddenCount > 0 && (
-        <p className="mt-2 text-[11px] text-slate-500">
-          +{hiddenCount}개 좌석은 슬라이더/숫자 버튼으로 조정
-        </p>
       )}
+      {children}
+    </article>
+  );
+}
+
+function Field({ label, hint, children }) {
+  return (
+    <label className="ops-field">
+      {label && <span>{label}</span>}
+      {children}
+      {hint && <small>{hint}</small>}
+    </label>
+  );
+}
+
+function Switch({ checked, onChange, title, desc }) {
+  return (
+    <label className="ops-switch">
+      <span className="ops-switch__text">
+        <strong>{title}</strong>
+        {desc && <small>{desc}</small>}
+      </span>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+      <span className="ops-switch__knob" />
+    </label>
+  );
+}
+
+function Stepper({ label, value, onStep }) {
+  return (
+    <div className="ops-stepper">
+      <button type="button" onClick={() => onStep(-1)} aria-label={`${label} 줄이기`}>−</button>
+      <div>
+        <strong>{value}</strong>
+        <small>{label}</small>
+      </div>
+      <button type="button" onClick={() => onStep(1)} aria-label={`${label} 늘리기`}>+</button>
     </div>
   );
 }
 
+function KeyGate({ value, onChange, onSubmit }) {
+  return (
+    <div className="ops-gate">
+      <form className="ops-gate__card" onSubmit={onSubmit}>
+        <img src="/images/chito-wave.png" alt="" onError={(e) => { e.currentTarget.src = "/images/chito.png"; }} />
+        <h1>부스 운영 콘솔</h1>
+        <p>운영진에게 받은 부스 키를 넣어 주세요. 이 브라우저를 닫기 전까지 기억해요.</p>
+        <input
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="부스 키"
+          autoComplete="off"
+          autoFocus
+        />
+        <button type="submit" className="ops-btn ops-btn--primary ops-btn--block" disabled={!value.trim()}>
+          들어가기
+        </button>
+      </form>
+    </div>
+  );
+}
+
+/* ---------- 페이지 ---------- */
 export default function OpsBoothPage() {
   const { id } = useParams();
   const initialKey = sessionStorage.getItem(BOOTH_KEY_STORAGE_KEY) || "";
+  const [notify, toastNode] = useOpsToast();
 
   const [keyInput, setKeyInput] = useState(initialKey);
   const [key, setKey] = useState(initialKey);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(Boolean(initialKey));
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
-
   const [data, setData] = useState(null);
   const [reservationAlert, setReservationAlert] = useState("");
+  const [orderCounts, setOrderCounts] = useState({ pending: 0, cooking: 0 });
+  const [active, setActive] = useState("overview");
+  const [saving, setSaving] = useState("");
+
   const [draft, setDraft] = useState({
     estimatedWaitMinutes: "",
     remainingStock: "",
@@ -230,13 +263,9 @@ export default function OpsBoothPage() {
     contentJson: "",
     reservationEnabled: true,
   });
-  const [menuImageFile, setMenuImageFile] = useState(null);
   const [menuItems, setMenuItems] = useState([]);
-
-  const [reservationDraft, setReservationDraft] = useState({
-    maxReservationMinutes: 10,
-    tables: [],
-  });
+  const [reservationDraft, setReservationDraft] = useState({ maxReservationMinutes: 10, tables: [] });
+  const [snapshot, setSnapshot] = useState({ info: "", tables: "" });
 
   const [qrTokenInput, setQrTokenInput] = useState("");
   const [cameraError, setCameraError] = useState("");
@@ -247,17 +276,19 @@ export default function OpsBoothPage() {
   const streamRef = useRef(null);
   const scanTimerRef = useRef(null);
 
+  const infoDirty = useMemo(() => JSON.stringify({ draft, menuItems }) !== snapshot.info, [draft, menuItems, snapshot.info]);
+  const tablesDirty = useMemo(() => JSON.stringify(reservationDraft) !== snapshot.tables, [reservationDraft, snapshot.tables]);
+
   async function load() {
     if (!id || !key) {
       setData(null);
       setLoading(false);
       return;
     }
-
     try {
       const next = await fetchOpsBoothBootstrap(id, key);
       setData(next);
-      setDraft({
+      const nextDraft = {
         estimatedWaitMinutes: next.booth.estimatedWaitMinutes ?? "",
         remainingStock: next.booth.remainingStock ?? "",
         liveStatusMessage: next.booth.liveStatusMessage ?? "",
@@ -270,9 +301,9 @@ export default function OpsBoothPage() {
         tags: next.booth.tags ?? "",
         contentJson: next.booth.contentJson ?? "",
         reservationEnabled: next.booth.reservationEnabled ?? true,
-      });
-      setMenuItems(parseMenuBoardJson(next.booth.menuBoardJson));
-      setReservationDraft({
+      };
+      const nextMenu = parseMenuBoardJson(next.booth.menuBoardJson);
+      const nextReservation = {
         maxReservationMinutes: next.reservations?.maxReservationMinutes ?? 10,
         tables: (next.reservations?.tables ?? []).map((table) => ({
           id: table.id,
@@ -284,15 +315,18 @@ export default function OpsBoothPage() {
           occupancyLabel: table.occupancyLabel,
           activeReservationId: table.activeReservationId,
         })),
+      };
+      setDraft(nextDraft);
+      setMenuItems(nextMenu);
+      setReservationDraft(nextReservation);
+      setSnapshot({
+        info: JSON.stringify({ draft: nextDraft, menuItems: nextMenu }),
+        tables: JSON.stringify(nextReservation),
       });
       setError("");
     } catch (e) {
       setData(null);
-      setError(
-        e.message === "Failed to fetch"
-          ? "서버 연결에 실패했습니다. 백엔드 상태를 확인해 주세요."
-          : e.message,
-      );
+      setError(friendlyError(e, "서버에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요."));
     } finally {
       setLoading(false);
     }
@@ -303,67 +337,69 @@ export default function OpsBoothPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, key]);
 
+  // 예약 스트림: 새 예약이 오면 띠를 띄우고 다시 읽는다.
   useEffect(() => {
     if (!id || !key) return undefined;
-
     const stream = createReservationStream();
     let alertTimer = null;
-
     stream.addEventListener("reservations", (event) => {
       try {
         const reservation = JSON.parse(event.data);
         if (String(reservation.boothId) !== String(id)) return;
-
         if (reservation.status === "RESERVED") {
-          setReservationAlert(
-            `새 예약: ${reservation.tableName} · ${reservation.seatCount}명`,
-          );
-          setMessage("새 예약이 접수되었습니다.");
-          if (alertTimer) {
-            window.clearTimeout(alertTimer);
-          }
-          alertTimer = window.setTimeout(() => setReservationAlert(""), 5000);
+          setReservationAlert(`새 예약 · ${reservation.tableName} · ${reservation.seatCount}명`);
+          if (alertTimer) window.clearTimeout(alertTimer);
+          alertTimer = window.setTimeout(() => setReservationAlert(""), 6000);
         }
-
         load();
       } catch {
         // ignore stream parse errors
       }
     });
-
     return () => {
-      if (alertTimer) {
-        window.clearTimeout(alertTimer);
-      }
+      if (alertTimer) window.clearTimeout(alertTimer);
       stream.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, key]);
 
   useEffect(() => {
-    setScannerSupported(
-      typeof window !== "undefined" && "BarcodeDetector" in window,
-    );
-
-    return () => {
-      stopScanner();
-    };
+    setScannerSupported(typeof window !== "undefined" && "BarcodeDetector" in window);
+    return () => stopScanner();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleSaveLiveStatus() {
-    if (!confirmAction("실시간 운영 정보를 저장합니다.")) return;
+  // 스크롤 위치에 따라 왼쪽 메뉴의 현재 구역을 맞춘다.
+  useEffect(() => {
+    if (!data || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((entry) => entry.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        if (visible[0]) setActive(visible[0].target.id);
+      },
+      { rootMargin: "-30% 0px -60% 0px", threshold: 0 },
+    );
+    SECTIONS.forEach((section) => {
+      const el = document.getElementById(section.id);
+      if (el) observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, [data]);
 
+  function jump(sectionId) {
+    setActive(sectionId);
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /* ----- 저장 ----- */
+  async function handleSaveLiveStatus() {
+    setSaving("info");
     try {
       await updateOpsBoothLiveStatus(
         id,
         {
-          estimatedWaitMinutes:
-            draft.estimatedWaitMinutes === ""
-              ? null
-              : Number(draft.estimatedWaitMinutes),
-          remainingStock:
-            draft.remainingStock === "" ? null : Number(draft.remainingStock),
+          estimatedWaitMinutes: draft.estimatedWaitMinutes === "" ? null : Number(draft.estimatedWaitMinutes),
+          remainingStock: draft.remainingStock === "" ? null : Number(draft.remainingStock),
           liveStatusMessage: draft.liveStatusMessage || null,
           boothIntro: draft.boothIntro || null,
           menuImageUrl: draft.menuImageUrl || null,
@@ -378,77 +414,58 @@ export default function OpsBoothPage() {
         },
         key,
       );
-      setMessage("실시간 정보가 저장되었습니다.");
+      notify("저장했어요. 손님 화면에 바로 반영돼요.", "success");
       await load();
     } catch (e) {
-      setError(
-        e.message === "Failed to fetch"
-          ? "실시간 정보 저장 요청이 실패했습니다."
-          : e.message,
-      );
-    }
-  }
-
-  async function handleUploadMenuImage() {
-    if (!menuImageFile) {
-      setError("업로드할 음식 사진 파일을 선택해 주세요.");
-      return;
-    }
-    try {
-      const updatedBooth = await uploadOpsBoothMenuImage(id, menuImageFile, key);
-      setDraft((prev) => ({
-        ...prev,
-        menuImageUrl: updatedBooth.menuImageUrl || "",
-      }));
-      setMenuImageFile(null);
-      setMessage("음식 사진이 업로드되었습니다.");
-      await load();
-    } catch (e) {
-      setError(
-        e.message === "Failed to fetch"
-          ? "이미지 업로드 요청이 실패했습니다."
-          : e.message,
-      );
+      notify(friendlyError(e, "저장하지 못했어요. 다시 시도해 주세요."), "error");
+    } finally {
+      setSaving("");
     }
   }
 
   async function handleSaveReservationConfig() {
-    if (!confirmAction("예약/테이블 설정을 저장합니다.")) return;
-
+    setSaving("tables");
     try {
       await updateOpsBoothReservationConfig(
         id,
         {
-          maxReservationMinutes: clampNumber(
-            reservationDraft.maxReservationMinutes,
-            1,
-            10,
-          ),
+          maxReservationMinutes: clampNumber(reservationDraft.maxReservationMinutes, 1, 10),
           tables: reservationDraft.tables.map((table) => {
             const totalSeats = clampNumber(table.totalSeats, 1, 1);
-            const availableSeats = Math.min(
-              totalSeats,
-              Math.max(0, Number(table.availableSeats) || 0),
-            );
-
-            return {
-              id: table.id ?? null,
-              tableName: table.tableName,
-              totalSeats,
-              availableSeats,
-            };
+            const availableSeats = Math.min(totalSeats, Math.max(0, Number(table.availableSeats) || 0));
+            return { id: table.id ?? null, tableName: table.tableName, totalSeats, availableSeats };
           }),
         },
         key,
       );
-      setMessage("예약/테이블 설정이 저장되었습니다.");
+      notify("테이블 설정을 저장했어요.", "success");
       await load();
     } catch (e) {
-      setError(
-        e.message === "Failed to fetch"
-          ? "예약 설정 저장 요청이 실패했습니다."
-          : e.message,
-      );
+      notify(friendlyError(e, "테이블 설정을 저장하지 못했어요."), "error");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  function discardChanges() {
+    if (!snapshot.info) return;
+    const info = JSON.parse(snapshot.info);
+    setDraft(info.draft);
+    setMenuItems(info.menuItems);
+    setReservationDraft(JSON.parse(snapshot.tables));
+    notify("변경을 되돌렸어요.");
+  }
+
+  /* ----- 사진 ----- */
+  async function handleUploadMenuImage(file) {
+    if (!file) return;
+    try {
+      const updatedBooth = await uploadOpsBoothMenuImage(id, file, key);
+      setDraft((prev) => ({ ...prev, menuImageUrl: updatedBooth.menuImageUrl || "" }));
+      notify("대표 사진을 올렸어요.", "success");
+      await load();
+    } catch (e) {
+      notify(friendlyError(e, "사진을 올리지 못했어요."), "error");
     }
   }
 
@@ -457,17 +474,15 @@ export default function OpsBoothPage() {
     try {
       const result = await uploadOpsBoothMenuItemImage(id, file, key);
       updateMenuItem(index, { imageUrl: result?.imageUrl || "" });
-      setMessage("메뉴 사진을 올렸어요. 아래 저장 버튼을 눌러야 손님에게 보여요.");
+      notify("사진을 올렸어요. 저장을 눌러야 손님에게 보여요.");
     } catch (e) {
-      setError(e.message === "Failed to fetch" ? "메뉴 사진 업로드가 실패했습니다." : e.message);
+      notify(friendlyError(e, "메뉴 사진을 올리지 못했어요."), "error");
     }
   }
 
+  /* ----- 메뉴판 ----- */
   function addMenuItem() {
-    setMenuItems((prev) => [
-      ...prev,
-      { name: "", price: "", description: "", soldOut: false },
-    ]);
+    setMenuItems((prev) => [...prev, { name: "", price: "", description: "", soldOut: false, imageUrl: "" }]);
   }
 
   function updateMenuItem(index, patch) {
@@ -482,73 +497,53 @@ export default function OpsBoothPage() {
     setMenuItems((prev) => prev.filter((_, idx) => idx !== index));
   }
 
+  /* ----- 예약 ----- */
   async function handleCheckIn(reservationId) {
-    if (!confirmAction(`예약 #${reservationId}를 체크인 처리할까요?`)) return;
-
     try {
       await checkInOpsBoothReservation(id, reservationId, key);
-      setMessage(`예약 #${reservationId} 체크인이 완료되었습니다.`);
+      notify("체크인했어요.", "success");
       await load();
     } catch (e) {
-      setError(
-        e.message === "Failed to fetch"
-          ? "체크인 요청이 실패했습니다."
-          : e.message,
-      );
+      notify(friendlyError(e, "체크인하지 못했어요."), "error");
     }
   }
 
   async function handleCompleteReservation(reservationId) {
-    if (!confirmAction(`예약 #${reservationId} 이용을 완료하고 테이블을 비울까요?`)) return;
-
+    if (!confirmAction("이용을 끝내고 테이블을 비울까요?")) return;
     try {
       await completeOpsBoothReservation(id, reservationId, key);
-      setMessage(`예약 #${reservationId} 테이블을 비웠습니다.`);
+      notify("테이블을 비웠어요.", "success");
       await load();
     } catch (e) {
-      setError(
-        e.message === "Failed to fetch"
-          ? "테이블 비우기 요청이 실패했습니다."
-          : e.message,
-      );
+      notify(friendlyError(e, "테이블을 비우지 못했어요."), "error");
     }
   }
 
-  async function handleReleaseTable(table) {
+  async function handleReleaseTable(table, message = `${table?.tableName}을(를) 빈 자리로 돌릴까요?`) {
     if (!table?.id) return;
-    if (!confirmAction(`${table.tableName}을(를) 예약 가능 상태로 전환할까요?`)) return;
-
+    if (!confirmAction(message)) return;
     try {
       await releaseOpsBoothReservationTable(id, table.id, key);
-      setMessage(`${table.tableName} 테이블을 예약 가능 상태로 전환했습니다.`);
+      notify(`${table.tableName}을(를) 빈 자리로 돌렸어요.`, "success");
       await load();
     } catch (e) {
-      setError(
-        e.message === "Failed to fetch"
-          ? "테이블 가용 처리 요청이 실패했습니다."
-          : e.message,
-      );
+      notify(friendlyError(e, "처리하지 못했어요."), "error");
     }
   }
 
   async function handleCheckInByToken() {
     const token = qrTokenInput.trim();
     if (!token) {
-      setError("QR 토큰을 입력해 주세요.");
+      notify("QR 토큰을 넣어 주세요.", "error");
       return;
     }
-
     try {
       await checkInOpsBoothReservationByToken(id, token, key);
-      setMessage("QR 체크인이 완료되었습니다.");
+      notify("QR 체크인했어요.", "success");
       setQrTokenInput("");
       await load();
     } catch (e) {
-      setError(
-        e.message === "Failed to fetch"
-          ? "QR 체크인 요청이 실패했습니다."
-          : e.message,
-      );
+      notify(friendlyError(e, "QR 체크인하지 못했어요."), "error");
     }
   }
 
@@ -557,62 +552,50 @@ export default function OpsBoothPage() {
       window.clearInterval(scanTimerRef.current);
       scanTimerRef.current = null;
     }
-
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     }
-
     setScannerActive(false);
     setScannerMessage("");
   }
 
   async function startScanner() {
     setScannerActive(true);
-    setScannerMessage("카메라를 여는 중입니다...");
+    setScannerMessage("카메라를 여는 중이에요…");
     setCameraError("");
 
     if (!navigator.mediaDevices?.getUserMedia) {
-      setCameraError("이 브라우저는 카메라 접근을 지원하지 않습니다. QR 토큰을 직접 입력해 주세요.");
+      setCameraError("이 브라우저는 카메라를 쓸 수 없어요. 아래에 토큰을 직접 넣어 주세요.");
       setScannerActive(false);
       setScannerMessage("");
       return;
     }
-
     if (!scannerSupported) {
-      setCameraError("이 브라우저는 QR 자동 스캔을 지원하지 않습니다. QR 화면 아래 토큰을 직접 입력해 주세요.");
+      setCameraError("이 브라우저는 QR 자동 인식이 안 돼요. 아래에 토큰을 직접 넣어 주세요.");
       setScannerActive(false);
       setScannerMessage("");
       return;
     }
-
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false,
-      });
-
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false });
       streamRef.current = stream;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
-
       const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
-      setScannerMessage("QR을 카메라 중앙에 맞춰 주세요.");
+      setScannerMessage("QR을 화면 가운데에 맞춰 주세요.");
       scanTimerRef.current = window.setInterval(async () => {
         if (!videoRef.current) return;
-
         try {
           const results = await detector.detect(videoRef.current);
           if (!results.length) return;
-
           const rawValue = results[0].rawValue?.trim();
           if (!rawValue) return;
-
           setQrTokenInput(rawValue);
           await checkInOpsBoothReservationByToken(id, rawValue, key);
-          setMessage("QR 체크인이 완료되었습니다.");
+          notify("QR 체크인했어요.", "success");
           await load();
           stopScanner();
         } catch {
@@ -620,28 +603,19 @@ export default function OpsBoothPage() {
         }
       }, 700);
     } catch {
-      setCameraError("카메라를 사용할 수 없습니다. 권한을 확인해 주세요.");
+      setCameraError("카메라를 열 수 없어요. 권한을 확인해 주세요.");
       stopScanner();
     }
   }
 
+  /* ----- 테이블 편집 ----- */
   function updateTableDraft(index, patch) {
     setReservationDraft((prev) => {
       const tables = [...prev.tables];
       const target = { ...tables[index], ...patch };
-
       const total = Math.max(1, Number(target.totalSeats) || 1);
-      const available = Math.max(
-        0,
-        Math.min(total, Number(target.availableSeats) || 0),
-      );
-
-      tables[index] = {
-        ...target,
-        totalSeats: total,
-        availableSeats: available,
-      };
-
+      const available = Math.max(0, Math.min(total, Number(target.availableSeats) || 0));
+      tables[index] = { ...target, totalSeats: total, availableSeats: available };
       return { ...prev, tables };
     });
   }
@@ -650,87 +624,43 @@ export default function OpsBoothPage() {
     setReservationDraft((prev) => {
       const tables = [...prev.tables];
       const table = { ...tables[index] };
-
       if (field === "totalSeats") {
         const nextTotal = Math.max(1, (Number(table.totalSeats) || 1) + delta);
         table.totalSeats = nextTotal;
-        table.availableSeats = Math.min(
-          nextTotal,
-          Math.max(0, Number(table.availableSeats) || 0),
-        );
+        table.availableSeats = Math.min(nextTotal, Math.max(0, Number(table.availableSeats) || 0));
       }
-
       if (field === "availableSeats") {
         const max = Math.max(1, Number(table.totalSeats) || 1);
-        table.availableSeats = Math.max(
-          0,
-          Math.min(max, (Number(table.availableSeats) || 0) + delta),
-        );
+        table.availableSeats = Math.max(0, Math.min(max, (Number(table.availableSeats) || 0) + delta));
       }
-
       tables[index] = table;
       return { ...prev, tables };
     });
-  }
-
-  function setTableAvailableSeats(index, value) {
-    setReservationDraft((prev) => {
-      const tables = [...prev.tables];
-      const table = { ...tables[index] };
-      const total = Math.max(1, Number(table.totalSeats) || 1);
-      table.availableSeats = Math.max(0, Math.min(total, Number(value) || 0));
-      tables[index] = table;
-      return { ...prev, tables };
-    });
-  }
-
-  function handleSeatVisualToggle(index, seatIndex) {
-    const table = reservationDraft.tables[index];
-    if (!table) return;
-    const currentAvailable = Math.max(0, Number(table.availableSeats) || 0);
-    const clickedSeat = seatIndex + 1;
-
-    const nextAvailable =
-      clickedSeat === currentAvailable
-        ? Math.max(0, currentAvailable - 1)
-        : clickedSeat;
-
-    setTableAvailableSeats(index, nextAvailable);
   }
 
   function addTableDraft(template = 4) {
     setReservationDraft((prev) => {
-      const nextIndex = prev.tables.length + 1;
+      const sameSize = prev.tables.filter((table) => Number(table.totalSeats) === template).length + 1;
       return {
         ...prev,
-        tables: [
-          ...prev.tables,
-          {
-            id: null,
-            tableName: `테이블 ${nextIndex}`,
-            totalSeats: template,
-            availableSeats: template,
-          },
-        ],
+        tables: [...prev.tables, { id: null, tableName: `${template}인 ${sameSize}`, totalSeats: template, availableSeats: template }],
       };
     });
   }
 
   function removeTableDraft(index) {
-    setReservationDraft((prev) => ({
-      ...prev,
-      tables: prev.tables.filter((_, idx) => idx !== index),
-    }));
+    setReservationDraft((prev) => ({ ...prev, tables: prev.tables.filter((_, idx) => idx !== index) }));
   }
 
+  /* ----- 키 ----- */
   function submitKey(e) {
     e.preventDefault();
     const next = keyInput.trim();
+    if (!next) return;
     sessionStorage.setItem(BOOTH_KEY_STORAGE_KEY, next);
     setKey(next);
     setLoading(true);
     setError("");
-    setMessage("");
   }
 
   function clearKey() {
@@ -739,751 +669,473 @@ export default function OpsBoothPage() {
     setKey("");
     setData(null);
     setError("");
-    setMessage("");
     setLoading(false);
     stopScanner();
   }
 
-  const activeReservations = useMemo(
-    () => data?.reservations?.activeReservations ?? [],
-    [data],
-  );
+  /* ----- 파생값 ----- */
+  const activeReservations = useMemo(() => data?.reservations?.activeReservations ?? [], [data]);
 
   const tableSummary = useMemo(() => {
     const tables = reservationDraft.tables || [];
     const totalTables = tables.length;
-    const totalSeats = tables.reduce(
-      (acc, table) => acc + (Number(table.totalSeats) || 0),
-      0,
-    );
-    const availableSeats = tables.reduce(
-      (acc, table) => acc + (Number(table.availableSeats) || 0),
-      0,
-    );
-    const reservedTables = tables.filter(
-      (table) => tableOccupancyStatus(table) === "RESERVED",
-    ).length;
-    const inUseTables = tables.filter(
-      (table) => tableOccupancyStatus(table) === "IN_USE",
-    ).length;
-
-    return {
-      totalTables,
-      totalSeats,
-      availableSeats,
-      occupiedSeats: Math.max(0, totalSeats - availableSeats),
-      reservedTables,
-      inUseTables,
-    };
+    const reservedTables = tables.filter((table) => tableOccupancyStatus(table) === "RESERVED").length;
+    const inUseTables = tables.filter((table) => tableOccupancyStatus(table) === "IN_USE").length;
+    const freeTables = tables.filter((table) => tableOccupancyStatus(table) === "AVAILABLE").length;
+    const totalSeats = tables.reduce((acc, table) => acc + (Number(table.totalSeats) || 0), 0);
+    return { totalTables, reservedTables, inUseTables, freeTables, totalSeats };
   }, [reservationDraft.tables]);
 
-  return (
-    <section className="cyber-page pt-4 space-y-3">
-      <h2 className="text-lg font-bold text-role-ops inline-flex items-center gap-1.5">
-        <IconShield className="h-5 w-5 icon-role-ops" />
-        부스 운영 대시보드
-      </h2>
+  const handleOrderSummary = useCallback((counts) => setOrderCounts(counts), []);
 
-      <form
-        onSubmit={submitKey}
-        className="rounded-xl border border-slate-200 bg-white p-3 space-y-2"
-      >
-        <p className="text-sm font-semibold text-role-ops inline-flex items-center gap-1.5">
-          <IconSettings className="h-4 w-4 icon-role-ops" />
-          운영 키 입력
-        </p>
-        <div className="grid grid-cols-[1fr_auto_auto] gap-2">
-          <input
-            className="border rounded px-2 py-2 text-sm"
-            value={keyInput}
-            onChange={(e) => setKeyInput(e.target.value)}
-            placeholder="1111"
-          />
-          <button
-            type="submit"
-            className="rounded border px-3 py-2 text-sm font-semibold"
-          >
-            적용
-          </button>
-          <button
-            type="button"
-            onClick={clearKey}
-            className="rounded border px-3 py-2 text-sm"
-          >
-            초기화
+  const badgeFor = (sectionId) => {
+    if (sectionId === "orders") return orderCounts.pending;
+    if (sectionId === "reservations") return activeReservations.filter((r) => r.status !== "CHECKED_IN").length;
+    return 0;
+  };
+
+  const openNow = (() => {
+    if (!data?.booth?.openTime || !data?.booth?.closeTime) return null;
+    const now = new Date();
+    const hm = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+    const open = String(data.booth.openTime).slice(0, 5);
+    const close = String(data.booth.closeTime).slice(0, 5);
+    return open <= close ? hm >= open && hm < close : hm >= open || hm < close;
+  })();
+
+  /* ----- 렌더 ----- */
+  if (!key) {
+    return (
+      <>
+        <KeyGate value={keyInput} onChange={setKeyInput} onSubmit={submitKey} />
+        {toastNode}
+      </>
+    );
+  }
+
+  const nav = (compact) =>
+    SECTIONS.map((section) => {
+      const Icon = Icons[section.id];
+      const count = badgeFor(section.id);
+      const cls = compact
+        ? `ops__tab${active === section.id ? " ops__tab--active" : ""}`
+        : `ops__nav-item${active === section.id ? " ops__nav-item--active" : ""}`;
+      return (
+        <button key={section.id} type="button" className={cls} onClick={() => jump(section.id)}>
+          {!compact && <Icon />}
+          {section.label}
+          {count > 0 && <span className="ops-count">{count}</span>}
+        </button>
+      );
+    });
+
+  return (
+    <div className="ops">
+      <aside className="ops__side">
+        <div className="ops__brand">
+          <img src="/images/chito.png" alt="" />
+          <div>
+            <strong>부스 운영 콘솔</strong>
+            <small>2026 가을축제 바람</small>
+          </div>
+        </div>
+        <div className="ops__booth">
+          <small>{data?.booth?.category || "부스"} · {openNow == null ? "운영 시간 미설정" : openNow ? "운영 중" : "운영 시간 아님"}</small>
+          <strong>{data?.booth?.name || `부스 ${id}`}</strong>
+        </div>
+        <nav className="ops__nav">{nav(false)}</nav>
+        <div className="ops__side-links">
+          <Link to={`/ops/booth/${id}/tables`} className="ops-btn ops-btn--dark ops-btn--sm">
+            <Icons.tables /> 자리 현황판 열기
+          </Link>
+          <Link to={`/ops/booth/${id}/table-qr`} className="ops-btn ops-btn--ghost ops-btn--sm">
+            <Icons.print /> 주문 QR 인쇄
+          </Link>
+          <button type="button" className="ops-btn ops-btn--text" onClick={clearKey}>
+            <Icons.logout /> 키 지우고 나가기
           </button>
         </div>
-      </form>
+      </aside>
 
-      {!key && <p className="text-sm text-rose-600">운영 키를 입력해 주세요.</p>}
-      {loading && <p className="text-sm text-slate-600">불러오는 중...</p>}
-      {error && <p className="text-sm text-rose-600">{error}</p>}
-      {message && <p className="text-sm text-teal-700">{message}</p>}
-
-      {data && (
-        <article className="rounded-xl border border-slate-200 bg-white overflow-hidden">
-          {reservationAlert && (
-            <div className="border-b border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-800">
-              {reservationAlert}
+      <div className="ops__main">
+        <header className="ops__top">
+          <div className="ops__top-row">
+            <div className="ops__top-title">
+              <small>부스 운영 콘솔</small>
+              <strong>{data?.booth?.name || `부스 ${id}`}</strong>
             </div>
-          )}
-          <div className="aspect-[16/8] bg-slate-100">
-            <img
-              src={resolveBoothImageUrl(data.booth)}
-              alt={`${data.booth.name} 이미지`}
-              className="h-full w-full object-cover"
-              loading="lazy"
-              decoding="async"
-            />
-          </div>
-
-          <div className="p-3 space-y-4">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="text-base font-bold text-role-map inline-flex items-center gap-1.5">
-                <IconMapPin className="h-4 w-4 icon-role-map" />
-                {data.booth.name}
-              </h3>
-              <CongestionBadge level={data.congestion.level} />
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-lg border border-sky-200 bg-sky-50 p-2">
-                <p className="text-[11px] text-sky-700">⏱ 대기(분)</p>
-                <p className="text-lg font-bold text-sky-800">{data.booth.estimatedWaitMinutes ?? "-"}</p>
-              </div>
-              <div className="rounded-lg border border-purple-200 bg-purple-50 p-2">
-                <p className="text-[11px] text-purple-700">📦 재고</p>
-                <p className="text-lg font-bold text-purple-800">{data.booth.remainingStock ?? "-"}</p>
-              </div>
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-2">
-                <p className="text-[11px] text-amber-700">🧾 활성 예약</p>
-                <p className="text-lg font-bold text-amber-800">{activeReservations.length}건</p>
-              </div>
-              <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-2">
-                <p className="text-[11px] text-emerald-700">🪑 사용 좌석</p>
-                <p className="text-lg font-bold text-emerald-800">
-                  {tableSummary.occupiedSeats}/{tableSummary.totalSeats || 0}
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-slate-200 p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-role-log inline-flex items-center gap-1.5">
-                  <IconClipboard className="h-4 w-4 icon-role-log" />
-                  실시간 운영 상태
-                </p>
-                <span className="text-xs text-slate-500">빠른 수정</span>
-              </div>
-              <div className="rounded border border-cyan-100 bg-cyan-50/40 p-2 space-y-2">
-                <p className="text-xs font-semibold text-slate-700">부스 유형/운영시간</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <select
-                    className="border rounded px-2 py-2 text-sm bg-white"
-                    value={draft.category}
-                    onChange={(e) =>
-                      setDraft((prev) => ({ ...prev, category: e.target.value }))
-                    }
-                  >
-                    {BOOTH_CATEGORIES.map((category) => (
-                      <option key={category} value={category}>
-                        {category}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="border rounded px-2 py-2 text-sm bg-white"
-                    value={draft.dayPart}
-                    onChange={(e) =>
-                      setDraft((prev) => ({ ...prev, dayPart: e.target.value }))
-                    }
-                  >
-                    {BOOTH_DAY_PARTS.map((part) => (
-                      <option key={part} value={part}>
-                        {part}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="time"
-                    className="border rounded px-2 py-2 text-sm bg-white"
-                    value={draft.openTime}
-                    onChange={(e) =>
-                      setDraft((prev) => ({ ...prev, openTime: e.target.value }))
-                    }
-                  />
-                  <input
-                    type="time"
-                    className="border rounded px-2 py-2 text-sm bg-white"
-                    value={draft.closeTime}
-                    onChange={(e) =>
-                      setDraft((prev) => ({ ...prev, closeTime: e.target.value }))
-                    }
-                  />
-                </div>
-                <input
-                  className="w-full border rounded px-2 py-2 text-sm bg-white"
-                  placeholder="태그 (예: 예약필요, 무료, 실내)"
-                  value={draft.tags}
-                  onChange={(e) =>
-                    setDraft((prev) => ({ ...prev, tags: e.target.value }))
-                  }
-                />
-                <textarea
-                  className="w-full border rounded px-2 py-2 text-sm bg-white min-h-16"
-                  placeholder="부스 유형별 추가 정보"
-                  value={draft.contentJson}
-                  onChange={(e) =>
-                    setDraft((prev) => ({ ...prev, contentJson: e.target.value }))
-                  }
-                />
-                <label className="flex items-center gap-2 rounded border bg-white px-2 py-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={draft.reservationEnabled}
-                    onChange={(e) =>
-                      setDraft((prev) => ({
-                        ...prev,
-                        reservationEnabled: e.target.checked,
-                      }))
-                    }
-                  />
-                  예약/웨이팅 기능 사용
-                </label>
-              </div>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  className="border rounded px-2 py-2 text-sm"
-                  placeholder="대기 분"
-                  value={draft.estimatedWaitMinutes}
-                  onChange={(e) =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      estimatedWaitMinutes: e.target.value,
-                    }))
-                  }
-                />
-                <input
-                  className="border rounded px-2 py-2 text-sm"
-                  placeholder="남은 재고"
-                  value={draft.remainingStock}
-                  onChange={(e) =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      remainingStock: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <input
-                className="w-full border rounded px-2 py-2 text-sm"
-                placeholder="운영 메모 (예: 10분 뒤 재료 재입고)"
-                value={draft.liveStatusMessage}
-                onChange={(e) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    liveStatusMessage: e.target.value,
-                  }))
-                }
-              />
-              <textarea
-                className="w-full border rounded px-2 py-2 text-sm min-h-20"
-                placeholder="부스 소개 (메뉴/특징/추천 포인트)"
-                value={draft.boothIntro}
-                onChange={(e) =>
-                  setDraft((prev) => ({
-                    ...prev,
-                    boothIntro: e.target.value,
-                  }))
-                }
-              />
-              <div className="rounded border border-slate-200 bg-slate-50 p-2 space-y-2">
-                <p className="text-xs font-semibold text-slate-700">음식 사진 업로드</p>
-                <div className="grid grid-cols-[1fr_auto] gap-2">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="border rounded px-2 py-2 text-sm bg-white"
-                    onChange={(e) => setMenuImageFile(e.target.files?.[0] || null)}
-                  />
-                  <button
-                    type="button"
-                    onClick={handleUploadMenuImage}
-                    className="rounded border border-teal-500 px-3 py-2 text-xs font-semibold text-teal-700"
-                  >
-                    업로드
-                  </button>
-                </div>
-              </div>
-              {draft.menuImageUrl && (
-                <div className="rounded border border-slate-200 bg-slate-50 p-2">
-                  <p className="text-[11px] text-slate-600 mb-1">음식 사진 미리보기</p>
-                  <img
-                    src={draft.menuImageUrl}
-                    alt="음식 사진 미리보기"
-                    className="h-32 w-full rounded object-cover"
-                    loading="lazy"
-                    decoding="async"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                </div>
-              )}
-
-              <div className="rounded border border-slate-200 bg-slate-50 p-2 space-y-2">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-semibold text-slate-700">메뉴판 편집</p>
-                  <button
-                    type="button"
-                    onClick={addMenuItem}
-                    className="rounded border border-cyan-500 px-2 py-1 text-[11px] font-semibold text-cyan-700"
-                  >
-                    메뉴 추가
-                  </button>
-                </div>
-                {menuItems.length ? (
-                  <div className="space-y-2">
-                    {menuItems.map((item, index) => (
-                      <div
-                        key={`menu-item-${index}`}
-                        className="rounded border border-slate-200 bg-white p-2 space-y-2"
-                      >
-                        <div className="flex items-center gap-2">
-                          {item.imageUrl ? (
-                            <img src={item.imageUrl} alt="" className="h-12 w-12 rounded object-cover" />
-                          ) : (
-                            <div className="h-12 w-12 rounded bg-slate-100" />
-                          )}
-                          <label className="rounded border border-cyan-500 px-2 py-1 text-[11px] font-semibold text-cyan-700 cursor-pointer">
-                            {item.imageUrl ? "사진 바꾸기" : "사진 올리기"}
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => handleMenuItemImage(index, e.target.files?.[0] || null)}
-                            />
-                          </label>
-                          {item.imageUrl && (
-                            <button type="button" className="text-[11px] text-slate-500" onClick={() => updateMenuItem(index, { imageUrl: "" })}>
-                              사진 지우기
-                            </button>
-                          )}
-                        </div>
-                        <div className="grid grid-cols-[1fr_auto] gap-2">
-                          <input
-                            className="border rounded px-2 py-1.5 text-sm"
-                            placeholder="메뉴명 (예: 닭강정)"
-                            value={item.name}
-                            onChange={(e) =>
-                              updateMenuItem(index, { name: e.target.value })
-                            }
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeMenuItem(index)}
-                            className="rounded border px-2 py-1 text-xs"
-                          >
-                            삭제
-                          </button>
-                        </div>
-                        <div className="grid grid-cols-[1fr_auto] gap-2">
-                          <input
-                            className="border rounded px-2 py-1.5 text-sm"
-                            placeholder="가격 (예: 5000원)"
-                            value={item.price}
-                            onChange={(e) =>
-                              updateMenuItem(index, { price: e.target.value })
-                            }
-                          />
-                          <label className="inline-flex items-center gap-1 rounded border px-2 text-xs">
-                            <input
-                              type="checkbox"
-                              checked={item.soldOut}
-                              onChange={(e) =>
-                                updateMenuItem(index, { soldOut: e.target.checked })
-                              }
-                            />
-                            품절
-                          </label>
-                        </div>
-                        <input
-                          className="w-full border rounded px-2 py-1.5 text-sm"
-                          placeholder="설명 (예: 국내산 닭다리살)"
-                          value={item.description}
-                          onChange={(e) =>
-                            updateMenuItem(index, { description: e.target.value })
-                          }
-                        />
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-slate-500">아직 메뉴가 없습니다. 메뉴 추가로 시작해 주세요.</p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={handleSaveLiveStatus}
-                className="w-full rounded bg-teal-700 text-white py-2 text-sm font-semibold"
-              >
-                실시간 상태 저장
+            <div className="ops-row">
+              <Link to={`/ops/booth/${id}/tables`} className="ops-btn ops-btn--dark ops-btn--sm">현황판</Link>
+              <button type="button" className="ops-btn ops-btn--ghost ops-btn--sm" onClick={clearKey} aria-label="키 지우고 나가기">
+                <Icons.logout />
               </button>
             </div>
+          </div>
+          <div className="ops__tabs">{nav(true)}</div>
+        </header>
 
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 space-y-3">
-              <div className="flex items-center justify-between">
-              <p className="text-sm font-semibold text-emerald-900 text-role-ops inline-flex items-center gap-1.5">
-                <IconUsers className="h-4 w-4 icon-role-ops" />
-                테이블/좌석 설정
-              </p>
-                <div className="flex gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => addTableDraft(2)}
-                    className="rounded border border-emerald-400 px-2 py-1 text-[11px]"
-                  >
-                    +2석
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addTableDraft(4)}
-                    className="rounded border border-emerald-400 px-2 py-1 text-[11px]"
-                  >
-                    +4석
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => addTableDraft(6)}
-                    className="rounded border border-emerald-400 px-2 py-1 text-[11px]"
-                  >
-                    +6석
-                  </button>
-                </div>
-              </div>
+        {loading && !data && (
+          <>
+            <div className="ops-skeleton" style={{ height: 120 }} />
+            <div className="ops-skeleton" style={{ height: 220 }} />
+            <div className="ops-skeleton" style={{ height: 220 }} />
+          </>
+        )}
 
-              <a
-                href={`/ops/booth/${id}/tables`}
-                className="block rounded-xl bg-emerald-600 px-3 py-3 text-center text-sm font-bold text-white"
+        {error && !data && (
+          <Card title="연결이 안 돼요" desc={error}>
+            <div className="ops-row ops-row--wrap">
+              <button type="button" className="ops-btn ops-btn--primary" onClick={() => { setLoading(true); load(); }}>다시 시도</button>
+              <button type="button" className="ops-btn ops-btn--ghost" onClick={clearKey}>다른 키로 들어가기</button>
+            </div>
+          </Card>
+        )}
+
+        {data && (
+          <>
+            {/* ===== 현황 ===== */}
+            <section id="overview" className="ops-section">
+              {reservationAlert && <div className="ops-banner ops-banner--green">{reservationAlert}</div>}
+              <Card
+                title="지금 현황"
+                desc={`${data.booth.category || "부스"} · ${data.booth.openTime ? `${String(data.booth.openTime).slice(0, 5)}–${String(data.booth.closeTime || "").slice(0, 5)}` : "운영 시간 미설정"}`}
+                actions={
+                  <span className={`ops-chip ops-chip--dot ${openNow ? "ops-chip--green" : openNow == null ? "" : "ops-chip--red"}`}>
+                    {openNow == null ? "시간 미설정" : openNow ? "운영 중" : "운영 시간 아님"}
+                  </span>
+                }
               >
-                자리 현황판 열기 (입구 스태프용 · 큰 버튼)
-              </a>
-              <div className="grid grid-cols-2 gap-2 rounded border border-emerald-200 bg-white p-2">
-                <div>
-                  <p className="text-[11px] text-slate-600">테이블</p>
-                  <p className="font-bold text-slate-800">{tableSummary.totalTables}개</p>
+                <div className="ops-kpis">
+                  <button type="button" className="ops-kpi ops-kpi--green" onClick={() => jump("tables")} style={{ textAlign: "left" }}>
+                    <small>빈 테이블</small>
+                    <strong>{tableSummary.freeTables}<em>/ {tableSummary.totalTables}</em></strong>
+                    <span>이용중 {tableSummary.inUseTables} · 예약중 {tableSummary.reservedTables}</span>
+                  </button>
+                  <button type="button" className="ops-kpi ops-kpi--blue" onClick={() => jump("orders")} style={{ textAlign: "left" }}>
+                    <small>입금 대기 주문</small>
+                    <strong>{orderCounts.pending}<em>건</em></strong>
+                    <span>조리 중 {orderCounts.cooking}건</span>
+                  </button>
+                  <button type="button" className="ops-kpi ops-kpi--yellow" onClick={() => jump("reservations")} style={{ textAlign: "left" }}>
+                    <small>활성 예약</small>
+                    <strong>{activeReservations.length}<em>건</em></strong>
+                    <span>체크인 전 {activeReservations.filter((r) => r.status !== "CHECKED_IN").length}건</span>
+                  </button>
+                  <div className="ops-kpi ops-kpi--violet">
+                    <small>메뉴</small>
+                    <strong>{menuItems.length}<em>개</em></strong>
+                    <span>품절 {menuItems.filter((item) => item.soldOut).length}개</span>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[11px] text-slate-600">좌석(가용/전체)</p>
-                  <p className="font-bold text-slate-800">
-                    {tableSummary.availableSeats}/{tableSummary.totalSeats}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-slate-600">예약중</p>
-                  <p className="font-bold text-amber-800">{tableSummary.reservedTables}개</p>
-                </div>
-                <div>
-                  <p className="text-[11px] text-slate-600">이용중</p>
-                  <p className="font-bold text-violet-800">{tableSummary.inUseTables}개</p>
-                </div>
-              </div>
+              </Card>
 
-              <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-                <span className="text-xs text-emerald-900">최대 예약 유지시간(분)</span>
-                <input
-                  className="border rounded px-2 py-1.5 text-sm w-24"
-                  type="number"
-                  min="1"
-                  value={reservationDraft.maxReservationMinutes}
-                  onChange={(e) =>
-                    setReservationDraft((prev) => ({
-                      ...prev,
-                      maxReservationMinutes: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                {reservationDraft.tables.map((table, index) => {
-                  const occupancyStatus = tableOccupancyStatus(table);
-                  const isBlocked =
-                    occupancyStatus === "RESERVED" || occupancyStatus === "IN_USE";
-
-                  return (
-                    <div
-                      key={`${table.id ?? "new"}-${index}`}
-                      className={`rounded border bg-white p-2 space-y-2 ${
-                        isBlocked ? "border-amber-300" : "border-emerald-200"
-                      }`}
-                    >
-                    <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-                      <input
-                        className="border rounded px-2 py-1.5 text-sm"
-                        value={table.tableName}
-                        onChange={(e) =>
-                          updateTableDraft(index, { tableName: e.target.value })
-                        }
-                        placeholder="테이블 이름"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeTableDraft(index)}
-                        disabled={isBlocked}
-                        className="rounded border px-2 text-xs disabled:opacity-50"
-                      >
-                        {isBlocked ? "삭제 불가" : "삭제"}
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between gap-2 rounded border border-slate-200 bg-slate-50 px-2 py-1.5">
-                      <span
-                        className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadgeClass(occupancyStatus)}`}
-                      >
-                        {tableOccupancyLabel(table)}
-                      </span>
-                      <div className="flex items-center gap-1.5">
-                        {table.activeReservationId && (
-                          <span className="text-[11px] text-slate-500">
-                            예약 #{table.activeReservationId}
-                          </span>
-                        )}
-                        {isBlocked && (
-                          <button
-                            type="button"
-                            onClick={() => handleReleaseTable(table)}
-                            className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px] font-semibold text-emerald-800"
-                          >
-                            가용 처리
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="rounded border border-slate-200 p-2">
-                        <p className="text-[11px] text-slate-600">전체 좌석</p>
-                        <div className="mt-1 flex items-center justify-between">
-                          <button
-                            type="button"
-                            className="rounded border px-2 py-1 text-xs"
-                            onClick={() => stepTable(index, "totalSeats", -1)}
-                          >
-                            -
-                          </button>
-                          <span className="font-bold text-slate-800">{table.totalSeats}</span>
-                          <button
-                            type="button"
-                            className="rounded border px-2 py-1 text-xs"
-                            onClick={() => stepTable(index, "totalSeats", 1)}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="rounded border border-slate-200 p-2">
-                        <p className="text-[11px] text-slate-600">가용 좌석</p>
-                        <div className="mt-1 flex items-center justify-between">
-                          <button
-                            type="button"
-                            className="rounded border px-2 py-1 text-xs"
-                            onClick={() => stepTable(index, "availableSeats", -1)}
-                          >
-                            -
-                          </button>
-                          <span className="font-bold text-slate-800">{table.availableSeats}</span>
-                          <button
-                            type="button"
-                            className="rounded border px-2 py-1 text-xs"
-                            onClick={() => stepTable(index, "availableSeats", 1)}
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded border border-slate-200 bg-slate-50 p-2">
-                      <div className="flex items-center justify-between gap-2">
-                        <p className="text-[11px] text-slate-600">좌석 상태 시각 설정</p>
-                        <p className="text-[11px] font-semibold text-slate-700">
-                          {table.availableSeats}/{table.totalSeats}
-                        </p>
-                      </div>
-                      <input
-                        type="range"
-                        min="0"
-                        max={Math.max(1, Number(table.totalSeats) || 1)}
-                        value={Math.max(0, Number(table.availableSeats) || 0)}
-                        onChange={(e) => setTableAvailableSeats(index, e.target.value)}
-                        className="mt-2 w-full"
-                      />
-                    </div>
-
-                    <TableSeatLayout
-                      tableName={table.tableName}
-                      totalSeats={table.totalSeats}
-                      availableSeats={table.availableSeats}
-                      onSeatClick={(seatIndex) =>
-                        handleSeatVisualToggle(index, seatIndex)
-                      }
+              <Card title="손님에게 보이는 한 줄" desc="주점 카드 위에 바로 뜨는 안내예요. 재료 소진, 마지막 주문 같은 걸 적어요.">
+                <div className="ops-grid-2">
+                  <Field label="운영 메모">
+                    <input
+                      value={draft.liveStatusMessage}
+                      onChange={(e) => setDraft((prev) => ({ ...prev, liveStatusMessage: e.target.value }))}
+                      placeholder="예) 오뎅탕 10분 뒤 재입고"
                     />
+                  </Field>
+                  <div className="ops-grid-2">
+                    <Field label="대기 시간(분)">
+                      <input inputMode="numeric" value={draft.estimatedWaitMinutes} onChange={(e) => setDraft((prev) => ({ ...prev, estimatedWaitMinutes: e.target.value }))} placeholder="0" />
+                    </Field>
+                    <Field label="남은 재고">
+                      <input inputMode="numeric" value={draft.remainingStock} onChange={(e) => setDraft((prev) => ({ ...prev, remainingStock: e.target.value }))} placeholder="비우면 표시 안 함" />
+                    </Field>
                   </div>
-                  );
-                })}
-
-                {!reservationDraft.tables.length && (
-                  <p className="text-xs text-slate-600">설정된 테이블이 없습니다. +2/+4/+6석 버튼으로 빠르게 추가해 주세요.</p>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={handleSaveReservationConfig}
-                className="w-full rounded bg-emerald-700 text-white py-2 text-sm font-semibold"
-              >
-                예약/테이블 설정 저장
-              </button>
-            </div>
-
-            <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-3 space-y-2">
-              <p className="text-sm font-semibold text-cyan-900 text-role-schedule inline-flex items-center gap-1.5">
-                <IconCalendar className="h-4 w-4 icon-role-schedule" />
-                QR 체크인
-              </p>
-
-              <div className="flex gap-2">
-                {!scannerActive ? (
-                  <button
-                    type="button"
-                    onClick={startScanner}
-                    className="rounded border border-cyan-500 px-3 py-1.5 text-xs font-semibold"
-                  >
-                    카메라 스캔 시작
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={stopScanner}
-                    className="rounded border border-slate-400 px-3 py-1.5 text-xs font-semibold"
-                  >
-                    스캔 중지
-                  </button>
-                )}
-              </div>
-
-              {scannerActive && (
-                <div className="space-y-1">
-                  <video
-                    ref={videoRef}
-                    className="aspect-[4/3] w-full rounded border border-cyan-300 bg-black object-cover"
-                    muted
-                    playsInline
-                  />
-                  {scannerMessage && (
-                    <p className="text-xs text-cyan-800">{scannerMessage}</p>
-                  )}
                 </div>
-              )}
+              </Card>
+            </section>
 
-              {cameraError && (
-                <p className="text-xs text-rose-700">{cameraError}</p>
-              )}
+            {/* ===== 주문 ===== */}
+            <section id="orders" className="ops-section">
+              <OpsBoothOrders boothId={id} opsKey={key} notify={notify} onSummary={handleOrderSummary} />
+            </section>
 
-              <div className="grid grid-cols-[1fr_auto] gap-2">
-                <input
-                  className="border rounded px-2 py-2 text-sm"
-                  value={qrTokenInput}
-                  onChange={(e) => setQrTokenInput(e.target.value)}
-                  placeholder="QR 안의 긴 토큰 직접 입력"
-                />
-                <button
-                  type="button"
-                  onClick={handleCheckInByToken}
-                  className="rounded bg-cyan-700 text-white px-3 py-2 text-xs font-semibold"
-                >
-                  체크인
-                </button>
-              </div>
-            </div>
+            {/* ===== 자리 ===== */}
+            <section id="tables" className="ops-section">
+              <Card
+                title="자리"
+                desc="입구 스태프는 현황판에서 한 번 눌러 이용중/빈 자리를 바꿔요. 여기서는 테이블 구성을 고쳐요."
+                actions={
+                  <div className="ops-seg">
+                    {[2, 4, 6, 8].map((n) => (
+                      <button key={n} type="button" onClick={() => addTableDraft(n)}>+{n}인</button>
+                    ))}
+                  </div>
+                }
+              >
+                <Link to={`/ops/booth/${id}/tables`} className="ops-board-link">
+                  <span>
+                    <strong>자리 현황판 열기</strong>
+                    <small>입구 스태프용 · 큰 버튼 · 한 번 누르면 바뀜</small>
+                  </span>
+                  <Icons.arrow />
+                </Link>
 
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
-              <p className="text-sm font-semibold text-amber-900">활성 예약 목록</p>
+                <div className="ops-kpis">
+                  <div className="ops-kpi"><small>테이블</small><strong>{tableSummary.totalTables}<em>개</em></strong></div>
+                  <div className="ops-kpi ops-kpi--green"><small>빈 자리</small><strong>{tableSummary.freeTables}<em>개</em></strong></div>
+                  <div className="ops-kpi ops-kpi--violet"><small>이용중</small><strong>{tableSummary.inUseTables}<em>개</em></strong></div>
+                  <div className="ops-kpi ops-kpi--yellow"><small>예약중</small><strong>{tableSummary.reservedTables}<em>개</em></strong></div>
+                </div>
 
-              {activeReservations.length ? (
-                activeReservations.map((reservation) => {
-                  const statusLabel = reservationStatusLabel(reservation.status);
-                  const checkedIn = reservation.status === "CHECKED_IN";
-
-                  return (
-                    <div
-                      key={reservation.id}
-                      className="rounded border border-amber-300 bg-white p-2 flex items-center justify-between gap-2"
-                    >
-                      <div className="text-xs text-slate-700">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <p className="font-semibold">#{reservation.id} · {reservation.tableName}</p>
-                          <span
-                            className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${statusBadgeClass(reservation.status)}`}
-                          >
-                            {statusLabel}
-                          </span>
-                        </div>
-                        <p>예약자: {reservation.userKey}</p>
-                        <p>좌석: {reservation.seatCount}</p>
-                        {checkedIn ? (
-                          <p>체크인: {formatTime(reservation.checkedInAt)}</p>
-                        ) : (
-                          <p>만료: {formatTime(reservation.expiresAt)}</p>
-                        )}
-                      </div>
-                      {checkedIn ? (
-                        <button
-                          type="button"
-                          onClick={() => handleCompleteReservation(reservation.id)}
-                          className="rounded bg-violet-700 text-white px-3 py-2 text-xs font-semibold"
+                {reservationDraft.tables.length ? (
+                  <div className="ops-tables">
+                    {reservationDraft.tables.map((table, index) => {
+                      const status = tableOccupancyStatus(table);
+                      const blocked = status === "RESERVED" || status === "IN_USE";
+                      return (
+                        <div
+                          key={`${table.id ?? "new"}-${index}`}
+                          className={`ops-table${status === "IN_USE" ? " ops-table--inuse" : status === "RESERVED" ? " ops-table--busy" : ""}`}
                         >
-                          테이블 비우기
-                        </button>
-                      ) : (
-                        <div className="grid gap-1">
-                          <button
-                            type="button"
-                            onClick={() => handleCheckIn(reservation.id)}
-                            className="rounded bg-amber-600 text-white px-3 py-2 text-xs font-semibold"
-                          >
-                            수동 체크인
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleReleaseTable({
-                                id: reservation.tableId,
-                                tableName: reservation.tableName,
-                              })
-                            }
-                            className="rounded border border-emerald-300 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800"
-                          >
-                            예약 취소
-                          </button>
+                          <div className="ops-table__head">
+                            <input value={table.tableName} onChange={(e) => updateTableDraft(index, { tableName: e.target.value })} placeholder="테이블 이름" />
+                            <span className={`ops-chip ops-chip--dot ops-chip--${statusTone(status)}`}>{tableOccupancyLabel(table)}</span>
+                          </div>
+                          <div className="ops-table__seats">
+                            <Stepper label="전체 좌석" value={table.totalSeats} onStep={(d) => stepTable(index, "totalSeats", d)} />
+                            <Stepper label="예약 가능" value={table.availableSeats} onStep={(d) => stepTable(index, "availableSeats", d)} />
+                          </div>
+                          <div className="ops-table__foot">
+                            <span className="ops-sub">
+                              {table.activeReservationId ? `예약 #${table.activeReservationId}` : table.id ? `테이블 #${table.id}` : "저장하면 만들어져요"}
+                            </span>
+                            <div className="ops-row">
+                              {blocked && (
+                                <button type="button" className="ops-btn ops-btn--soft ops-btn--sm" onClick={() => handleReleaseTable(table)}>
+                                  빈 자리로
+                                </button>
+                              )}
+                              <button type="button" className="ops-btn ops-btn--danger ops-btn--sm" disabled={blocked} onClick={() => removeTableDraft(index)}>
+                                {blocked ? "사용 중" : "삭제"}
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-xs text-slate-600">현재 활성 예약이 없습니다.</p>
-              )}
-            </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="ops-empty">아직 테이블이 없어요. 오른쪽 위 +4인 같은 버튼으로 추가해 주세요.</div>
+                )}
+
+                <div className="ops-divider" />
+                <div className="ops-grid-2">
+                  <Field label="예약 자리 유지 시간(분)" hint="예약 후 이 시간 안에 안 오면 자동으로 풀려요.">
+                    <input
+                      type="number"
+                      min="1"
+                      value={reservationDraft.maxReservationMinutes}
+                      onChange={(e) => setReservationDraft((prev) => ({ ...prev, maxReservationMinutes: e.target.value }))}
+                    />
+                  </Field>
+                </div>
+              </Card>
+            </section>
+
+            {/* ===== 메뉴판 ===== */}
+            <section id="menu" className="ops-section">
+              <Card
+                title="메뉴판"
+                desc="손님 주문 화면에 이 순서대로 보여요. 가격은 숫자만 적어도 돼요."
+                actions={
+                  <button type="button" className="ops-btn ops-btn--soft ops-btn--sm" onClick={addMenuItem}>
+                    <Icons.plus /> 메뉴 추가
+                  </button>
+                }
+              >
+                {menuItems.length ? (
+                  <div className="ops-dishes">
+                    {menuItems.map((item, index) => (
+                      <div key={`menu-item-${index}`} className={`ops-dish${item.soldOut ? " ops-dish--soldout" : ""}`}>
+                        <label className="ops-dish__photo" title="사진 올리기">
+                          {item.imageUrl ? <img src={resolveApiAssetUrl(item.imageUrl)} alt="" /> : <span>사진<br />올리기</span>}
+                          <input type="file" accept="image/*" onChange={(e) => handleMenuItemImage(index, e.target.files?.[0] || null)} />
+                        </label>
+                        <div className="ops-dish__body">
+                          <div className="ops-dish__row">
+                            <input value={item.name} onChange={(e) => updateMenuItem(index, { name: e.target.value })} placeholder="메뉴 이름" />
+                            <input value={item.price} onChange={(e) => updateMenuItem(index, { price: e.target.value })} placeholder="가격 (예: 12000)" inputMode="numeric" />
+                          </div>
+                          <input value={item.description} onChange={(e) => updateMenuItem(index, { description: e.target.value })} placeholder="설명 · 재료 (예: 삼겹살 400g · 볶음김치)" />
+                          <div className="ops-dish__foot">
+                            <label>
+                              <input type="checkbox" checked={item.soldOut} onChange={(e) => updateMenuItem(index, { soldOut: e.target.checked })} />
+                              품절
+                            </label>
+                            <div className="ops-row">
+                              {item.imageUrl && (
+                                <button type="button" className="ops-btn ops-btn--text" onClick={() => updateMenuItem(index, { imageUrl: "" })}>사진 지우기</button>
+                              )}
+                              <button type="button" className="ops-btn ops-btn--danger ops-btn--sm" onClick={() => removeMenuItem(index)}>삭제</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="ops-empty">아직 메뉴가 없어요. 메뉴 추가로 시작해 주세요.</div>
+                )}
+              </Card>
+
+              <Card title="대표 사진" desc="주점 카드와 주문 화면 맨 위에 크게 보여요.">
+                <label className="ops-hero-photo" style={{ cursor: "pointer" }}>
+                  {draft.menuImageUrl ? (
+                    <img src={resolveApiAssetUrl(draft.menuImageUrl)} alt="대표 사진" onError={(e) => { e.currentTarget.style.display = "none"; }} />
+                  ) : (
+                    <span>사진을 골라 주세요</span>
+                  )}
+                  <input type="file" accept="image/*" style={{ position: "absolute", inset: 0, opacity: 0, minHeight: 0, cursor: "pointer" }} onChange={(e) => handleUploadMenuImage(e.target.files?.[0] || null)} />
+                </label>
+                <p className="ops-sub">지금 손님 화면 대표 이미지: <span style={{ wordBreak: "break-all" }}>{resolveBoothImageUrl(data.booth)}</span></p>
+              </Card>
+            </section>
+
+            {/* ===== 예약 ===== */}
+            <section id="reservations" className="ops-section">
+              <Card
+                title="예약"
+                desc="손님이 앱에서 잡은 자리 예약이에요. 오면 체크인, 다 먹고 가면 테이블 비우기."
+                actions={<span className="ops-chip">{activeReservations.length}건</span>}
+              >
+                {activeReservations.length ? (
+                  <div style={{ display: "grid", gap: 10 }}>
+                    {activeReservations.map((reservation) => {
+                      const checkedIn = reservation.status === "CHECKED_IN";
+                      return (
+                        <div key={reservation.id} className="ops-resv">
+                          <div className="ops-resv__main">
+                            <div className="ops-resv__title">
+                              <strong>{reservation.tableName}</strong>
+                              <span className={`ops-chip ops-chip--dot ops-chip--${statusTone(reservation.status)}`}>{reservationStatusLabel(reservation.status)}</span>
+                            </div>
+                            <span className="ops-resv__meta">
+                              #{reservation.id} · {reservation.seatCount}명 · {reservation.userKey}
+                            </span>
+                            <span className="ops-resv__meta">
+                              {checkedIn ? `체크인 ${formatTime(reservation.checkedInAt)}` : `만료 ${formatTime(reservation.expiresAt)}`}
+                            </span>
+                          </div>
+                          <div className="ops-resv__actions">
+                            {checkedIn ? (
+                              <button type="button" className="ops-btn ops-btn--dark ops-btn--sm" onClick={() => handleCompleteReservation(reservation.id)}>테이블 비우기</button>
+                            ) : (
+                              <>
+                                <button type="button" className="ops-btn ops-btn--primary ops-btn--sm" onClick={() => handleCheckIn(reservation.id)}>체크인</button>
+                                <button
+                                  type="button"
+                                  className="ops-btn ops-btn--danger ops-btn--sm"
+                                  onClick={() => handleReleaseTable({ id: reservation.tableId, tableName: reservation.tableName }, "이 예약을 취소하고 자리를 비울까요?")}
+                                >
+                                  예약 취소
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="ops-empty">지금 활성 예약이 없어요.</div>
+                )}
+              </Card>
+
+              <Card
+                title="QR 체크인"
+                desc="손님 예약 QR을 카메라로 찍거나, QR 아래 토큰을 직접 넣어요."
+                actions={
+                  scannerActive ? (
+                    <button type="button" className="ops-btn ops-btn--ghost ops-btn--sm" onClick={stopScanner}>스캔 중지</button>
+                  ) : (
+                    <button type="button" className="ops-btn ops-btn--soft ops-btn--sm" onClick={startScanner}><Icons.camera /> 카메라 스캔</button>
+                  )
+                }
+              >
+                {scannerActive && (
+                  <div className="ops-scan">
+                    <video ref={videoRef} muted playsInline />
+                    {scannerMessage && <p className="ops-sub" style={{ marginTop: 8 }}>{scannerMessage}</p>}
+                  </div>
+                )}
+                {cameraError && <div className="ops-banner ops-banner--red">{cameraError}</div>}
+                <div className="ops-row">
+                  <input value={qrTokenInput} onChange={(e) => setQrTokenInput(e.target.value)} placeholder="QR 토큰 직접 입력" />
+                  <button type="button" className="ops-btn ops-btn--primary" onClick={handleCheckInByToken}>체크인</button>
+                </div>
+              </Card>
+            </section>
+
+            {/* ===== 설정 ===== */}
+            <section id="settings" className="ops-section">
+              <Card title="부스 정보" desc="손님 화면의 분류, 운영 시간, 소개에 쓰여요.">
+                <div className="ops-grid-2">
+                  <Field label="분류">
+                    <select value={draft.category} onChange={(e) => setDraft((prev) => ({ ...prev, category: e.target.value }))}>
+                      {BOOTH_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="운영 시간대">
+                    <select value={draft.dayPart} onChange={(e) => setDraft((prev) => ({ ...prev, dayPart: e.target.value }))}>
+                      {BOOTH_DAY_PARTS.map((part) => <option key={part} value={part}>{part}</option>)}
+                    </select>
+                  </Field>
+                  <Field label="여는 시간">
+                    <input type="time" value={draft.openTime} onChange={(e) => setDraft((prev) => ({ ...prev, openTime: e.target.value }))} />
+                  </Field>
+                  <Field label="닫는 시간">
+                    <input type="time" value={draft.closeTime} onChange={(e) => setDraft((prev) => ({ ...prev, closeTime: e.target.value }))} />
+                  </Field>
+                </div>
+                <Field label="소개" hint="주점 카드에 두 줄 정도로 보여요.">
+                  <textarea value={draft.boothIntro} onChange={(e) => setDraft((prev) => ({ ...prev, boothIntro: e.target.value }))} placeholder="예) 바람 축제 공식 주점. 테이블 QR로 자리에서 바로 주문할 수 있어요." />
+                </Field>
+                <div className="ops-grid-2">
+                  <Field label="태그" hint="쉼표로 구분">
+                    <input value={draft.tags} onChange={(e) => setDraft((prev) => ({ ...prev, tags: e.target.value }))} placeholder="예) 주점, 총학, 노천극장" />
+                  </Field>
+                  <Field label="추가 정보" hint="부스 유형별 자유 메모">
+                    <input value={draft.contentJson} onChange={(e) => setDraft((prev) => ({ ...prev, contentJson: e.target.value }))} placeholder="선택" />
+                  </Field>
+                </div>
+                <Switch
+                  checked={draft.reservationEnabled}
+                  onChange={(checked) => setDraft((prev) => ({ ...prev, reservationEnabled: checked }))}
+                  title="자리 예약 받기"
+                  desc="끄면 손님 화면에서 예약 버튼이 사라져요. 빈 자리 표시는 그대로 보여요."
+                />
+              </Card>
+            </section>
+          </>
+        )}
+      </div>
+
+      {(infoDirty || tablesDirty) && data && (
+        <div className="ops-savebar" role="region" aria-label="저장하지 않은 변경">
+          <strong>저장 안 한 변경이 있어요</strong>
+          <div className="ops-row">
+            <button type="button" className="ops-btn ops-btn--ghost ops-btn--sm" onClick={discardChanges} disabled={Boolean(saving)}>되돌리기</button>
+            {tablesDirty && (
+              <button type="button" className="ops-btn ops-btn--primary ops-btn--sm" onClick={handleSaveReservationConfig} disabled={Boolean(saving)}>
+                {saving === "tables" ? "저장 중…" : "테이블 저장"}
+              </button>
+            )}
+            {infoDirty && (
+              <button type="button" className="ops-btn ops-btn--primary ops-btn--sm" onClick={handleSaveLiveStatus} disabled={Boolean(saving)}>
+                {saving === "info" ? "저장 중…" : tablesDirty ? "정보 저장" : "저장"}
+              </button>
+            )}
           </div>
-        </article>
+        </div>
       )}
 
-      {data && <OpsBoothOrders boothId={id} opsKey={key} />}
-    </section>
+      {toastNode}
+    </div>
   );
 }
