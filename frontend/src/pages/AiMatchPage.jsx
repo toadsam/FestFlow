@@ -2422,6 +2422,36 @@ export default function AiMatchPage() {
     return (
       <div className="ai-match-flow">
         <section className="am-disc">
+          <div className="am-disc__top">
+            <label className="am-disc__search">
+              <IconSearch className="h-4 w-4" />
+              <input
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="닉네임, 소개, 장소, MBTI"
+              />
+              {searchQuery ? (
+                <button type="button" className="am-disc__clear" aria-label="검색어 지우기" onClick={() => setSearchQuery("")}>
+                  ×
+                </button>
+              ) : null}
+            </label>
+            <button
+              type="button"
+              className={`am-disc__filter${peopleFiltersOpen || peopleTagFilters.length || peopleMbtiFilter ? " is-on" : ""}`}
+              aria-expanded={peopleFiltersOpen}
+              aria-label="상세 필터"
+              onClick={() => setPeopleFiltersOpen((open) => !open)}
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 6h16M7 12h10M10 18h4" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
+              </svg>
+              {peopleTagFilters.length + (peopleMbtiFilter ? 1 : 0) ? (
+                <em>{peopleTagFilters.length + (peopleMbtiFilter ? 1 : 0)}</em>
+              ) : null}
+            </button>
+          </div>
+
           <div className="am-disc__chips" role="tablist" aria-label="프로필 필터">
             {PROFILE_FILTERS.map((filter) => (
               <button
@@ -2437,48 +2467,22 @@ export default function AiMatchPage() {
             ))}
           </div>
 
-          <label className="am-disc__search">
-            <IconSearch className="h-4 w-4" />
-            <input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="닉네임, 소개, 장소, MBTI 검색"
-            />
-            {searchQuery ? (
-              <button type="button" className="am-disc__clear" aria-label="검색어 지우기" onClick={() => setSearchQuery("")}>
-                ×
-              </button>
-            ) : null}
-          </label>
-
-          <div className="am-disc__row am-disc__row--3">
-            <div className="am-seg am-seg--sort" role="group" aria-label="정렬">
-              <button type="button" className={`am-seg__btn${peopleSort === "match" ? " is-on" : ""}`} onClick={() => setPeopleSort("match")}>궁합순</button>
-              <button type="button" className={`am-seg__btn${peopleSort === "new" ? " is-on" : ""}`} onClick={() => setPeopleSort("new")}>최신순</button>
+          {peopleFiltersOpen ? (
+            <div className="am-disc__panel">
+              <label className="am-disc__select">
+                <span>MBTI</span>
+                <select value={peopleMbtiFilter} onChange={(event) => setPeopleMbtiFilter(cleanMbtiValue(event.target.value))}>
+                  <option value="">전체</option>
+                  {MBTI_OPTIONS.map((item) => (
+                    <option key={item} value={item}>
+                      {item}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <span className="am-disc__panel-label">관심사</span>
             </div>
-            <label className="am-disc__select">
-              <span>MBTI</span>
-              <select value={peopleMbtiFilter} onChange={(event) => setPeopleMbtiFilter(cleanMbtiValue(event.target.value))}>
-                <option value="">전체</option>
-                {MBTI_OPTIONS.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button
-              type="button"
-              className={`am-chip am-chip--more${peopleFiltersOpen || peopleTagFilters.length ? " is-on" : ""}`}
-              aria-expanded={peopleFiltersOpen}
-              onClick={() => setPeopleFiltersOpen((open) => !open)}
-            >
-              관심사{peopleTagFilters.length ? ` ${peopleTagFilters.length}` : ""}
-              <svg viewBox="0 0 24 24" className={`am-disc__chev${peopleFiltersOpen ? " is-open" : ""}`} aria-hidden="true">
-                <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
-          </div>
+          ) : null}
 
           {peopleFiltersOpen ? (
             <div className="am-chips">
@@ -2507,9 +2511,19 @@ export default function AiMatchPage() {
           <MatchTop3 profiles={topMatches} resolveImage={resolveApiAssetUrl} onOpen={openProfile} />
         ) : null}
 
-        <section className="ai-match-list-meta">
+        <section className="ai-match-list-meta am-meta">
           <strong>{loading ? "불러오는 중..." : `${filteredProfiles.length}명`}</strong>
-          <span>AI 프로필이 준비된 사람만 보여줘요.</span>
+          <button
+            type="button"
+            className="am-sort"
+            aria-label={peopleSort === "match" ? "궁합순으로 보는 중, 누르면 최신순" : "최신순으로 보는 중, 누르면 궁합순"}
+            onClick={() => setPeopleSort((current) => (current === "match" ? "new" : "match"))}
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 4v16m0 0l-3-3m3 3l3-3M17 20V4m0 0l-3 3m3-3l3 3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            {peopleSort === "match" ? "궁합순" : "최신순"}
+          </button>
         </section>
 
         {filteredProfiles.length ? (
