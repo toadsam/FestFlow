@@ -1,0 +1,436 @@
+/*
+ * 사주 소개팅 탭만 '사주풍'으로. 밤하늘 보라·금색·명조 제목.
+ * 다른 탭(축제·주점·분실물)은 토스 파랑 그대로. 이 파일은 .ai-match-page 안에서만 효과가 있다.
+ * v2-aimatch.css / saju.css 가 var(--v2-blue), var(--sm-blue) 를 쓰므로 변수만 바꿔도 대부분 보라가 된다.
+ * 하드코딩된 파랑만 아래에서 따로 덮는다. main.jsx 에서 맨 마지막에 불러온다.
+ */
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page {
+  --saju-ink: #2a1f4d;
+  --saju-night: #1d1740;
+  --saju-purple: #6d4fd2;
+  --saju-purple-dark: #55389f;
+  --saju-purple-soft: #efe9fb;
+  --saju-purple-tint: #f8f5ff;
+  --saju-gold: #d9b45a;
+  --saju-gold-soft: #fbf3dc;
+  --saju-pink: #e9a9c9;
+  --saju-serif: "Gowun Batang", "Noto Serif KR", "Nanum Myeongjo", serif;
+
+  --v2-blue: var(--saju-purple);
+  --v2-blue-dark: var(--saju-purple-dark);
+  --v2-blue-soft: var(--saju-purple-soft);
+  --v2-blue-tint: var(--saju-purple-tint);
+  --sm-blue: var(--saju-purple);
+  --sm-blue-soft: var(--saju-purple-soft);
+  --sm-ink: var(--saju-ink);
+
+  background: linear-gradient(180deg, #f1ebfa 0%, #f8f5fd 38%, #fff 100%) !important;
+}
+
+/* 제목은 명조. 본문은 그대로 고딕. */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-hero-copy h2,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-card h3,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-row strong,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-section-head h2,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-section-head h3,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-topbar h1,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-reg__title,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-summary strong,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-top__head strong,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-report__title strong,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-section h4,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-detail-card h2,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-name,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-sheet-head strong {
+  font-family: var(--saju-serif) !important;
+  letter-spacing: -0.01em !important;
+}
+
+/* ---------- 히어로: 달·오행 원 그림 위에 제목 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero {
+  position: relative;
+  overflow: hidden;
+  min-height: 16rem !important;
+  padding: 1.35rem 1.25rem 1.3rem !important;
+  border-radius: 22px !important;
+  background: var(--saju-night) !important;
+  color: #fff !important;
+  box-shadow: 0 14px 34px rgba(42, 31, 77, 0.28) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero::before,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero::after {
+  display: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 12% 50%;
+  z-index: 0;
+  animation: saju-hero-drift 14s ease-in-out infinite alternate;
+}
+
+@keyframes saju-hero-drift {
+  from { transform: scale(1.02) translateX(0); }
+  to { transform: scale(1.06) translateX(-8px); }
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__shade {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(29, 23, 64, 0.82) 0%, rgba(29, 23, 64, 0.42) 50%, rgba(29, 23, 64, 0) 100%),
+    linear-gradient(180deg, rgba(29, 23, 64, 0.25) 0%, rgba(29, 23, 64, 0) 30%, rgba(29, 23, 64, 0.45) 100%);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero .ai-match-hero-copy {
+  position: relative;
+  z-index: 2;
+  max-width: 78%;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero .ai-match-hero-copy p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.78) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero .ai-match-hero-copy h2 {
+  margin: 0 0 10px;
+  font-size: 30px !important;
+  line-height: 1.15 !important;
+  font-weight: 700 !important;
+  background: linear-gradient(90deg, #fff4dc 0%, #f4e2ff 55%, #c9b3ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  text-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero .ai-match-hero-copy span {
+  display: block;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.86) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__quote {
+  display: block;
+  margin-top: 14px;
+  font-family: var(--saju-serif);
+  font-style: normal;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: rgba(255, 233, 200, 0.85);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__seal {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  z-index: 2;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1.5px solid rgba(255, 120, 120, 0.85);
+  border-radius: 5px;
+  font-family: var(--saju-serif);
+  font-size: 15px;
+  font-weight: 700;
+  color: rgba(255, 130, 130, 0.95);
+  transform: rotate(-6deg);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero .ai-match-float-heart {
+  z-index: 2;
+  background: rgba(255, 255, 255, 0.14) !important;
+  color: #fff !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.25) !important;
+  backdrop-filter: blur(6px);
+}
+
+/* ---------- 4단계 카드: 보라 원형 번호 + 금색 점 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-card {
+  background: #fff !important;
+  box-shadow: 0 2px 14px rgba(42, 31, 77, 0.06), 0 0 0 1px rgba(109, 79, 210, 0.08) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-card h3::after {
+  content: " ✦";
+  font-size: 12px;
+  color: var(--saju-gold);
+  vertical-align: 2px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-row {
+  background: var(--saju-purple-tint) !important;
+  box-shadow: 0 0 0 1px rgba(109, 79, 210, 0.08) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-step-row > span {
+  border-radius: 50% !important;
+  background: linear-gradient(160deg, #6f52d6, #4a2f93) !important;
+  color: #fff !important;
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px rgba(109, 79, 210, 0.35), 0 6px 14px rgba(74, 47, 147, 0.28) !important;
+  font-family: var(--saju-serif);
+  font-weight: 700 !important;
+}
+
+/* ---------- 버튼: 보라 그라데이션 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button {
+  background: linear-gradient(135deg, #7457dc 0%, #5b3fb0 100%) !important;
+  box-shadow: 0 10px 22px rgba(91, 63, 176, 0.28) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button:active {
+  background: linear-gradient(135deg, #5f43c0 0%, #4a2f93 100%) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-primary-button:disabled {
+  background: var(--v2-gray-2) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-secondary-button {
+  background: var(--saju-purple-soft) !important;
+  color: var(--saju-purple-dark) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-secondary-button--danger {
+  background: var(--v2-red-soft) !important;
+  color: var(--v2-red) !important;
+}
+
+/* 화면 전환 세그먼트(처음·신청함·MY·문의) 활성 탭 */
+.app-shell.app-shell[data-v2="true"] .ai-match-page .ai-match-bottom-nav {
+  background: rgba(109, 79, 210, 0.08) !important;
+}
+
+.app-shell.app-shell[data-v2="true"] .ai-match-page .ai-match-bottom-tab.is-active {
+  color: var(--saju-purple-dark) !important;
+  box-shadow: 0 2px 10px rgba(42, 31, 77, 0.1) !important;
+}
+
+/* ---------- 하드코딩된 파랑 덮기 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-float-heart {
+  box-shadow: 0 6px 16px rgba(109, 79, 210, 0.2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-input.is-ok :is(input, select, textarea) {
+  border-color: rgba(109, 79, 210, 0.45) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-spinner {
+  border-color: rgba(109, 79, 210, 0.2);
+  border-top-color: var(--saju-purple);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-converting__bar {
+  background: rgba(109, 79, 210, 0.18);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-banner {
+  background: linear-gradient(135deg, #7457dc, #4a2f93) !important;
+  box-shadow: 0 10px 24px rgba(91, 63, 176, 0.3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-report {
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(217, 180, 90, 0.2), rgba(255, 255, 255, 0) 55%),
+    radial-gradient(120% 80% at 0% 0%, rgba(109, 79, 210, 0.14), rgba(255, 255, 255, 0) 55%),
+    #fffdf8;
+  border-color: #eadfc9 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-tip {
+  background: var(--saju-purple-soft);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .sm-tip strong {
+  color: var(--saju-purple-dark) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota {
+  background: var(--saju-purple-soft);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota__text strong {
+  color: var(--saju-purple-dark);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota__dots i {
+  box-shadow: inset 0 0 0 2px var(--saju-purple);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota__dots i.is-used {
+  background: var(--saju-purple);
+}
+
+/* 개인정보 안내 줄 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-note {
+  background: rgba(255, 255, 255, 0.7) !important;
+}
+
+/* ---------- 스플래시 ---------- */
+.saju-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #1d1740;
+  color: #fff;
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.saju-splash--out {
+  opacity: 0;
+  transform: scale(1.03);
+  pointer-events: none;
+}
+
+.saju-splash__art {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 62%;
+  overflow: hidden;
+}
+
+.saju-splash__art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+  animation: saju-splash-zoom 2.6s ease-out both;
+}
+
+@keyframes saju-splash-zoom {
+  from { transform: scale(1.08); }
+  to { transform: scale(1); }
+}
+
+/* 그림 아래를 밤하늘색으로 녹여서 제목 영역과 잇는다 */
+.saju-splash__fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 44%;
+  height: 22%;
+  background: linear-gradient(180deg, rgba(29, 23, 64, 0) 0%, rgba(29, 23, 64, 0.75) 60%, #1d1740 100%);
+}
+
+.saju-splash__body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 62%;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 0 28px calc(env(safe-area-inset-bottom, 0px) + 16px);
+  text-align: center;
+  animation: saju-splash-rise 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes saju-splash-rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.saju-splash__eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  letter-spacing: 0.32em;
+  color: rgba(255, 233, 200, 0.8);
+}
+
+.saju-splash__eyebrow i {
+  width: 34px;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 233, 200, 0), rgba(255, 233, 200, 0.7));
+}
+
+.saju-splash__eyebrow i:last-child {
+  transform: scaleX(-1);
+}
+
+.saju-splash__title {
+  font-family: "Gowun Batang", "Noto Serif KR", serif;
+  font-size: 38px;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  background: linear-gradient(90deg, #fff4dc 0%, #f6e6ff 50%, #c9b3ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+}
+
+.saju-splash__sub {
+  margin: 0;
+  font-family: "Gowun Batang", "Noto Serif KR", serif;
+  font-size: 15px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.saju-splash__knot {
+  margin-top: 4px;
+  font-size: 16px;
+  color: #d9b45a;
+}
+
+.saju-splash__bar {
+  width: 62%;
+  max-width: 280px;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  overflow: hidden;
+}
+
+.saju-splash__bar i {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #c9b3ff, #fff4dc);
+  transform-origin: left center;
+  animation: saju-splash-bar 2s cubic-bezier(0.3, 0.7, 0.3, 1) both;
+}
+
+@keyframes saju-splash-bar {
+  from { transform: scaleX(0.05); }
+  to { transform: scaleX(1); }
+}
+
+.saju-splash__caption {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+@media (min-width: 720px) {
+  .saju-splash__art {
+    height: 60%;
+  }
+
+  .saju-splash__title {
+    font-size: 46px;
+  }
+}

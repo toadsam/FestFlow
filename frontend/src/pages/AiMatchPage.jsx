@@ -37,6 +37,7 @@ import {
   updateAiMatchProfile,
 } from "../api";
 import { SajuPanel } from "../components/SajuCard";
+import SajuSplash, { shouldShowSajuSplash } from "../components/SajuSplash";
 import { MatchCardBlock, MatchMissingBanner, MatchReport, MatchTop3 } from "../components/SajuMatch";
 
 const MEET_PLACES = ["총학생회 부스"];
@@ -678,6 +679,8 @@ export default function AiMatchPage() {
   const [accessRequests, setAccessRequests] = useState([]);
   const [accessSentRequests, setAccessSentRequests] = useState([]);
   const [accessRequestQuota, setAccessRequestQuota] = useState(null);
+  // 탭에 처음 들어올 때 한 번 뜨는 사주 스플래시
+  const [sajuSplash, setSajuSplash] = useState(() => shouldShowSajuSplash());
   const [accessNickname, setAccessNickname] = useState("");
   const [accessPin, setAccessPin] = useState("");
   const [accessPhoneNumber, setAccessPhoneNumber] = useState("");
@@ -1921,12 +1924,16 @@ export default function AiMatchPage() {
 
     return (
       <div className="ai-match-flow">
-        <section className="ai-match-hero-card">
+        <section className="ai-match-hero-card saju-hero">
+          <img className="saju-hero__bg" src="/images/saju/hero.webp" alt="" />
+          <div className="saju-hero__shade" aria-hidden="true" />
           <div className="ai-match-hero-copy">
-            <p>AI 프로필을 만들고 축제에서 어울릴 사람을 찾아보세요!</p>
+            <p>AI가 풀어주는 당신의 인연 이야기</p>
             <h2>AI 사주 소개팅</h2>
             <span>사주 궁합까지 보고 축제에서 같이 걸을 사람을 찾는 현장 매칭</span>
+            <em className="saju-hero__quote">“좋은 인연은, 언제나 이유가 있더라.”</em>
           </div>
+          <span className="saju-hero__seal" aria-hidden="true">緣</span>
           <div className="ai-match-float-heart ai-match-float-heart--a" aria-hidden>
             <IconHeart className="h-5 w-5" />
           </div>
@@ -3219,6 +3226,7 @@ export default function AiMatchPage() {
       className={`uni-page ai-match-page ai-match-redesigned ai-match-redesigned--${activeScreen}${accessProfile ? " ai-match-redesigned--signed-in" : ""}`}
       data-i18n-skip
     >
+      {sajuSplash ? <SajuSplash onDone={() => setSajuSplash(false)} /> : null}
       <header className="ai-match-topbar">
         {activeScreen === "intro" ? (
           <span className="ai-match-topbar-spacer" aria-hidden="true" />

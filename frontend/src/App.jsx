@@ -49,7 +49,10 @@ export default function App() {
   const isAdminRoute = location.pathname.startsWith("/admin");
   const showCustomerNav = isV2Shell && !isTableBoardRoute && !isAdminRoute;
   // 스플래시는 손님 화면에서 세션당 한 번. 운영 콘솔·QR 주문·현황판으로 바로 들어오면 안 띄운다.
-  const [splash, setSplash] = useState(() => showCustomerNav && shouldShowSplash());
+  const [splash, setSplash] = useState(
+    // 소개팅 탭으로 바로 열면 그쪽 사주 스플래시가 대신 뜬다.
+    () => showCustomerNav && !window.location.pathname.startsWith("/ai-match") && shouldShowSplash(),
+  );
   const closeSplash = useCallback(() => setSplash(false), []);
 
   return (
