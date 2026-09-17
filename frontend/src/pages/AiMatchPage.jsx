@@ -36,7 +36,8 @@ import {
   toggleAiMatchFavorite,
   updateAiMatchProfile,
 } from "../api";
-import { SajuCompatibilityPanel, SajuPanel, SajuScoreBadge } from "../components/SajuCard";
+import { SajuPanel } from "../components/SajuCard";
+import { MatchCardBlock, MatchMissingBanner, MatchReport, MatchTop3 } from "../components/SajuMatch";
 
 const MEET_PLACES = ["총학생회 부스"];
 const MEET_PLACE_MAP_TARGET = {
@@ -58,7 +59,7 @@ const NAV_ITEMS = [
   { id: "my", label: "MY", icon: IconUsers },
   { id: "inquiry", label: "문의", icon: IconChat },
 ];
-const PROFILE_FILTERS = ["전체", "남자", "여자", "신청 가능", "좋아요"];
+const PROFILE_FILTERS = ["전체", "찰떡 궁합", "남자", "여자", "신청 가능", "좋아요"];
 const REGISTRATION_TAGS = ["운동", "음악", "영화", "여행", "맛집", "독서", "게임", "보드게임", "사진", "공연", "기타"];
 const MBTI_OPTIONS = [
   "ISTJ",
@@ -540,6 +541,8 @@ function matchesProfileFilter(filter, profile) {
   if (filter === "남자") return profile.gender === "남성";
   if (filter === "여자") return profile.gender === "여성";
   if (filter === "신청 가능") return profile.isRequestable;
+  // 사주 궁합 80점 이상. 둘 다 생년월일이 있어야 점수가 있다.
+  if (filter === "찰떡 궁합") return Number(profile.compatibility?.score) >= 80;
   return true;
 }
 
@@ -691,6 +694,8 @@ export default function AiMatchPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [peopleTagFilters, setPeopleTagFilters] = useState([]);
   const [peopleFiltersOpen, setPeopleFiltersOpen] = useState(false);
+  // 목록 정렬: 궁합 점수 높은 순이 기본. 점수 없는 사람은 뒤로.
+  const [peopleSort, setPeopleSort] = useState("match");
   const [peopleMbtiFilter, setPeopleMbtiFilter] = useState("");
   const [favoriteProfileIds, setFavoriteProfileIds] = useState([]);
   const [expandedTagProfileIds, setExpandedTagProfileIds] = useState([]);
@@ -782,12 +787,26 @@ export default function AiMatchPage() {
         : successMessage;
   const isDetailScreen = Boolean(selectedProfile);
   const decoratedProfiles = buildDecoratedProfiles(profiles);
-  const filteredProfiles = decoratedProfiles.filter(
-    (profile) =>
-      matchesProfileFilter(activeFilter, profile) &&
-      (activeFilter !== "좋아요" || isFavoriteProfile(profile.id)) &&
-      matchesDiscoveryFilters(profile, searchQuery, peopleMbtiFilter, peopleTagFilters),
-  );
+  const filteredProfiles = decoratedProfiles
+    .filter(
+      (profile) =>
+        matchesProfileFilter(activeFilter, profile) &&
+        (activeFilter !== "좋아요" || isFavoriteProfile(profile.id)) &&
+        matchesDiscoveryFilters(profile, searchQuery, peopleMbtiFilter, peopleTagFilters),
+    )
+    .sort((a, b) => {
+      if (peopleSort === "match") {
+        const sa = Number.isFinite(Number(a.compatibility?.score)) ? Number(a.compatibility.score) : -1;
+        const sb = Number.isFinite(Number(b.compatibility?.score)) ? Number(b.compatibility.score) : -1;
+        if (sb !== sa) return sb - sa;
+      }
+      return Date.parse(b.createdAt || 0) - Date.parse(a.createdAt || 0);
+    });
+  // 나와 궁합이 가장 좋은 세 명(점수가 있는 사람만).
+  const topMatches = decoratedProfiles
+    .filter((profile) => profile.compatibility && profile.id !== accessProfile?.id)
+    .sort((a, b) => Number(b.compatibility.score) - Number(a.compatibility.score))
+    .slice(0, 3);
   const latestSentRequestMap = buildLatestSentRequestMap(accessSentRequests);
   const selectedDetailProfile = selectedProfile
     ? buildDecoratedProfiles([selectedProfile])[0]
@@ -2381,7 +2400,11 @@ export default function AiMatchPage() {
             ) : null}
           </label>
 
-          <div className="am-disc__row">
+          <div className="am-disc__row am-disc__row--3">
+            <div className="am-seg am-seg--sort" role="group" aria-label="정렬">
+              <button type="button" className={`am-seg__btn${peopleSort === "match" ? " is-on" : ""}`} onClick={() => setPeopleSort("match")}>궁합순</button>
+              <button type="button" className={`am-seg__btn${peopleSort === "new" ? " is-on" : ""}`} onClick={() => setPeopleSort("new")}>최신순</button>
+            </div>
             <label className="am-disc__select">
               <span>MBTI</span>
               <select value={peopleMbtiFilter} onChange={(event) => setPeopleMbtiFilter(cleanMbtiValue(event.target.value))}>
@@ -2427,6 +2450,11 @@ export default function AiMatchPage() {
             </div>
           ) : null}
         </section>
+
+        {accessProfile && !accessProfile.saju ? <MatchMissingBanner onEdit={startEditingProfile} /> : null}
+        {accessProfile?.saju && topMatches.length ? (
+          <MatchTop3 profiles={topMatches} resolveImage={resolveApiAssetUrl} onOpen={openProfile} />
+        ) : null}
 
         <section className="ai-match-list-meta">
           <strong>{loading ? "불러오는 중..." : `${filteredProfiles.length}명`}</strong>
@@ -2478,9 +2506,15 @@ export default function AiMatchPage() {
                         <p>{profile.summary}</p>
                       </button>
 
+                      <MatchCardBlock
+                        compatibility={profile.compatibility}
+                        viewerHasSaju={Boolean(accessProfile?.saju)}
+                        targetHasSaju={Boolean(profile.saju)}
+                        onFixMine={startEditingProfile}
+                      />
+
                       <div className="ai-match-person-footer">
                         <div className="ai-match-inline-tags">
-                          <SajuScoreBadge compatibility={profile.compatibility} />
                           {shouldShowPeopleRequestStatus(sentRequest?.status) ? (
                             <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(sentRequest.status, sentRequest.statusReason)}`}>
                               신청 {requestStatusLabel}
@@ -2904,12 +2938,15 @@ export default function AiMatchPage() {
           </div>
         </section>
 
-        <SajuCompatibilityPanel
+        <MatchReport
           compatibility={selectedDetailProfile.compatibility}
+          mine={accessProfile?.saju}
+          theirs={selectedDetailProfile.saju}
+          myNickname={accessProfile?.nickname}
           nickname={selectedDetailProfile.nickname}
         />
 
-        {selectedDetailProfile.saju ? (
+        {selectedDetailProfile.saju && !selectedDetailProfile.compatibility ? (
           <SajuPanel
             saju={selectedDetailProfile.saju}
             title={`${selectedDetailProfile.nickname} 님의 사주`}

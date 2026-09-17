@@ -1003,3 +1003,29 @@
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__chev.is-open {
   transform: rotate(180deg);
 }
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__row--3 {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-seg--sort {
+  height: 40px;
+  padding: 3px;
+  border-radius: 12px;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-seg--sort .am-seg__btn {
+  height: 34px;
+  padding: 0 10px !important;
+  font-size: 13px !important;
+}
+
+@media (max-width: 400px) {
+  .app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__row--3 {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .app-shell.festival-shell[data-v2="true"] .ai-match-page .am-disc__row--3 .am-seg--sort {
+    grid-column: 1 / -1;
+  }
+}
