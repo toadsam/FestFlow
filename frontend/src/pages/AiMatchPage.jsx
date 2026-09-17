@@ -745,6 +745,7 @@ export default function AiMatchPage() {
   const accessSessionSeqRef = useRef(0);
   const accessSessionRestoredRef = useRef(false);
   const accessRefreshInFlightRef = useRef(false);
+  const accessRefreshPausedUntilRef = useRef(0);
   const requestSnapshotRef = useRef(null);
   const liveNoticeTimeoutRef = useRef(null);
   const selectedProfileRef = useRef(null);
@@ -990,13 +991,22 @@ export default function AiMatchPage() {
   useEffect(() => {
     if (!accessProfile || !accessNickname || !accessPin || isEditingProfile) return undefined;
 
+    // 신청함 갱신용 조용한 재로그인. 예전엔 2초마다 불러서 서버 레이트리밋(IP당)을 혼자 다 써 버렸다.
+    // 15초면 축제 현장에서 충분하고, 탭을 다시 볼 때는 바로 한 번 부른다. 429 를 받으면 1분 쉰다.
     const refreshSilently = () => {
       if (document.visibilityState === "hidden" || accessRefreshInFlightRef.current || submitting || accessSubmitting) {
+        return;
+      }
+      if (accessRefreshPausedUntilRef.current > Date.now()) {
         return;
       }
       accessRefreshInFlightRef.current = true;
       loadAccessProfile(accessNickname, accessPin, activeScreen, { closeModal: false, notify: true })
         .catch((error) => {
+          if (error?.status === 429) {
+            accessRefreshPausedUntilRef.current = Date.now() + 60_000;
+            return;
+          }
           if (isAccessExpiredError(error)) {
             clearAccessSession({ resetForm: true });
             setActiveScreen("intro");
@@ -1007,7 +1017,7 @@ export default function AiMatchPage() {
           accessRefreshInFlightRef.current = false;
         });
     };
-    const intervalId = window.setInterval(refreshSilently, 2000);
+    const intervalId = window.setInterval(refreshSilently, 15_000);
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         refreshSilently();

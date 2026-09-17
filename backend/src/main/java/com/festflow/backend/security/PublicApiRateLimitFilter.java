@@ -21,6 +21,7 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
 
     // IP 기준 한도. 축제 캠퍼스 와이파이(NAT)는 수백 명이 공인 IP 하나를 같이 쓰므로 소개팅 쪽은 넉넉히 잡는다.
     // 비밀번호 무차별 대입은 AiMatchService 의 닉네임별 실패 잠금(10회/10분)이 따로 막는다.
+    // 로그인(access)은 앱이 신청함 갱신용으로 15초마다 다시 부르므로 IP 한도는 폭주 방지 수준(3000/10분)만 둔다.
     private static final List<Rule> RULES = List.of(
             new Rule("POST", Pattern.compile("^/api/auth/login$"), "admin-login", 10, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/staff/auth/login$"), "staff-login", 10, Duration.ofMinutes(10)),
@@ -30,7 +31,7 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
             new Rule("GET", Pattern.compile("^/api/ai/visitor-guide/.*"), "ai-visitor-guide", 30, Duration.ofMinutes(1)),
             new Rule("POST", Pattern.compile("^/api/ai-match/image-preview$"), "ai-match-image-preview", 40, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/ai-match/profiles$"), "ai-match-profile-create", 60, Duration.ofMinutes(10)),
-            new Rule("POST", Pattern.compile("^/api/ai-match/profiles/access$"), "ai-match-profile-access", 300, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/profiles/access$"), "ai-match-profile-access", 3000, Duration.ofMinutes(10)),
             new Rule("GET", Pattern.compile("^/api/ai-match/phone-check$"), "ai-match-phone-check", 300, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/ai-match/profiles/\\d+/(requests|favorite)$"), "ai-match-profile-action", 300, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/ai-match/requests/\\d+/(accept|reject|cancel|meetup/propose|meetup/confirm)$"), "ai-match-request-action", 300, Duration.ofMinutes(10)),

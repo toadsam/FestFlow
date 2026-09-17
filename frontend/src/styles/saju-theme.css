@@ -726,3 +726,377 @@
     animation: none !important;
   }
 }
+
+/* ---------- 신청함 · MY · 문의: 요약 카드는 밤하늘, 나머지는 흰 카드에 보라·금 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-summary {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 6px;
+  min-height: 7.5rem;
+  padding: 18px 18px 16px !important;
+  border: 0 !important;
+  border-radius: 22px !important;
+  background:
+    linear-gradient(90deg, rgba(29, 23, 64, 0.92) 0%, rgba(29, 23, 64, 0.7) 55%, rgba(29, 23, 64, 0.3) 100%),
+    url("/images/saju/hero.webp") 78% 50% / cover no-repeat, var(--saju-night) !important;
+  color: #fff !important;
+  box-shadow: 0 12px 30px rgba(42, 31, 77, 0.26) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-summary strong {
+  font-family: var(--saju-serif) !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  line-height: 1.2;
+  background: linear-gradient(90deg, #fff4dc 0%, #f4e2ff 60%, #c9b3ff 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent !important;
+  text-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-summary p {
+  margin: 0;
+  max-width: 82%;
+  font-size: 13px !important;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.82) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-summary span {
+  justify-self: start;
+  margin-top: 4px;
+  padding: 5px 11px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(217, 180, 90, 0.18) !important;
+  color: #ffe9b8 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  box-shadow: inset 0 0 0 1px rgba(217, 180, 90, 0.55) !important;
+}
+
+/* 받은/보낸 탭 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-filter-bar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 16px;
+  background: rgba(109, 79, 210, 0.08);
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-filter-bar .ai-match-filter-chip {
+  height: 40px;
+  justify-content: center;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  color: var(--v2-text-2) !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  filter: none !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-filter-bar .ai-match-filter-chip.is-active {
+  background: #fff !important;
+  color: var(--saju-purple-dark) !important;
+  box-shadow: 0 2px 10px rgba(42, 31, 77, 0.12) !important;
+}
+
+/* 신청 카드 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-card {
+  gap: 8px;
+  padding: 16px !important;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: #fff !important;
+  box-shadow: 0 2px 12px rgba(42, 31, 77, 0.06), 0 0 0 1px rgba(109, 79, 210, 0.1) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-head strong,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-person strong {
+  font-family: var(--saju-serif) !important;
+  font-size: 17px !important;
+  font-weight: 700 !important;
+  color: var(--saju-ink) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-head small {
+  color: var(--v2-text-3) !important;
+  font-size: 12px !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-card p {
+  margin: 0;
+  color: var(--v2-text-2) !important;
+  font-size: 13.5px !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-card > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--saju-purple-dark) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-history-card em {
+  display: block;
+  margin: 2px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border-left: 3px solid var(--saju-gold);
+  background: var(--saju-purple-tint);
+  color: var(--v2-text) !important;
+  font-family: var(--saju-serif);
+  font-style: normal;
+  font-size: 13.5px !important;
+  line-height: 1.55;
+}
+
+/* 상태 알약 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-status {
+  border: 0 !important;
+  border-radius: 999px !important;
+  padding: 4px 10px !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-status--pending {
+  background: var(--saju-purple-soft) !important;
+  color: var(--saju-purple-dark) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-status--success {
+  background: var(--saju-gold-soft) !important;
+  color: #8a5f10 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-status--danger {
+  background: var(--v2-red-soft) !important;
+  color: var(--v2-red) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-status--muted {
+  background: var(--v2-gray) !important;
+  color: var(--v2-text-3) !important;
+}
+
+/* 수락·거절·취소·프로필 수정 줄: 첫 버튼은 보라 채움 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-actions {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-actions .ai-match-secondary-button {
+  min-height: 44px;
+  border-radius: 14px !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-actions .ai-match-secondary-button:first-child:not(.ai-match-secondary-button--danger) {
+  background: linear-gradient(135deg, #7457dc 0%, #5b3fb0 100%) !important;
+  color: #fff !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-actions .ai-match-secondary-button:first-child:not(.ai-match-secondary-button--danger) * {
+  color: #fff !important;
+}
+
+/* 만남 제안 박스 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-meetup-box {
+  border-radius: 14px !important;
+  background: var(--saju-purple-tint) !important;
+  box-shadow: inset 0 0 0 1px rgba(109, 79, 210, 0.14) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-meetup-box__head strong {
+  color: var(--saju-purple-dark) !important;
+}
+
+/* 비어 있을 때 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-empty-card {
+  position: relative;
+  padding: 26px 18px 20px !important;
+  text-align: center;
+  background: #fff !important;
+  box-shadow: 0 0 0 1px rgba(109, 79, 210, 0.1) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-empty-card::before {
+  content: "☾";
+  display: block;
+  margin-bottom: 6px;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--saju-gold);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-empty-card strong {
+  font-family: var(--saju-serif) !important;
+  font-size: 17px !important;
+  color: var(--saju-ink) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-empty-card .ai-match-secondary-button {
+  justify-self: center;
+  margin: 6px auto 0;
+}
+
+/* ---------- MY ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-card {
+  gap: 14px;
+  padding: 18px !important;
+  background: #fff !important;
+  box-shadow: 0 2px 12px rgba(42, 31, 77, 0.06), 0 0 0 1px rgba(109, 79, 210, 0.1) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-profile {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 14px;
+  align-items: center;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-photo {
+  width: 84px;
+  height: 84px;
+  border-radius: 50% !important;
+  overflow: hidden;
+  background: var(--saju-purple-soft) !important;
+  color: var(--saju-purple) !important;
+  box-shadow: 0 0 0 3px #fff, 0 0 0 5px var(--saju-purple), 0 0 0 7px rgba(217, 180, 90, 0.5) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-copy em {
+  width: fit-content;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--saju-purple-soft) !important;
+  color: var(--saju-purple-dark) !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  font-style: normal;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-copy strong {
+  font-family: var(--saju-serif) !important;
+  font-size: 21px !important;
+  font-weight: 700 !important;
+  color: var(--saju-ink) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-copy p {
+  margin: 0;
+  font-size: 13px !important;
+  color: var(--v2-text-2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-copy .ai-match-inline-tags span {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--saju-purple-tint) !important;
+  color: var(--saju-purple-dark) !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  box-shadow: inset 0 0 0 1px rgba(109, 79, 210, 0.14) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-stats span {
+  display: grid;
+  gap: 2px;
+  justify-items: center;
+  padding: 12px 8px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: var(--saju-purple-tint) !important;
+  box-shadow: inset 0 0 0 1px rgba(109, 79, 210, 0.12) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-stats strong {
+  font-family: var(--saju-serif) !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  line-height: 1;
+  color: var(--saju-purple-dark) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-stats small {
+  font-size: 12px !important;
+  color: var(--v2-text-2) !important;
+}
+
+/* MY 버튼 줄: 수정(보라) · 삭제(빨강 연함) · 로그아웃(회색) */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-card .ai-match-request-actions {
+  grid-auto-flow: row;
+  grid-template-columns: 1fr 1fr;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-my-card .ai-match-request-actions .ai-match-secondary-button:last-child {
+  grid-column: 1 / -1;
+  background: var(--v2-gray) !important;
+  color: var(--v2-text-2) !important;
+}
+
+/* 내 사주 패널 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-panel {
+  border: 0 !important;
+  border-radius: 20px !important;
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(217, 180, 90, 0.22), rgba(255, 255, 255, 0) 60%),
+    radial-gradient(120% 90% at 0% 0%, rgba(109, 79, 210, 0.12), rgba(255, 255, 255, 0) 55%),
+    #fffdf8 !important;
+  box-shadow: 0 0 0 1px rgba(217, 180, 90, 0.35) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-panel__head strong {
+  font-family: var(--saju-serif) !important;
+  font-size: 18px !important;
+  color: var(--saju-ink) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-zodiac {
+  background: var(--saju-gold-soft) !important;
+  border-color: rgba(217, 180, 90, 0.6) !important;
+  color: #8a5f10 !important;
+}
+
+/* 문의: 확인 목록 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-contact-list article {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: var(--saju-purple-tint);
+  box-shadow: inset 0 0 0 1px rgba(109, 79, 210, 0.1);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-contact-list article strong {
+  font-family: var(--saju-serif) !important;
+  color: var(--saju-ink) !important;
+}
