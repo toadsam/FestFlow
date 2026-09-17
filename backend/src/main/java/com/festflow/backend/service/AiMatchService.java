@@ -17,6 +17,7 @@ import com.festflow.backend.dto.AiMatchPhoneCheckDto;
 import com.festflow.backend.dto.AiMatchProfileResponseDto;
 import com.festflow.backend.dto.AiMatchProfileUpdateDto;
 import com.festflow.backend.dto.AiMatchRequestCreateDto;
+import com.festflow.backend.dto.AiMatchRequestQuotaDto;
 import com.festflow.backend.dto.AiMatchRequestResponseDto;
 import com.festflow.backend.dto.SajuCompatibilityDto;
 import com.festflow.backend.dto.AiMatchNicknameCheckDto;
@@ -59,6 +60,8 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 public class AiMatchService {
 
     private static final int MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE = 2;
+    /** 한 사람이 축제 동안 보낼 수 있는 데이트 신청 수. 취소·거절도 센다(보내는 행동 자체를 제한). */
+    public static final int MAX_SENT_REQUESTS_PER_PROFILE = 3;
 
     private final AiMatchProfileRepository profileRepository;
     private final AiMatchRequestRepository requestRepository;
@@ -311,7 +314,22 @@ public class AiMatchService {
                         .map(this::toRequestDto)
                         .toList(),
                 getDiscoverableProfiles(profile.getId(), profile),
-                favoriteRepository.findActiveProfileIdsByRequesterProfileId(profile.getId())
+                favoriteRepository.findActiveProfileIdsByRequesterProfileId(profile.getId()),
+                toRequestQuotaDto(sentRequests)
+        );
+    }
+
+    /** 상대가 계정을 지워서 닫힌 신청은 내 잘못이 아니니 횟수에서 뺀다. */
+    private static boolean countsTowardQuota(AiMatchRequest request) {
+        return !"PROFILE_DELETED".equals(request.getStatusReason());
+    }
+
+    private static AiMatchRequestQuotaDto toRequestQuotaDto(List<AiMatchRequest> sentRequests) {
+        int used = (int) sentRequests.stream().filter(AiMatchService::countsTowardQuota).count();
+        return new AiMatchRequestQuotaDto(
+                MAX_SENT_REQUESTS_PER_PROFILE,
+                used,
+                Math.max(0, MAX_SENT_REQUESTS_PER_PROFILE - used)
         );
     }
 
@@ -563,6 +581,14 @@ public class AiMatchService {
         }
         if (requestRepository.existsByRequesterProfileIdAndProfileIdAndStatus(requesterProfile.getId(), profile.getId(), "PENDING")) {
             throw new ResponseStatusException(CONFLICT, "이미 대기 중인 데이트 신청이 있습니다.");
+        }
+        List<AiMatchRequest> sentRequests = requestRepository.findAllByRequesterProfileIdOrderByCreatedAtDesc(requesterProfile.getId());
+        closeRequestsWithInactiveParticipants(sentRequests);
+        if (toRequestQuotaDto(sentRequests).remaining() <= 0) {
+            throw new ResponseStatusException(
+                    CONFLICT,
+                    "데이트 신청은 한 사람당 " + MAX_SENT_REQUESTS_PER_PROFILE + "번까지만 보낼 수 있어요. 이미 다 썼어요."
+            );
         }
         String meetPlace = trimRequired(requestDto.meetPlace(), "meetPlace", 120);
         String message = trimRequired(requestDto.message(), "message", 500);

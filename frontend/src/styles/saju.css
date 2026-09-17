@@ -939,18 +939,19 @@
   gap: 4px;
   padding: 14px;
   border-radius: 16px;
-  background: var(--sm-ink);
+  background: #e8f3ff;
 }
 
 .app-shell .sm-tip strong {
+  display: block;
   font-size: 12px;
   font-weight: 800;
-  color: #ffd76a !important;
+  color: #1b64da !important;
 }
 
 .app-shell .sm-tip p {
   margin: 0;
   font-size: 13.5px;
   line-height: 1.5;
-  color: #fff !important;
+  color: #191f28 !important;
 }

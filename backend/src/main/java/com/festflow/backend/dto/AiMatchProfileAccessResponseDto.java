@@ -9,6 +9,7 @@ public record AiMatchProfileAccessResponseDto(
         List<AiMatchRequestResponseDto> receivedRequests,
         List<AiMatchRequestResponseDto> sentRequests,
         List<AiMatchProfileResponseDto> profiles,
-        List<Long> favoriteProfileIds
+        List<Long> favoriteProfileIds,
+        AiMatchRequestQuotaDto requestQuota
 ) {
 }

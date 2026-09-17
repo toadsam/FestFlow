@@ -1029,3 +1029,75 @@
     grid-column: 1 / -1;
   }
 }
+
+/* 데이트 신청 횟수(한 사람당 3번) */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--v2-blue-soft);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota--sheet {
+  margin: 4px 0 6px;
+  padding: 12px 14px;
+  background: #fff;
+  box-shadow: 0 0 0 1px var(--v2-line);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota--done {
+  background: #fff3f3;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota__text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota__text strong {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--v2-blue-dark);
+  letter-spacing: -0.2px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota--done .am-quota__text strong {
+  color: #d63b3b;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota__text small {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #6b7684;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota__dots {
+  display: inline-flex;
+  flex: none;
+  gap: 6px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota__dots i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: inset 0 0 0 2px var(--v2-blue);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota__dots i.is-used {
+  background: var(--v2-blue);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota--done .am-quota__dots i {
+  box-shadow: inset 0 0 0 2px #d63b3b;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-quota--done .am-quota__dots i.is-used {
+  background: #d63b3b;
+}

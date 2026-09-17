@@ -260,6 +260,30 @@ function canSendRequest(status) {
   return !status || status === "REJECTED" || status === "CANCELED";
 }
 
+// 한 사람이 보낼 수 있는 데이트 신청 수. 서버(AiMatchService.MAX_SENT_REQUESTS_PER_PROFILE)와 같은 값.
+const MAX_SENT_REQUESTS = 3;
+
+// 서버가 주는 requestQuota 를 쓰고, 없으면 보낸 신청에서 센다(상대 계정 삭제로 닫힌 건 제외).
+function resolveRequestQuota(quota, sentRequests) {
+  if (quota && Number.isFinite(Number(quota.limit))) {
+    const limit = Number(quota.limit);
+    const used = Number(quota.used) || 0;
+    return { limit, used, remaining: Math.max(0, limit - used) };
+  }
+  const used = (sentRequests || []).filter((request) => request.statusReason !== "PROFILE_DELETED").length;
+  return { limit: MAX_SENT_REQUESTS, used, remaining: Math.max(0, MAX_SENT_REQUESTS - used) };
+}
+
+function RequestQuotaDots({ quota }) {
+  return (
+    <span className="am-quota__dots" aria-hidden="true">
+      {Array.from({ length: quota.limit }, (_, index) => (
+        <i key={index} className={index < quota.used ? "is-used" : ""} />
+      ))}
+    </span>
+  );
+}
+
 function RequestFaceThumb({ imageUrl, name, onClick }) {
   const resolvedUrl = resolveApiAssetUrl(imageUrl || "");
   const initial = `${name || "?"}`.slice(0, 1);
@@ -653,6 +677,7 @@ export default function AiMatchPage() {
   const [accessProfile, setAccessProfile] = useState(null);
   const [accessRequests, setAccessRequests] = useState([]);
   const [accessSentRequests, setAccessSentRequests] = useState([]);
+  const [accessRequestQuota, setAccessRequestQuota] = useState(null);
   const [accessNickname, setAccessNickname] = useState("");
   const [accessPin, setAccessPin] = useState("");
   const [accessPhoneNumber, setAccessPhoneNumber] = useState("");
@@ -808,6 +833,8 @@ export default function AiMatchPage() {
     .sort((a, b) => Number(b.compatibility.score) - Number(a.compatibility.score))
     .slice(0, 3);
   const latestSentRequestMap = buildLatestSentRequestMap(accessSentRequests);
+  const requestQuota = resolveRequestQuota(accessRequestQuota, accessSentRequests);
+  const requestQuotaExhausted = Boolean(accessProfile) && requestQuota.remaining <= 0;
   const selectedDetailProfile = selectedProfile
     ? buildDecoratedProfiles([selectedProfile])[0]
     : null;
@@ -1086,6 +1113,7 @@ export default function AiMatchPage() {
     setAccessProfile(null);
     setAccessRequests([]);
     setAccessSentRequests([]);
+    setAccessRequestQuota(null);
     setProfiles([]);
     setFavoriteProfileIds([]);
     setAccessNickname("");
@@ -1259,6 +1287,7 @@ export default function AiMatchPage() {
     setAccessProfile(response.profile || null);
     setAccessRequests(nextReceivedRequests);
     setAccessSentRequests(nextSentRequests);
+    setAccessRequestQuota(response.requestQuota || null);
     setProfiles(nextProfiles);
     setFavoriteProfileIds(nextFavoriteProfileIds);
     setAccessNickname(nextNickname);
@@ -1689,6 +1718,11 @@ export default function AiMatchPage() {
     if (!accessProfile) {
       setErrorMessage("등록한 닉네임과 비밀번호로 먼저 입장해 주세요.");
       openAccessModal("intro");
+      return;
+    }
+
+    if (requestQuotaExhausted) {
+      setErrorMessage(`데이트 신청은 한 사람당 ${requestQuota.limit}번까지만 보낼 수 있어요.`);
       return;
     }
 
@@ -2549,7 +2583,9 @@ export default function AiMatchPage() {
                                 ? "다시 신청"
                                 : sentRequest && sentRequest.status === "ACCEPTED"
                                   ? "수락 상태 보기"
-                                  : "데이트 신청"}
+                                  : requestQuotaExhausted
+                                    ? "신청 마감"
+                                    : "데이트 신청"}
                           </span>
                         </button>
                       </div>
@@ -2763,6 +2799,18 @@ export default function AiMatchPage() {
           <span>{accessRequests.length + accessSentRequests.length}건</span>
         </section>
 
+        <section className={`am-quota${requestQuotaExhausted ? " am-quota--done" : ""}`}>
+          <div className="am-quota__text">
+            <strong>
+              {requestQuotaExhausted
+                ? "데이트 신청을 모두 보냈어요"
+                : `데이트 신청 ${requestQuota.remaining}번 남았어요`}
+            </strong>
+            <small>한 사람당 {requestQuota.limit}번까지 보낼 수 있어요. 취소하거나 거절돼도 횟수는 돌아오지 않아요.</small>
+          </div>
+          <RequestQuotaDots quota={requestQuota} />
+        </section>
+
         <section className="ai-match-filter-bar">
           <button
             type="button"
@@ -2971,6 +3019,22 @@ export default function AiMatchPage() {
             </button>
           </div>
 
+          {accessProfile ? (
+            <div className={`am-quota am-quota--sheet${requestQuotaExhausted ? " am-quota--done" : ""}`}>
+              <div className="am-quota__text">
+                <strong>
+                  {requestQuotaExhausted
+                    ? "신청 횟수를 모두 썼어요"
+                    : canSendRequest(detailRequestStatus)
+                      ? `보내면 ${requestQuota.remaining - 1}번 남아요`
+                      : `${requestQuota.remaining}번 남았어요`}
+                </strong>
+                <small>한 사람당 {requestQuota.limit}번까지 · 취소해도 돌아오지 않아요</small>
+              </div>
+              <RequestQuotaDots quota={requestQuota} />
+            </div>
+          ) : null}
+
           <label className="ai-match-field">
             <div className="ai-match-field-head">
               <span>신청자 닉네임</span>
@@ -3011,7 +3075,7 @@ export default function AiMatchPage() {
           <button
             type="submit"
             className="ai-match-primary-button ai-match-primary-button--sheet"
-            disabled={submitting || !canSendRequest(detailRequestStatus)}
+            disabled={submitting || !canSendRequest(detailRequestStatus) || requestQuotaExhausted}
           >
             {submitting ? (
               <span className="ai-match-primary-button__icon">
@@ -3025,9 +3089,11 @@ export default function AiMatchPage() {
                   ? "신청 완료"
                   : detailRequestStatus === "ACCEPTED"
                     ? "수락됨"
-                    : selectedDetailRequest && (detailRequestStatus === "REJECTED" || detailRequestStatus === "CANCELED")
-                      ? "다시 신청 보내기"
-                      : "데이트 신청 보내기"}
+                    : requestQuotaExhausted
+                      ? "신청 횟수를 모두 썼어요"
+                      : selectedDetailRequest && (detailRequestStatus === "REJECTED" || detailRequestStatus === "CANCELED")
+                        ? "다시 신청 보내기"
+                        : "데이트 신청 보내기"}
             </span>
             {!submitting ? (
               <span className="ai-match-primary-button__accent" aria-hidden="true">
