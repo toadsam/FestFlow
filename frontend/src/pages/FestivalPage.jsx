@@ -12,6 +12,7 @@ import {
 import { IconBox, IconChevronRight } from "../components/UxIcons";
 import { CountUp, HeroReeds, IconBeer, IconHeartSaju, Mascot, PaperPlane } from "../components/v2/V2Kit";
 import { resolveBoothImageUrl } from "../config/boothImages";
+import { TableDots } from "../components/v2/TableMap";
 import { FESTIVAL, MAIN_BOOTH_FALLBACK, findMainBooth } from "../config/festival";
 import { fallbackEvents } from "../data/festivalUiData";
 
@@ -330,6 +331,7 @@ export default function FestivalPage() {
             {mainBoothSeats ? (
               <span className={`v2-main-booth__seats${mainBoothSeats.free === 0 ? " is-full" : ""}`}>
                 {mainBoothSeats.free === 0 ? "지금 만석" : `빈 테이블 ${mainBoothSeats.free}/${mainBoothSeats.total}`}
+                <TableDots free={mainBoothSeats.free} total={mainBoothSeats.total} />
                 <small style={{ fontWeight: 500, color: "var(--v2-text-3)" }}>· {relativeTime(boothsUpdatedAt)}</small>
               </span>
             ) : null}

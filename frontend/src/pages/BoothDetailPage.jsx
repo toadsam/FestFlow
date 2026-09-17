@@ -17,7 +17,8 @@ import { IconArrowLeft, IconClock, IconMapPin, IconUsers } from "../components/U
 import { DishGrid, DishSheet } from "../components/v2/DishGrid";
 import { BottomSheet, IconPhone, useToast } from "../components/v2/V2Kit";
 import { resolveBoothImageUrl } from "../config/boothImages";
-import { MAIN_BOOTH_FALLBACK, isMainBooth } from "../config/festival";
+import { FESTIVAL, MAIN_BOOTH_FALLBACK, isMainBooth } from "../config/festival";
+import { TableMap } from "../components/v2/TableMap";
 import { fallbackBooths } from "../data/festivalUiData";
 import {
   clearReservationAuth,
@@ -298,7 +299,8 @@ export default function BoothDetailPage() {
   const availableTables = tables.filter(canReserveTable).length;
   const freeSummary = freeTablesSummary(tables);
   const seatsTone = tables.length === 0 ? "none" : availableTables === 0 ? "full" : "ok";
-  const reservationOn = booth?.reservationEnabled !== false;
+  // 이번 축제는 예약을 안 받는다(config). 빈 자리 카드는 예약과 상관없이 보여 준다.
+  const reservationOn = FESTIVAL.reservations !== false && booth?.reservationEnabled !== false;
   const canReserve = Boolean(
     reservationToken && selectedTable && canReserveTable(selectedTable) && !myReservation && !penalty?.blocked && !noSeat,
   );
@@ -449,8 +451,8 @@ export default function BoothDetailPage() {
         </div>
       </div>
 
-      {reservationOn && (
-        <div className={`v2-seats v2-seats--${seatsTone} v2-rise`} style={{ "--i": 2 }} aria-live="polite">
+      <div className={`v2-seats v2-seats--${seatsTone} v2-seats--map v2-rise`} style={{ "--i": 2 }} aria-live="polite">
+        <div className="v2-seats__head">
           <div>
             <span className="v2-seats__label">
               지금 빈 자리
@@ -477,7 +479,8 @@ export default function BoothDetailPage() {
             </div>
           ) : null}
         </div>
-      )}
+        {tables.length > 0 ? <TableMap tables={tables} compact /> : null}
+      </div>
 
       {menuItems.length > 0 && (
         <section className="v2-section v2-rise" style={{ "--i": 3 }}>

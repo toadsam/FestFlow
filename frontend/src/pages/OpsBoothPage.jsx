@@ -17,10 +17,15 @@ import {
 } from "../api";
 import OpsBoothOrders from "../components/OpsBoothOrders";
 import { resolveBoothImageUrl } from "../config/boothImages";
+import { FESTIVAL } from "../config/festival";
+import { TableMap } from "../components/v2/TableMap";
 
 const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
 const BOOTH_CATEGORIES = ["주점", "음식", "체험", "이벤트", "굿즈", "안내", "응급", "포토존", "플리마켓", "기타"];
 const BOOTH_DAY_PARTS = ["상시", "주간", "야간"];
+
+// 이번 축제는 자리 예약을 안 받는다(config/festival.js). 예약 구역·예약 가능 좌석·예약 스위치를 숨긴다.
+const RESERVATIONS_ON = FESTIVAL.reservations !== false;
 
 const SECTIONS = [
   { id: "overview", label: "현황" },
@@ -29,7 +34,7 @@ const SECTIONS = [
   { id: "menu", label: "메뉴판" },
   { id: "reservations", label: "예약" },
   { id: "settings", label: "설정" },
-];
+].filter((section) => RESERVATIONS_ON || section.id !== "reservations");
 
 /* ---------- 작은 아이콘 ---------- */
 const svgProps = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
@@ -675,6 +680,8 @@ export default function OpsBoothPage() {
 
   /* ----- 파생값 ----- */
   const activeReservations = useMemo(() => data?.reservations?.activeReservations ?? [], [data]);
+  // 그림용은 서버가 준 그대로(편집 중인 초안 말고).
+  const serverTables = useMemo(() => data?.reservations?.tables ?? [], [data]);
 
   const tableSummary = useMemo(() => {
     const tables = reservationDraft.tables || [];
@@ -805,28 +812,44 @@ export default function OpsBoothPage() {
                   </span>
                 }
               >
-                <div className="ops-kpis">
+                <div className={`ops-kpis${RESERVATIONS_ON ? "" : " ops-kpis--3"}`}>
                   <button type="button" className="ops-kpi ops-kpi--green" onClick={() => jump("tables")} style={{ textAlign: "left" }}>
                     <small>빈 테이블</small>
                     <strong>{tableSummary.freeTables}<em>/ {tableSummary.totalTables}</em></strong>
-                    <span>이용중 {tableSummary.inUseTables} · 예약중 {tableSummary.reservedTables}</span>
+                    <span>이용중 {tableSummary.inUseTables}{RESERVATIONS_ON ? ` · 예약중 ${tableSummary.reservedTables}` : ""}</span>
                   </button>
                   <button type="button" className="ops-kpi ops-kpi--blue" onClick={() => jump("orders")} style={{ textAlign: "left" }}>
                     <small>입금 대기 주문</small>
                     <strong>{orderCounts.pending}<em>건</em></strong>
                     <span>조리 중 {orderCounts.cooking}건</span>
                   </button>
-                  <button type="button" className="ops-kpi ops-kpi--yellow" onClick={() => jump("reservations")} style={{ textAlign: "left" }}>
-                    <small>활성 예약</small>
-                    <strong>{activeReservations.length}<em>건</em></strong>
-                    <span>체크인 전 {activeReservations.filter((r) => r.status !== "CHECKED_IN").length}건</span>
-                  </button>
+                  {RESERVATIONS_ON && (
+                    <button type="button" className="ops-kpi ops-kpi--yellow" onClick={() => jump("reservations")} style={{ textAlign: "left" }}>
+                      <small>활성 예약</small>
+                      <strong>{activeReservations.length}<em>건</em></strong>
+                      <span>체크인 전 {activeReservations.filter((r) => r.status !== "CHECKED_IN").length}건</span>
+                    </button>
+                  )}
                   <div className="ops-kpi ops-kpi--violet">
                     <small>메뉴</small>
                     <strong>{menuItems.length}<em>개</em></strong>
                     <span>품절 {menuItems.filter((item) => item.soldOut).length}개</span>
                   </div>
                 </div>
+              </Card>
+
+              <Card
+                title="자리 한눈에"
+                desc="초록이 빈 테이블, 회색이 이용 중. 입구 스태프가 현황판을 누르면 여기와 손님 화면이 같이 바뀌어요."
+                actions={
+                  <Link to={`/ops/booth/${id}/tables`} className="ops-btn ops-btn--dark ops-btn--sm">현황판 열기</Link>
+                }
+              >
+                {serverTables.length ? (
+                  <TableMap tables={serverTables} />
+                ) : (
+                  <div className="ops-empty">아직 테이블이 없어요. 아래 자리 구역에서 만들어 주세요.</div>
+                )}
               </Card>
 
               <Card title="손님에게 보이는 한 줄" desc="주점 카드 위에 바로 뜨는 안내예요. 재료 소진, 마지막 주문 같은 걸 적어요.">
@@ -859,7 +882,7 @@ export default function OpsBoothPage() {
             <section id="tables" className="ops-section">
               <Card
                 title="자리"
-                desc="입구 스태프는 현황판에서 한 번 눌러 이용중/빈 자리를 바꿔요. 여기서는 테이블 구성을 고쳐요."
+                desc="입구 스태프는 현황판에서 한 번 눌러 이용 중/빈 자리를 바꿔요. 여기서는 테이블 이름과 좌석 수만 고쳐요."
                 actions={
                   <div className="ops-seg">
                     {[2, 4, 6, 8].map((n) => (
@@ -876,13 +899,6 @@ export default function OpsBoothPage() {
                   <Icons.arrow />
                 </Link>
 
-                <div className="ops-kpis">
-                  <div className="ops-kpi"><small>테이블</small><strong>{tableSummary.totalTables}<em>개</em></strong></div>
-                  <div className="ops-kpi ops-kpi--green"><small>빈 자리</small><strong>{tableSummary.freeTables}<em>개</em></strong></div>
-                  <div className="ops-kpi ops-kpi--violet"><small>이용중</small><strong>{tableSummary.inUseTables}<em>개</em></strong></div>
-                  <div className="ops-kpi ops-kpi--yellow"><small>예약중</small><strong>{tableSummary.reservedTables}<em>개</em></strong></div>
-                </div>
-
                 {reservationDraft.tables.length ? (
                   <div className="ops-tables">
                     {reservationDraft.tables.map((table, index) => {
@@ -897,9 +913,11 @@ export default function OpsBoothPage() {
                             <input value={table.tableName} onChange={(e) => updateTableDraft(index, { tableName: e.target.value })} placeholder="테이블 이름" />
                             <span className={`ops-chip ops-chip--dot ops-chip--${statusTone(status)}`}>{tableOccupancyLabel(table)}</span>
                           </div>
-                          <div className="ops-table__seats">
-                            <Stepper label="전체 좌석" value={table.totalSeats} onStep={(d) => stepTable(index, "totalSeats", d)} />
-                            <Stepper label="예약 가능" value={table.availableSeats} onStep={(d) => stepTable(index, "availableSeats", d)} />
+                          <div className="ops-table__seats" style={RESERVATIONS_ON ? undefined : { gridTemplateColumns: "minmax(0, 1fr)" }}>
+                            <Stepper label="좌석 수" value={table.totalSeats} onStep={(d) => stepTable(index, "totalSeats", d)} />
+                            {RESERVATIONS_ON && (
+                              <Stepper label="예약 가능" value={table.availableSeats} onStep={(d) => stepTable(index, "availableSeats", d)} />
+                            )}
                           </div>
                           <div className="ops-table__foot">
                             <span className="ops-sub">
@@ -924,17 +942,21 @@ export default function OpsBoothPage() {
                   <div className="ops-empty">아직 테이블이 없어요. 오른쪽 위 +4인 같은 버튼으로 추가해 주세요.</div>
                 )}
 
-                <div className="ops-divider" />
-                <div className="ops-grid-2">
-                  <Field label="예약 자리 유지 시간(분)" hint="예약 후 이 시간 안에 안 오면 자동으로 풀려요.">
-                    <input
-                      type="number"
-                      min="1"
-                      value={reservationDraft.maxReservationMinutes}
-                      onChange={(e) => setReservationDraft((prev) => ({ ...prev, maxReservationMinutes: e.target.value }))}
-                    />
-                  </Field>
-                </div>
+                {RESERVATIONS_ON && (
+                  <>
+                    <div className="ops-divider" />
+                    <div className="ops-grid-2">
+                      <Field label="예약 자리 유지 시간(분)" hint="예약 후 이 시간 안에 안 오면 자동으로 풀려요.">
+                        <input
+                          type="number"
+                          min="1"
+                          value={reservationDraft.maxReservationMinutes}
+                          onChange={(e) => setReservationDraft((prev) => ({ ...prev, maxReservationMinutes: e.target.value }))}
+                        />
+                      </Field>
+                    </div>
+                  </>
+                )}
               </Card>
             </section>
 
@@ -998,6 +1020,7 @@ export default function OpsBoothPage() {
             </section>
 
             {/* ===== 예약 ===== */}
+            {RESERVATIONS_ON && (
             <section id="reservations" className="ops-section">
               <Card
                 title="예약"
@@ -1071,6 +1094,7 @@ export default function OpsBoothPage() {
                 </div>
               </Card>
             </section>
+            )}
 
             {/* ===== 설정 ===== */}
             <section id="settings" className="ops-section">
@@ -1104,12 +1128,14 @@ export default function OpsBoothPage() {
                     <input value={draft.contentJson} onChange={(e) => setDraft((prev) => ({ ...prev, contentJson: e.target.value }))} placeholder="선택" />
                   </Field>
                 </div>
-                <Switch
-                  checked={draft.reservationEnabled}
-                  onChange={(checked) => setDraft((prev) => ({ ...prev, reservationEnabled: checked }))}
-                  title="자리 예약 받기"
-                  desc="끄면 손님 화면에서 예약 버튼이 사라져요. 빈 자리 표시는 그대로 보여요."
-                />
+                {RESERVATIONS_ON && (
+                  <Switch
+                    checked={draft.reservationEnabled}
+                    onChange={(checked) => setDraft((prev) => ({ ...prev, reservationEnabled: checked }))}
+                    title="자리 예약 받기"
+                    desc="끄면 손님 화면에서 예약 버튼이 사라져요. 빈 자리 표시는 그대로 보여요."
+                  />
+                )}
               </Card>
             </section>
           </>

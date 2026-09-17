@@ -94,7 +94,7 @@
   content: none !important;
 }
 
-.app-shell.app-shell.app-shell[data-ops-v2="true"] button:hover {
+.app-shell.app-shell.app-shell[data-ops-v2="true"] button:not(.ops-kpi):hover {
   background: transparent !important;
   color: inherit !important;
   transform: none !important;
@@ -544,21 +544,25 @@
   .app-shell[data-ops-v2="true"] .ops-kpis {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
+
+  .app-shell[data-ops-v2="true"] .ops-kpis--3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 .app-shell.app-shell.app-shell[data-ops-v2="true"] .ops-kpi {
   padding: 16px;
   border-radius: 16px;
-  background: var(--ops-bg);
+  background: var(--ops-bg) !important;
   display: grid;
   gap: 4px;
   min-width: 0;
 }
 
-.app-shell.app-shell.app-shell[data-ops-v2="true"] .ops-kpi--blue { background: var(--ops-blue-soft); }
-.app-shell.app-shell.app-shell[data-ops-v2="true"] .ops-kpi--green { background: var(--ops-green-soft); }
-.app-shell.app-shell.app-shell[data-ops-v2="true"] .ops-kpi--yellow { background: var(--ops-yellow-soft); }
-.app-shell.app-shell.app-shell[data-ops-v2="true"] .ops-kpi--violet { background: var(--ops-violet-soft); }
+.app-shell.app-shell.app-shell[data-ops-v2="true"] .ops-kpi--blue { background: var(--ops-blue-soft) !important; }
+.app-shell.app-shell.app-shell[data-ops-v2="true"] .ops-kpi--green { background: var(--ops-green-soft) !important; }
+.app-shell.app-shell.app-shell[data-ops-v2="true"] .ops-kpi--yellow { background: var(--ops-yellow-soft) !important; }
+.app-shell.app-shell.app-shell[data-ops-v2="true"] .ops-kpi--violet { background: var(--ops-violet-soft) !important; }
 
 .app-shell[data-ops-v2="true"] .ops-kpi small {
   font-size: 12px;

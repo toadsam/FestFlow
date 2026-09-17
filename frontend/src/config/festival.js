@@ -11,6 +11,8 @@ export const FESTIVAL = {
   posterUrl: "/images/poster.jpg",
   // 이번 축제 주점은 총학 주점 하나. 서버 부스 중 이름에 이 말이 들어간 부스를 주점 탭에 바로 띄운다.
   mainBoothKeyword: "총학",
+  // 이번 축제는 자리 예약을 안 받는다. 손님 화면의 예약 칸과 운영 콘솔의 예약 구역을 숨긴다(빈 자리 표시는 그대로).
+  reservations: false,
 };
 
 /**

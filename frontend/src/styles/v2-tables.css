@@ -492,3 +492,156 @@
   color: var(--v2-text) !important;
   background: var(--v2-gray) !important;
 }
+
+/* ---------- 테이블 그림(TableMap): 손님 화면·첫 화면·운영 콘솔 공용 ---------- */
+.app-shell .v2-tmap {
+  display: grid;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.app-shell .v2-tmap__bar {
+  display: flex;
+  gap: 3px;
+  height: 6px;
+}
+
+.app-shell .v2-tmap__bar i {
+  flex: 1 1 0;
+  border-radius: 999px;
+  background: #cfd4da;
+  transition: background 0.4s;
+}
+
+.app-shell .v2-tmap__bar i.is-available { background: #1fa06c; }
+.app-shell .v2-tmap__bar i.is-reserved { background: #f2b224; }
+
+.app-shell .v2-tmap__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.app-shell .v2-tmap--compact .v2-tmap__grid {
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+  gap: 6px;
+}
+
+.app-shell .v2-tmap__tile {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 10px 6px 9px;
+  border-radius: 14px;
+  background: #e6f6ee;
+  min-width: 0;
+  transition: background 0.4s, transform 0.2s;
+}
+
+.app-shell .v2-tmap__tile strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: #191f28 !important;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.2;
+}
+
+.app-shell .v2-tmap__tile small {
+  font-size: 11px;
+  font-weight: 700;
+  color: #1fa06c !important;
+}
+
+.app-shell .v2-tmap__icon {
+  width: 56px;
+  height: 35px;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.app-shell .v2-tmap--compact .v2-tmap__icon {
+  width: 46px;
+  height: 29px;
+}
+
+.app-shell .v2-tmap__top { fill: #1fa06c; transition: fill 0.4s; }
+.app-shell .v2-tmap__chair { fill: #7fd1ac; transition: fill 0.4s; }
+
+.app-shell .v2-tmap__tile.is-in_use,
+.app-shell .v2-tmap__tile.is-full {
+  background: #eceff3;
+}
+
+.app-shell .v2-tmap__tile.is-in_use small,
+.app-shell .v2-tmap__tile.is-full small {
+  color: #6b7684 !important;
+}
+
+.app-shell .v2-tmap__tile.is-in_use .v2-tmap__top,
+.app-shell .v2-tmap__tile.is-full .v2-tmap__top { fill: #8b95a1; }
+
+.app-shell .v2-tmap__tile.is-in_use .v2-tmap__chair,
+.app-shell .v2-tmap__tile.is-full .v2-tmap__chair { fill: #b0b8c1; }
+
+.app-shell .v2-tmap__tile.is-reserved { background: #fff5d6; }
+.app-shell .v2-tmap__tile.is-reserved small { color: #b7820c !important; }
+.app-shell .v2-tmap__tile.is-reserved .v2-tmap__top { fill: #f2b224; }
+.app-shell .v2-tmap__tile.is-reserved .v2-tmap__chair { fill: #f8d783; }
+
+.app-shell .v2-tmap__legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.app-shell .v2-tmap__legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #6b7684 !important;
+}
+
+.app-shell .v2-tmap__legend span::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #b0b8c1;
+}
+
+.app-shell .v2-tmap__legend .is-available::before { background: #1fa06c; }
+.app-shell .v2-tmap__legend .is-reserved::before { background: #f2b224; }
+
+/* 손님 카드: 그림이 들어가면 한 줄 구성으로 */
+.app-shell[data-v2="true"] .v2-seats--map {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.app-shell[data-v2="true"] .v2-seats__head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* 첫 화면 카드의 점 띠 */
+.app-shell .v2-tdots {
+  display: inline-flex;
+  gap: 3px;
+  margin-left: 2px;
+}
+
+.app-shell .v2-tdots i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: #cfd4da;
+}
+
+.app-shell .v2-tdots i.is-free { background: #1fa06c; }
