@@ -3265,13 +3265,15 @@ export default function AiMatchPage() {
 
       {accessModalOpen ? (
         <div className="ai-match-modal" role="dialog" aria-modal="true" aria-labelledby="ai-match-access-title">
-          <form ref={accessDialogRef} className="ai-match-dialog" onSubmit={handleAccessSubmit}>
-            <button type="button" className="ai-match-close" onClick={closeAccessModal}>
-              닫기
+          <form ref={accessDialogRef} className="ai-match-dialog am-login" onSubmit={handleAccessSubmit}>
+            <span className="am-login__handle" aria-hidden="true" />
+            <button type="button" className="ai-match-close am-login__close" aria-label="닫기" onClick={closeAccessModal}>
+              <IconX className="h-4 w-4" />
             </button>
-            <div className="ai-match-section-head">
+            <div className="am-login__head">
+              <span className="am-login__moon" aria-hidden="true">☾</span>
               <h2 id="ai-match-access-title">{getAccessModalTitle()}</h2>
-              <span>닉네임 + 비밀번호</span>
+              <p>가입할 때 정한 닉네임과 비밀번호로 들어가요.</p>
             </div>
             <label className="ai-match-field">
               <div className="ai-match-field-head">
@@ -3311,6 +3313,10 @@ export default function AiMatchPage() {
                 {getAccessSubmitLabel()}
               </span>
             </button>
+            <p className="am-login__foot">
+              <IconShield className="h-4 w-4" />
+              비밀번호를 잊었다면 총학생회 본부에서 확인해 드려요.
+            </p>
           </form>
         </div>
       ) : null}

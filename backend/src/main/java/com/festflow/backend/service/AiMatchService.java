@@ -42,18 +42,22 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.IOException;
 import java.time.DateTimeException;
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
@@ -62,6 +66,10 @@ public class AiMatchService {
     private static final int MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE = 2;
     /** 한 사람이 축제 동안 보낼 수 있는 데이트 신청 수. 취소·거절도 센다(보내는 행동 자체를 제한). */
     public static final int MAX_SENT_REQUESTS_PER_PROFILE = 3;
+    /** 같은 닉네임으로 비밀번호를 이만큼 틀리면 잠시 잠근다(IP 와 무관하게). */
+    private static final int MAX_PIN_FAILURES = 10;
+    private static final Duration PIN_FAILURE_WINDOW = Duration.ofMinutes(10);
+    private final Map<String, PinFailure> pinFailures = new ConcurrentHashMap<>();
 
     private final AiMatchProfileRepository profileRepository;
     private final AiMatchRequestRepository requestRepository;
@@ -829,12 +837,62 @@ public class AiMatchService {
         String safeNickname = trimRequired(nickname, "nickname", 40);
         String safePin = trimRequired(pin, "pin", 20);
         validatePin(safePin);
+        String failureKey = safeNickname.toLowerCase();
+        ensureNotLocked(failureKey);
         AiMatchProfile profile = profileRepository.findByNicknameIgnoreCaseAndStatus(safeNickname, "ACTIVE")
-                .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "닉네임 또는 비밀번호가 올바르지 않습니다."));
-        if (profile.getPinHash() == null || !passwordEncoder.matches(safePin, profile.getPinHash())) {
+                .orElse(null);
+        if (profile == null || profile.getPinHash() == null || !passwordEncoder.matches(safePin, profile.getPinHash())) {
+            recordPinFailure(failureKey);
             throw new ResponseStatusException(UNAUTHORIZED, "닉네임 또는 비밀번호가 올바르지 않습니다.");
         }
+        pinFailures.remove(failureKey);
         return profile;
+    }
+
+    /** 닉네임별 비밀번호 실패 횟수. 10분 안에 10번 틀리면 남은 시간 동안 잠근다. */
+    private static final class PinFailure {
+        private Instant windowStart;
+        private int count;
+
+        private PinFailure(Instant windowStart) {
+            this.windowStart = windowStart;
+        }
+    }
+
+    private void ensureNotLocked(String failureKey) {
+        PinFailure failure = pinFailures.get(failureKey);
+        if (failure == null) {
+            return;
+        }
+        synchronized (failure) {
+            Instant now = Instant.now();
+            if (Duration.between(failure.windowStart, now).compareTo(PIN_FAILURE_WINDOW) >= 0) {
+                pinFailures.remove(failureKey);
+                return;
+            }
+            if (failure.count >= MAX_PIN_FAILURES) {
+                long minutesLeft = Math.max(
+                        1,
+                        PIN_FAILURE_WINDOW.minus(Duration.between(failure.windowStart, now)).toMinutes() + 1
+                );
+                throw new ResponseStatusException(
+                        TOO_MANY_REQUESTS,
+                        "비밀번호를 여러 번 틀려서 잠시 잠겼어요. " + minutesLeft + "분 뒤에 다시 해 주세요."
+                );
+            }
+        }
+    }
+
+    private void recordPinFailure(String failureKey) {
+        PinFailure failure = pinFailures.computeIfAbsent(failureKey, ignored -> new PinFailure(Instant.now()));
+        synchronized (failure) {
+            Instant now = Instant.now();
+            if (Duration.between(failure.windowStart, now).compareTo(PIN_FAILURE_WINDOW) >= 0) {
+                failure.windowStart = now;
+                failure.count = 0;
+            }
+            failure.count++;
+        }
     }
 
     private void ensureNicknameAvailable(String nickname, Long profileId) {

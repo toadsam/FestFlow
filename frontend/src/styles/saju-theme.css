@@ -475,3 +475,137 @@
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-copy .sm-card {
   margin: 6px 0 0;
 }
+
+/* ---------- 로그인 시트 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-modal {
+  /* index.css 의 `.ai-match-redesigned > * { position: relative }` 가 fixed 를 덮어서 시트가 화면을 못 덮던 문제 */
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2500 !important;
+  align-items: end;
+  padding: 0 0 calc(var(--v2-nav-height) + env(safe-area-inset-bottom, 0px)) !important;
+  background: rgba(29, 23, 64, 0.55) !important;
+  backdrop-filter: blur(4px) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login {
+  position: relative;
+  gap: 12px !important;
+  max-width: 100% !important;
+  padding: 10px 20px calc(18px + env(safe-area-inset-bottom, 0px)) !important;
+  border-radius: 26px 26px 0 0 !important;
+  background:
+    radial-gradient(120% 60% at 100% 0%, rgba(109, 79, 210, 0.1), rgba(255, 255, 255, 0) 55%),
+    #fff !important;
+  box-shadow: 0 -16px 48px rgba(29, 23, 64, 0.35) !important;
+  animation: am-login-up 0.32s var(--v2-ease) both;
+}
+
+@keyframes am-login-up {
+  from { transform: translateY(24px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login__handle {
+  justify-self: center;
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--v2-gray-2);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login__close {
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  display: grid;
+  place-items: center;
+  width: 34px !important;
+  min-width: 34px !important;
+  height: 34px !important;
+  min-height: 34px !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+  background: var(--v2-gray) !important;
+  color: var(--v2-text-2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login__head {
+  display: grid;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login__moon {
+  font-size: 20px;
+  line-height: 1;
+  color: var(--saju-gold);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login__head h2 {
+  margin: 2px 0 0;
+  font-family: var(--saju-serif) !important;
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  color: var(--saju-ink) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login__head p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--v2-text-2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login .ai-match-field input {
+  min-height: 52px;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: var(--v2-gray) !important;
+  box-shadow: none !important;
+  font-size: 16px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login .ai-match-field input:focus {
+  background: #fff !important;
+  box-shadow: 0 0 0 2px var(--saju-purple) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login .ai-match-primary-button--sheet {
+  min-height: 54px !important;
+  margin-top: 4px;
+  font-size: 16px !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login__foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--v2-text-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login__foot svg {
+  width: 14px;
+  height: 14px;
+  color: var(--saju-purple);
+}
+
+@media (min-width: 720px) {
+  .app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-modal {
+    align-items: center;
+    padding: 24px !important;
+  }
+
+  .app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login {
+    max-width: 420px !important;
+    border-radius: 26px !important;
+    padding-top: 14px !important;
+  }
+
+  .app-shell.festival-shell[data-v2="true"] .ai-match-page .am-login__handle {
+    display: none;
+  }
+}
