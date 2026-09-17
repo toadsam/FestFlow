@@ -17,7 +17,7 @@ import {
 } from "../api";
 import OpsBoothOrders from "../components/OpsBoothOrders";
 import { resolveBoothImageUrl } from "../config/boothImages";
-import { FESTIVAL } from "../config/festival";
+import { FESTIVAL, MAIN_BOOTH_FALLBACK, isMainBooth } from "../config/festival";
 import { TableMap } from "../components/v2/TableMap";
 
 const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
@@ -281,6 +281,11 @@ export default function OpsBoothPage() {
   const streamRef = useRef(null);
   const scanTimerRef = useRef(null);
 
+  // 총학 주점인데 서버 메뉴판이 비어 있어 기본 메뉴를 미리 채운 상태(아직 저장 전).
+  const menuPrefilled = useMemo(() => {
+    if (!snapshot.info || !menuItems.length) return false;
+    try { return isMainBooth(data?.booth) && JSON.parse(snapshot.info).menuItems.length === 0; } catch { return false; }
+  }, [snapshot.info, menuItems.length, data]);
   const infoDirty = useMemo(() => JSON.stringify({ draft, menuItems }) !== snapshot.info, [draft, menuItems, snapshot.info]);
   const tablesDirty = useMemo(() => JSON.stringify(reservationDraft) !== snapshot.tables, [reservationDraft, snapshot.tables]);
 
@@ -307,7 +312,12 @@ export default function OpsBoothPage() {
         contentJson: next.booth.contentJson ?? "",
         reservationEnabled: next.booth.reservationEnabled ?? true,
       };
-      const nextMenu = parseMenuBoardJson(next.booth.menuBoardJson);
+      const savedMenu = parseMenuBoardJson(next.booth.menuBoardJson);
+      // 총학 주점에 메뉴판이 아직 없으면 손님 화면과 같은 기본 메뉴 5개를 미리 채워 둔다. 저장을 눌러야 서버에 들어간다.
+      const prefillMenu = !savedMenu.length && isMainBooth(next.booth);
+      const nextMenu = prefillMenu
+        ? MAIN_BOOTH_FALLBACK.menu.map((item) => ({ name: item.name, price: item.price || "", description: item.description || "", soldOut: false, imageUrl: "" }))
+        : savedMenu;
       const nextReservation = {
         maxReservationMinutes: next.reservations?.maxReservationMinutes ?? 10,
         tables: (next.reservations?.tables ?? []).map((table) => ({
@@ -325,7 +335,8 @@ export default function OpsBoothPage() {
       setMenuItems(nextMenu);
       setReservationDraft(nextReservation);
       setSnapshot({
-        info: JSON.stringify({ draft: nextDraft, menuItems: nextMenu }),
+        // 미리 채운 메뉴는 아직 서버에 없으니 '저장 안 한 변경'으로 잡히게 빈 메뉴판을 기준으로 둔다.
+        info: JSON.stringify({ draft: nextDraft, menuItems: savedMenu }),
         tables: JSON.stringify(nextReservation),
       });
       setError("");
@@ -964,7 +975,7 @@ export default function OpsBoothPage() {
             <section id="menu" className="ops-section">
               <Card
                 title="메뉴판"
-                desc="손님 주문 화면에 이 순서대로 보여요. 가격은 숫자만 적어도 돼요."
+                desc={menuPrefilled ? "총학 주점 기본 메뉴를 미리 채워 뒀어요. 가격을 적고 아래 저장을 누르면 서버 메뉴판이 돼요." : "손님 주문 화면에 이 순서대로 보여요. 가격은 숫자만 적어도 돼요."}
                 actions={
                   <button type="button" className="ops-btn ops-btn--soft ops-btn--sm" onClick={addMenuItem}>
                     <Icons.plus /> 메뉴 추가
