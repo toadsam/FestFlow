@@ -813,12 +813,12 @@ export default function OpsBoothPage() {
                 }
               >
                 <div className={`ops-kpis${RESERVATIONS_ON ? "" : " ops-kpis--3"}`}>
-                  <button type="button" className="ops-kpi ops-kpi--green" onClick={() => jump("tables")} style={{ textAlign: "left" }}>
+                  <button type="button" className="ops-kpi ops-kpi--blue" onClick={() => jump("tables")} style={{ textAlign: "left" }}>
                     <small>빈 테이블</small>
                     <strong>{tableSummary.freeTables}<em>/ {tableSummary.totalTables}</em></strong>
                     <span>이용중 {tableSummary.inUseTables}{RESERVATIONS_ON ? ` · 예약중 ${tableSummary.reservedTables}` : ""}</span>
                   </button>
-                  <button type="button" className="ops-kpi ops-kpi--blue" onClick={() => jump("orders")} style={{ textAlign: "left" }}>
+                  <button type="button" className="ops-kpi" onClick={() => jump("orders")} style={{ textAlign: "left" }}>
                     <small>입금 대기 주문</small>
                     <strong>{orderCounts.pending}<em>건</em></strong>
                     <span>조리 중 {orderCounts.cooking}건</span>
@@ -840,7 +840,7 @@ export default function OpsBoothPage() {
 
               <Card
                 title="자리 한눈에"
-                desc="초록이 빈 테이블, 회색이 이용 중. 입구 스태프가 현황판을 누르면 여기와 손님 화면이 같이 바뀌어요."
+                desc="파랑이 빈 테이블, 회색이 이용 중. 입구 스태프가 현황판을 누르면 여기와 손님 화면이 같이 바뀌어요."
                 actions={
                   <Link to={`/ops/booth/${id}/tables`} className="ops-btn ops-btn--dark ops-btn--sm">현황판 열기</Link>
                 }

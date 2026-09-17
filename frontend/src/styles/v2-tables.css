@@ -106,7 +106,7 @@
   width: 0.45rem;
   height: 0.45rem;
   border-radius: 999px;
-  background: var(--v2-green);
+  background: var(--v2-blue);
   animation: v2-blink 1.4s ease-in-out infinite;
 }
 
@@ -513,7 +513,7 @@
   transition: background 0.4s;
 }
 
-.app-shell .v2-tmap__bar i.is-available { background: #1fa06c; }
+.app-shell .v2-tmap__bar i.is-available { background: #3182f6; }
 .app-shell .v2-tmap__bar i.is-reserved { background: #f2b224; }
 
 .app-shell .v2-tmap__grid {
@@ -533,7 +533,7 @@
   gap: 2px;
   padding: 10px 6px 9px;
   border-radius: 14px;
-  background: #e6f6ee;
+  background: #e8f3ff;
   min-width: 0;
   transition: background 0.4s, transform 0.2s;
 }
@@ -552,7 +552,7 @@
 .app-shell .v2-tmap__tile small {
   font-size: 11px;
   font-weight: 700;
-  color: #1fa06c !important;
+  color: #3182f6 !important;
 }
 
 .app-shell .v2-tmap__icon {
@@ -567,8 +567,8 @@
   height: 29px;
 }
 
-.app-shell .v2-tmap__top { fill: #1fa06c; transition: fill 0.4s; }
-.app-shell .v2-tmap__chair { fill: #7fd1ac; transition: fill 0.4s; }
+.app-shell .v2-tmap__top { fill: #3182f6; transition: fill 0.4s; }
+.app-shell .v2-tmap__chair { fill: #9cc4fb; transition: fill 0.4s; }
 
 .app-shell .v2-tmap__tile.is-in_use,
 .app-shell .v2-tmap__tile.is-full {
@@ -614,8 +614,26 @@
   background: #b0b8c1;
 }
 
-.app-shell .v2-tmap__legend .is-available::before { background: #1fa06c; }
+.app-shell .v2-tmap__legend .is-available::before { background: #3182f6; }
 .app-shell .v2-tmap__legend .is-reserved::before { background: #f2b224; }
+
+/* 손님 카드(연파랑 바탕): 빈 자리 타일은 흰색, 이용 중은 연회색 */
+.app-shell[data-v2="true"] .v2-seats .v2-tmap__tile {
+  background: #fff;
+}
+
+.app-shell[data-v2="true"] .v2-seats .v2-tmap__tile.is-in_use,
+.app-shell[data-v2="true"] .v2-seats .v2-tmap__tile.is-full {
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.app-shell[data-v2="true"] .v2-seats .v2-tmap__bar i {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.app-shell[data-v2="true"] .v2-seats .v2-tmap__bar i.is-available {
+  background: #3182f6;
+}
 
 /* 손님 카드: 그림이 들어가면 한 줄 구성으로 */
 .app-shell[data-v2="true"] .v2-seats--map {
@@ -644,4 +662,4 @@
   background: #cfd4da;
 }
 
-.app-shell .v2-tdots i.is-free { background: #1fa06c; }
+.app-shell .v2-tdots i.is-free { background: #3182f6; }
