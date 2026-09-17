@@ -846,7 +846,7 @@ export default function OpsBoothPage() {
                 }
               >
                 {serverTables.length ? (
-                  <TableMap tables={serverTables} />
+                  <TableMap tables={serverTables} collapsible storageKey="ops" toggleClass="ops-btn ops-btn--ghost ops-btn--sm" />
                 ) : (
                   <div className="ops-empty">아직 테이블이 없어요. 아래 자리 구역에서 만들어 주세요.</div>
                 )}

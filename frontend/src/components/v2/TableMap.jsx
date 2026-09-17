@@ -1,5 +1,7 @@
 // 테이블 자리 현황을 그림으로. 손님 주점 화면, 첫 화면 카드, 운영 콘솔이 같이 쓴다.
 // 테이블마다 작은 테이블 그림(의자 개수 = 좌석 수)을 그리고 상태별로 색을 바꾼다. 스타일은 styles/v2-tables.css.
+// collapsible 이면 띠와 범례만 남기고 그림을 접을 수 있다. 접은 상태는 storageKey 로 기억한다.
+import { useState } from "react";
 
 function statusOf(table) {
   if (table?.occupancyStatus) return table.occupancyStatus;
@@ -29,7 +31,28 @@ function TableIcon({ seats }) {
   );
 }
 
-export function TableMap({ tables = [], compact = false }) {
+function readOpen(storageKey, fallback) {
+  if (!storageKey) return fallback;
+  try {
+    const saved = window.localStorage.getItem(`festflow_tmap_${storageKey}`);
+    return saved == null ? fallback : saved === "1";
+  } catch {
+    return fallback;
+  }
+}
+
+export function TableMap({ tables = [], compact = false, collapsible = false, defaultOpen = true, storageKey = "", toggleClass = "" }) {
+  const [open, setOpen] = useState(() => readOpen(storageKey, defaultOpen));
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    try {
+      if (storageKey) window.localStorage.setItem(`festflow_tmap_${storageKey}`, next ? "1" : "0");
+    } catch {
+      // 저장 못 해도 동작에는 지장 없다
+    }
+  }
+
   const list = tables.map((table, index) => ({
     id: table.id ?? index,
     name: table.tableName || `테이블 ${index + 1}`,
@@ -49,19 +72,33 @@ export function TableMap({ tables = [], compact = false }) {
           <i key={t.id} className={`is-${t.status.toLowerCase()}`} />
         ))}
       </div>
-      <div className="v2-tmap__grid">
-        {list.map((t) => (
-          <div key={t.id} className={`v2-tmap__tile is-${t.status.toLowerCase()}`} title={`${t.name} · ${LABEL[t.status] || t.status}`}>
-            <TableIcon seats={t.seats} />
-            <strong>{t.name}</strong>
-            <small>{t.status === "AVAILABLE" ? `${t.seats}인석` : LABEL[t.status] || t.status}</small>
+      <div className={`v2-tmap__body${!collapsible || open ? " v2-tmap__body--open" : ""}`}>
+        <div>
+          <div className="v2-tmap__grid">
+            {list.map((t) => (
+              <div key={t.id} className={`v2-tmap__tile is-${t.status.toLowerCase()}`} title={`${t.name} · ${LABEL[t.status] || t.status}`}>
+                <TableIcon seats={t.seats} />
+                <strong>{t.name}</strong>
+                <small>{t.status === "AVAILABLE" ? `${t.seats}인석` : LABEL[t.status] || t.status}</small>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
-      <div className="v2-tmap__legend">
-        <span className="is-available">빈 자리 {free}</span>
-        <span className="is-in_use">이용 중 {inUse}</span>
-        {reserved > 0 && <span className="is-reserved">예약 {reserved}</span>}
+      <div className="v2-tmap__foot">
+        <div className="v2-tmap__legend">
+          <span className="is-available">빈 자리 {free}</span>
+          <span className="is-in_use">이용 중 {inUse}</span>
+          {reserved > 0 && <span className="is-reserved">예약 {reserved}</span>}
+        </div>
+        {collapsible && (
+          <button type="button" className={`v2-tmap__toggle ${toggleClass}`.trim()} onClick={toggle} aria-expanded={open}>
+            {open ? "접기" : `테이블 ${list.length}개 보기`}
+            <svg viewBox="0 0 24 24" className={`v2-tmap__chev${open ? " is-open" : ""}`} aria-hidden="true">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
       </div>
     </div>
   );
