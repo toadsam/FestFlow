@@ -2,6 +2,7 @@
 // 점수·등급·이유는 서버(SajuCompatibility)가 주고, 여기서는 그리기만 한다. 스타일은 styles/saju.css 의 sm-*.
 
 import { useEffect, useRef, useState } from "react";
+import { pillarParts } from "./SajuCard";
 
 const ELEMENTS = ["목", "화", "토", "금", "수"];
 
@@ -195,18 +196,49 @@ export function MatchMissingBanner({ onEdit }) {
   );
 }
 
-function PillarRow({ label, mine, theirs }) {
+const POSITION_COPY = {
+  년주: "뿌리 자리 · 자란 배경이 비슷한지",
+  월주: "줄기 자리 · 사회에서 굴러가는 방식",
+  일주: "꽃 자리 · 나와 배우자, 궁합의 핵심",
+  시주: "열매 자리 · 함께 갈 방향",
+};
+
+function PillarRow({ label, mine, theirs, active, onToggle }) {
+  const canOpen = Boolean(mine && theirs);
   return (
-    <div className="sm-pillars__row">
+    <button
+      type="button"
+      className={`sm-pillars__row${active ? " is-on" : ""}${canOpen ? "" : " sm-pillars__row--none"}`}
+      onClick={canOpen ? onToggle : undefined}
+      aria-pressed={active}
+    >
       <span className={`sm-pillar${mine ? "" : " sm-pillar--none"}`}>{mine || "—"}</span>
       <span className="sm-pillars__label">{label}</span>
       <span className={`sm-pillar sm-pillar--theirs${theirs ? "" : " sm-pillar--none"}`}>{theirs || "—"}</span>
+    </button>
+  );
+}
+
+function PillarCompare({ label, mine, theirs }) {
+  const a = pillarParts(mine);
+  const b = pillarParts(theirs);
+  if (!a || !b) return null;
+  const relation = elementRelation(a.stemElement, b.stemElement);
+  const sameBranch = a.branch === b.branch;
+  return (
+    <div className="sm-pillars__note">
+      <strong>{label} · {POSITION_COPY[label]}</strong>
+      <span>
+        내 {a.stem}({a.stemElement}) ↔ 상대 {b.stem}({b.stemElement}) : {relation ? relation.label : "—"}
+        {sameBranch ? ` · 지지가 같은 ${a.branch}(${a.animal})라 결이 닮았어요` : ""}
+      </span>
     </div>
   );
 }
 
 /** 상세 화면의 궁합 리포트. */
 export function MatchReport({ compatibility, mine, theirs, myNickname, nickname }) {
+  const [activeRow, setActiveRow] = useState(null);
   if (!compatibility) return null;
   const tone = toneOf(compatibility.score);
   const relation = mine && theirs ? elementRelation(mine.dayMasterElement, theirs.dayMasterElement) : null;
@@ -255,12 +287,32 @@ export function MatchReport({ compatibility, mine, theirs, myNickname, nickname 
                 <span />
                 <span>{nickname}</span>
               </div>
-              <PillarRow label="년주" mine={mine.yearPillar} theirs={theirs.yearPillar} />
-              <PillarRow label="월주" mine={mine.monthPillar} theirs={theirs.monthPillar} />
-              <PillarRow label="일주" mine={mine.dayPillar} theirs={theirs.dayPillar} />
-              <PillarRow label="시주" mine={mine.hourKnown ? mine.hourPillar : ""} theirs={theirs.hourKnown ? theirs.hourPillar : ""} />
+              {[
+                ["년주", mine.yearPillar, theirs.yearPillar],
+                ["월주", mine.monthPillar, theirs.monthPillar],
+                ["일주", mine.dayPillar, theirs.dayPillar],
+                ["시주", mine.hourKnown ? mine.hourPillar : "", theirs.hourKnown ? theirs.hourPillar : ""],
+              ].map(([label, a, b]) => (
+                <PillarRow
+                  key={label}
+                  label={label}
+                  mine={a}
+                  theirs={b}
+                  active={activeRow === label}
+                  onToggle={() => setActiveRow((current) => (current === label ? null : label))}
+                />
+              ))}
             </div>
-            <p className="sm-section__copy">일주(가운데 줄)가 배우자 자리라 점수에 가장 크게 들어가요. {mine.zodiac}띠와 {theirs.zodiac}띠.</p>
+            {activeRow ? (
+              <PillarCompare
+                key={activeRow}
+                label={activeRow}
+                mine={activeRow === "년주" ? mine.yearPillar : activeRow === "월주" ? mine.monthPillar : activeRow === "일주" ? mine.dayPillar : mine.hourPillar}
+                theirs={activeRow === "년주" ? theirs.yearPillar : activeRow === "월주" ? theirs.monthPillar : activeRow === "일주" ? theirs.dayPillar : theirs.hourPillar}
+              />
+            ) : (
+              <p className="sm-section__copy">줄을 누르면 그 자리끼리 어떻게 맞는지 보여요. 일주(셋째 줄)가 배우자 자리라 점수에 가장 크게 들어가요. {mine.zodiac}띠와 {theirs.zodiac}띠.</p>
+            )}
           </div>
         </>
       ) : null}
@@ -268,8 +320,8 @@ export function MatchReport({ compatibility, mine, theirs, myNickname, nickname 
       <div className="sm-section">
         <h4>이렇게 봤어요</h4>
         <ul className="sm-reasons">
-          {(compatibility.reasons || []).map((reason) => (
-            <li key={reason}>{reason}</li>
+          {(compatibility.reasons || []).map((reason, index) => (
+            <li key={reason} style={{ "--i": index }}>{reason}</li>
           ))}
         </ul>
       </div>
