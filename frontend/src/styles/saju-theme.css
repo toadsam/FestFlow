@@ -617,3 +617,112 @@
   box-shadow: 0 10px 22px rgba(91, 63, 176, 0.32) !important;
   color: #fff !important;
 }
+
+/* ---------- 사람 카드: 사진은 정사각형에 가깝게, 궁합 블록은 아래 전체 폭 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-main {
+  align-items: start !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-photo {
+  aspect-ratio: 1 / 1.06 !important;
+  align-self: start;
+  height: auto;
+  min-height: 0;
+  max-height: 9.6rem;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-photo img {
+  object-position: 50% 30%;
+  transition: transform 0.5s var(--v2-ease);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-photo:active img {
+  transform: scale(1.06);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-card > .sm-card {
+  margin: 10px 0 0 !important;
+}
+
+/* ---------- 움직임: 카드 등장, 누름, 하트 팝 ---------- */
+@keyframes am-card-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-card {
+  animation: am-card-in 0.5s var(--v2-ease) both;
+  animation-delay: calc(var(--i, 0) * 55ms);
+  transition: transform 0.18s var(--v2-ease), box-shadow 0.18s var(--v2-ease);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-card:active {
+  transform: scale(0.988);
+  box-shadow: 0 1px 6px rgba(42, 31, 77, 0.06), 0 0 0 1px rgba(109, 79, 210, 0.16) !important;
+}
+
+@keyframes am-heart-pop {
+  0% { transform: scale(0.6); }
+  55% { transform: scale(1.35); }
+  100% { transform: scale(1); }
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-favorite-button--active svg {
+  animation: am-heart-pop 0.45s var(--v2-spring) both;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-favorite-button:active {
+  transform: scale(0.9);
+}
+
+/* 태그 = 누르면 관심사 필터 */
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-inline-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--saju-purple-soft) !important;
+  color: var(--saju-purple-dark) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+  transition: transform 0.15s var(--v2-ease), background 0.15s;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-inline-tag::before,
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-inline-tag::after {
+  content: none !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-inline-tag.is-on {
+  background: var(--saju-purple) !important;
+  color: #fff !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-inline-tag:active {
+  transform: scale(0.92);
+}
+
+/* 데이트 신청 버튼: 누르면 하트가 콩 뛴다 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-button--card {
+  transition: transform 0.16s var(--v2-ease), background 0.16s;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-button--card:active {
+  transform: scale(0.97);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-request-button--card:active .ai-match-request-button__icon {
+  animation: am-heart-pop 0.4s var(--v2-spring) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-person-card,
+  .app-shell.festival-shell[data-v2="true"] .ai-match-page .ai-match-favorite-button--active svg {
+    animation: none !important;
+  }
+}

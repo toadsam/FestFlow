@@ -2504,7 +2504,7 @@ export default function AiMatchPage() {
 
         {filteredProfiles.length ? (
           <div className="ai-match-profile-list">
-            {filteredProfiles.map((profile) => {
+            {filteredProfiles.map((profile, index) => {
               const isFavorite = isFavoriteProfile(profile.id);
               const isTagsExpanded = expandedTagProfileIds.includes(profile.id);
               const hasExtraTags = profile.tags.length > 3;
@@ -2512,7 +2512,11 @@ export default function AiMatchPage() {
               const sentRequest = latestSentRequestMap.get(profile.id);
               const requestStatusLabel = sentRequest ? getRequestStatusLabel(sentRequest.status, sentRequest.statusReason) : "";
               return (
-                <article key={profile.id} className={`ai-match-person-card ai-match-person-card--${profile.tone}`}>
+                <article
+                  key={profile.id}
+                  className={`ai-match-person-card ai-match-person-card--${profile.tone}`}
+                  style={{ "--i": Math.min(index, 8) }}
+                >
                   <button
                     type="button"
                     className={`ai-match-favorite-button${isFavorite ? " ai-match-favorite-button--active" : ""}`}
@@ -2546,15 +2550,16 @@ export default function AiMatchPage() {
                         <small>{profile.meetPlace || "축제 부스 근처"}</small>
                         <p>{profile.summary}</p>
                       </button>
-
-                      <MatchCardBlock
-                        compatibility={profile.compatibility}
-                        viewerHasSaju={Boolean(accessProfile?.saju)}
-                        targetHasSaju={Boolean(profile.saju)}
-                        onFixMine={startEditingProfile}
-                      />
                     </div>
                   </div>
+
+                  <MatchCardBlock
+                    compatibility={profile.compatibility}
+                    viewerHasSaju={Boolean(accessProfile?.saju)}
+                    targetHasSaju={Boolean(profile.saju)}
+                    onFixMine={startEditingProfile}
+                    onOpen={() => openProfile(profile)}
+                  />
 
                   <div className="ai-match-person-footer">
                     <div className="ai-match-inline-tags">
@@ -2564,7 +2569,16 @@ export default function AiMatchPage() {
                         </span>
                       ) : null}
                       {visibleTags.map((tag) => (
-                        <span key={`${profile.id}-${tag}`}>{tag}</span>
+                        <button
+                          key={`${profile.id}-${tag}`}
+                          type="button"
+                          className={`ai-match-inline-tag${peopleTagFilters.includes(tag) ? " is-on" : ""}`}
+                          aria-pressed={peopleTagFilters.includes(tag)}
+                          title={peopleTagFilters.includes(tag) ? "이 관심사 필터 끄기" : "이 관심사로 모아 보기"}
+                          onClick={() => togglePeopleTagFilter(tag)}
+                        >
+                          #{tag}
+                        </button>
                       ))}
                       {hasExtraTags ? (
                         <button

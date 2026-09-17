@@ -1,7 +1,63 @@
 // 궁합을 "보는 느낌"으로. 목록 카드의 점수 링, 상단 TOP 3, 상세의 궁합 리포트(두 사주 나란히 + 오행 관계).
 // 점수·등급·이유는 서버(SajuCompatibility)가 주고, 여기서는 그리기만 한다. 스타일은 styles/saju.css 의 sm-*.
 
+import { useEffect, useRef, useState } from "react";
+
 const ELEMENTS = ["목", "화", "토", "금", "수"];
+
+function prefersReducedMotion() {
+  try {
+    return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
+/** 화면에 들어오면 0에서 점수까지 0.9초 동안 차오른다. 숫자도 같이 센다. */
+function useCountUp(target, durationMs = 900) {
+  const [value, setValue] = useState(prefersReducedMotion() ? target : 0);
+  const ref = useRef(null);
+  const started = useRef(false);
+
+  useEffect(() => {
+    if (prefersReducedMotion()) {
+      setValue(target);
+      return undefined;
+    }
+    const node = ref.current;
+    if (!node || started.current) return undefined;
+    let frame = 0;
+    const run = () => {
+      started.current = true;
+      const from = 0;
+      const startAt = performance.now();
+      const tick = (now) => {
+        const t = Math.min(1, (now - startAt) / durationMs);
+        const eased = 1 - Math.pow(1 - t, 3);
+        setValue(from + (target - from) * eased);
+        if (t < 1) frame = requestAnimationFrame(tick);
+      };
+      frame = requestAnimationFrame(tick);
+    };
+    if (typeof IntersectionObserver === "undefined") {
+      run();
+      return () => cancelAnimationFrame(frame);
+    }
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        observer.disconnect();
+        run();
+      }
+    }, { threshold: 0.35 });
+    observer.observe(node);
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(frame);
+    };
+  }, [target, durationMs]);
+
+  return [value, ref];
+}
 const ELEMENT_WORD = { 목: "나무", 화: "불", 토: "흙", 금: "쇠", 수: "물" };
 
 function toneOf(score) {
@@ -33,8 +89,9 @@ export function MatchRing({ score, size = 52, stroke = 5 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const safe = Math.max(0, Math.min(100, Number(score) || 0));
+  const [shown, ref] = useCountUp(safe);
   return (
-    <span className={`sm-ring sm-ring--${toneOf(safe)}`} style={{ width: size, height: size }}>
+    <span ref={ref} className={`sm-ring sm-ring--${toneOf(safe)}`} style={{ width: size, height: size }}>
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden="true">
         <circle cx={size / 2} cy={size / 2} r={r} className="sm-ring__track" strokeWidth={stroke} />
         <circle
@@ -43,27 +100,37 @@ export function MatchRing({ score, size = 52, stroke = 5 }) {
           r={r}
           className="sm-ring__fill"
           strokeWidth={stroke}
-          strokeDasharray={`${(safe / 100) * c} ${c}`}
+          strokeDasharray={`${(shown / 100) * c} ${c}`}
           transform={`rotate(-90 ${size / 2} ${size / 2})`}
         />
       </svg>
-      <strong style={{ fontSize: Math.round(size * 0.34) }}>{safe}</strong>
+      <strong style={{ fontSize: Math.round(size * 0.34) }}>{Math.round(shown)}</strong>
     </span>
   );
 }
 
 /** 목록 카드 안. 점수가 있으면 링 + 등급 + 한 줄, 없으면 이유를 짧게. */
-export function MatchCardBlock({ compatibility, viewerHasSaju, targetHasSaju, onFixMine }) {
+export function MatchCardBlock({ compatibility, viewerHasSaju, targetHasSaju, onFixMine, onOpen }) {
   if (compatibility) {
     const tone = toneOf(compatibility.score);
+    const Tag = onOpen ? "button" : "div";
     return (
-      <div className={`sm-card sm-card--${tone}`}>
+      <Tag
+        type={onOpen ? "button" : undefined}
+        className={`sm-card sm-card--${tone}${onOpen ? " sm-card--tap" : ""}`}
+        onClick={onOpen}
+      >
         <MatchRing score={compatibility.score} />
         <div className="sm-card__body">
           <span className={`sm-grade sm-grade--${tone}`}>{compatibility.grade}</span>
           <p>{compatibility.headline}</p>
         </div>
-      </div>
+        {onOpen ? (
+          <span className="sm-card__go" aria-hidden="true">
+            궁합 보기 ›
+          </span>
+        ) : null}
+      </Tag>
     );
   }
   if (!viewerHasSaju) {

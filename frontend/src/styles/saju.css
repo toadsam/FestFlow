@@ -955,3 +955,40 @@
   line-height: 1.5;
   color: #191f28 !important;
 }
+
+/* 누를 수 있는 궁합 블록(버튼). 전역 button 규칙을 되돌린다. */
+.app-shell.app-shell.app-shell button.sm-card {
+  border: 0 !important;
+  box-shadow: none !important;
+  filter: none !important;
+  text-shadow: none !important;
+  color: inherit !important;
+  cursor: pointer;
+  transition: transform 0.16s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.16s;
+}
+
+.app-shell.app-shell.app-shell button.sm-card::before,
+.app-shell.app-shell.app-shell button.sm-card::after {
+  content: none !important;
+}
+
+.app-shell.app-shell.app-shell button.sm-card--tap { background: var(--sm-blue-soft) !important; }
+.app-shell.app-shell.app-shell button.sm-card--tap.sm-card--high { background: var(--sm-gold-soft) !important; }
+.app-shell.app-shell.app-shell button.sm-card--tap.sm-card--low { background: var(--sm-gray-soft) !important; }
+
+.app-shell.app-shell.app-shell button.sm-card--tap:active {
+  transform: scale(0.98);
+}
+
+.app-shell .sm-card__go {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--sm-blue) !important;
+}
+
+.app-shell .sm-card--high .sm-card__go { color: var(--sm-gold) !important; }
+.app-shell .sm-card--low .sm-card__go { color: var(--sm-gray) !important; }
