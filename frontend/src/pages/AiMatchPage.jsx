@@ -2553,50 +2553,50 @@ export default function AiMatchPage() {
                         targetHasSaju={Boolean(profile.saju)}
                         onFixMine={startEditingProfile}
                       />
+                    </div>
+                  </div>
 
-                      <div className="ai-match-person-footer">
-                        <div className="ai-match-inline-tags">
-                          {shouldShowPeopleRequestStatus(sentRequest?.status) ? (
-                            <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(sentRequest.status, sentRequest.statusReason)}`}>
-                              신청 {requestStatusLabel}
-                            </span>
-                          ) : null}
-                          {visibleTags.map((tag) => (
-                            <span key={`${profile.id}-${tag}`}>{tag}</span>
-                          ))}
-                          {hasExtraTags ? (
-                            <button
-                              type="button"
-                              className="ai-match-inline-tags__toggle"
-                              onClick={() => toggleExpandedTags(profile.id)}
-                            >
-                              {isTagsExpanded ? "접기" : `+${profile.tags.length - 2}`}
-                            </button>
-                          ) : null}
-                        </div>
-
+                  <div className="ai-match-person-footer">
+                    <div className="ai-match-inline-tags">
+                      {shouldShowPeopleRequestStatus(sentRequest?.status) ? (
+                        <span className={`ai-match-request-status ai-match-request-status--${getRequestStatusTone(sentRequest.status, sentRequest.statusReason)}`}>
+                          신청 {requestStatusLabel}
+                        </span>
+                      ) : null}
+                      {visibleTags.map((tag) => (
+                        <span key={`${profile.id}-${tag}`}>{tag}</span>
+                      ))}
+                      {hasExtraTags ? (
                         <button
                           type="button"
-                          className="ai-match-request-button ai-match-request-button--card"
-                          onClick={() => openProfile(profile)}
+                          className="ai-match-inline-tags__toggle"
+                          onClick={() => toggleExpandedTags(profile.id)}
                         >
-                          <span className="ai-match-request-button__icon">
-                            <IconHeart className="h-4 w-4" />
-                          </span>
-                          <span className="ai-match-request-button__label">
-                            {sentRequest && sentRequest.status === "PENDING"
-                              ? "신청 완료"
-                              : sentRequest && sentRequest.status === "REJECTED"
-                                ? "다시 신청"
-                                : sentRequest && sentRequest.status === "ACCEPTED"
-                                  ? "수락 상태 보기"
-                                  : requestQuotaExhausted
-                                    ? "신청 마감"
-                                    : "데이트 신청"}
-                          </span>
+                          {isTagsExpanded ? "접기" : `+${profile.tags.length - 2}`}
                         </button>
-                      </div>
+                      ) : null}
                     </div>
+
+                    <button
+                      type="button"
+                      className="ai-match-request-button ai-match-request-button--card"
+                      onClick={() => openProfile(profile)}
+                    >
+                      <span className="ai-match-request-button__icon">
+                        <IconHeart className="h-4 w-4" />
+                      </span>
+                      <span className="ai-match-request-button__label">
+                        {sentRequest && sentRequest.status === "PENDING"
+                          ? "신청 완료"
+                          : sentRequest && sentRequest.status === "REJECTED"
+                            ? "다시 신청"
+                            : sentRequest && sentRequest.status === "ACCEPTED"
+                              ? "수락 상태 보기"
+                              : requestQuotaExhausted
+                                ? "신청 마감"
+                                : "데이트 신청"}
+                      </span>
+                    </button>
                   </div>
                 </article>
               );
