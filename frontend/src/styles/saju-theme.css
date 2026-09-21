@@ -1686,3 +1686,81 @@
 .app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-sort:active {
   transform: scale(0.94);
 }
+
+/* ---------- 살아 있는 히어로: 손가락·기울기를 따라 그림이 움직이고 치토가 손을 흔든다 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero--live {
+  --tx: 0;
+  --ty: 0;
+  min-height: 17rem !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero--live .saju-hero__bg {
+  animation: none;
+  transform: scale(1.12) translate(calc(var(--tx) * -12px), calc(var(--ty) * -9px));
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: transform;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero--live .ai-match-hero-copy {
+  max-width: 72%;
+  transform: translate(calc(var(--tx) * 3px), calc(var(--ty) * 2px));
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero--live .ai-match-hero-copy p {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.06em;
+  color: #ffe9b8 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero--live .saju-hero__seal {
+  top: 16px;
+  right: 16px;
+  bottom: auto;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__chito,
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__chito:hover {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  z-index: 3;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transform: translate(calc(var(--tx) * 6px), calc(var(--ty) * 4px));
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__chito::before,
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__chito::after {
+  content: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__chito img {
+  width: 70px;
+  height: auto;
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.45));
+  animation: sf-bob 3.2s ease-in-out infinite;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__chito span {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(217, 180, 90, 0.92);
+  color: #2a1f4d !important;
+  font-size: 11px !important;
+  font-weight: 800;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__chito:active img {
+  transform: scale(0.94);
+}

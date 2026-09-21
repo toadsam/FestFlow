@@ -40,6 +40,8 @@ import {
 import { SajuPanel } from "../components/SajuCard";
 import SajuSplash, { shouldShowSajuSplash } from "../components/SajuSplash";
 import MeetupScheduler from "../components/MeetupScheduler";
+import SajuHero from "../components/SajuHero";
+import SajuFortune from "../components/SajuFortune";
 import { MatchCardBlock, MatchMissingBanner, MatchReport, MatchTop3 } from "../components/SajuMatch";
 
 const MEET_PLACES = ["총학생회 부스"];
@@ -683,6 +685,7 @@ export default function AiMatchPage() {
   const [accessRequestQuota, setAccessRequestQuota] = useState(null);
   // 탭에 처음 들어올 때 한 번 뜨는 사주 스플래시
   const [sajuSplash, setSajuSplash] = useState(() => shouldShowSajuSplash());
+  const fortuneRef = useRef(null);
   const [accessNickname, setAccessNickname] = useState("");
   const [accessPin, setAccessPin] = useState("");
   const [accessPhoneNumber, setAccessPhoneNumber] = useState("");
@@ -1977,23 +1980,11 @@ export default function AiMatchPage() {
 
     return (
       <div className="ai-match-flow">
-        <section className="ai-match-hero-card saju-hero">
-          <img className="saju-hero__bg" src="/images/saju/hero.webp" alt="" />
-          <div className="saju-hero__shade" aria-hidden="true" />
-          <div className="ai-match-hero-copy">
-            <p>AI가 풀어주는 당신의 인연 이야기</p>
-            <h2>AI 사주 소개팅</h2>
-            <span>사주 궁합까지 보고 축제에서 같이 걸을 사람을 찾는 현장 매칭</span>
-            <em className="saju-hero__quote">“좋은 인연은, 언제나 이유가 있더라.”</em>
-          </div>
-          <span className="saju-hero__seal" aria-hidden="true">緣</span>
-          <div className="ai-match-float-heart ai-match-float-heart--a" aria-hidden>
-            <IconHeart className="h-5 w-5" />
-          </div>
-          <div className="ai-match-float-heart ai-match-float-heart--b" aria-hidden>
-            <IconSparkles className="h-4 w-4" />
-          </div>
-        </section>
+        <SajuHero onChitoClick={() => fortuneRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })} />
+
+        <div ref={fortuneRef}>
+          <SajuFortune ctaLabel="가입하고 내 궁합 보러 가기" onCta={startNewRegistration} />
+        </div>
 
         <section className="ai-match-step-card">
           <h3>4단계면 끝나요</h3>
@@ -2464,6 +2455,14 @@ export default function AiMatchPage() {
 
     return (
       <div className="ai-match-flow">
+        <SajuFortune
+          compact
+          nickname={accessProfile?.nickname}
+          myElement={accessProfile?.saju?.dayMasterElement}
+          ctaLabel="찰떡 궁합만 모아 보기"
+          onCta={() => setActiveFilter("찰떡 궁합")}
+        />
+
         <section className="am-disc">
           <div className="am-disc__top">
             <label className="am-disc__search">

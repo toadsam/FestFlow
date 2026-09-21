@@ -15,7 +15,7 @@ function prefersReducedMotion() {
 }
 
 /** 화면에 들어오면 0에서 점수까지 0.9초 동안 차오른다. 숫자도 같이 센다. */
-function useCountUp(target, durationMs = 900) {
+function useCountUp(target, durationMs = 900, startDelayMs = 0) {
   const [value, setValue] = useState(prefersReducedMotion() ? target : 0);
   const ref = useRef(null);
   const started = useRef(false);
@@ -31,9 +31,9 @@ function useCountUp(target, durationMs = 900) {
     const run = () => {
       started.current = true;
       const from = 0;
-      const startAt = performance.now();
+      const startAt = performance.now() + startDelayMs;
       const tick = (now) => {
-        const t = Math.min(1, (now - startAt) / durationMs);
+        const t = Math.max(0, Math.min(1, (now - startAt) / durationMs));
         const eased = 1 - Math.pow(1 - t, 3);
         setValue(from + (target - from) * eased);
         if (t < 1) frame = requestAnimationFrame(tick);
@@ -55,7 +55,7 @@ function useCountUp(target, durationMs = 900) {
       observer.disconnect();
       cancelAnimationFrame(frame);
     };
-  }, [target, durationMs]);
+  }, [target, durationMs, startDelayMs]);
 
   return [value, ref];
 }
@@ -86,11 +86,11 @@ const TIPS = {
   clash: "첫 만남은 짧게, 부담 없이. 주점에서 한 잔 하고 괜찮으면 두 번째 약속을 잡아요.",
 };
 
-export function MatchRing({ score, size = 52, stroke = 5 }) {
+export function MatchRing({ score, size = 52, stroke = 5, delayMs = 0 }) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const safe = Math.max(0, Math.min(100, Number(score) || 0));
-  const [shown, ref] = useCountUp(safe);
+  const [shown, ref] = useCountUp(safe, 900, delayMs);
   return (
     <span ref={ref} className={`sm-ring sm-ring--${toneOf(safe)}`} style={{ width: size, height: size }}>
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} aria-hidden="true">
@@ -236,6 +236,87 @@ function PillarCompare({ label, mine, theirs }) {
   );
 }
 
+/**
+ * 궁합 공개. 화면에 들어오면 두 사람의 일간이 양쪽에서 다가오고, 붉은 실(인연의 실)이 둘을 묶고,
+ * 점수가 차오른 뒤 등급 도장이 찍힌다. 이 화면에서 움직임을 쓰는 곳은 여기 한 군데다.
+ */
+function MatchReveal({ compatibility, mine, theirs, myNickname, nickname, tone }) {
+  const ref = useRef(null);
+  const [play, setPlay] = useState(prefersReducedMotion());
+  const [run, setRun] = useState(0);
+
+  useEffect(() => {
+    if (prefersReducedMotion()) return undefined;
+    const node = ref.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      setPlay(true);
+      return undefined;
+    }
+    setPlay(false);
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) {
+        observer.disconnect();
+        setPlay(true);
+      }
+    }, { threshold: 0.4 });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [run]);
+
+  // 도장이 찍히는 순간 짧게 진동
+  useEffect(() => {
+    if (!play || prefersReducedMotion()) return undefined;
+    const id = window.setTimeout(() => {
+      try {
+        window.navigator.vibrate?.(35);
+      } catch {
+        /* 진동 없는 기기 */
+      }
+    }, 2350);
+    return () => window.clearTimeout(id);
+  }, [play, run]);
+
+  const quick = prefersReducedMotion();
+
+  return (
+    <div ref={ref} key={run} className={`sm-reveal sm-reveal--${tone}${play ? " is-play" : ""}`}>
+      <div className="sm-reveal__pair">
+        <div className={`sm-coin sm-coin--mine sm-el--${mine?.dayMasterElement || ""}`}>
+          <b>{mine?.dayMaster || "?"}</b>
+          <small>{myNickname || "나"}</small>
+        </div>
+        <svg className="sm-thread" viewBox="0 0 200 60" preserveAspectRatio="none" aria-hidden="true">
+          <path pathLength="100" d="M2 30 C34 2, 64 58, 100 30 S166 2, 198 30" />
+          <circle cx="100" cy="30" r="5" />
+        </svg>
+        <div className={`sm-coin sm-coin--theirs sm-el--${theirs?.dayMasterElement || ""}`}>
+          <b>{theirs?.dayMaster || "?"}</b>
+          <small>{nickname}</small>
+        </div>
+      </div>
+
+      <div className="sm-reveal__score">
+        <MatchRing key={`ring-${run}`} score={compatibility.score} size={116} stroke={9} delayMs={quick ? 0 : 1300} />
+        <div className="sm-reveal__copy">
+          <strong>{compatibility.headline}</strong>
+          <small>
+            {myNickname || "나"} × {nickname}
+          </small>
+        </div>
+        <span className={`sm-stamp sm-stamp--${tone}`} aria-label={`등급 ${compatibility.grade}`}>
+          {compatibility.grade}
+        </span>
+      </div>
+
+      {!quick ? (
+        <button type="button" className="sm-replay" onClick={() => setRun((value) => value + 1)}>
+          ↻ 다시 보기
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 /** 상세 화면의 궁합 리포트. */
 export function MatchReport({ compatibility, mine, theirs, myNickname, nickname }) {
   const [activeRow, setActiveRow] = useState(null);
@@ -245,16 +326,14 @@ export function MatchReport({ compatibility, mine, theirs, myNickname, nickname 
 
   return (
     <section className={`sm-report sm-report--${tone}`}>
-      <div className="sm-report__hero">
-        <MatchRing score={compatibility.score} size={120} stroke={9} />
-        <div className="sm-report__title">
-          <span className={`sm-grade sm-grade--${tone} sm-grade--big`}>{compatibility.grade}</span>
-          <strong>{compatibility.headline}</strong>
-          <small>
-            {myNickname || "나"} × {nickname}
-          </small>
-        </div>
-      </div>
+      <MatchReveal
+        compatibility={compatibility}
+        mine={mine}
+        theirs={theirs}
+        myNickname={myNickname}
+        nickname={nickname}
+        tone={tone}
+      />
 
       {mine && theirs ? (
         <>
