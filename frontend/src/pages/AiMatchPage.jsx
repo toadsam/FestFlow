@@ -25,6 +25,7 @@ import {
   checkAiMatchNickname,
   checkAiMatchPhoneNumber,
   previewAiMatchSaju,
+  cancelAiMatchMeetup,
   confirmAiMatchMeetup,
   createAiMatchImagePreview,
   deleteAiMatchProfile,
@@ -38,6 +39,7 @@ import {
 } from "../api";
 import { SajuPanel } from "../components/SajuCard";
 import SajuSplash, { shouldShowSajuSplash } from "../components/SajuSplash";
+import MeetupScheduler from "../components/MeetupScheduler";
 import { MatchCardBlock, MatchMissingBanner, MatchReport, MatchTop3 } from "../components/SajuMatch";
 
 const MEET_PLACES = ["총학생회 부스"];
@@ -1885,6 +1887,44 @@ export default function AiMatchPage() {
     }
   }
 
+  // 시간표에서 슬롯을 골라 제안. 실패 이유(다른 커플이 먼저 잡음 등)는 시간표 안에 바로 보여 주려고 돌려준다.
+  async function handleProposeMeetupSlot(request, slotAt) {
+    if (!accessNickname || !accessPin) return { ok: false, message: "다시 로그인해 주세요." };
+    setSubmitting(true);
+    setErrorMessage("");
+    try {
+      await proposeAiMatchMeetup(request.id, {
+        nickname: accessNickname,
+        pin: accessPin,
+        meetupPlace: "총학생회 소개팅 부스",
+        meetupAt: slotAt,
+      });
+      await loadAccessProfile(accessNickname, accessPin, "requests");
+      setSuccessMessage("시간을 제안했어요. 상대가 30분 안에 확정하면 약속이 잡혀요.");
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, message: error.message || "시간을 잡지 못했어요." };
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleCancelMeetup(requestId) {
+    if (!accessNickname || !accessPin) return;
+    if (!window.confirm("약속을 취소할까요? 잡아 둔 시간은 다른 커플에게 다시 열려요.")) return;
+    setSubmitting(true);
+    setErrorMessage("");
+    try {
+      await cancelAiMatchMeetup(requestId, accessNickname, accessPin);
+      await loadAccessProfile(accessNickname, accessPin, "requests");
+      setSuccessMessage("약속을 취소했어요. 시간은 다시 고를 수 있어요.");
+    } catch (error) {
+      showAuthenticatedActionError(error, "약속 취소에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleConfirmMeetup(requestId) {
     if (!accessNickname || !accessPin) return;
 
@@ -1895,6 +1935,9 @@ export default function AiMatchPage() {
       await loadAccessProfile(accessNickname, accessPin, "requests");
       setSuccessMessage("약속이 확정되었습니다.");
     } catch (error) {
+      if (error?.status === 409) {
+        await loadAccessProfile(accessNickname, accessPin, "requests").catch(() => {});
+      }
       showAuthenticatedActionError(error, "약속 확정에 실패했습니다.");
     } finally {
       setSubmitting(false);
@@ -2660,26 +2703,15 @@ export default function AiMatchPage() {
     if (!["ACCEPTED", "PROPOSED", "CONFIRMED"].includes(request.status)) return null;
 
     return (
-      <div className="ai-match-meetup-box">
-        <div className="ai-match-meetup-box__head">
-          <strong>매치 성사</strong>
-          <div className="ai-match-meetup-box__route">
-            <span>총학생회 부스</span>
-            <button
-              type="button"
-              className="ai-match-map-icon-button"
-              onClick={openMeetPlaceMap}
-              aria-label="총학생회 부스 카카오맵 길찾기"
-              title="카카오맵 길찾기"
-            >
-              <IconMapPin className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <p className="ai-match-meetup-box__summary">
-          관리자의 연락을 받은 뒤 총학생회 부스 앞으로 와 주세요. 양쪽 연락처는 관리자에게만 공개됩니다.
-        </p>
-      </div>
+      <MeetupScheduler
+        request={request}
+        myProfileId={accessProfile.id}
+        busy={submitting}
+        onPropose={handleProposeMeetupSlot}
+        onConfirm={handleConfirmMeetup}
+        onCancel={handleCancelMeetup}
+        onOpenMap={openMeetPlaceMap}
+      />
     );
   }
 

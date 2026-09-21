@@ -23,6 +23,7 @@ import {
   IconX,
 } from "../components/UxIcons";
 import { clearLogin, getAdminName, isLoggedIn, saveLogin } from "../utils/auth";
+import AdminMeetupSchedule from "../components/admin/AdminMeetupSchedule";
 
 const STATUS_LABELS = {
   PENDING: "대기중",
@@ -618,6 +619,8 @@ export default function AiMatchAdminPage() {
           </article>
         </div>
       </header>
+
+      <AdminMeetupSchedule />
 
       <section className="admin-ai-operations-strip">
         <article>

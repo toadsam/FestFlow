@@ -34,7 +34,7 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
             new Rule("POST", Pattern.compile("^/api/ai-match/profiles/access$"), "ai-match-profile-access", 3000, Duration.ofMinutes(10)),
             new Rule("GET", Pattern.compile("^/api/ai-match/phone-check$"), "ai-match-phone-check", 300, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/ai-match/profiles/\\d+/(requests|favorite)$"), "ai-match-profile-action", 300, Duration.ofMinutes(10)),
-            new Rule("POST", Pattern.compile("^/api/ai-match/requests/\\d+/(accept|reject|cancel|meetup/propose|meetup/confirm)$"), "ai-match-request-action", 300, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/requests/\\d+/(accept|reject|cancel|meetup/propose|meetup/confirm|meetup/cancel)$"), "ai-match-request-action", 300, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/reservations/auth/send-code$"), "reservation-auth", 5, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/lost-items$"), "lost-item-create", 5, Duration.ofMinutes(10)),
             new Rule("PUT", Pattern.compile("^/api/lost-items/\\d+/claim$"), "lost-item-claim", 60, Duration.ofMinutes(1))

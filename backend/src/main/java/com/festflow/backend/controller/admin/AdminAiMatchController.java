@@ -1,6 +1,7 @@
 package com.festflow.backend.controller.admin;
 
 import com.festflow.backend.dto.AiMatchAdminOverviewDto;
+import com.festflow.backend.dto.AiMatchMeetupScheduleDto;
 import com.festflow.backend.dto.AiMatchAdminNoteUpdateDto;
 import com.festflow.backend.dto.AiMatchAdminPhonePurgeRequestDto;
 import com.festflow.backend.dto.AiMatchAdminPhonePurgeResponseDto;
@@ -58,5 +59,12 @@ public class AdminAiMatchController {
             @Valid @RequestBody AiMatchAdminPhonePurgeRequestDto requestDto
     ) {
         return aiMatchService.purgeByPhoneNumber(requestDto);
+    }
+
+    @GetMapping("/meetup-schedule")
+    public AiMatchMeetupScheduleDto getMeetupSchedule(
+            @org.springframework.web.bind.annotation.RequestParam(required = false) String date
+    ) {
+        return aiMatchService.getAdminMeetupSchedule(date);
     }
 }

@@ -423,6 +423,14 @@ export async function fetchAdminAiMatchOverview() {
   return parseJson(response, "AI 매칭 운영 현황을 불러오지 못했습니다.");
 }
 
+export async function fetchAdminAiMatchMeetupSchedule(date) {
+  const query = date ? `?date=${encodeURIComponent(date)}` : "";
+  const response = await fetch(`${API_BASE}/admin/ai-match/meetup-schedule${query}`, {
+    headers: withAuth(),
+  });
+  return parseJson(response, "소개팅 부스 시간표를 불러오지 못했습니다.");
+}
+
 export async function updateAdminAiMatchConnectionStatus(requestId, connectionStatus) {
   const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/connection-status`, {
     method: "PUT",
@@ -1304,6 +1312,25 @@ export async function proposeAiMatchMeetup(requestId, payload) {
     }),
   });
   return parseJson(response, "약속 제안에 실패했습니다.");
+}
+
+/** 소개팅 부스 15분 슬롯 현황. date 가 비면 서버가 알맞은 축제 날짜를 고른다. */
+export async function fetchAiMatchMeetupSlots(date, requestId) {
+  const params = new URLSearchParams();
+  if (date) params.set("date", date);
+  if (requestId) params.set("requestId", `${requestId}`);
+  const query = params.toString();
+  const response = await fetch(`${API_BASE}/ai-match/meetup-slots${query ? `?${query}` : ""}`);
+  return parseJson(response, "시간표를 불러오지 못했습니다.");
+}
+
+export async function cancelAiMatchMeetup(requestId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/meetup/cancel`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "약속 취소에 실패했습니다.");
 }
 
 export async function confirmAiMatchMeetup(requestId, nickname, pin) {

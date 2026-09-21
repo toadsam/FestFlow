@@ -6,6 +6,7 @@ import com.festflow.backend.dto.AiMatchProfileDeleteDto;
 import com.festflow.backend.dto.AiMatchFavoriteResponseDto;
 import com.festflow.backend.dto.AiMatchImagePreviewDto;
 import com.festflow.backend.dto.AiMatchMeetupProposalDto;
+import com.festflow.backend.dto.AiMatchMeetupSlotsDto;
 import com.festflow.backend.dto.AiMatchNicknameCheckDto;
 import com.festflow.backend.dto.AiMatchPhoneCheckDto;
 import com.festflow.backend.dto.SajuDto;
@@ -178,5 +179,22 @@ public class AiMatchController {
             @RequestBody AiMatchProfileAccessRequestDto requestDto
     ) {
         return aiMatchService.confirmMeetup(requestId, requestDto);
+    }
+
+    @PostMapping("/requests/{requestId}/meetup/cancel")
+    public AiMatchRequestResponseDto cancelMeetup(
+            @PathVariable Long requestId,
+            @RequestBody AiMatchProfileAccessRequestDto requestDto
+    ) {
+        return aiMatchService.cancelMeetup(requestId, requestDto);
+    }
+
+    /** 소개팅 부스 15분 슬롯 현황. 누가 잡았는지는 내려주지 않는다. */
+    @GetMapping("/meetup-slots")
+    public AiMatchMeetupSlotsDto getMeetupSlots(
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) Long requestId
+    ) {
+        return aiMatchService.getMeetupSlots(date, requestId);
     }
 }

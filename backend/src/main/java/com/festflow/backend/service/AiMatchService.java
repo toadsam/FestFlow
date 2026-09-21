@@ -18,6 +18,10 @@ import com.festflow.backend.dto.AiMatchProfileResponseDto;
 import com.festflow.backend.dto.AiMatchProfileUpdateDto;
 import com.festflow.backend.dto.AiMatchRequestCreateDto;
 import com.festflow.backend.dto.AiMatchRequestQuotaDto;
+import com.festflow.backend.dto.AiMatchMeetupScheduleDto;
+import com.festflow.backend.dto.AiMatchMeetupScheduleItemDto;
+import com.festflow.backend.dto.AiMatchMeetupSlotsDto;
+import com.festflow.backend.entity.AiMatchMeetupSlot;
 import com.festflow.backend.dto.AiMatchRequestResponseDto;
 import com.festflow.backend.dto.SajuCompatibilityDto;
 import com.festflow.backend.dto.AiMatchNicknameCheckDto;
@@ -80,6 +84,7 @@ public class AiMatchService {
     private final AiMatchSmsNotifier aiMatchSmsNotifier;
     private final PasswordEncoder passwordEncoder;
     private final SajuService sajuService;
+    private final AiMatchMeetupSlotService meetupSlotService;
 
     public AiMatchService(
             AiMatchProfileRepository profileRepository,
@@ -90,9 +95,11 @@ public class AiMatchService {
             AiImageGenerationService aiImageGenerationService,
             AiMatchSmsNotifier aiMatchSmsNotifier,
             PasswordEncoder passwordEncoder,
-            SajuService sajuService
+            SajuService sajuService,
+            AiMatchMeetupSlotService meetupSlotService
     ) {
         this.sajuService = sajuService;
+        this.meetupSlotService = meetupSlotService;
         this.profileRepository = profileRepository;
         this.requestRepository = requestRepository;
         this.favoriteRepository = favoriteRepository;
@@ -311,6 +318,7 @@ public class AiMatchService {
         List<AiMatchRequest> receivedRequests = requestRepository.findAllByProfileIdOrderByCreatedAtDesc(profile.getId());
         List<AiMatchRequest> sentRequests = requestRepository.findAllByRequesterProfileIdOrderByCreatedAtDesc(profile.getId());
         closeRequestsWithInactiveParticipants(Stream.concat(receivedRequests.stream(), sentRequests.stream()).toList());
+        expireStaleMeetupProposals(Stream.concat(receivedRequests.stream(), sentRequests.stream()).toList());
         return new AiMatchProfileAccessResponseDto(
                 toProfileDto(profile),
                 profile.getPhoneNumber(),
@@ -659,20 +667,17 @@ public class AiMatchService {
         ensureRequestParticipantsActive(request);
         ensureMeetupProposalAllowed(request);
 
-        String meetupPlace = trimRequired(requestDto.meetupPlace(), "meetPlace", 120);
+        // 장소는 늘 소개팅 부스. 시간은 15분 슬롯이고, 고르는 순간 30분 동안 임시로 잠긴다.
         LocalDateTime meetupAt = requestDto.meetupAt();
-        if (meetupAt == null) {
-            throw new ResponseStatusException(BAD_REQUEST, "만날 시간을 선택해 주세요.");
-        }
-        if (meetupAt.isBefore(LocalDateTime.now().minusMinutes(1))) {
-            throw new ResponseStatusException(BAD_REQUEST, "지나간 시간으로는 약속을 제안할 수 없습니다.");
-        }
+        meetupSlotService.hold(request.getId(), meetupAt);
+        String meetupPlace = AiMatchMeetupSlotService.BOOTH_NAME;
 
         request.proposeMeetup(meetupPlace, meetupAt, profile.getId(), profile.getNickname());
         return toRequestDto(request);
     }
 
-    @Transactional
+    // 임시 예약이 풀린 걸 발견하면 약속을 지운 채로 409 를 돌려준다. 그 지움이 롤백되면 안 된다.
+    @Transactional(noRollbackFor = ResponseStatusException.class)
     public AiMatchRequestResponseDto confirmMeetup(Long requestId, AiMatchProfileAccessRequestDto requestDto) {
         AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
         AiMatchRequest request = getParticipatingRequest(requestId, profile);
@@ -684,8 +689,105 @@ public class AiMatchService {
             throw new ResponseStatusException(CONFLICT, "상대방이 제안한 약속만 확정할 수 있습니다.");
         }
 
+        if (meetupSlotService.confirm(request.getId()).isEmpty()) {
+            request.clearMeetup();
+            requestRepository.saveAndFlush(request);
+            throw new ResponseStatusException(CONFLICT, "제안한 시간의 임시 예약이 풀렸어요. 시간을 다시 골라 주세요.");
+        }
         request.confirmMeetup();
         return toRequestDto(request);
+    }
+
+    /** 약속 취소(제안 중이든 확정이든). 슬롯을 다시 열고 매칭 상태로 되돌린다. */
+    @Transactional
+    public AiMatchRequestResponseDto cancelMeetup(Long requestId, AiMatchProfileAccessRequestDto requestDto) {
+        AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
+        AiMatchRequest request = getParticipatingRequest(requestId, profile);
+        ensureRequestParticipantsActive(request);
+        if (!"PROPOSED".equals(request.getStatus()) && !"CONFIRMED".equals(request.getStatus())) {
+            throw new ResponseStatusException(CONFLICT, "취소할 약속이 없습니다.");
+        }
+        meetupSlotService.release(request.getId());
+        request.clearMeetup();
+        return toRequestDto(request);
+    }
+
+    @Transactional
+    public AiMatchMeetupSlotsDto getMeetupSlots(String date, Long requestId) {
+        return meetupSlotService.getSlots(date, requestId);
+    }
+
+    /** 운영진 시간표: 그날 잡힌 슬롯과 두 사람이 어디서 기다리는지. */
+    @Transactional
+    public AiMatchMeetupScheduleDto getAdminMeetupSchedule(String dateText) {
+        meetupSlotService.purge();
+        LocalDate date = meetupSlotService.resolveDate(dateText);
+        List<AiMatchMeetupScheduleItemDto> items = meetupSlotService.findByDate(date).stream()
+                .map(slot -> requestRepository.findById(slot.getRequestId())
+                        .map(request -> toScheduleItem(slot, request))
+                        .orElse(null))
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        return new AiMatchMeetupScheduleDto(
+                date.toString(),
+                meetupSlotService.getDates(),
+                AiMatchMeetupSlotService.BOOTH_NAME,
+                meetupSlotService.slotsPerDay(),
+                items
+        );
+    }
+
+    private AiMatchMeetupScheduleItemDto toScheduleItem(AiMatchMeetupSlot slot, AiMatchRequest request) {
+        AiMatchProfile profile = request.getProfile();
+        AiMatchProfile requesterProfile = request.getRequesterProfile();
+        String[] places = waitingPlaces(requesterProfile, profile);
+        return new AiMatchMeetupScheduleItemDto(
+                slot.getSlotAt(),
+                slot.isConfirmed(),
+                slot.getHeldUntil(),
+                request.getId(),
+                request.getConnectionStatus(),
+                request.getRequesterNickname(),
+                requesterProfile == null ? "" : requesterProfile.getGender(),
+                requesterProfile == null ? "" : requesterProfile.getPhoneNumber(),
+                places[0],
+                profile == null ? "" : profile.getNickname(),
+                profile == null ? "" : profile.getGender(),
+                profile == null ? "" : profile.getPhoneNumber(),
+                places[1]
+        );
+    }
+
+    /**
+     * [신청한 사람 대기 장소, 신청받은 사람 대기 장소].
+     * 남녀면 성별대로. 성별이 같거나 알 수 없으면 신청한 쪽이 도서관, 받은 쪽이 성호관.
+     */
+    private static String[] waitingPlaces(AiMatchProfile requesterProfile, AiMatchProfile profile) {
+        String requesterGender = requesterProfile == null ? "" : String.valueOf(requesterProfile.getGender());
+        String profileGender = profile == null ? "" : String.valueOf(profile.getGender());
+        boolean requesterFemale = requesterGender.contains("여");
+        boolean profileFemale = profileGender.contains("여");
+        if (requesterFemale && !profileFemale) {
+            return new String[]{AiMatchMeetupSlotService.WAITING_PLACE_FEMALE, AiMatchMeetupSlotService.WAITING_PLACE_MALE};
+        }
+        return new String[]{AiMatchMeetupSlotService.WAITING_PLACE_MALE, AiMatchMeetupSlotService.WAITING_PLACE_FEMALE};
+    }
+
+    /** 제안만 해 두고 30분 안에 확정이 안 돼 슬롯이 풀린 신청은 '매칭됨'으로 되돌린다. */
+    private void expireStaleMeetupProposals(List<AiMatchRequest> requests) {
+        List<AiMatchRequest> proposed = requests.stream()
+                .filter(request -> "PROPOSED".equals(request.getStatus()))
+                .toList();
+        if (proposed.isEmpty()) {
+            return;
+        }
+        meetupSlotService.purge();
+        Map<Long, AiMatchMeetupSlot> slots = meetupSlotService.findByRequestIds(
+                proposed.stream().map(AiMatchRequest::getId).toList()
+        );
+        proposed.stream()
+                .filter(request -> !slots.containsKey(request.getId()))
+                .forEach(AiMatchRequest::clearMeetup);
     }
 
     private List<AiMatchProfileResponseDto> getDiscoverableProfiles(Long viewerProfileId) {
@@ -921,6 +1023,14 @@ public class AiMatchService {
     private AiMatchRequestResponseDto toRequestDto(AiMatchRequest request) {
         AiMatchProfile profile = request.getProfile();
         AiMatchProfile requesterProfile = request.getRequesterProfile();
+        LocalDateTime heldUntil = "PROPOSED".equals(request.getStatus())
+                ? meetupSlotService.findByRequestIds(List.of(request.getId())).values().stream()
+                        .map(AiMatchMeetupSlot::getHeldUntil)
+                        .filter(java.util.Objects::nonNull)
+                        .findFirst()
+                        .orElse(null)
+                : null;
+        String[] places = waitingPlaces(requesterProfile, profile);
         return new AiMatchRequestResponseDto(
                 request.getId(),
                 profile == null ? null : profile.getId(),
@@ -940,7 +1050,10 @@ public class AiMatchService {
                 request.getMeetupProposerProfileId(),
                 request.getMeetupProposerNickname(),
                 request.getCreatedAt(),
-                request.getUpdatedAt()
+                request.getUpdatedAt(),
+                heldUntil,
+                places[0],
+                places[1]
         );
     }
 

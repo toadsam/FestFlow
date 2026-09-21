@@ -203,6 +203,17 @@ public class AiMatchRequest {
         this.updatedAt = LocalDateTime.now();
     }
 
+    /** 약속을 없던 일로. 매칭(ACCEPTED)은 그대로 두고 시간만 다시 정하게 한다. */
+    public void clearMeetup() {
+        this.status = "ACCEPTED";
+        this.statusReason = null;
+        this.meetupPlace = null;
+        this.meetupAt = null;
+        this.meetupProposerProfileId = null;
+        this.meetupProposerNickname = null;
+        this.updatedAt = LocalDateTime.now();
+    }
+
     public void confirmMeetup() {
         this.status = "CONFIRMED";
         this.statusReason = null;
