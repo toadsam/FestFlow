@@ -1764,3 +1764,14 @@
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero__chito:active img {
   transform: scale(0.94);
 }
+
+/* 아주대 밤 풍경(ajou-night.webp): 달이 오른쪽 위 3분의 1에 오도록, 글자 아래 은행나무는 조금 더 어둡게 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero--live .saju-hero__bg {
+  object-position: 88% 42%;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .saju-hero--live .saju-hero__shade {
+  background:
+    linear-gradient(90deg, rgba(29, 23, 64, 0.86) 0%, rgba(29, 23, 64, 0.5) 52%, rgba(29, 23, 64, 0.04) 100%),
+    linear-gradient(180deg, rgba(29, 23, 64, 0.1) 0%, rgba(29, 23, 64, 0) 35%, rgba(29, 23, 64, 0.62) 100%);
+}
