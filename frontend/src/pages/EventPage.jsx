@@ -35,7 +35,7 @@ import {
 export default function EventPage() {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
-  const [selectedDate, setSelectedDate] = useState("2026-05-30");
+  const [selectedDate, setSelectedDate] = useState("");
   const [stageFilter, setStageFilter] = useState("전체");
   const [reminders, setReminders] = useState(() => readEventReminders());
   const [aiGuide, setAiGuide] = useState(null);
@@ -93,8 +93,7 @@ export default function EventPage() {
   const visibleEvents = stageFilter === "전체"
     ? dayEvents
     : dayEvents.filter((item) => {
-        if (stageFilter === "버스킹") return item.title.includes("버스킹") || item.stage.includes("버스킹");
-        return item.stage === stageFilter;
+        return `${item.stage || ""}`.includes(stageFilter) || `${item.title || ""}`.includes(stageFilter);
       });
   const recommendedEvent =
     dayEvents.find((item) => item.status === EVENT_STATUS.SOON)

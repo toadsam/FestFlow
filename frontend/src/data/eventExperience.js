@@ -4,15 +4,11 @@ export const EVENT_REMINDER_KEY = "festa_event_reminders";
 export const EVENT_REMINDER_LEAD_MS = 10 * 60 * 1000;
 export const EVENT_MAX_TIMER_MS = 2_147_483_647;
 
-export const EVENT_DATE_TABS = [
-  "2026-04-06",
-  "2026-04-08",
-  "2026-05-13",
-  "2026-05-30",
-  "2026-05-31",
-];
+// 2026 가을축제 "바람" 이틀. 서버에 일정이 없어도 이 두 날짜 탭은 항상 보인다.
+export const EVENT_DATE_TABS = ["2026-10-07", "2026-10-08"];
 
-export const EVENT_STAGE_FILTERS = ["전체", "메인 스테이지", "보조 무대", "잔디 광장", "버스킹"];
+// 장소로 거른다. 일정의 stage(장소)나 제목에 이 글자가 들어가면 잡힌다.
+export const EVENT_STAGE_FILTERS = ["전체", "노천극장", "성호관", "가온마당", "아로새길", "대운동장"];
 
 export const EVENT_STATUS = {
   LIVE: "진행 중",
@@ -30,104 +26,108 @@ const CHEER_IMAGE = "https://images.pexels.com/photos/1190297/pexels-photo-11902
 const FIREWORKS_IMAGE = "https://images.pexels.com/photos/949592/pexels-photo-949592.jpeg?auto=compress&cs=tinysrgb&w=900";
 const DJ_IMAGE = "https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=900&q=80";
 
+const HOST = "아주대학교 총학생회";
+
+function preset(id, title, stage, day, start, end, extra) {
+  // "25:00" 처럼 자정을 넘는 시간은 다음 날로 넘긴다.
+  const [endHour, endMinute] = end.split(":").map(Number);
+  const endDate = endHour >= 24 ? nextDay(day) : day;
+  const endText = `${String(endHour % 24).padStart(2, "0")}:${String(endMinute).padStart(2, "0")}`;
+  return {
+    id,
+    title,
+    stage,
+    startTime: `${day}T${start}:00`,
+    endTime: `${endDate}T${endText}:00`,
+    status: EVENT_STATUS.SCHEDULED,
+    badge: "예정",
+    age: "전체 관람가",
+    host: HOST,
+    distance: "-",
+    waitTime: "-",
+    crowd: "보통",
+    weather: "-",
+    ...extra,
+  };
+}
+
+function nextDay(day) {
+  const date = new Date(`${day}T12:00:00`);
+  date.setDate(date.getDate() + 1);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+/** 총학생회 확정 타임테이블. 서버 일정이 비어 있을 때의 기본값이자, 서버 일정에 붙는 설명·사진의 출처. */
 export const EVENT_PRESETS = [
-  {
-    id: "opening-parade",
-    title: "오프닝 퍼레이드",
-    stage: "메인 스테이지",
-    startTime: "2026-05-30T17:20:00",
-    endTime: "2026-05-30T17:50:00",
-    status: EVENT_STATUS.SCHEDULED,
-    imageUrl: CONCERT_IMAGE,
-    badge: "예정",
-    lead: "축제의 시작을 알리는 메인 퍼레이드",
-    description: "무대와 광장을 잇는 오프닝 퍼레이드로 축제 분위기를 가장 먼저 느낄 수 있어요.",
-    genre: "퍼레이드",
-    age: "전체 관람가",
-    host: "축제 운영단",
-    distance: "80m",
-    waitTime: "0분",
-    crowd: "보통",
-    weather: "22°C",
-  },
-  {
-    id: "busking-relay",
-    title: "버스킹 릴레이",
-    stage: "보조 무대",
-    startTime: "2026-05-30T18:30:00",
-    endTime: "2026-05-30T19:10:00",
-    status: EVENT_STATUS.SOON,
-    imageUrl: BUSKING_IMAGE,
-    badge: "10분 후 시작",
-    lead: "지금 이 순간, 놓치지 말아야 할 공연!",
-    description: "다양한 뮤지션들이 함께하는 릴레이 버스킹 공연! 감성 가득한 음악으로 축제를 더 뜨겁게 즐겨보세요.",
-    genre: "어쿠스틱, 인디",
-    age: "전체 관람가",
-    host: "축제 운영단",
-    distance: "120m",
-    waitTime: "5분",
-    crowd: "보통",
-    weather: "22°C",
-  },
-  {
-    id: "cheer-stage",
-    title: "응원단 합동 무대",
-    stage: "잔디 광장",
-    startTime: "2026-05-30T19:35:00",
-    endTime: "2026-05-30T20:10:00",
-    status: EVENT_STATUS.LIVE,
+  preset("d1-booth-setup", "주간부스 세팅", "총학생회실", "2026-10-07", "09:00", "10:00", {
     imageUrl: CHEER_IMAGE,
-    badge: "진행 중",
-    lead: "잔디 광장에서 가장 뜨거운 응원 무대",
-    description: "아주 응원단과 동아리 팀이 함께 만드는 합동 무대입니다. 현장 반응이 가장 활발한 공연이에요.",
-    genre: "응원, 퍼포먼스",
-    age: "전체 관람가",
-    host: "아주 응원단",
-    distance: "150m",
-    waitTime: "8분",
-    crowd: "혼잡",
-    weather: "22°C",
-  },
-  {
-    id: "fireworks",
-    title: "불꽃놀이",
-    stage: "메인 스테이지",
-    startTime: "2026-05-30T20:30:00",
-    endTime: "2026-05-30T20:50:00",
-    status: EVENT_STATUS.SCHEDULED,
-    imageUrl: FIREWORKS_IMAGE,
-    badge: "예정",
-    lead: "밤하늘을 채우는 축제 하이라이트",
-    description: "메인 스테이지 인근에서 진행되는 짧고 강한 불꽃 세션입니다. 관람 전 이동 동선을 미리 확인해 주세요.",
-    genre: "스페셜 이벤트",
-    age: "전체 관람가",
-    host: "축제 운영단",
-    distance: "95m",
-    waitTime: "3분",
-    crowd: "보통",
-    weather: "22°C",
-  },
-  {
-    id: "dj-party",
-    title: "DJ 파티",
-    stage: "보조 무대",
-    startTime: "2026-05-30T21:00:00",
-    endTime: "2026-05-30T22:00:00",
-    status: EVENT_STATUS.SCHEDULED,
+    lead: "1일차 주간 부스 준비",
+    description: "총학생회실에서 주간 부스 운영을 준비합니다. 부스 운영진은 이 시간에 모여 주세요.",
+    genre: "운영",
+  }),
+  preset("d1-run", "뛰아주", "아주대학교 전체", "2026-10-07", "10:30", "12:00", {
+    imageUrl: CHEER_IMAGE,
+    lead: "캠퍼스 전체를 달리는 축제의 시작",
+    description: "아주대학교 캠퍼스 전체에서 진행되는 러닝 프로그램입니다. 편한 복장으로 참여해 주세요.",
+    genre: "참여 프로그램",
+  }),
+  preset("d1-day-booth", "주간부스", "성호관 잔디 · 가온마당", "2026-10-07", "10:30", "16:30", {
+    imageUrl: BUSKING_IMAGE,
+    lead: "낮의 축제, 성호관 잔디와 가온마당",
+    description: "성호관 잔디와 가온마당에서 학과·동아리 주간 부스가 열립니다. 사주 소개팅 부스도 여기에 있어요.",
+    genre: "부스",
+  }),
+  preset("d1-sucl", "SUCL", "대운동장", "2026-10-07", "15:00", "19:00", {
+    imageUrl: CONCERT_IMAGE,
+    lead: "대운동장을 채우는 오후 무대",
+    description: "아주대학교 대운동장에서 진행되는 SUCL 프로그램입니다. 관람석은 선착순이에요.",
+    genre: "공연",
+  }),
+  preset("d1-pub", "총학 주점", "아로새길", "2026-10-07", "15:00", "23:00", {
     imageUrl: DJ_IMAGE,
-    badge: "예정",
-    lead: "축제 마지막을 끌어올리는 DJ 무대",
-    description: "보조 무대에서 이어지는 DJ 파티입니다. 공연 전후 보조 무대 주변 혼잡도가 빠르게 오를 수 있어요.",
-    genre: "EDM, DJ",
-    age: "전체 관람가",
-    host: "DJ Flow",
-    distance: "130m",
-    waitTime: "6분",
-    crowd: "보통",
-    weather: "22°C",
-  },
+    lead: "아로새길에 차려지는 총학 주점",
+    description: "총학생회가 운영하는 주점입니다. 주점 탭에서 메뉴와 대기 현황을 볼 수 있어요.",
+    genre: "주점",
+  }),
+  preset("d1-cinema", "어썸 시네마", "노천극장(The Art)", "2026-10-07", "18:00", "22:00", {
+    imageUrl: FIREWORKS_IMAGE,
+    lead: "노천극장에서 보는 가을밤 영화",
+    description: "노천극장(The Art)에서 야외 상영이 진행됩니다. 담요를 챙기면 더 좋아요.",
+    genre: "영화",
+  }),
+  preset("d1-night-market", "야시장", "도서관 주차장 · 성호관 잔디밭", "2026-10-07", "10:30", "25:00", {
+    imageUrl: DJ_IMAGE,
+    lead: "밤늦게까지 이어지는 야시장",
+    description: "도서관 주차장과 성호관 잔디밭에서 야시장이 열립니다. 새벽 1시까지 운영해요.",
+    genre: "야시장",
+  }),
+  preset("d2-booth-setup", "주간부스 세팅", "총학생회실", "2026-10-08", "09:00", "10:00", {
+    imageUrl: CHEER_IMAGE,
+    lead: "2일차 주간 부스 준비",
+    description: "총학생회실에서 주간 부스 운영을 준비합니다. 부스 운영진은 이 시간에 모여 주세요.",
+    genre: "운영",
+  }),
+  preset("d2-day-booth", "주간부스", "성호관 잔디 · 가온마당", "2026-10-08", "10:30", "16:30", {
+    imageUrl: BUSKING_IMAGE,
+    lead: "둘째 날 주간 부스",
+    description: "성호관 잔디와 가온마당에서 주간 부스가 이어집니다. 사주 소개팅 부스 만남도 이 시간에 잡을 수 있어요.",
+    genre: "부스",
+  }),
+  preset("d2-stage", "공연무대", "노천극장(The Art)", "2026-10-08", "17:00", "25:00", {
+    imageUrl: CONCERT_IMAGE,
+    lead: "축제의 마지막 밤, 노천극장 공연",
+    description: "노천극장(The Art)에서 축제 공연무대가 열립니다. 입장 대기가 길 수 있으니 미리 와 주세요.",
+    genre: "공연",
+  }),
+  preset("d2-night-booth", "야간부스", "가온마당", "2026-10-08", "10:30", "25:00", {
+    imageUrl: FIREWORKS_IMAGE,
+    lead: "가온마당의 야간 부스",
+    description: "가온마당에서 야간 부스가 운영됩니다. 공연 전후로 들르기 좋아요.",
+    genre: "부스",
+  }),
 ];
 
+// 예전 데모 공연 제목. 서버가 아직 이런 데이터를 주면 위 실제 일정으로 바꿔서 보여 준다.
 const SEED_TITLES = new Set([
   "밴드 연습실",
   "DJ Awesome",
@@ -135,12 +135,21 @@ const SEED_TITLES = new Set([
   "싸이",
   "득근득근 포징 공연",
   "하이키",
+  "오프닝 공연",
+  "밴드 라이브",
+  "댄스팀 쇼케이스",
+  "DJ 피날레",
   "오프닝 퍼레이드",
   "버스킹 릴레이",
   "응원단 합동 무대",
   "인디밴드 쇼케이스",
   "DJ 나이트",
   "폐막 불꽃 카운트다운",
+  "재즈 버스킹",
+  "댄스 배틀 예선",
+  "동아리 랜덤 플레이댄스",
+  "심야 어쿠스틱",
+  "셔틀 막차 안내 방송",
 ]);
 
 export function readEventReminders() {
@@ -188,7 +197,9 @@ export function eventDayHeading(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "전체 일정";
   const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
-  return `${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}(${weekdays[date.getDay()]}) 전체 일정`;
+  const dayIndex = EVENT_DATE_TABS.indexOf(eventDateKey(value));
+  const dayLabel = dayIndex >= 0 ? `${dayIndex + 1}일차 · ` : "";
+  return `${dayLabel}${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")}(${weekdays[date.getDay()]}) 전체 일정`;
 }
 
 export function normalizeStatus(rawStatus, fallbackStatus = EVENT_STATUS.SCHEDULED) {
@@ -211,6 +222,18 @@ export function statusTone(status) {
   return "scheduled";
 }
 
+/** 일정에 붙일 기본 정보. 같은 제목·같은 날짜 → 같은 제목 → 순서 순으로 찾는다. */
+function presetFor(event, index = 0) {
+  if (event?.title) {
+    const date = eventDateKey(event.startTime);
+    const exact = EVENT_PRESETS.find((item) => item.title === event.title && eventDateKey(item.startTime) === date);
+    if (exact) return exact;
+    const byTitle = EVENT_PRESETS.find((item) => item.title === event.title);
+    if (byTitle) return byTitle;
+  }
+  return EVENT_PRESETS[index % EVENT_PRESETS.length];
+}
+
 export function normalizeEvents(events = []) {
   const isSeedDataset =
     Array.isArray(events)
@@ -221,35 +244,37 @@ export function normalizeEvents(events = []) {
 }
 
 export function normalizeEvent(event, index = 0) {
-  const preset = EVENT_PRESETS[index % EVENT_PRESETS.length];
   const seedLike = !event || SEED_TITLES.has(event.title) || `${event.imageUrl || ""}`.includes("Bodybuilder");
-  const title = seedLike ? preset.title : event.title || preset.title;
+  const base = seedLike ? EVENT_PRESETS[index % EVENT_PRESETS.length] : presetFor(event, index);
+  const title = seedLike ? base.title : event.title || base.title;
   const stage = seedLike
-    ? preset.stage
-    : event.stage || event.locationName || event.venue || event.artist || preset.stage;
-  const imageUrl = seedLike ? preset.imageUrl : resolveApiAssetUrl(event.imageUrl) || preset.imageUrl;
-  const status = normalizeStatus(event.statusOverride || event.status, preset.status);
+    ? base.stage
+    : event.stage || event.locationName || event.venue || event.artist || base.stage;
+  const imageUrl = seedLike ? base.imageUrl : resolveApiAssetUrl(event.imageUrl) || base.imageUrl;
+  const status = normalizeStatus(event?.statusOverride || event?.status, base.status);
+  // 서버의 liveMessage 는 "장소: ..." 같은 운영 메모라 설명으로는 preset 문장을 먼저 쓴다.
+  const liveMessage = `${event?.liveMessage || ""}`.trim();
 
   return {
-    ...preset,
-    ...event,
-    id: event?.id || preset.id,
+    ...base,
+    ...(seedLike ? {} : event),
+    id: event?.id || base.id,
     title,
     stage,
     imageUrl,
     status,
-    badge: status === EVENT_STATUS.SCHEDULED ? preset.badge : status,
-    description: event?.description || event?.liveMessage || preset.description,
-    lead: event?.lead || preset.lead,
-    genre: event?.genre || preset.genre,
-    age: event?.age || preset.age,
-    host: event?.host || event?.artist || preset.host,
-    distance: event?.distance || preset.distance,
-    waitTime: event?.waitTime || preset.waitTime,
-    crowd: event?.crowd || preset.crowd,
-    weather: event?.weather || preset.weather,
-    startTime: event?.startTime || preset.startTime,
-    endTime: event?.endTime || preset.endTime,
+    badge: status === EVENT_STATUS.SCHEDULED ? base.badge : status,
+    description: event?.description || base.description || liveMessage,
+    lead: event?.lead || base.lead,
+    genre: event?.genre || base.genre,
+    age: event?.age || base.age,
+    host: event?.host || event?.artist || base.host,
+    distance: event?.distance || base.distance,
+    waitTime: event?.waitTime || base.waitTime,
+    crowd: event?.crowd || base.crowd,
+    weather: event?.weather || base.weather,
+    startTime: (seedLike ? null : event?.startTime) || base.startTime,
+    endTime: (seedLike ? null : event?.endTime) || base.endTime,
   };
 }
 
@@ -264,10 +289,14 @@ export function uniqueEventDates(events) {
 }
 
 export function primaryFestivalDate(events) {
+  // 축제 기간 중이면 오늘, 아니면 1일차부터.
+  const today = eventDateKey(new Date().toISOString());
+  if (EVENT_DATE_TABS.includes(today)) return today;
   const counts = new Map();
   events.forEach((event) => {
     const key = eventDateKey(event.startTime);
     counts.set(key, (counts.get(key) || 0) + 1);
   });
-  return [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] || "2026-05-30";
+  const first = [...counts.entries()].sort((a, b) => a[0].localeCompare(b[0]))[0]?.[0];
+  return EVENT_DATE_TABS[0] || first || "2026-10-07";
 }

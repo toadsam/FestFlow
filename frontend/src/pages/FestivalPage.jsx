@@ -14,7 +14,7 @@ import { CountUp, HeroReeds, IconBeer, IconHeartSaju, Mascot, PaperPlane } from 
 import { resolveBoothImageUrl } from "../config/boothImages";
 import { TableDots } from "../components/v2/TableMap";
 import { FESTIVAL, MAIN_BOOTH_FALLBACK, findMainBooth } from "../config/festival";
-import { fallbackEvents } from "../data/festivalUiData";
+import { normalizeEvents } from "../data/eventExperience";
 
 const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -123,7 +123,8 @@ export default function FestivalPage() {
     };
   }, []);
 
-  const eventSource = events.length ? events : fallbackEvents;
+  // 서버 일정에 장소·설명을 붙이고, 옛 데모 일정이면 총학 타임테이블로 바꾼다.
+  const eventSource = useMemo(() => normalizeEvents(events), [events]);
 
   const schedule = useMemo(() => {
     const dated = eventSource
@@ -192,8 +193,8 @@ export default function FestivalPage() {
           <strong>{event.title}</strong>
           <small>
             {event.end ? `${formatClock(event.start)} ~ ${formatClock(event.end)}` : "시간 확인 중"}
-            {event.artist ? ` · ${event.artist}` : ""}
-            {event.liveMessage ? ` · ${event.liveMessage}` : ""}
+            {event.stage || event.artist ? ` · ${event.stage || event.artist}` : ""}
+            {event.liveMessage && !`${event.liveMessage}`.startsWith("장소") ? ` · ${event.liveMessage}` : ""}
             {Number(event.delayMinutes) > 0 ? ` · ${event.delayMinutes}분 지연` : ""}
           </small>
         </div>

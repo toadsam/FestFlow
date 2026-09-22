@@ -17,6 +17,8 @@ import {
   saveEventReminders,
   sortedEvents,
   statusTone,
+  uniqueEventDates,
+  eventDateLabel,
 } from "../data/eventExperience";
 import {
   areNotificationsEnabled,
@@ -28,6 +30,7 @@ export default function LineupPage() {
   const navigate = useNavigate();
   const [events, setEvents] = useState([]);
   const [stageFilter, setStageFilter] = useState("전체");
+  const [selectedDate, setSelectedDate] = useState("");
   const [reminders, setReminders] = useState(() => readEventReminders());
   const [message, setMessage] = useState("");
   const reminderTimersRef = useRef(new Map());
@@ -65,13 +68,13 @@ export default function LineupPage() {
   }, []);
 
   const normalizedEvents = useMemo(() => sortedEvents(normalizeEvents(events)), [events]);
-  const activeDate = primaryFestivalDate(normalizedEvents);
+  const dateOptions = useMemo(() => uniqueEventDates(normalizedEvents), [normalizedEvents]);
+  const activeDate = selectedDate || primaryFestivalDate(normalizedEvents);
   const dayEvents = normalizedEvents.filter((item) => String(item.startTime).startsWith(activeDate));
   const visibleEvents = stageFilter === "전체"
     ? dayEvents
     : dayEvents.filter((item) => {
-        if (stageFilter === "버스킹") return item.title.includes("버스킹") || item.stage.includes("버스킹");
-        return item.stage === stageFilter;
+        return `${item.stage || ""}`.includes(stageFilter) || `${item.title || ""}`.includes(stageFilter);
       });
 
   function clearReminderTimer(key) {
@@ -152,6 +155,19 @@ export default function LineupPage() {
           <IconCalendar className="h-5 w-5" />
         </button>
       </header>
+
+      <div className="events-mobile-date-tabs" aria-label="날짜 선택">
+        {dateOptions.map((date) => (
+          <button
+            key={date}
+            type="button"
+            className={activeDate === date ? "is-active" : ""}
+            onClick={() => setSelectedDate(date)}
+          >
+            {eventDateLabel(date, true)}
+          </button>
+        ))}
+      </div>
 
       <div className="events-mobile-filter-tabs events-lineup-filter-tabs" aria-label="라인업 필터">
         {EVENT_STAGE_FILTERS.map((stage) => (

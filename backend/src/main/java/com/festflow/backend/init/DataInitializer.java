@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.Duration;
@@ -33,6 +34,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.UUID;
 
 @Configuration
@@ -67,6 +69,20 @@ public class DataInitializer {
     @Value("${app.init.simple-demo-credentials:false}")
     private boolean simpleDemoCredentials;
 
+    /** true 면 시연용 공연(지금 시각 기준으로 생기는 가짜 일정)을 같이 넣는다. 실제 축제에서는 끈다. */
+    @Value("${app.init.demo-events:false}")
+    private boolean demoEvents;
+
+    /** 예전 시연용 공연 제목. 실제 타임테이블을 넣으면서 이 제목의 일정은 지운다. */
+    private static final Set<String> DEMO_EVENT_TITLES = Set.of(
+            "오프닝 공연", "밴드 라이브", "댄스팀 쇼케이스", "DJ 피날레",
+            "오프닝 퍼레이드", "버스킹 릴레이", "응원단 합동 무대", "인디밴드 쇼케이스", "DJ 나이트", "폐막 불꽃 카운트다운",
+            "재즈 버스킹", "댄스 배틀 예선", "동아리 랜덤 플레이댄스", "심야 어쿠스틱", "셔틀 막차 안내 방송",
+            // 예전 시연용 라인업(오늘 날짜로 계속 밀리던 가짜 공연)
+            "득근득근 포징 공연", "하츠투하트", "베이비몬스터", "데이식스", "이즈나", "에스파", "엔플라잉",
+            "밴드 연습실", "DJ Awesome", "에일리", "싸이", "하이키"
+    );
+
     @Bean
     public CommandLineRunner seedData(
             BoothRepository boothRepository,
@@ -93,12 +109,13 @@ public class DataInitializer {
             seedMissingDemoBooths(boothRepository, seedMoreScenarioBooths(now));
             normalizeCorruptedDemoBooths(boothRepository, now);
 
-            if (eventRepository.count() == 0) {
-                eventRepository.saveAll(seedEvents(now));
+            // 2026 가을축제 "바람" 타임테이블(총학 확정본). 시연용 공연은 지우고, 없는 일정만 채운다(제목+날짜 기준이라 다시 켜도 중복 없음).
+            syncBaramSchedule(eventRepository);
+            if (demoEvents) {
+                seedMissingDemoEvents(eventRepository, seedScenarioEvents(now));
+                seedMissingDemoEvents(eventRepository, seedMoreScenarioEvents(now));
+                refreshStaleDemoEvents(eventRepository, now);
             }
-            seedMissingDemoEvents(eventRepository, seedScenarioEvents(now));
-            seedMissingDemoEvents(eventRepository, seedMoreScenarioEvents(now));
-            refreshStaleDemoEvents(eventRepository, now);
 
             if (noticeRepository.count() == 0) {
                 noticeRepository.save(new Notice(
@@ -424,13 +441,57 @@ public class DataInitializer {
         };
     }
 
-    private List<FestivalEvent> seedEvents(LocalDateTime now) {
+    /** 가을축제 바람 타임테이블. "25:00" 처럼 자정을 넘는 종료는 다음 날 새벽으로 넘긴다. */
+    private List<FestivalEvent> seedBaramSchedule() {
+        LocalDate day1 = LocalDate.of(2026, 10, 7);
+        LocalDate day2 = LocalDate.of(2026, 10, 8);
         return List.of(
-                new FestivalEvent("오프닝 공연", now.plusMinutes(30), now.plusMinutes(70), "예정", null, null, null),
-                new FestivalEvent("밴드 라이브", now.plusHours(2), now.plusHours(3), "예정", null, null, null),
-                new FestivalEvent("댄스팀 쇼케이스", now.plusHours(3).plusMinutes(30), now.plusHours(4).plusMinutes(20), "예정", null, null, null),
-                new FestivalEvent("DJ 피날레", now.plusHours(5), now.plusHours(6), "예정", null, null, null)
+                schedule("주간부스 세팅", day1, "09:00", "10:00", "장소: 총학생회실"),
+                schedule("뛰아주", day1, "10:30", "12:00", "장소: 아주대학교 전체"),
+                schedule("주간부스", day1, "10:30", "16:30", "장소: 아주대학교 성호관 잔디 / 가온마당"),
+                schedule("SUCL", day1, "15:00", "19:00", "장소: 아주대학교 대운동장"),
+                schedule("총학 주점", day1, "15:00", "23:00", "장소: 아로새길"),
+                schedule("어썸 시네마", day1, "18:00", "22:00", "장소: 노천극장(The Art)"),
+                schedule("야시장", day1, "10:30", "25:00", "장소: 도서관 주차장 / 성호관 잔디밭"),
+                schedule("주간부스 세팅", day2, "09:00", "10:00", "장소: 총학생회실"),
+                schedule("주간부스", day2, "10:30", "16:30", "장소: 아주대학교 성호관 잔디 / 가온마당"),
+                schedule("공연무대", day2, "17:00", "25:00", "장소: 노천극장(The Art)"),
+                schedule("야간부스", day2, "10:30", "25:00", "장소: 가온마당")
         );
+    }
+
+    private FestivalEvent schedule(String title, LocalDate day, String start, String end, String place) {
+        LocalDateTime startTime = day.atTime(LocalTime.parse(start));
+        String[] endParts = end.split(":");
+        int endHour = Integer.parseInt(endParts[0]);
+        LocalDateTime endTime = (endHour >= 24 ? day.plusDays(1) : day)
+                .atTime(LocalTime.of(endHour % 24, Integer.parseInt(endParts[1])));
+        return event(title, startTime, endTime, "예정", place, 0);
+    }
+
+    /** 시연용 공연은 지우고, 타임테이블에 있는데 DB에 없는 일정(제목+날짜)만 넣는다. 운영진이 고친 시간은 건드리지 않는다. */
+    private void syncBaramSchedule(EventRepository eventRepository) {
+        List<FestivalEvent> existing = eventRepository.findAll();
+        List<FestivalEvent> demo = existing.stream()
+                .filter(item -> DEMO_EVENT_TITLES.contains(item.getTitle()))
+                .toList();
+        if (!demo.isEmpty()) {
+            eventRepository.deleteAll(demo);
+        }
+        Set<String> keys = existing.stream()
+                .filter(item -> !demo.contains(item))
+                .map(item -> scheduleKey(item.getTitle(), item.getStartTime()))
+                .collect(Collectors.toSet());
+        List<FestivalEvent> missing = seedBaramSchedule().stream()
+                .filter(item -> !keys.contains(scheduleKey(item.getTitle(), item.getStartTime())))
+                .toList();
+        if (!missing.isEmpty()) {
+            eventRepository.saveAll(missing);
+        }
+    }
+
+    private String scheduleKey(String title, LocalDateTime startTime) {
+        return title + "@" + (startTime == null ? "" : startTime.toLocalDate());
     }
 
     private void seedDemoNotices(NoticeRepository noticeRepository) {

@@ -1,3 +1,5 @@
+import { EVENT_PRESETS } from "./eventExperience";
+
 export const FESTIVAL_IMAGE = "/images/offline-state.png";
 
 export const fallbackBooths = [
@@ -188,56 +190,15 @@ export const fallbackBooths = [
   },
 ];
 
-export const fallbackEvents = [
-  {
-    id: 1,
-    title: "오프닝 퍼레이드",
-    artist: "메인 스테이지",
-    startTime: "2026-05-30T17:20:00",
-    endTime: "2026-05-30T17:50:00",
-    status: "예정",
-  },
-  {
-    id: 2,
-    title: "버스킹 릴레이",
-    artist: "보조 무대",
-    startTime: "2026-05-30T18:30:00",
-    endTime: "2026-05-30T19:10:00",
-    status: "10분 후 시작",
-  },
-  {
-    id: 3,
-    title: "응원단 합동 무대",
-    artist: "잔디 광장",
-    startTime: "2026-05-30T19:35:00",
-    endTime: "2026-05-30T20:10:00",
-    status: "진행 중",
-  },
-  {
-    id: 4,
-    title: "불꽃놀이",
-    artist: "메인 스테이지",
-    startTime: "2026-05-30T20:30:00",
-    endTime: "2026-05-30T20:50:00",
-    status: "예정",
-  },
-  {
-    id: 5,
-    title: "DJ 파티",
-    artist: "보조 무대",
-    startTime: "2026-05-30T21:00:00",
-    endTime: "2026-05-30T22:00:00",
-    status: "예정",
-  },
-  {
-    id: 6,
-    title: "폐막 불꽃 카운트다운",
-    artist: "운영본부",
-    startTime: "2026-05-30T23:40:00",
-    endTime: "2026-05-31T00:00:00",
-    status: "예정",
-  },
-];
+// 총학 확정 타임테이블(eventExperience.js 의 EVENT_PRESETS)을 예전 모양(artist = 장소)으로 맞춘 것.
+export const fallbackEvents = EVENT_PRESETS.map((event, index) => ({
+  id: index + 1,
+  title: event.title,
+  artist: event.stage,
+  startTime: event.startTime,
+  endTime: event.endTime,
+  status: "예정",
+}));
 
 export const homeRecommendations = [
   {

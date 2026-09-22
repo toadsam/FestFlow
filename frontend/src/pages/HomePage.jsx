@@ -19,8 +19,8 @@ import { resolveBoothImageUrl } from "../config/boothImages";
 import {
   FESTIVAL_IMAGE,
   fallbackBooths,
-  fallbackEvents,
 } from "../data/festivalUiData";
+import { normalizeEvents } from "../data/eventExperience";
 
 const EVENT_RECOMMEND_IMAGE = "/images/og-festflow.png";
 const DEFAULT_AI_GUIDE = {
@@ -145,7 +145,7 @@ export default function HomePage() {
   }, []);
 
   const boothSource = booths.length ? booths : fallbackBooths;
-  const eventSource = events.length ? events : fallbackEvents;
+  const eventSource = normalizeEvents(events);
 
   const homeCards = useMemo(() => {
     const sortedBooths = [...boothSource].sort(
