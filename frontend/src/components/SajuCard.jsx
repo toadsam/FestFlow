@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { PillarChart, stemHanja, ELEMENT_HANJA } from "./SajuChart";
 import "../styles/saju.css";
 
 const ELEMENT_ORDER = ["목", "화", "토", "금", "수"];
@@ -9,12 +10,6 @@ const STEM_ELEMENT = { 갑: "목", 을: "목", 병: "화", 정: "화", 무: "토
 const BRANCH_INFO = {
   자: ["수", "쥐"], 축: ["토", "소"], 인: ["목", "호랑이"], 묘: ["목", "토끼"], 진: ["토", "용"], 사: ["화", "뱀"],
   오: ["화", "말"], 미: ["토", "양"], 신: ["금", "원숭이"], 유: ["금", "닭"], 술: ["토", "개"], 해: ["수", "돼지"],
-};
-const POSITION_MEANING = {
-  년주: "뿌리 · 조상과 어린 시절",
-  월주: "줄기 · 부모와 사회생활",
-  일주: "꽃 · 나 자신과 배우자 자리",
-  시주: "열매 · 자녀와 말년",
 };
 const ELEMENT_COPY = {
   목: ["나무", "자라는 힘과 시작. 많으면 호기심이 넘쳐요."],
@@ -38,25 +33,8 @@ export function pillarParts(value) {
   };
 }
 
-function PillarButton({ label, value, active, onToggle }) {
-  const known = Boolean(value);
-  return (
-    <button
-      type="button"
-      className={`saju-pillar${known ? "" : " saju-pillar--unknown"}${active ? " is-on" : ""}`}
-      onClick={known ? onToggle : undefined}
-      aria-pressed={active}
-      aria-label={known ? `${label} ${value} 풀이 보기` : `${label} 없음`}
-    >
-      <span className="saju-pillar__label">{label}</span>
-      <strong className="saju-pillar__value">{known ? value : "―"}</strong>
-    </button>
-  );
-}
-
-/** 한 사람의 사주. 프로필 상세와 내 프로필 양쪽에서 쓴다. 기둥·오행·일간을 누르면 풀이가 열린다. */
+/** 한 사람의 사주. 프로필 상세와 내 프로필 양쪽에서 쓴다. 명식 표의 기둥·오행·일간을 누르면 풀이가 열린다. */
 export function SajuPanel({ saju, title = "사주", subtitle }) {
-  const [activePillar, setActivePillar] = useState(null);
   const [activeElement, setActiveElement] = useState(null);
   const [dayTipOpen, setDayTipOpen] = useState(false);
   const [readingOpen, setReadingOpen] = useState(false);
@@ -72,14 +50,6 @@ export function SajuPanel({ saju, title = "사주", subtitle }) {
 
   const counts = saju.elementCounts || {};
   const max = Math.max(1, ...ELEMENT_ORDER.map((name) => counts[name] || 0));
-  const pillars = [
-    ["시주", saju.hourKnown ? saju.hourPillar : ""],
-    ["일주", saju.dayPillar],
-    ["월주", saju.monthPillar],
-    ["년주", saju.yearPillar],
-  ];
-  const activeParts = activePillar ? pillarParts(pillars.find(([label]) => label === activePillar)?.[1]) : null;
-  const activeValue = activePillar ? pillars.find(([label]) => label === activePillar)?.[1] : "";
   const readingLong = (saju.reading || "").length > 120;
 
   return (
@@ -92,36 +62,7 @@ export function SajuPanel({ saju, title = "사주", subtitle }) {
         <span className="saju-zodiac">{saju.zodiac}띠</span>
       </header>
 
-      <div className="saju-pillars">
-        {pillars.map(([label, value]) => (
-          <PillarButton
-            key={label}
-            label={label}
-            value={value}
-            active={activePillar === label}
-            onToggle={() => setActivePillar((current) => (current === label ? null : label))}
-          />
-        ))}
-      </div>
-
-      {activePillar && activeParts ? (
-        <div className="saju-pillar-detail" key={activePillar}>
-          <strong>
-            {activePillar} {activeValue}
-          </strong>
-          <span>{POSITION_MEANING[activePillar]}</span>
-          <small>
-            천간 {activeParts.stem}({activeParts.stemElement}) · 지지 {activeParts.branch}({activeParts.branchElement}
-            {activeParts.animal ? `, ${activeParts.animal}` : ""})
-          </small>
-        </div>
-      ) : (
-        <p className="saju-note saju-note--hint">기둥을 누르면 그 자리의 뜻이 보여요.</p>
-      )}
-
-      {!saju.hourKnown ? (
-        <p className="saju-note">태어난 시간을 몰라 시주 없이 세 기둥으로 봤어요.</p>
-      ) : null}
+      <PillarChart title={null} people={[{ saju }]} />
 
       <button
         type="button"
@@ -129,9 +70,9 @@ export function SajuPanel({ saju, title = "사주", subtitle }) {
         onClick={() => setDayTipOpen((current) => !current)}
         aria-expanded={dayTipOpen}
       >
-        <span>일간</span>
+        <span>일간 · 나</span>
         <strong>
-          {saju.dayMaster} <em>{saju.dayMasterElement}</em>
+          {stemHanja(saju.dayMaster)} {saju.dayMaster} <em>{ELEMENT_HANJA[saju.dayMasterElement] || ""} {saju.dayMasterElement}</em>
         </strong>
       </button>
       {dayTipOpen ? (
@@ -153,7 +94,7 @@ export function SajuPanel({ saju, title = "사주", subtitle }) {
               onClick={() => setActiveElement((current) => (current === name ? null : name))}
               aria-pressed={active}
             >
-              <span className="saju-element__name">{name}</span>
+              <span className="saju-element__name">{ELEMENT_HANJA[name]}</span>
               <div className="saju-element__bar">
                 <i style={{ height: barsReady ? `${Math.round((value / max) * 100)}%` : "0%" }} />
               </div>
@@ -165,7 +106,7 @@ export function SajuPanel({ saju, title = "사주", subtitle }) {
       {activeElement ? (
         <p className="saju-note saju-note--tip" key={activeElement}>
           <b>
-            {activeElement}({ELEMENT_COPY[activeElement][0]}) {counts[activeElement] || 0}
+            {ELEMENT_HANJA[activeElement]} {activeElement}({ELEMENT_COPY[activeElement][0]}) {counts[activeElement] || 0}
           </b>{" "}
           {ELEMENT_COPY[activeElement][1]}
           {(counts[activeElement] || 0) === 0 ? " 이 사람에게는 없는 기운이라, 이 기운을 가진 상대가 잘 채워 줘요." : ""}

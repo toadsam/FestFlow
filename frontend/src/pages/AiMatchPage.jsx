@@ -38,6 +38,7 @@ import {
   updateAiMatchProfile,
 } from "../api";
 import { SajuPanel } from "../components/SajuCard";
+import { ElementSeal } from "../components/SajuChart";
 import SajuSplash, { shouldShowSajuSplash } from "../components/SajuSplash";
 import MeetupScheduler from "../components/MeetupScheduler";
 import SajuHero from "../components/SajuHero";
@@ -2550,7 +2551,7 @@ export default function AiMatchPage() {
 
         {accessProfile && !accessProfile.saju ? <MatchMissingBanner onEdit={startEditingProfile} /> : null}
         {accessProfile?.saju && topMatches.length ? (
-          <MatchTop3 profiles={topMatches} resolveImage={resolveApiAssetUrl} onOpen={openProfile} />
+          <MatchTop3 profiles={topMatches} resolveImage={resolveApiAssetUrl} onOpen={openProfile} viewerSaju={accessProfile.saju} />
         ) : null}
 
         <section className="ai-match-list-meta am-meta">
@@ -2599,6 +2600,7 @@ export default function AiMatchPage() {
 
                   <div className="ai-match-person-main">
                     <button type="button" className="ai-match-person-photo" onClick={() => openProfile(profile)}>
+                      <ElementSeal saju={profile.saju} />
                       {profile.generatedImageUrl ? (
                         <img src={resolveApiAssetUrl(profile.generatedImageUrl)} alt="" />
                       ) : (
@@ -2623,6 +2625,8 @@ export default function AiMatchPage() {
                     compatibility={profile.compatibility}
                     viewerHasSaju={Boolean(accessProfile?.saju)}
                     targetHasSaju={Boolean(profile.saju)}
+                    viewerSaju={accessProfile?.saju}
+                    targetSaju={profile.saju}
                     onFixMine={startEditingProfile}
                     onOpen={() => openProfile(profile)}
                   />
