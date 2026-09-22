@@ -1255,3 +1255,81 @@
 .app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login .ai-match-field-error {
   color: #ff9d94 !important;
 }
+
+
+/* ---------- 상세 화면: 신고 ---------- */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-safety-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.am-report__open,
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.am-report__open:hover {
+  min-height: 0 !important;
+  height: 30px;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory-3) !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.am-report__open::before,
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.am-report__open::after {
+  content: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-report {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(224, 72, 61, 0.1);
+  box-shadow: inset 0 0 0 1px rgba(255, 138, 128, 0.4);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-report > strong {
+  color: var(--nt-ivory) !important;
+  font-size: 14px !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-report__reasons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-report__reasons .am-chip.is-on {
+  background: #e0483d !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-report textarea {
+  min-height: 72px;
+  padding: 10px 12px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+  resize: vertical;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-report__foot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-report__foot small {
+  color: var(--nt-ivory-3) !important;
+  font-size: 11.5px !important;
+}

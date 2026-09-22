@@ -70,6 +70,17 @@ public class AiMatchProfile {
     @Column(length = 2000)
     private String sajuReading;
 
+    /** 운영진이 목록에서 숨김. 본인 로그인은 된다. */
+    @Column(name = "hidden")
+    private Boolean hidden;
+
+    @Column(name = "hidden_reason", length = 200)
+    private String hiddenReason;
+
+    /** 사진 검수. null/PENDING 검수 전, APPROVED, REJECTED. */
+    @Column(name = "photo_review", length = 20)
+    private String photoReview;
+
     protected AiMatchProfile() {
     }
 
@@ -190,6 +201,27 @@ public class AiMatchProfile {
     }
 
     /** 사주가 세워져 있는가. 기능이 생기기 전에 가입한 프로필은 없을 수 있다. */
+    public boolean isHidden() {
+        return Boolean.TRUE.equals(hidden);
+    }
+
+    public String getHiddenReason() {
+        return hiddenReason;
+    }
+
+    public void setHidden(boolean hidden, String reason) {
+        this.hidden = hidden;
+        this.hiddenReason = hidden ? reason : null;
+    }
+
+    public String getPhotoReview() {
+        return photoReview == null || photoReview.isBlank() ? "PENDING" : photoReview;
+    }
+
+    public void setPhotoReview(String photoReview) {
+        this.photoReview = photoReview;
+    }
+
     public boolean hasSaju() {
         return birthDate != null;
     }

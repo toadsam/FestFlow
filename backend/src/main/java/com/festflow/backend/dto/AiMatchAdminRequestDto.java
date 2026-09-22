@@ -21,6 +21,13 @@ public record AiMatchAdminRequestDto(
         String connectionStatus,
         String adminNote,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        String meetupPlace,
+        LocalDateTime meetupAt,
+        String requesterWaitingPlace,
+        String profileWaitingPlace,
+        LocalDateTime requesterArrivedAt,
+        LocalDateTime profileArrivedAt,
+        String meetupOutcome
 ) {
 }

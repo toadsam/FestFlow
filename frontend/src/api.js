@@ -1342,3 +1342,84 @@ export async function confirmAiMatchMeetup(requestId, nickname, pin) {
   return parseJson(response, "약속 확정에 실패했습니다.");
 }
 
+// ---------- 소개팅: 신고(사용자) · 현장 체크인 · 숨김 · 사진 검수 · CSV(관리자) ----------
+export async function reportAiMatchProfile(profileId, nickname, pin, reason, detail) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/${profileId}/report`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin, reason, detail }),
+  });
+  return parseJson(response, "신고를 접수하지 못했습니다.");
+}
+
+export async function markAdminAiMatchArrival(requestId, side, arrived) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/arrival`, {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ side, arrived }),
+  });
+  return parseJson(response, "도착 체크에 실패했습니다.");
+}
+
+export async function markAdminAiMatchMet(requestId) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/met`, {
+    method: "POST",
+    headers: withAuth(),
+  });
+  return parseJson(response, "만남 완료 처리에 실패했습니다.");
+}
+
+export async function markAdminAiMatchNoShow(requestId, side) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/no-show`, {
+    method: "POST",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ side }),
+  });
+  return parseJson(response, "노쇼 처리에 실패했습니다.");
+}
+
+export async function setAdminAiMatchProfileHidden(profileId, hidden, reason) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/profiles/${profileId}/hidden`, {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ hidden, reason }),
+  });
+  return parseJson(response, "숨김 처리에 실패했습니다.");
+}
+
+export async function reviewAdminAiMatchPhoto(profileId, decision, reason) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/profiles/${profileId}/photo-review`, {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ decision, reason }),
+  });
+  return parseJson(response, "사진 검수 처리에 실패했습니다.");
+}
+
+export async function resolveAdminAiMatchReport(reportId, action, note) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/reports/${reportId}/resolve`, {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ action, note }),
+  });
+  return parseJson(response, "신고 처리에 실패했습니다.");
+}
+
+export async function downloadAdminAiMatchCsv() {
+  const response = await fetch(`${API_BASE}/admin/ai-match/export.csv`, { headers: withAuth() });
+  if (!response.ok) {
+    const error = new Error("CSV를 내려받지 못했습니다.");
+    error.status = response.status;
+    throw error;
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const stamp = new Date().toISOString().slice(0, 10);
+  link.href = url;
+  link.download = `사주소개팅-운영보고-${stamp}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}

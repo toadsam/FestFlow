@@ -1321,3 +1321,455 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+
+/* ---------- 매치 카드: 약속 줄 · 문자 문구 복사 ---------- */
+.app-shell .ai-match-admin-page .aa-match__meetup {
+  margin: 0 !important;
+  padding: 6px 10px;
+  border-radius: 9px;
+  background: #fff6dc;
+  color: #6b4a00 !important;
+  font-size: 11.5px !important;
+  line-height: 1.45;
+}
+
+.app-shell .ai-match-admin-page .aa-match__copy {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-match__copy button,
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-match__copy button:hover {
+  min-height: 0 !important;
+  height: 30px;
+  padding: 0 8px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  background-image: none !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+  color: var(--aa-purple) !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-match__copy button.is-done {
+  background: #e6f5ec !important;
+  color: #1c7a4e !important;
+  box-shadow: none !important;
+}
+
+.app-shell .ai-match-admin-page .aa-match__state.is-completed { background: #e6f5ec; color: #1c7a4e !important; }
+
+/* ---------- 사람 카드: 배지 · 숨김 버튼 ---------- */
+.app-shell .ai-match-admin-page .aa-person__flag {
+  display: inline-block;
+  margin-right: 4px;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: #f4f2fa;
+  color: var(--aa-muted) !important;
+  font-size: 10px !important;
+  font-style: normal;
+  font-weight: 800;
+  vertical-align: 1px;
+}
+
+.app-shell .ai-match-admin-page .aa-person__flag--hidden { background: #ececec; color: #555 !important; }
+.app-shell .ai-match-admin-page .aa-person__flag--report { background: #fdeceb; color: #c93d30 !important; }
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-person__hide,
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-person__hide:hover {
+  min-height: 0 !important;
+  height: 32px;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: #f4f2fa !important;
+  background-image: none !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+  color: var(--aa-muted) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-person__hide.is-on {
+  background: #2a2160 !important;
+  color: #ffe9b8 !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-person__hide:disabled {
+  opacity: 0.35;
+}
+
+.app-shell .ai-match-admin-page .aa-person.is-hidden-profile {
+  background: #f7f6fb !important;
+}
+
+/* ---------- 신고 접수함 ---------- */
+.app-shell .ai-match-admin-page .aa-reports {
+  display: grid;
+  gap: 8px;
+}
+
+.app-shell .ai-match-admin-page .aa-report {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #fdf5f4;
+  box-shadow: inset 0 0 0 1px #f3c5c0;
+}
+
+.app-shell .ai-match-admin-page .aa-report.is-closed {
+  background: #faf9fd;
+  box-shadow: inset 0 0 0 1px var(--aa-line);
+  opacity: 0.75;
+}
+
+.app-shell .ai-match-admin-page .aa-report__main {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.app-shell .ai-match-admin-page .aa-report__main > :first-child {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+}
+
+.app-shell .ai-match-admin-page .aa-report__blank {
+  background: #eee;
+}
+
+.app-shell .ai-match-admin-page .aa-report__id {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.app-shell .ai-match-admin-page .aa-report__id strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px !important;
+  color: var(--aa-ink) !important;
+}
+
+.app-shell .ai-match-admin-page .aa-report__id strong i {
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #fdeceb;
+  color: #c93d30 !important;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.app-shell .ai-match-admin-page .aa-report__id span,
+.app-shell .ai-match-admin-page .aa-report__id small {
+  font-size: 11.5px !important;
+  color: var(--aa-muted) !important;
+}
+
+.app-shell .ai-match-admin-page .aa-report__id p {
+  margin: 2px 0 0 !important;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12.5px !important;
+  line-height: 1.45;
+  color: var(--aa-ink) !important;
+}
+
+.app-shell .ai-match-admin-page .aa-report__actions,
+.app-shell .ai-match-admin-page .aa-review__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page :is(.aa-report__actions, .aa-review__actions, .aa-review__reject) button,
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page :is(.aa-report__actions, .aa-review__actions, .aa-review__reject) button:hover {
+  min-height: 0 !important;
+  height: 34px;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  background-image: none !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+  color: var(--aa-ink) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  white-space: nowrap;
+  text-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page :is(.aa-report__actions, .aa-review__actions, .aa-review__reject) button.is-warn {
+  background: #fff6dc !important;
+  color: #9a6b00 !important;
+  box-shadow: inset 0 0 0 1px #f0d890 !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page :is(.aa-report__actions, .aa-review__actions, .aa-review__reject) button.is-danger {
+  background: #fdf3f2 !important;
+  color: var(--aa-red) !important;
+  box-shadow: inset 0 0 0 1px #f3c5c0 !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-review__actions button.is-ok {
+  background: var(--aa-green) !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  flex: 1 1 100%;
+  height: 40px;
+  font-size: 14px !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page :is(.aa-report__actions, .aa-review__actions) button:disabled {
+  opacity: 0.4;
+}
+
+/* ---------- 사진 검수 ---------- */
+.app-shell .ai-match-admin-page .aa-review {
+  display: grid;
+  gap: 10px;
+}
+
+.app-shell .ai-match-admin-page .aa-review__who {
+  display: grid;
+  gap: 2px;
+}
+
+.app-shell .ai-match-admin-page .aa-review__who strong {
+  font-size: 15px !important;
+  color: var(--aa-ink) !important;
+}
+
+.app-shell .ai-match-admin-page .aa-review__who span {
+  font-size: 12px !important;
+  color: var(--aa-muted) !important;
+}
+
+.app-shell .ai-match-admin-page .aa-review__who p {
+  margin: 4px 0 0 !important;
+  font-size: 12.5px !important;
+  color: var(--aa-ink) !important;
+}
+
+.app-shell .ai-match-admin-page .aa-review__reject {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  flex: 1 1 100%;
+}
+
+.app-shell .ai-match-admin-page .aa-review__reject input {
+  min-height: 34px !important;
+  padding: 0 10px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: #f4f2fa !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+  font-size: 12.5px !important;
+}
+
+.app-shell .ai-match-admin-page .aa-review__hint {
+  font-size: 11px !important;
+  color: var(--aa-muted) !important;
+}
+
+/* ---------- CSV ---------- */
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-csv,
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-csv:hover {
+  min-height: 0 !important;
+  height: 40px;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: #2a2160 !important;
+  background-image: none !important;
+  color: #ffe9b8 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+/* ---------- 부스 시간표: 지금 카드 · 도착 체크 · 만남/노쇼 버튼 ---------- */
+.mu-now {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.mu-now__cell {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f4f2fa;
+  box-shadow: inset 0 0 0 1px #e6e3f2;
+  min-width: 0;
+}
+
+.mu-now__cell.is-live {
+  background: #1d1740;
+  box-shadow: inset 0 0 0 1px rgba(217, 180, 90, 0.5);
+}
+
+.mu-now__cell.is-soon {
+  background: #fff6dc;
+  box-shadow: inset 0 0 0 1px #f0d890;
+}
+
+.mu-now__cell small {
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: #6b6a85;
+}
+
+.mu-now__cell.is-live small { color: #d9b45a; }
+.mu-now__cell.is-soon small { color: #9a6b00; }
+
+.mu-now__cell strong {
+  font-size: 14px;
+  font-weight: 800;
+  color: #1f1a3d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mu-now__cell.is-live strong { color: #fff4dc; }
+
+.mu-now__cell span {
+  font-size: 11px;
+  color: #6b6a85;
+  line-height: 1.4;
+}
+
+.mu-now__cell.is-live span { color: rgba(255, 244, 220, 0.7); }
+
+.mu-admin__row--done {
+  opacity: 0.6;
+}
+
+.mu-admin__state--done { background: #e6f5ec; color: #1c7a4e; }
+
+.mu-admin__pair.is-arrived b { color: #1c7a4e; }
+
+.app-shell.app-shell.app-shell .mu-admin__check,
+.app-shell.app-shell.app-shell .mu-admin__check:hover {
+  min-height: 0 !important;
+  height: 24px;
+  padding: 0 8px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #fff !important;
+  background-image: none !important;
+  box-shadow: inset 0 0 0 1.5px #c9c2d8 !important;
+  color: #6b6a85 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.app-shell.app-shell.app-shell .mu-admin__check.is-on {
+  background: #22a06b !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+
+.app-shell.app-shell.app-shell .mu-admin__check::before,
+.app-shell.app-shell.app-shell .mu-admin__check::after,
+.app-shell.app-shell.app-shell .mu-admin__btn::before,
+.app-shell.app-shell.app-shell .mu-admin__btn::after {
+  content: none !important;
+}
+
+.mu-admin__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.app-shell.app-shell.app-shell .mu-admin__btn,
+.app-shell.app-shell.app-shell .mu-admin__btn:hover {
+  min-height: 0 !important;
+  height: 30px;
+  padding: 0 11px !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: #fff !important;
+  background-image: none !important;
+  box-shadow: inset 0 0 0 1px #e6e3f2 !important;
+  color: #1f1a3d !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  white-space: nowrap;
+  text-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.app-shell.app-shell.app-shell .mu-admin__btn--met.is-ready {
+  background: #22a06b !important;
+  color: #fff !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell.app-shell .mu-admin__btn--ghost {
+  color: #6b6a85 !important;
+}
+
+.app-shell.app-shell.app-shell .mu-admin__btn--danger {
+  background: #fdf3f2 !important;
+  color: #c93d30 !important;
+  box-shadow: inset 0 0 0 1px #f3c5c0 !important;
+}
+
+.app-shell.app-shell.app-shell .mu-admin__btn:disabled {
+  opacity: 0.4;
+}
+
+.mu-admin__noshow {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  border-radius: 10px;
+  background: #fdf5f4;
+}
+
+.mu-admin__noshow small {
+  font-size: 11px;
+  font-weight: 700;
+  color: #c93d30;
+  margin-right: 2px;
+}

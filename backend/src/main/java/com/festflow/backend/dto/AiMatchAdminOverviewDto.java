@@ -9,6 +9,9 @@ public record AiMatchAdminOverviewDto(
         long pendingRequestCount,
         long matchedRequestCount,
         List<AiMatchAdminProfileDto> profiles,
-        List<AiMatchAdminRequestDto> requests
+        List<AiMatchAdminRequestDto> requests,
+        List<AiMatchReportDto> reports,
+        long openReportCount,
+        long pendingPhotoReviewCount
 ) {
 }

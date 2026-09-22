@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   deleteAdminAiMatchProfile,
+  downloadAdminAiMatchCsv,
+  resolveAdminAiMatchReport,
+  reviewAdminAiMatchPhoto,
+  setAdminAiMatchProfileHidden,
   fetchAdminAiMatchOverview,
   loginAdmin,
   purgeAdminAiMatchPhone,
@@ -23,7 +27,7 @@ import {
   IconX,
 } from "../components/UxIcons";
 import { clearLogin, getAdminName, isLoggedIn, saveLogin } from "../utils/auth";
-import AdminMeetupSchedule from "../components/admin/AdminMeetupSchedule";
+import AdminMeetupSchedule, { OUTCOME_LABELS } from "../components/admin/AdminMeetupSchedule";
 import "../styles/admin-aimatch.css";
 
 const STATUS_LABELS = {
@@ -54,6 +58,47 @@ function adminErrorMessage(error) {
 
 function getStatusLabel(status) {
   return STATUS_LABELS[status] || status || "대기중";
+}
+
+const REPORT_REASON_LABELS = {
+  INAPPROPRIATE_PHOTO: "부적절한 사진",
+  OFFENSIVE_MESSAGE: "불쾌한 메시지",
+  FAKE_PROFILE: "가짜 프로필",
+  HARASSMENT: "괴롭힘",
+  OTHER: "기타",
+};
+
+function formatKoreanDateTime(value) {
+  if (!value) return "";
+  const [datePart, timePart = ""] = `${value}`.split("T");
+  const [, m, d] = datePart.split("-");
+  return `${Number(m)}월 ${Number(d)}일 ${timePart.slice(0, 5)}`;
+}
+
+/** 매치 카드의 '문자 문구 복사'. 약속이 잡혔으면 시간·대기 장소까지, 아니면 성사 안내만. */
+function buildMatchMessage(request, side) {
+  const me = side === "requester" ? request.requesterNickname : request.profileNickname;
+  const other = side === "requester" ? request.profileNickname : request.requesterNickname;
+  const place = side === "requester" ? request.requesterWaitingPlace : request.profileWaitingPlace;
+  if (request.meetupAt) {
+    return `[아주대 가을축제 사주 소개팅] ${me}님, ${other}님과의 부스 만남이 ${formatKoreanDateTime(request.meetupAt)}에 잡혔어요. 5분 전까지 ${place}에서 기다려 주시면 운영진이 안내해 드려요. 못 오시면 앱에서 약속을 취소해 주세요.`;
+  }
+  return `[아주대 가을축제 사주 소개팅] ${me}님, ${other}님과 매칭이 성사됐어요! 앱 신청함에서 소개팅 부스 시간을 골라 주세요. 부스는 성호관 앞 총학생회 소개팅 부스예요.`;
+}
+
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const area = document.createElement("textarea");
+    area.value = text;
+    document.body.appendChild(area);
+    area.select();
+    const ok = document.execCommand("copy");
+    area.remove();
+    return ok;
+  }
 }
 
 function getConnectionStatusLabel(status) {
@@ -167,11 +212,21 @@ export default function AiMatchAdminPage() {
   const [purgeBusy, setPurgeBusy] = useState(false);
   // 화면을 넷으로 나눈다: 성사·연락 / 신청 기록 / 사람들 / 통계·도구
   const [adminTab, setAdminTab] = useState("matches");
+  const [reportBusyId, setReportBusyId] = useState(null);
+  const [reviewBusyId, setReviewBusyId] = useState(null);
+  const [rejectReason, setRejectReason] = useState("");
+  const [copiedKey, setCopiedKey] = useState("");
   const overviewRefreshInFlightRef = useRef(false);
   const completePulseTimerRef = useRef(null);
 
   const profiles = Array.isArray(overview?.profiles) ? overview.profiles : [];
   const requests = Array.isArray(overview?.requests) ? overview.requests : [];
+  const reports = Array.isArray(overview?.reports) ? overview.reports : [];
+  const openReports = reports.filter((report) => report.status === "OPEN");
+  // 사진 검수 대기열: 활성이고 아직 검수 안 한 사람, 가입 순서대로
+  const photoQueue = profiles
+    .filter((profile) => profile.status === "ACTIVE" && (profile.photoReview || "PENDING") === "PENDING")
+    .sort((a, b) => `${a.createdAt || ""}`.localeCompare(`${b.createdAt || ""}`));
   const profileStatusById = useMemo(
     () => new Map(profiles.map((profile) => [profile.id, profile.status])),
     [profiles],
@@ -486,6 +541,80 @@ export default function AiMatchAdminPage() {
     }
   }
 
+  function patchProfile(updated) {
+    setOverview((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        profiles: prev.profiles.map((profile) => (
+          profile.id === updated.id
+            ? { ...profile, hidden: updated.hidden, hiddenReason: updated.hiddenReason, photoReview: updated.photoReview, openReportCount: updated.openReportCount, status: updated.status }
+            : profile
+        )),
+      };
+    });
+  }
+
+  async function handleToggleHidden(profile) {
+    const nextHidden = !profile.hidden;
+    const reason = nextHidden ? window.prompt(`${profile.nickname}님을 목록에서 숨깁니다. 이유(선택)`, "") : "";
+    if (nextHidden && reason === null) return;
+    try {
+      const updated = await setAdminAiMatchProfileHidden(profile.id, nextHidden, reason || "");
+      patchProfile(updated);
+      setMessage(nextHidden ? `${profile.nickname}님을 목록에서 숨겼습니다.` : `${profile.nickname}님이 다시 목록에 보입니다.`);
+    } catch (error) {
+      setMessage(adminErrorMessage(error));
+    }
+  }
+
+  async function handleReviewPhoto(profile, decision) {
+    setReviewBusyId(profile.id);
+    try {
+      const updated = await reviewAdminAiMatchPhoto(profile.id, decision, decision === "REJECTED" ? rejectReason : "");
+      patchProfile(updated);
+      setRejectReason("");
+      setMessage(decision === "APPROVED" ? `${profile.nickname}님 사진을 승인했습니다.` : `${profile.nickname}님 사진을 반려하고 목록에서 숨겼습니다.`);
+    } catch (error) {
+      setMessage(adminErrorMessage(error));
+    } finally {
+      setReviewBusyId(null);
+    }
+  }
+
+  async function handleResolveReport(report, action) {
+    const note = action === "DISMISS" ? "" : window.prompt(action === "HIDE" ? "숨김 사유(선택)" : "삭제 사유(선택)", "");
+    if (note === null) return;
+    if (action === "DELETE" && !window.confirm(`${report.targetNickname}님 프로필을 삭제할까요? 되돌릴 수 없습니다.`)) return;
+    setReportBusyId(report.id);
+    try {
+      await resolveAdminAiMatchReport(report.id, action, note || "");
+      await loadOverview({ silent: true, force: true });
+      setMessage("신고를 처리했습니다.");
+    } catch (error) {
+      setMessage(adminErrorMessage(error));
+    } finally {
+      setReportBusyId(null);
+    }
+  }
+
+  async function handleCopyMessage(request, side) {
+    const ok = await copyText(buildMatchMessage(request, side));
+    const key = `${request.id}-${side}`;
+    setCopiedKey(ok ? key : "");
+    setMessage(ok ? "문자 문구를 복사했어요. 문자 앱에 붙여 넣으세요." : "복사하지 못했어요.");
+    window.setTimeout(() => setCopiedKey((current) => (current === key ? "" : current)), 2000);
+  }
+
+  async function handleDownloadCsv() {
+    try {
+      await downloadAdminAiMatchCsv();
+      setMessage("운영 보고 CSV를 내려받았습니다.");
+    } catch (error) {
+      setMessage(adminErrorMessage(error));
+    }
+  }
+
   function toggleExpandedMatch(requestId) {
     setExpandedMatchIds((prev) => (
       prev.includes(requestId) ? prev.filter((id) => id !== requestId) : [...prev, requestId]
@@ -628,6 +757,7 @@ export default function AiMatchAdminPage() {
           ["matches", "성사·연락", matchedRequests.length],
           ["requests", "신청 기록", requests.length],
           ["profiles", "사람들", profiles.length],
+          ["reports", "신고·검수", openReports.length + photoQueue.length],
           ["tools", "통계·도구", null],
         ].map(([key, label, count]) => (
           <button
@@ -645,7 +775,7 @@ export default function AiMatchAdminPage() {
 
       {adminTab === "matches" ? (
       <>
-      <AdminMeetupSchedule />
+      <AdminMeetupSchedule onChanged={() => loadOverview({ silent: true, force: true })} />
 
       <section className="admin-ai-operations-strip">
         <article>
@@ -672,6 +802,9 @@ export default function AiMatchAdminPage() {
           </div>
           <em>성사율 {adminStats.matchedRate}%</em>
         </div>
+        <button type="button" className="aa-csv" onClick={handleDownloadCsv}>
+          운영 보고 CSV 내려받기
+        </button>
         <div className="admin-ai-stat-grid">
           <article>
             <span>성별</span>
@@ -781,7 +914,22 @@ export default function AiMatchAdminPage() {
                     {request.meetPlace || "장소 미지정"}
                   </span>
                 </div>
-                <em className={`aa-match__state is-${connectionStatus.toLowerCase()}`}>{getConnectionStatusLabel(connectionStatus)}</em>
+                <em className={`aa-match__state is-${connectionStatus.toLowerCase()}`}>
+                  {request.meetupOutcome ? OUTCOME_LABELS[request.meetupOutcome] || request.meetupOutcome : getConnectionStatusLabel(connectionStatus)}
+                </em>
+              </div>
+              {request.meetupAt ? (
+                <p className="aa-match__meetup">
+                  부스 약속 {formatKoreanDateTime(request.meetupAt)} · {request.requesterNickname} {request.requesterWaitingPlace} / {request.profileNickname} {request.profileWaitingPlace}
+                </p>
+              ) : null}
+              <div className="aa-match__copy">
+                <button type="button" className={copiedKey === `${request.id}-requester` ? "is-done" : ""} onClick={() => handleCopyMessage(request, "requester")}>
+                  {copiedKey === `${request.id}-requester` ? "복사됨" : `${request.requesterNickname} 문자 문구`}
+                </button>
+                <button type="button" className={copiedKey === `${request.id}-profile` ? "is-done" : ""} onClick={() => handleCopyMessage(request, "profile")}>
+                  {copiedKey === `${request.id}-profile` ? "복사됨" : `${request.profileNickname} 문자 문구`}
+                </button>
               </div>
               <div className="aa-match__foot">
                 <div className="aa-match__phones">
@@ -991,6 +1139,105 @@ export default function AiMatchAdminPage() {
       </aside>
       ) : null}
 
+      {adminTab === "reports" ? (
+      <main className="admin-ai-dashboard-main">
+      <article className="admin-console-panel">
+        <div className="admin-console-panel__head">
+          <div>
+            <span>참가자 신고</span>
+            <h3>신고 접수함</h3>
+          </div>
+          <strong>{openReports.length}건 대기</strong>
+        </div>
+        {reports.length === 0 ? <p className="admin-console-hint">접수된 신고가 없습니다.</p> : null}
+        <div className="aa-reports">
+          {reports.map((report) => {
+            const open = report.status === "OPEN";
+            const target = profiles.find((profile) => profile.id === report.targetProfileId);
+            return (
+              <article key={report.id} className={`aa-report${open ? "" : " is-closed"}`}>
+                <div className="aa-report__main">
+                  {target ? <AvatarThumb imageUrl={getProfileImageUrl(target)} name={target.nickname} /> : <span className="aa-report__blank" />}
+                  <div className="aa-report__id">
+                    <strong>
+                      {report.targetNickname}
+                      <i>{REPORT_REASON_LABELS[report.reason] || report.reason}</i>
+                    </strong>
+                    <span>
+                      {report.reporterNickname}님 신고 · {report.createdAt?.replace("T", " ").slice(5, 16)}
+                      {target?.hidden ? " · 현재 숨김" : ""}
+                    </span>
+                    {report.detail ? <p>{report.detail}</p> : null}
+                    {!open ? <small>처리됨 · {report.resolution || "-"} · {report.resolvedAt?.replace("T", " ").slice(5, 16)}</small> : null}
+                  </div>
+                </div>
+                {open ? (
+                  <div className="aa-report__actions">
+                    <button type="button" disabled={reportBusyId === report.id} onClick={() => handleResolveReport(report, "DISMISS")}>문제 없음</button>
+                    <button type="button" className="is-warn" disabled={reportBusyId === report.id || !target || target.hidden} onClick={() => handleResolveReport(report, "HIDE")}>숨기기</button>
+                    <button type="button" className="is-danger" disabled={reportBusyId === report.id || !target || target.status !== "ACTIVE"} onClick={() => handleResolveReport(report, "DELETE")}>삭제</button>
+                  </div>
+                ) : null}
+              </article>
+            );
+          })}
+        </div>
+      </article>
+
+      <article className="admin-console-panel">
+        <div className="admin-console-panel__head">
+          <div>
+            <span>새 가입자 사진</span>
+            <h3>사진 검수</h3>
+          </div>
+          <strong>{photoQueue.length}명 대기</strong>
+        </div>
+        {photoQueue.length === 0 ? (
+          <p className="admin-console-hint">검수할 사진이 없습니다. 새로 가입하면 여기에 쌓여요.</p>
+        ) : (
+          (() => {
+            const profile = photoQueue[0];
+            const meta = parseProfileMeta(profile.intro);
+            return (
+              <div className="aa-review">
+                <div className="aa-review__who">
+                  <strong>{profile.nickname}</strong>
+                  <span>
+                    {profile.gender}
+                    {meta.mbti ? ` · ${meta.mbti}` : ""} · 가입 {profile.createdAt?.replace("T", " ").slice(5, 16)}
+                  </span>
+                  {meta.summary ? <p>{meta.summary}</p> : null}
+                </div>
+                <AdminImageCompare
+                  originalImageUrl={profile.originalImageUrl}
+                  generatedImageUrl={profile.generatedImageUrl}
+                  name={profile.nickname}
+                />
+                <div className="aa-review__actions">
+                  <button type="button" className="is-ok" disabled={reviewBusyId === profile.id} onClick={() => handleReviewPhoto(profile, "APPROVED")}>
+                    승인 · 다음
+                  </button>
+                  <div className="aa-review__reject">
+                    <input
+                      value={rejectReason}
+                      onChange={(event) => setRejectReason(event.target.value)}
+                      placeholder="반려 사유 (예: 얼굴이 안 보여요)"
+                      maxLength={150}
+                    />
+                    <button type="button" className="is-danger" disabled={reviewBusyId === profile.id} onClick={() => handleReviewPhoto(profile, "REJECTED")}>
+                      반려 · 숨김
+                    </button>
+                  </div>
+                </div>
+                <small className="aa-review__hint">반려하면 목록에서 바로 사라지고, 사람들 탭에서 다시 보이기로 되돌릴 수 있어요. 남은 {photoQueue.length - 1}명.</small>
+              </div>
+            );
+          })()
+        )}
+      </article>
+      </main>
+      ) : null}
+
       {adminTab === "profiles" ? (
       <main className="admin-ai-dashboard-main">
       <article className="admin-console-panel">
@@ -1073,6 +1320,9 @@ export default function AiMatchAdminPage() {
                       <i className={`aa-person__dot${profile.status === "ACTIVE" ? " is-active" : ""}`} title={getProfileStatusLabel(profile.status)} />
                     </strong>
                     <span>
+                      {profile.hidden ? <i className="aa-person__flag aa-person__flag--hidden">숨김</i> : null}
+                      {(profile.photoReview || "PENDING") === "PENDING" && profile.status === "ACTIVE" ? <i className="aa-person__flag">검수 전</i> : null}
+                      {profile.openReportCount ? <i className="aa-person__flag aa-person__flag--report">신고 {profile.openReportCount}</i> : null}
                       {profile.gender}
                       {meta.mbti ? ` · ${meta.mbti}` : ""}
                       {visibleTags.length ? ` · ${visibleTags.join(" · ")}` : ""}
@@ -1091,6 +1341,15 @@ export default function AiMatchAdminPage() {
                     <li className={profile.matchedCount ? "is-good" : ""}><b>{profile.matchedCount}</b>성사</li>
                   </ul>
                   <div className="aa-person__actions">
+                    <button
+                      type="button"
+                      className={`aa-person__hide${profile.hidden ? " is-on" : ""}`}
+                      onClick={() => handleToggleHidden(profile)}
+                      disabled={profile.status !== "ACTIVE"}
+                      title={profile.hidden ? `숨김 중${profile.hiddenReason ? ` · ${profile.hiddenReason}` : ""} · 누르면 다시 보임` : "목록에서 숨기기"}
+                    >
+                      {profile.hidden ? "보이기" : "숨기기"}
+                    </button>
                     <button
                       type="button"
                       className={`aa-person__more${isProfileExpanded ? " is-open" : ""}`}

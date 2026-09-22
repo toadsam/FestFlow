@@ -1,6 +1,13 @@
 package com.festflow.backend.controller.admin;
 
 import com.festflow.backend.dto.AiMatchAdminOverviewDto;
+import com.festflow.backend.dto.AiMatchAdminArrivalDto;
+import com.festflow.backend.dto.AiMatchAdminHiddenDto;
+import com.festflow.backend.dto.AiMatchAdminNoShowDto;
+import com.festflow.backend.dto.AiMatchAdminPhotoReviewDto;
+import com.festflow.backend.dto.AiMatchAdminProfileDto;
+import com.festflow.backend.dto.AiMatchReportDto;
+import com.festflow.backend.dto.AiMatchReportResolveDto;
 import com.festflow.backend.dto.AiMatchMeetupScheduleDto;
 import com.festflow.backend.dto.AiMatchAdminNoteUpdateDto;
 import com.festflow.backend.dto.AiMatchAdminPhonePurgeRequestDto;
@@ -59,6 +66,45 @@ public class AdminAiMatchController {
             @Valid @RequestBody AiMatchAdminPhonePurgeRequestDto requestDto
     ) {
         return aiMatchService.purgeByPhoneNumber(requestDto);
+    }
+
+    @PutMapping("/requests/{requestId}/arrival")
+    public AiMatchAdminRequestDto markArrival(@PathVariable Long requestId, @RequestBody AiMatchAdminArrivalDto requestDto) {
+        return aiMatchService.markArrival(requestId, requestDto);
+    }
+
+    @PostMapping("/requests/{requestId}/met")
+    public AiMatchAdminRequestDto markMet(@PathVariable Long requestId) {
+        return aiMatchService.markMet(requestId);
+    }
+
+    @PostMapping("/requests/{requestId}/no-show")
+    public AiMatchAdminRequestDto markNoShow(@PathVariable Long requestId, @RequestBody(required = false) AiMatchAdminNoShowDto requestDto) {
+        return aiMatchService.markNoShow(requestId, requestDto);
+    }
+
+    @PutMapping("/profiles/{profileId}/hidden")
+    public AiMatchAdminProfileDto setHidden(@PathVariable Long profileId, @RequestBody AiMatchAdminHiddenDto requestDto) {
+        return aiMatchService.setProfileHidden(profileId, requestDto);
+    }
+
+    @PutMapping("/profiles/{profileId}/photo-review")
+    public AiMatchAdminProfileDto reviewPhoto(@PathVariable Long profileId, @RequestBody AiMatchAdminPhotoReviewDto requestDto) {
+        return aiMatchService.reviewPhoto(profileId, requestDto);
+    }
+
+    @PutMapping("/reports/{reportId}/resolve")
+    public AiMatchReportDto resolveReport(@PathVariable Long reportId, @RequestBody(required = false) AiMatchReportResolveDto requestDto) {
+        return aiMatchService.resolveReport(reportId, requestDto);
+    }
+
+    @GetMapping(value = "/export.csv", produces = "text/csv")
+    public org.springframework.http.ResponseEntity<String> exportCsv() {
+        String csv = aiMatchService.exportAdminCsv();
+        return org.springframework.http.ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=\"ai-match-report.csv\"")
+                .contentType(new org.springframework.http.MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
+                .body(csv);
     }
 
     @GetMapping("/meetup-schedule")

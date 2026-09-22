@@ -16,6 +16,10 @@ public record AiMatchAdminProfileDto(
         int sentCount,
         int pendingReceivedCount,
         int matchedCount,
-        LocalDateTime createdAt
+        LocalDateTime createdAt,
+        boolean hidden,
+        String hiddenReason,
+        String photoReview,
+        int openReportCount
 ) {
 }

@@ -26,6 +26,7 @@ import {
   checkAiMatchPhoneNumber,
   previewAiMatchSaju,
   cancelAiMatchMeetup,
+  reportAiMatchProfile,
   confirmAiMatchMeetup,
   createAiMatchImagePreview,
   deleteAiMatchProfile,
@@ -688,6 +689,10 @@ export default function AiMatchPage() {
   // 탭에 처음 들어올 때 한 번 뜨는 사주 스플래시
   const [sajuSplash, setSajuSplash] = useState(() => shouldShowSajuSplash());
   const fortuneRef = useRef(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("OFFENSIVE_MESSAGE");
+  const [reportDetail, setReportDetail] = useState("");
+  const [reportBusy, setReportBusy] = useState(false);
   const [accessNickname, setAccessNickname] = useState("");
   const [accessPin, setAccessPin] = useState("");
   const [accessPhoneNumber, setAccessPhoneNumber] = useState("");
@@ -1379,7 +1384,27 @@ export default function AiMatchPage() {
     openProfile(requestProfile);
   }
 
+  async function handleReportSubmit(event) {
+    event.preventDefault();
+    if (!selectedProfile || !accessNickname || !accessPin) {
+      setErrorMessage("신고는 로그인 후 할 수 있어요.");
+      return;
+    }
+    setReportBusy(true);
+    try {
+      await reportAiMatchProfile(selectedProfile.id, accessNickname, accessPin, reportReason, reportDetail);
+      setReportOpen(false);
+      setReportDetail("");
+      setSuccessMessage("신고가 접수됐어요. 운영진이 확인하고 조치할게요. 상대에게는 알려지지 않아요.");
+    } catch (error) {
+      setErrorMessage(error.message || "신고를 접수하지 못했어요.");
+    } finally {
+      setReportBusy(false);
+    }
+  }
+
   function closeDetail() {
+    setReportOpen(false);
     setActiveSelectedProfile(null);
   }
 
@@ -3121,7 +3146,49 @@ export default function AiMatchPage() {
         <section className="ai-match-safety-card">
           <IconShield className="h-5 w-5" />
           <p>안전한 만남을 위해 실명 및 연락처는 상호 매칭 후에만 공개됩니다.</p>
+          <button type="button" className="am-report__open" onClick={() => setReportOpen((open) => !open)}>
+            {reportOpen ? "신고 닫기" : "이 사람 신고"}
+          </button>
         </section>
+
+        {reportOpen ? (
+          <form className="am-report" onSubmit={handleReportSubmit}>
+            <strong>무엇이 문제였나요?</strong>
+            <div className="am-report__reasons" role="radiogroup">
+              {[
+                ["INAPPROPRIATE_PHOTO", "부적절한 사진"],
+                ["OFFENSIVE_MESSAGE", "불쾌한 메시지"],
+                ["FAKE_PROFILE", "가짜 프로필"],
+                ["HARASSMENT", "괴롭힘"],
+                ["OTHER", "기타"],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  role="radio"
+                  aria-checked={reportReason === value}
+                  className={`am-chip${reportReason === value ? " is-on" : ""}`}
+                  onClick={() => setReportReason(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={reportDetail}
+              onChange={(event) => setReportDetail(event.target.value)}
+              placeholder="자세한 내용을 적어 주시면 더 빨리 확인할 수 있어요 (선택)"
+              maxLength={500}
+              rows={3}
+            />
+            <div className="am-report__foot">
+              <small>신고한 사실은 상대에게 알려지지 않아요.</small>
+              <button type="submit" className="ai-match-secondary-button ai-match-secondary-button--danger" disabled={reportBusy}>
+                {reportBusy ? "접수 중…" : "신고 보내기"}
+              </button>
+            </div>
+          </form>
+        ) : null}
 
         <form className="ai-match-request-sheet" onSubmit={handleRequest}>
           <div className="ai-match-request-sheet-head">

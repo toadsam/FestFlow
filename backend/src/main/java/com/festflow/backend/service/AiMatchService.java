@@ -1,6 +1,15 @@
 package com.festflow.backend.service;
 
 import com.festflow.backend.dto.AiMatchAdminOverviewDto;
+import com.festflow.backend.dto.AiMatchAdminArrivalDto;
+import com.festflow.backend.dto.AiMatchAdminHiddenDto;
+import com.festflow.backend.dto.AiMatchAdminNoShowDto;
+import com.festflow.backend.dto.AiMatchAdminPhotoReviewDto;
+import com.festflow.backend.dto.AiMatchReportCreateDto;
+import com.festflow.backend.dto.AiMatchReportDto;
+import com.festflow.backend.dto.AiMatchReportResolveDto;
+import com.festflow.backend.entity.AiMatchReport;
+import com.festflow.backend.repository.AiMatchReportRepository;
 import com.festflow.backend.dto.AiMatchAdminNoteUpdateDto;
 import com.festflow.backend.dto.AiMatchAdminPhonePurgeRequestDto;
 import com.festflow.backend.dto.AiMatchAdminPhonePurgeResponseDto;
@@ -85,6 +94,7 @@ public class AiMatchService {
     private final PasswordEncoder passwordEncoder;
     private final SajuService sajuService;
     private final AiMatchMeetupSlotService meetupSlotService;
+    private final AiMatchReportRepository reportRepository;
 
     public AiMatchService(
             AiMatchProfileRepository profileRepository,
@@ -96,8 +106,10 @@ public class AiMatchService {
             AiMatchSmsNotifier aiMatchSmsNotifier,
             PasswordEncoder passwordEncoder,
             SajuService sajuService,
-            AiMatchMeetupSlotService meetupSlotService
+            AiMatchMeetupSlotService meetupSlotService,
+            AiMatchReportRepository reportRepository
     ) {
+        this.reportRepository = reportRepository;
         this.sajuService = sajuService;
         this.meetupSlotService = meetupSlotService;
         this.profileRepository = profileRepository;
@@ -376,13 +388,18 @@ public class AiMatchService {
                 .filter(id -> id != null)
                 .collect(Collectors.groupingBy(id -> id, Collectors.counting()));
 
+        List<AiMatchReport> reports = reportRepository.findAllByOrderByCreatedAtDesc();
+        Map<Long, Long> openReportCounts = reports.stream()
+                .filter(report -> "OPEN".equals(report.getStatus()))
+                .collect(Collectors.groupingBy(AiMatchReport::getTargetProfileId, Collectors.counting()));
         List<AiMatchAdminProfileDto> profileDtos = profiles.stream()
                 .map(profile -> toAdminProfileDto(
                         profile,
                         receivedCounts.getOrDefault(profile.getId(), 0L),
                         sentCounts.getOrDefault(profile.getId(), 0L),
                         pendingReceivedCounts.getOrDefault(profile.getId(), 0L),
-                        matchedCounts.getOrDefault(profile.getId(), 0L)
+                        matchedCounts.getOrDefault(profile.getId(), 0L),
+                        openReportCounts.getOrDefault(profile.getId(), 0L)
                 ))
                 .toList();
         List<AiMatchAdminRequestDto> requestDtos = requests.stream()
@@ -396,7 +413,13 @@ public class AiMatchService {
                 requests.stream().filter(request -> "PENDING".equals(request.getStatus())).count(),
                 requests.stream().filter(request -> isMatchedStatus(request.getStatus())).count(),
                 profileDtos,
-                requestDtos
+                requestDtos,
+                reports.stream().map(this::toReportDto).toList(),
+                reports.stream().filter(report -> "OPEN".equals(report.getStatus())).count(),
+                profiles.stream()
+                        .filter(profile -> "ACTIVE".equals(profile.getStatus()))
+                        .filter(profile -> "PENDING".equals(profile.getPhotoReview()))
+                        .count()
         );
     }
 
@@ -538,6 +561,7 @@ public class AiMatchService {
                 ? 0
                 : requestRepository.deleteAllReferencingProfileIds(targetProfileIds);
         if (!targetProfileIds.isEmpty()) {
+            targetProfileIds.forEach(id -> reportRepository.deleteAllByReporterProfileIdOrTargetProfileId(id, id));
             profileRepository.deleteAllByIdInBatch(targetProfileIds);
         }
         long deletedPhoneUsage = phoneUsageRepository.deleteByPhoneNumber(phoneNumberKey);
@@ -552,6 +576,227 @@ public class AiMatchService {
                 imageFileDeleteResult.deletedCount(),
                 imageFileDeleteResult.failedCount()
         );
+    }
+
+    // ---------- 신고 · 숨김 · 사진 검수 ----------
+
+    private static final java.util.Set<String> REPORT_REASONS = java.util.Set.of(
+            "INAPPROPRIATE_PHOTO", "OFFENSIVE_MESSAGE", "FAKE_PROFILE", "HARASSMENT", "OTHER"
+    );
+
+    @Transactional
+    public AiMatchReportDto createReport(Long targetProfileId, AiMatchReportCreateDto requestDto) {
+        AiMatchProfile reporter = authenticateProfile(requestDto.nickname(), requestDto.pin());
+        AiMatchProfile target = profileRepository.findById(targetProfileId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "존재하지 않는 프로필입니다."));
+        if (reporter.getId().equals(target.getId())) {
+            throw new ResponseStatusException(BAD_REQUEST, "자기 자신은 신고할 수 없습니다.");
+        }
+        String reason = requestDto.reason() == null ? "" : requestDto.reason().trim().toUpperCase();
+        if (!REPORT_REASONS.contains(reason)) {
+            throw new ResponseStatusException(BAD_REQUEST, "신고 사유를 골라 주세요.");
+        }
+        if (reportRepository.existsByReporterProfileIdAndTargetProfileIdAndStatus(reporter.getId(), target.getId(), "OPEN")) {
+            throw new ResponseStatusException(CONFLICT, "이미 접수된 신고가 있어요. 운영진이 확인 중입니다.");
+        }
+        AiMatchReport saved = reportRepository.save(new AiMatchReport(
+                reporter.getId(),
+                reporter.getNickname(),
+                target.getId(),
+                target.getNickname(),
+                reason,
+                trimOptional(requestDto.detail(), 500)
+        ));
+        return toReportDto(saved);
+    }
+
+    @Transactional
+    public AiMatchReportDto resolveReport(Long reportId, AiMatchReportResolveDto requestDto) {
+        AiMatchReport report = reportRepository.findById(reportId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "신고를 찾을 수 없습니다."));
+        String action = requestDto == null || requestDto.action() == null ? "DISMISS" : requestDto.action().trim().toUpperCase();
+        String note = trimOptional(requestDto == null ? "" : requestDto.note(), 200);
+        AiMatchProfile target = profileRepository.findById(report.getTargetProfileId()).orElse(null);
+        if ("HIDE".equals(action) && target != null) {
+            target.setHidden(true, note.isEmpty() ? "신고 처리" : note);
+        } else if ("DELETE".equals(action) && target != null && "ACTIVE".equals(target.getStatus())) {
+            deleteProfileByAdmin(target.getId());
+        } else if (!"DISMISS".equals(action)) {
+            throw new ResponseStatusException(BAD_REQUEST, "처리 방법이 올바르지 않습니다.");
+        }
+        report.resolve(action + (note.isEmpty() ? "" : " · " + note));
+        return toReportDto(report);
+    }
+
+    @Transactional
+    public AiMatchAdminProfileDto setProfileHidden(Long profileId, AiMatchAdminHiddenDto requestDto) {
+        AiMatchProfile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "AI match profile not found."));
+        profile.setHidden(requestDto.hidden(), trimOptional(requestDto.reason(), 200));
+        return adminProfileSnapshot(profile);
+    }
+
+    @Transactional
+    public AiMatchAdminProfileDto reviewPhoto(Long profileId, AiMatchAdminPhotoReviewDto requestDto) {
+        AiMatchProfile profile = profileRepository.findById(profileId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "AI match profile not found."));
+        String decision = requestDto == null || requestDto.decision() == null ? "" : requestDto.decision().trim().toUpperCase();
+        if ("APPROVED".equals(decision)) {
+            profile.setPhotoReview("APPROVED");
+            // 사진 반려로 숨겨 둔 사람이면 승인과 함께 다시 보이게 한다
+            if (profile.isHidden() && profile.getHiddenReason() != null && profile.getHiddenReason().startsWith("사진 반려")) {
+                profile.setHidden(false, null);
+            }
+        } else if ("REJECTED".equals(decision)) {
+            String reason = trimOptional(requestDto.reason(), 150);
+            profile.setPhotoReview("REJECTED");
+            profile.setHidden(true, "사진 반려" + (reason.isEmpty() ? "" : " · " + reason));
+        } else {
+            throw new ResponseStatusException(BAD_REQUEST, "승인 또는 반려만 고를 수 있습니다.");
+        }
+        return adminProfileSnapshot(profile);
+    }
+
+    /** 통계 없이 프로필 한 장만 다시 그릴 때. 숫자는 0으로 두고 프런트가 기존 값을 유지한다. */
+    private AiMatchAdminProfileDto adminProfileSnapshot(AiMatchProfile profile) {
+        long openReports = reportRepository.findAllByOrderByCreatedAtDesc().stream()
+                .filter(report -> "OPEN".equals(report.getStatus()) && profile.getId().equals(report.getTargetProfileId()))
+                .count();
+        return toAdminProfileDto(profile, 0, 0, 0, 0, openReports);
+    }
+
+    private AiMatchReportDto toReportDto(AiMatchReport report) {
+        return new AiMatchReportDto(
+                report.getId(),
+                report.getReporterProfileId(),
+                report.getReporterNickname(),
+                report.getTargetProfileId(),
+                report.getTargetNickname(),
+                report.getReason(),
+                report.getDetail(),
+                report.getStatus(),
+                report.getResolution(),
+                report.getCreatedAt(),
+                report.getResolvedAt()
+        );
+    }
+
+    // ---------- 부스 현장: 도착 체크 · 만남 완료 · 노쇼 ----------
+
+    @Transactional
+    public AiMatchAdminRequestDto markArrival(Long requestId, AiMatchAdminArrivalDto requestDto) {
+        AiMatchRequest request = findMeetupRequest(requestId);
+        String side = requestDto == null || requestDto.side() == null ? "" : requestDto.side().trim().toUpperCase();
+        if (!"REQUESTER".equals(side) && !"PROFILE".equals(side)) {
+            throw new ResponseStatusException(BAD_REQUEST, "누가 도착했는지 골라 주세요.");
+        }
+        request.markArrival("REQUESTER".equals(side), requestDto.arrived());
+        return toAdminRequestDto(request);
+    }
+
+    @Transactional
+    public AiMatchAdminRequestDto markMet(Long requestId) {
+        AiMatchRequest request = findMeetupRequest(requestId);
+        request.markMet();
+        return toAdminRequestDto(request);
+    }
+
+    /** 노쇼 처리. 슬롯을 바로 반납해 다음 쌍이 쓸 수 있게 하고, 매칭은 남겨 둔다. */
+    @Transactional
+    public AiMatchAdminRequestDto markNoShow(Long requestId, AiMatchAdminNoShowDto requestDto) {
+        AiMatchRequest request = findMeetupRequest(requestId);
+        String side = requestDto == null || requestDto.side() == null ? "BOTH" : requestDto.side().trim().toUpperCase();
+        String outcome = switch (side) {
+            case "REQUESTER" -> "NO_SHOW_REQUESTER";
+            case "PROFILE" -> "NO_SHOW_PROFILE";
+            case "BOTH" -> "NO_SHOW_BOTH";
+            default -> throw new ResponseStatusException(BAD_REQUEST, "누가 안 왔는지 골라 주세요.");
+        };
+        meetupSlotService.release(request.getId());
+        request.markNoShow(outcome);
+        return toAdminRequestDto(request);
+    }
+
+    private AiMatchRequest findMeetupRequest(Long requestId) {
+        AiMatchRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "데이트 신청을 찾을 수 없습니다."));
+        if (!isMatchedStatus(request.getStatus())) {
+            throw new ResponseStatusException(CONFLICT, "성사된 매치만 현장 처리할 수 있습니다.");
+        }
+        return request;
+    }
+
+    // ---------- 보고서용 CSV ----------
+
+    @Transactional(readOnly = true)
+    public String exportAdminCsv() {
+        List<AiMatchProfile> profiles = profileRepository.findAll();
+        List<AiMatchRequest> requests = requestRepository.findAllByOrderByCreatedAtDesc();
+        StringBuilder out = new StringBuilder();
+        out.append('\uFEFF');
+        out.append("구분,항목,값\n");
+        long active = profiles.stream().filter(p -> "ACTIVE".equals(p.getStatus())).count();
+        long matched = requests.stream().filter(r -> isMatchedStatus(r.getStatus())).count();
+        long met = requests.stream().filter(r -> "MET".equals(r.getMeetupOutcome())).count();
+        long noShow = requests.stream().filter(r -> r.getMeetupOutcome() != null && r.getMeetupOutcome().startsWith("NO_SHOW")).count();
+        csvRow(out, "요약", "활성 프로필", active);
+        csvRow(out, "요약", "전체 프로필", profiles.size());
+        csvRow(out, "요약", "전체 신청", requests.size());
+        csvRow(out, "요약", "성사", matched);
+        csvRow(out, "요약", "부스 만남 완료", met);
+        csvRow(out, "요약", "노쇼", noShow);
+        csvRow(out, "요약", "성사율(%)", requests.isEmpty() ? 0 : Math.round(matched * 100.0 / requests.size()));
+        profiles.stream()
+                .filter(p -> "ACTIVE".equals(p.getStatus()))
+                .collect(Collectors.groupingBy(p -> p.getGender() == null ? "미상" : p.getGender(), java.util.TreeMap::new, Collectors.counting()))
+                .forEach((gender, count) -> csvRow(out, "성별", gender, count));
+        requests.stream()
+                .filter(r -> r.getCreatedAt() != null)
+                .collect(Collectors.groupingBy(r -> r.getCreatedAt().toLocalDate() + " " + String.format("%02d시", r.getCreatedAt().getHour()), java.util.TreeMap::new, Collectors.counting()))
+                .forEach((hour, count) -> csvRow(out, "시간대별 신청", hour, count));
+        requests.stream()
+                .collect(Collectors.groupingBy(r -> r.getStatus() == null ? "" : r.getStatus(), java.util.TreeMap::new, Collectors.counting()))
+                .forEach((status, count) -> csvRow(out, "신청 상태", status, count));
+
+        out.append("\n신청ID,신청 시각,신청자,신청자 성별,상대,상대 성별,상태,연결 상태,약속 시각,약속 장소,만남 결과,신청자 도착,상대 도착,관리자 메모\n");
+        for (AiMatchRequest r : requests) {
+            AiMatchProfile requester = r.getRequesterProfile();
+            AiMatchProfile profile = r.getProfile();
+            out.append(String.join(",",
+                    csv(r.getId()),
+                    csv(r.getCreatedAt()),
+                    csv(r.getRequesterNickname()),
+                    csv(requester == null ? "" : requester.getGender()),
+                    csv(profile == null ? "" : profile.getNickname()),
+                    csv(profile == null ? "" : profile.getGender()),
+                    csv(r.getStatus()),
+                    csv(r.getConnectionStatus()),
+                    csv(r.getMeetupAt()),
+                    csv(r.getMeetupPlace()),
+                    csv(r.getMeetupOutcome()),
+                    csv(r.getRequesterArrivedAt()),
+                    csv(r.getProfileArrivedAt()),
+                    csv(r.getAdminNote())
+            )).append("\n");
+        }
+        return out.toString();
+    }
+
+    private static void csvRow(StringBuilder out, String group, String label, Object value) {
+        out.append(csv(group)).append(',').append(csv(label)).append(',').append(csv(value)).append("\n");
+    }
+
+    private static String csv(Object value) {
+        if (value == null) {
+            return "";
+        }
+        String text = value instanceof LocalDateTime dateTime
+                ? dateTime.toString().replace('T', ' ')
+                : String.valueOf(value);
+        if (text.contains(",") || text.contains("\"") || text.contains("\n")) {
+            return "\"" + text.replace("\"", "\"\"") + "\"";
+        }
+        return text;
     }
 
     @Transactional
@@ -754,7 +999,10 @@ public class AiMatchService {
                 profile == null ? "" : profile.getNickname(),
                 profile == null ? "" : profile.getGender(),
                 profile == null ? "" : profile.getPhoneNumber(),
-                places[1]
+                places[1],
+                request.getRequesterArrivedAt(),
+                request.getProfileArrivedAt(),
+                request.getMeetupOutcome()
         );
     }
 
@@ -797,6 +1045,7 @@ public class AiMatchService {
     private List<AiMatchProfileResponseDto> getDiscoverableProfiles(Long viewerProfileId, AiMatchProfile viewer) {
         return profileRepository.findAllByStatusOrderByCreatedAtDesc("ACTIVE").stream()
                 .filter(profile -> !profile.getId().equals(viewerProfileId))
+                .filter(profile -> !profile.isHidden())
                 .map(profile -> toProfileDto(profile, viewer))
                 .toList();
     }
@@ -915,7 +1164,8 @@ public class AiMatchService {
             long receivedCount,
             long sentCount,
             long pendingReceivedCount,
-            long matchedCount
+            long matchedCount,
+            long openReportCount
     ) {
         return new AiMatchAdminProfileDto(
                 profile.getId(),
@@ -931,7 +1181,11 @@ public class AiMatchService {
                 Math.toIntExact(sentCount),
                 Math.toIntExact(pendingReceivedCount),
                 Math.toIntExact(matchedCount),
-                profile.getCreatedAt()
+                profile.getCreatedAt(),
+                profile.isHidden(),
+                profile.getHiddenReason(),
+                profile.getPhotoReview(),
+                Math.toIntExact(openReportCount)
         );
     }
 
@@ -1079,7 +1333,14 @@ public class AiMatchService {
                 request.getConnectionStatus(),
                 request.getAdminNote(),
                 request.getCreatedAt(),
-                request.getUpdatedAt()
+                request.getUpdatedAt(),
+                request.getMeetupPlace(),
+                request.getMeetupAt(),
+                waitingPlaces(requesterProfile, profile)[0],
+                waitingPlaces(requesterProfile, profile)[1],
+                request.getRequesterArrivedAt(),
+                request.getProfileArrivedAt(),
+                request.getMeetupOutcome()
         );
     }
 

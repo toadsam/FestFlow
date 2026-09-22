@@ -4,6 +4,8 @@ import com.festflow.backend.dto.AiMatchProfileAccessRequestDto;
 import com.festflow.backend.dto.AiMatchProfileAccessResponseDto;
 import com.festflow.backend.dto.AiMatchProfileDeleteDto;
 import com.festflow.backend.dto.AiMatchFavoriteResponseDto;
+import com.festflow.backend.dto.AiMatchReportCreateDto;
+import com.festflow.backend.dto.AiMatchReportDto;
 import com.festflow.backend.dto.AiMatchImagePreviewDto;
 import com.festflow.backend.dto.AiMatchMeetupProposalDto;
 import com.festflow.backend.dto.AiMatchMeetupSlotsDto;
@@ -131,6 +133,14 @@ public class AiMatchController {
             @RequestBody AiMatchRequestCreateDto requestDto
     ) {
         return aiMatchService.createRequest(profileId, requestDto);
+    }
+
+    @PostMapping("/profiles/{profileId}/report")
+    public AiMatchReportDto reportProfile(
+            @PathVariable Long profileId,
+            @RequestBody AiMatchReportCreateDto requestDto
+    ) {
+        return aiMatchService.createReport(profileId, requestDto);
     }
 
     @PostMapping("/profiles/{profileId}/favorite")

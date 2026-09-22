@@ -16,6 +16,9 @@ public record AiMatchMeetupScheduleItemDto(
         String profileNickname,
         String profileGender,
         String profilePhoneNumber,
-        String profileWaitingPlace
+        String profileWaitingPlace,
+        LocalDateTime requesterArrivedAt,
+        LocalDateTime profileArrivedAt,
+        String meetupOutcome
 ) {
 }
