@@ -823,7 +823,7 @@ export default function AiMatchPage() {
         : successMessage;
   const isDetailScreen = Boolean(selectedProfile);
   // 로그인 뒤 목록과 프로필 상세는 밤 풍경 위 유리 카드(밤 모드)
-  const nightMode = isDetailScreen || Boolean(accessProfile && ["intro", "people", "my", "requests"].includes(activeScreen));
+  const nightMode = isDetailScreen || Boolean(accessProfile && ["intro", "people", "my", "requests", "inquiry"].includes(activeScreen));
   const decoratedProfiles = buildDecoratedProfiles(profiles);
   const filteredProfiles = decoratedProfiles
     .filter(

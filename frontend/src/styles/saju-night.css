@@ -1025,3 +1025,18 @@
   background: rgba(224, 72, 61, 0.18) !important;
   box-shadow: inset 0 0 0 1px rgba(255, 138, 128, 0.4);
 }
+
+/* 문의 화면: 확인 사항 상자 */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-contact-list article {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 0 !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-contact-list article strong {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-contact-list article p {
+  color: var(--nt-ivory-2) !important;
+}
