@@ -823,7 +823,7 @@ export default function AiMatchPage() {
         : successMessage;
   const isDetailScreen = Boolean(selectedProfile);
   // 로그인 뒤 목록과 프로필 상세는 밤 풍경 위 유리 카드(밤 모드)
-  const nightMode = isDetailScreen || Boolean(accessProfile && ["intro", "people", "my", "requests", "inquiry"].includes(activeScreen));
+  const nightMode = isDetailScreen || activeScreen === "register" || Boolean(accessProfile && ["intro", "people", "my", "requests", "inquiry"].includes(activeScreen));
   const decoratedProfiles = buildDecoratedProfiles(profiles);
   const filteredProfiles = decoratedProfiles
     .filter(
@@ -2468,7 +2468,15 @@ export default function AiMatchPage() {
             </h2>
             <p>오늘도, 좋은 인연이 피어나길</p>
           </div>
-          <img className="nt-head__chito" src="/images/chito-wave.png" alt="" />
+          <img
+            className="nt-head__chito"
+            src="/images/saju/chito-dosa.png"
+            alt=""
+            onError={(event) => {
+              event.currentTarget.onerror = null;
+              event.currentTarget.src = "/images/chito-wave.png";
+            }}
+          />
         </header>
 
         <SajuFortune

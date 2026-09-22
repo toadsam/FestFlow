@@ -2056,3 +2056,25 @@
   box-shadow: none !important;
   color: #fff !important;
 }
+
+/* 스플래시의 치토 도사: 그림 오른쪽 아래에서 떠오른다 */
+.saju-splash__art img.saju-splash__chito {
+  position: absolute;
+  right: 6%;
+  bottom: -6%;
+  width: min(50vw, 200px);
+  animation: none;
+  height: auto !important;
+  object-fit: contain !important;
+  filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.5));
+  animation: saju-splash-chito 0.9s cubic-bezier(0.2, 0.8, 0.2, 1) 0.25s both, sf-bob 3.2s ease-in-out 1.15s infinite !important;
+}
+
+@keyframes saju-splash-chito {
+  from { opacity: 0; transform: translateY(26px) rotate(-4deg); }
+  to { opacity: 1; transform: translateY(0) rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .saju-splash__art img.saju-splash__chito { animation: none !important; }
+}

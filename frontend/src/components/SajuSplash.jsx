@@ -34,6 +34,15 @@ export default function SajuSplash({ onDone }) {
     <div className={`saju-splash saju-splash--${phase}`} role="presentation" aria-hidden="true" onClick={() => setPhase("out")}>
       <div className="saju-splash__art">
         <img src="/images/saju/splash-top.webp" alt="" />
+        <img
+          className="saju-splash__chito"
+          src="/images/saju/chito-dosa.png"
+          alt=""
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = "/images/chito-wave.png";
+          }}
+        />
       </div>
       <div className="saju-splash__fade" />
       <div className="saju-splash__body">
