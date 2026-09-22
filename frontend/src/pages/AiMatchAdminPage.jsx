@@ -753,7 +753,7 @@ export default function AiMatchAdminPage() {
             <div
               key={`matched-${request.id}`}
               className={[
-                "admin-ai-match-card",
+                "admin-ai-match-card aa-match",
                 isCompleted ? "is-completed" : "",
                 isFailed ? "is-failed" : "",
                 isCompletePulse ? "is-complete-pulse" : "",
@@ -764,30 +764,45 @@ export default function AiMatchAdminPage() {
                   <IconHeart className="h-12 w-12" />
                 </div>
               ) : null}
-              <div className="admin-ai-match-card__top">
-                <div className="admin-ai-match-pair">
+              <div className="aa-match__main">
+                <div className="aa-match__pair" aria-hidden="true">
                   <AvatarThumb imageUrl={request.requesterImageUrl} name={request.requesterNickname} />
-                  <IconHeart className="h-4 w-4" />
                   <AvatarThumb imageUrl={request.profileImageUrl} name={request.profileNickname} />
                 </div>
-                <div>
-                  <strong>{request.requesterNickname} → {request.profileNickname}</strong>
-                  <small>{request.createdAt?.replace("T", " ").slice(5, 16) || "시간 없음"}</small>
+                <div className="aa-match__id">
+                  <strong>
+                    {request.requesterNickname}
+                    <i>→</i>
+                    {request.profileNickname}
+                  </strong>
+                  <span>
+                    {request.createdAt?.replace("T", " ").slice(5, 16) || "시간 없음"}
+                    {" · "}
+                    {request.meetPlace || "장소 미지정"}
+                  </span>
                 </div>
-                <em>{getConnectionStatusLabel(connectionStatus)}</em>
+                <em className={`aa-match__state is-${connectionStatus.toLowerCase()}`}>{getConnectionStatusLabel(connectionStatus)}</em>
               </div>
-              <div className="admin-ai-compact-meta">
-                <span>{request.requesterPhoneNumber ? "신청자 연락처 있음" : "신청자 연락처 없음"}</span>
-                <span>{request.profilePhoneNumber ? "상대 연락처 있음" : "상대 연락처 없음"}</span>
-                <span>{request.meetPlace || "장소 미지정"}</span>
+              <div className="aa-match__foot">
+                <div className="aa-match__phones">
+                  <a className={request.requesterPhoneNumber ? "" : "is-none"} href={request.requesterPhoneNumber ? `tel:${request.requesterPhoneNumber}` : undefined}>
+                    <small>신청자</small>
+                    {request.requesterPhoneNumber || "번호 없음"}
+                  </a>
+                  <a className={request.profilePhoneNumber ? "" : "is-none"} href={request.profilePhoneNumber ? `tel:${request.profilePhoneNumber}` : undefined}>
+                    <small>상대</small>
+                    {request.profilePhoneNumber || "번호 없음"}
+                  </a>
+                </div>
+                <button
+                  type="button"
+                  className={`aa-person__more${isMatchExpanded ? " is-open" : ""}`}
+                  onClick={() => toggleExpandedMatch(request.id)}
+                  aria-expanded={isMatchExpanded}
+                >
+                  {isMatchExpanded ? "접기" : "상세"}
+                </button>
               </div>
-              <button
-                type="button"
-                className="admin-ai-detail-toggle"
-                onClick={() => toggleExpandedMatch(request.id)}
-              >
-                {isMatchExpanded ? "상세 접기" : "상세 보기"}
-              </button>
               {isMatchExpanded ? (
                 <div className="admin-ai-detail-panel">
               <div className="admin-ai-match-contact-grid">
