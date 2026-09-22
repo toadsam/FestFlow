@@ -1049,45 +1049,52 @@ export default function AiMatchAdminPage() {
             const visibleTags = meta.tags.slice(0, 3);
             const hiddenTagCount = Math.max(meta.tags.length - visibleTags.length, 0);
             return (
-              <article key={profile.id} className={`admin-ai-profile-card${isDeletedProfile ? " is-deleted" : ""}`}>
-                <div className="admin-ai-profile-card__head">
+              <article key={profile.id} className={`admin-ai-profile-card aa-person${isDeletedProfile ? " is-deleted" : ""}`}>
+                <div className="aa-person__main">
                   <AvatarThumb imageUrl={getProfileImageUrl(profile)} name={profile.nickname} />
-                  <div>
-                    <strong>{profile.nickname}</strong>
-                    <span>{profile.gender} {meta.mbti ? `· ${meta.mbti}` : ""}</span>
+                  <div className="aa-person__id">
+                    <strong>
+                      {profile.nickname}
+                      <i className={`aa-person__dot${profile.status === "ACTIVE" ? " is-active" : ""}`} title={getProfileStatusLabel(profile.status)} />
+                    </strong>
+                    <span>
+                      {profile.gender}
+                      {meta.mbti ? ` · ${meta.mbti}` : ""}
+                      {visibleTags.length ? ` · ${visibleTags.join(" · ")}` : ""}
+                      {hiddenTagCount ? ` +${hiddenTagCount}` : ""}
+                    </span>
                   </div>
-                  <em className={profile.status === "ACTIVE" ? "is-active" : ""}>{getProfileStatusLabel(profile.status)}</em>
+                  <a className="aa-person__phone" href={profile.phoneNumber ? `tel:${profile.phoneNumber}` : undefined}>
+                    {profile.phoneNumber || "번호 없음"}
+                  </a>
                 </div>
-                <div className="admin-ai-profile-card__compact-tags" aria-label="관심사">
-                  {visibleTags.length ? visibleTags.map((tag) => <span key={`${profile.id}-compact-${tag}`}>{tag}</span>) : <span>관심사 없음</span>}
-                  {hiddenTagCount ? <span>+{hiddenTagCount}</span> : null}
-                </div>
-                <div className="admin-ai-profile-card__stats">
-                  <span>받은 {profile.receivedCount}</span>
-                  <span>보낸 {profile.sentCount}</span>
-                  <span>대기 {profile.pendingReceivedCount}</span>
-                  <span>성사 {profile.matchedCount}</span>
-                </div>
-                <a className="admin-ai-profile-card__phone" href={profile.phoneNumber ? `tel:${profile.phoneNumber}` : undefined}>
-                  {profile.phoneNumber || "전화번호 없음"}
-                </a>
-                <div className="admin-ai-profile-card__actions">
-                  <button
-                    type="button"
-                    className="admin-ai-detail-toggle"
-                    onClick={() => toggleExpandedProfile(profile.id)}
-                  >
-                    {isProfileExpanded ? "상세 접기" : "상세 보기"}
-                  </button>
-                  <button
-                    type="button"
-                    className="admin-ai-danger-action"
-                    onClick={() => handleAdminDeleteProfile(profile.id, profile.nickname)}
-                    disabled={profile.status !== "ACTIVE" || deleteBusyId === profile.id}
-                  >
-                    <IconX className="h-4 w-4" />
-                    <span>{profile.status !== "ACTIVE" ? "삭제됨" : deleteBusyId === profile.id ? "삭제 중" : "관리자 삭제"}</span>
-                  </button>
+                <div className="aa-person__foot">
+                  <ul className="aa-person__stats" aria-label="신청 현황">
+                    <li><b>{profile.receivedCount}</b>받은</li>
+                    <li><b>{profile.sentCount}</b>보낸</li>
+                    <li className={profile.pendingReceivedCount ? "is-hot" : ""}><b>{profile.pendingReceivedCount}</b>대기</li>
+                    <li className={profile.matchedCount ? "is-good" : ""}><b>{profile.matchedCount}</b>성사</li>
+                  </ul>
+                  <div className="aa-person__actions">
+                    <button
+                      type="button"
+                      className={`aa-person__more${isProfileExpanded ? " is-open" : ""}`}
+                      onClick={() => toggleExpandedProfile(profile.id)}
+                      aria-expanded={isProfileExpanded}
+                    >
+                      {isProfileExpanded ? "접기" : "상세"}
+                    </button>
+                    <button
+                      type="button"
+                      className="aa-person__delete"
+                      onClick={() => handleAdminDeleteProfile(profile.id, profile.nickname)}
+                      disabled={profile.status !== "ACTIVE" || deleteBusyId === profile.id}
+                      aria-label={profile.status !== "ACTIVE" ? "삭제됨" : "관리자 삭제"}
+                      title={profile.status !== "ACTIVE" ? "삭제됨" : deleteBusyId === profile.id ? "삭제 중" : "관리자 삭제"}
+                    >
+                      <IconX className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 {isProfileExpanded ? (
                   <div className="admin-ai-profile-detail">
