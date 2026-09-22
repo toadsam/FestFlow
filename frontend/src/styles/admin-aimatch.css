@@ -1,0 +1,892 @@
+/* 소개팅 전용 관리자(/ai-match/admin) 정리. 한 화면에 다 늘어놓던 걸 탭 4개로 나누고, 카드마다 여백·글자를 줄였다.
+   .ai-match-admin-page 안에서만 효과가 있다. index.css 의 admin-ai-* 규칙 위에 덮는다. */
+
+.app-shell .ai-match-admin-page {
+  --aa-ink: #1f1a3d;
+  --aa-muted: #6b6a85;
+  --aa-line: #e6e3f2;
+  --aa-purple: #6d4fd2;
+  --aa-purple-soft: #efe9fb;
+  --aa-gold: #d9b45a;
+  --aa-red: #e0483d;
+  --aa-green: #22a06b;
+  gap: 12px !important;
+  padding-bottom: 96px !important;
+}
+
+/* ---------- 머리글: 낮게, 한 줄 ---------- */
+.app-shell .admin-console-page.ai-match-admin-page .admin-console-hero.ai-match-admin-hero {
+  padding: 14px 16px 12px !important;
+  border-radius: 20px !important;
+  background: linear-gradient(135deg, #2d2263 0%, #1d1740 100%) !important;
+  box-shadow: inset 0 0 0 1px rgba(217, 180, 90, 0.3), 0 10px 26px rgba(29, 23, 64, 0.22) !important;
+  border: 0 !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero::before,
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero::after {
+  display: none !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-console-hero__top {
+  align-items: center;
+  gap: 10px;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-console-hero__eyebrow {
+  color: var(--aa-gold) !important;
+  font-size: 11px !important;
+  letter-spacing: 0.12em;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero h1 {
+  margin: 2px 0 0 !important;
+  font-family: "Gowun Batang", "Noto Serif KR", serif !important;
+  font-size: 22px !important;
+  font-weight: 700 !important;
+  color: #fff4dc !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-console-hero__copy p {
+  margin: 2px 0 0 !important;
+  font-size: 12px !important;
+  color: rgba(255, 244, 220, 0.65) !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-console-hero__actions {
+  display: flex !important;
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px !important;
+  width: auto !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-console-hero__actions :is(a, button) {
+  width: auto !important;
+  flex: 0 0 auto;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-console-hero__actions :is(a, button) {
+  min-height: 34px !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2) !important;
+  color: #fff4dc !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-console-hero__actions :is(a, button) * {
+  color: #fff4dc !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-console-status {
+  margin: 10px 0 0 !important;
+  padding: 8px 12px !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 0 !important;
+  color: rgba(255, 244, 220, 0.85) !important;
+  font-size: 12px !important;
+}
+
+/* 한 줄 안내 */
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-command-card {
+  margin-top: 10px !important;
+  padding: 8px 12px !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  gap: 10px !important;
+  align-items: center;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-command-card__mark {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 999px !important;
+  background: rgba(224, 72, 61, 0.2) !important;
+  color: #ff9d94 !important;
+  box-shadow: none !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-command-card strong {
+  font-size: 13px !important;
+  color: #fff4dc !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-command-card p {
+  margin: 1px 0 0 !important;
+  font-size: 11.5px !important;
+  color: rgba(255, 244, 220, 0.6) !important;
+}
+
+/* 숫자 네 개: 한 줄(모바일 2×2), 낮게 */
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-match-kpi-grid {
+  margin-top: 10px !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-kpi-card {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas: "icon label" "icon value" "icon sub";
+  align-items: center;
+  column-gap: 8px;
+  row-gap: 0;
+  padding: 10px 12px !important;
+  border-radius: 14px !important;
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14) !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-kpi-card__icon {
+  grid-area: icon;
+  width: 30px !important;
+  height: 30px !important;
+  margin: 0 !important;
+  border-radius: 9px !important;
+  background: rgba(255, 255, 255, 0.12) !important;
+  color: #ffe9b8 !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-kpi-card--matched .admin-ai-kpi-card__icon { color: #ff9d94 !important; }
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-kpi-card--pending .admin-ai-kpi-card__icon { color: #ffd97a !important; }
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-kpi-card > span {
+  grid-area: label;
+  margin: 0 !important;
+  font-size: 11px !important;
+  color: rgba(255, 244, 220, 0.65) !important;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-kpi-card > strong {
+  grid-area: value;
+  margin: 0 !important;
+  font-size: 22px !important;
+  line-height: 1.1;
+  color: #fff4dc !important;
+  font-variant-numeric: tabular-nums;
+}
+
+.app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-kpi-card > small {
+  grid-area: sub;
+  margin: 0 !important;
+  font-size: 10.5px !important;
+  color: rgba(255, 244, 220, 0.5) !important;
+}
+
+/* ---------- 탭 ---------- */
+.app-shell .ai-match-admin-page .aa-tabs {
+  position: sticky;
+  top: 8px;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 0 0 1px var(--aa-line), 0 8px 24px rgba(31, 26, 61, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app-shell .ai-match-admin-page .aa-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  min-height: 0 !important;
+  height: 38px;
+  padding: 0 6px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--aa-muted) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+.app-shell .ai-match-admin-page .aa-tabs button::before,
+.app-shell .ai-match-admin-page .aa-tabs button::after {
+  content: none !important;
+}
+
+.app-shell .ai-match-admin-page .aa-tabs button em {
+  display: inline-grid;
+  place-items: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--aa-purple-soft);
+  color: var(--aa-purple) !important;
+  font-size: 10.5px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.app-shell .ai-match-admin-page .aa-tabs button.is-active {
+  background: var(--aa-purple) !important;
+  color: #fff !important;
+}
+
+.app-shell .ai-match-admin-page .aa-tabs button.is-active em {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff !important;
+}
+
+/* ---------- 공통 패널 ---------- */
+.app-shell .ai-match-admin-page .admin-console-panel,
+.app-shell .ai-match-admin-page .admin-ai-stat-panel,
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card,
+.app-shell .ai-match-admin-page .admin-ai-operations-strip article,
+.app-shell .ai-match-admin-page .admin-meetup-schedule {
+  border-radius: 18px !important;
+  border: 0 !important;
+  background: #fff !important;
+  box-shadow: 0 0 0 1px var(--aa-line), 0 6px 20px rgba(31, 26, 61, 0.05) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-console-panel {
+  padding: 14px !important;
+  gap: 10px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-console-panel__head span,
+.app-shell .ai-match-admin-page .admin-ai-stat-panel__head span,
+.app-shell .ai-match-admin-page .admin-ai-operations-strip article > span,
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card > div > span {
+  font-size: 11px !important;
+  letter-spacing: 0.04em;
+  color: var(--aa-muted) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-console-panel__head h3,
+.app-shell .ai-match-admin-page .admin-ai-stat-panel__head strong,
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card > div > strong {
+  margin: 0 !important;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: var(--aa-ink) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-console-panel__head > strong {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--aa-purple-soft);
+  color: var(--aa-purple) !important;
+  font-size: 12px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-dashboard-grid {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 12px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-dashboard-side,
+.app-shell .ai-match-admin-page .admin-ai-dashboard-main {
+  grid-column: 1 / -1 !important;
+  grid-row: auto !important;
+  position: static !important;
+  width: 100% !important;
+  max-width: none !important;
+  display: grid;
+  gap: 12px;
+}
+
+/* 검색·필터 */
+.app-shell .ai-match-admin-page .admin-ai-search-field {
+  min-height: 40px !important;
+  border-radius: 12px !important;
+  border: 0 !important;
+  background: #f4f2fa !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-search-field input {
+  min-height: 0 !important;
+  font-size: 13px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-status-filter button,
+.app-shell .ai-match-admin-page .admin-ai-interest-filter button,
+.app-shell .ai-match-admin-page .admin-ai-filter-clear {
+  min-height: 0 !important;
+  height: 30px;
+  padding: 0 11px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #f4f2fa !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+  color: var(--aa-ink) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-status-filter button.is-active,
+.app-shell .ai-match-admin-page .admin-ai-interest-filter button.is-active {
+  background: var(--aa-purple) !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-interest-filter button strong,
+.app-shell .ai-match-admin-page .admin-ai-interest-filter button span {
+  font-size: 11px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-filter-panel {
+  padding: 10px !important;
+  border-radius: 14px !important;
+  border: 0 !important;
+  background: #faf9fd !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+  gap: 8px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-filter-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  gap: 6px;
+  align-items: end;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-filter-row label {
+  font-size: 11px !important;
+  color: var(--aa-muted) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-filter-row select {
+  min-height: 36px !important;
+  padding: 0 8px !important;
+  border-radius: 10px !important;
+  font-size: 12.5px !important;
+}
+
+/* ---------- 오늘 할 일 두 장: 한 줄 ---------- */
+.app-shell .ai-match-admin-page .admin-ai-operations-strip {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-operations-strip article {
+  padding: 12px !important;
+  gap: 2px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-operations-strip article strong {
+  font-size: 15px !important;
+  color: var(--aa-ink) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-operations-strip article small {
+  font-size: 11px !important;
+  color: var(--aa-muted) !important;
+}
+
+/* ---------- 성사된 매치 카드 ---------- */
+.app-shell .ai-match-admin-page .admin-ai-match-list {
+  gap: 10px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-match-card {
+  padding: 12px !important;
+  border-radius: 16px !important;
+  border: 0 !important;
+  background: #faf9fd !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+  gap: 8px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-match-card.is-completed {
+  background: #f1fbf5 !important;
+  box-shadow: inset 0 0 0 1px #bfe8cf !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-match-card.is-failed {
+  background: #fdf3f2 !important;
+  box-shadow: inset 0 0 0 1px #f3c5c0 !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-match-card__top strong {
+  font-size: 14.5px !important;
+  color: var(--aa-ink) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-match-card__top small {
+  font-size: 11px !important;
+  color: var(--aa-muted) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-match-card__top em {
+  padding: 3px 9px !important;
+  border-radius: 999px !important;
+  font-size: 11px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-compact-meta span {
+  min-height: 0 !important;
+  height: 24px;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  background: #fff !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line);
+}
+
+.app-shell .ai-match-admin-page .admin-ai-detail-toggle {
+  min-height: 0 !important;
+  height: 34px;
+  border-radius: 10px !important;
+  border: 0 !important;
+  background: #fff !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+  color: var(--aa-purple) !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-connection-controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px var(--aa-line);
+}
+
+.app-shell .ai-match-admin-page .admin-ai-connection-controls button {
+  min-height: 0 !important;
+  height: 32px;
+  border: 0 !important;
+  border-radius: 9px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--aa-muted) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-connection-controls button.is-active {
+  background: var(--aa-purple) !important;
+  color: #fff !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-connection-controls button.is-active.is-complete,
+.app-shell .ai-match-admin-page .admin-ai-connection-controls button.is-active.is-completed {
+  background: var(--aa-green) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-connection-controls button.is-active.is-failed {
+  background: var(--aa-red) !important;
+}
+
+/* ---------- 신청 기록: 한 줄 카드 ---------- */
+.app-shell .ai-match-admin-page .admin-ai-request-table {
+  gap: 8px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-row {
+  padding: 10px 12px 10px 14px !important;
+  border-radius: 14px !important;
+  border: 0 !important;
+  background: #faf9fd !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line), inset 4px 0 0 #c9c2d8 !important;
+  gap: 8px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-row.is-accepted { box-shadow: inset 0 0 0 1px var(--aa-line), inset 4px 0 0 var(--aa-green) !important; }
+.app-shell .ai-match-admin-page .admin-ai-request-row.is-rejected { box-shadow: inset 0 0 0 1px var(--aa-line), inset 4px 0 0 var(--aa-red) !important; }
+.app-shell .ai-match-admin-page .admin-ai-request-row.is-pending { box-shadow: inset 0 0 0 1px var(--aa-line), inset 4px 0 0 var(--aa-gold) !important; }
+
+.app-shell .ai-match-admin-page .admin-ai-request-row__people {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) 20px minmax(0, 1fr) !important;
+  align-items: center;
+  gap: 6px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-person {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-person > div {
+  display: grid;
+  min-width: 0;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-person small {
+  font-size: 10px !important;
+  color: var(--aa-muted) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-person strong {
+  font-size: 13px !important;
+  color: var(--aa-ink) !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-person em {
+  font-size: 11px !important;
+  font-style: normal;
+  color: var(--aa-muted) !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-arrow {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--aa-purple-soft);
+  color: var(--aa-purple) !important;
+  font-size: 12px;
+  transform: none !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-row__meta {
+  display: flex !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-row__meta span {
+  min-height: 0 !important;
+  height: 22px;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  background: #fff !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line);
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-row__meta span.admin-ai-request-state {
+  font-weight: 800 !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-row__meta small {
+  font-size: 10.5px !important;
+  color: var(--aa-muted) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-row__message {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-row__message span {
+  flex: 0 0 auto;
+  min-height: 0 !important;
+  height: 22px;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  background: #fff !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line);
+}
+
+.app-shell .ai-match-admin-page .admin-ai-request-row__message p {
+  margin: 0 !important;
+  font-size: 12px !important;
+  color: var(--aa-ink) !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- 사람 카드 ---------- */
+.app-shell .ai-match-admin-page .admin-ai-profile-grid {
+  gap: 8px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-card {
+  padding: 12px !important;
+  border-radius: 16px !important;
+  border: 0 !important;
+  background: #faf9fd !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+  gap: 8px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-card__head strong {
+  font-size: 14px !important;
+  color: var(--aa-ink) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-card__head span {
+  font-size: 11.5px !important;
+  color: var(--aa-muted) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-card__head em {
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  font-size: 10.5px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-card__compact-tags span,
+.app-shell .ai-match-admin-page .admin-ai-profile-card__stats span {
+  min-height: 0 !important;
+  height: 22px;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  background: #fff !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line);
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-card__phone {
+  min-height: 0 !important;
+  padding: 6px 10px !important;
+  border-radius: 10px !important;
+  border: 0 !important;
+  background: #fff !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+  color: var(--aa-purple) !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  width: fit-content;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-profile-card__actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-danger-action {
+  min-height: 0 !important;
+  height: 34px;
+  padding: 0 12px !important;
+  border-radius: 10px !important;
+  border: 0 !important;
+  background: #fdf3f2 !important;
+  box-shadow: inset 0 0 0 1px #f3c5c0 !important;
+  color: var(--aa-red) !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+}
+
+/* ---------- 통계 · 위험 작업 ---------- */
+.app-shell .ai-match-admin-page .admin-ai-stat-panel {
+  padding: 14px !important;
+  gap: 10px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-stat-panel__head em {
+  padding: 3px 9px !important;
+  border-radius: 999px !important;
+  background: var(--aa-purple-soft) !important;
+  color: var(--aa-purple) !important;
+  font-size: 12px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-stat-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 8px !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-stat-grid article {
+  padding: 10px !important;
+  border-radius: 14px !important;
+  border: 0 !important;
+  background: #faf9fd !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-stat-grid article > span {
+  font-size: 11px !important;
+  color: var(--aa-muted) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-stat-grid article small {
+  min-height: 0 !important;
+  height: 22px;
+  padding: 0 8px !important;
+  font-size: 11px !important;
+  background: #fff !important;
+  box-shadow: inset 0 0 0 1px var(--aa-line);
+}
+
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card {
+  padding: 14px !important;
+  gap: 10px !important;
+  background: #fff !important;
+  box-shadow: inset 0 0 0 1px #f3c5c0, 0 6px 20px rgba(31, 26, 61, 0.05) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card > div > span {
+  color: var(--aa-red) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card > div > p {
+  margin: 4px 0 0 !important;
+  font-size: 12px !important;
+  line-height: 1.5;
+  color: var(--aa-muted) !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card input {
+  min-height: 40px !important;
+  border-radius: 12px !important;
+  border: 0 !important;
+  background: #fdf3f2 !important;
+  box-shadow: inset 0 0 0 1px #f3c5c0 !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card button {
+  min-height: 40px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: var(--aa-red) !important;
+  color: #fff !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card button:disabled {
+  opacity: 0.45;
+}
+
+/* ---------- 부스 시간표 ---------- */
+.app-shell .ai-match-admin-page .admin-meetup-schedule {
+  padding: 14px !important;
+}
+
+/* ---------- 넓은 화면: 매치·사람 카드를 두세 줄로 ---------- */
+@media (min-width: 720px) {
+  .app-shell .ai-match-admin-page .admin-ai-match-list {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    align-items: start;
+  }
+
+  .app-shell .ai-match-admin-page .admin-ai-profile-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  .app-shell .ai-match-admin-page .admin-ai-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+@media (max-width: 719px) {
+  .app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-ai-match-kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .app-shell .admin-console-page.ai-match-admin-page .ai-match-admin-hero .admin-console-hero__top {
+    display: grid;
+  }
+
+  .app-shell .ai-match-admin-page .aa-tabs button {
+    font-size: 12px !important;
+    gap: 4px;
+  }
+
+  .app-shell .ai-match-admin-page .admin-ai-profile-filter-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* 위험 작업 폼: 바탕 그라데이션·테두리 잔재 제거 */
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card form {
+  padding: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+.app-shell .ai-match-admin-page .admin-ai-phone-purge-card input:focus {
+  outline: none !important;
+  box-shadow: 0 0 0 2px var(--aa-red) !important;
+}
+
+/* 전역 버튼 그라데이션(cyber-page)보다 세게: 탭 버튼과 머리글 아래 색띠 */
+.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button,
+.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button:hover {
+  background-image: none !important;
+  background-color: transparent !important;
+  color: var(--aa-muted) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button.is-active,
+.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button.is-active:hover {
+  background-image: none !important;
+  background-color: var(--aa-purple) !important;
+  color: #fff !important;
+}
+
+.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button.is-active em {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #fff !important;
+}
+
+.app-shell .cyber-page.admin-console-page.ai-match-admin-page .ai-match-admin-hero::after,
+.app-shell .cyber-page.admin-console-page.ai-match-admin-page .ai-match-admin-hero::before {
+  content: none !important;
+  display: none !important;
+}
+
+/* 전역 button 규칙(:not 체인)보다 확실히 세게 */
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button,
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button:hover,
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button:focus {
+  background: transparent !important;
+  background-image: none !important;
+  color: var(--aa-muted) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button.is-active,
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button.is-active:hover,
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button.is-active:focus {
+  background: var(--aa-purple) !important;
+  background-image: none !important;
+  color: #fff !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button::before,
+.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-tabs button::after {
+  content: none !important;
+}

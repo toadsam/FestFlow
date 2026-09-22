@@ -24,6 +24,7 @@ import {
 } from "../components/UxIcons";
 import { clearLogin, getAdminName, isLoggedIn, saveLogin } from "../utils/auth";
 import AdminMeetupSchedule from "../components/admin/AdminMeetupSchedule";
+import "../styles/admin-aimatch.css";
 
 const STATUS_LABELS = {
   PENDING: "대기중",
@@ -164,6 +165,8 @@ export default function AiMatchAdminPage() {
   const [noteDrafts, setNoteDrafts] = useState({});
   const [purgePhoneNumber, setPurgePhoneNumber] = useState("");
   const [purgeBusy, setPurgeBusy] = useState(false);
+  // 화면을 넷으로 나눈다: 성사·연락 / 신청 기록 / 사람들 / 통계·도구
+  const [adminTab, setAdminTab] = useState("matches");
   const overviewRefreshInFlightRef = useRef(false);
   const completePulseTimerRef = useRef(null);
 
@@ -620,6 +623,28 @@ export default function AiMatchAdminPage() {
         </div>
       </header>
 
+      <nav className="aa-tabs" aria-label="관리 화면">
+        {[
+          ["matches", "성사·연락", matchedRequests.length],
+          ["requests", "신청 기록", requests.length],
+          ["profiles", "사람들", profiles.length],
+          ["tools", "통계·도구", null],
+        ].map(([key, label, count]) => (
+          <button
+            key={key}
+            type="button"
+            className={adminTab === key ? "is-active" : ""}
+            aria-current={adminTab === key ? "page" : undefined}
+            onClick={() => setAdminTab(key)}
+          >
+            {label}
+            {count !== null ? <em>{count}</em> : null}
+          </button>
+        ))}
+      </nav>
+
+      {adminTab === "matches" ? (
+      <>
       <AdminMeetupSchedule />
 
       <section className="admin-ai-operations-strip">
@@ -634,27 +659,11 @@ export default function AiMatchAdminPage() {
           <small>참가자 수락/거절에 따라 자동으로 상태가 바뀝니다.</small>
         </article>
       </section>
+      </>
+      ) : null}
 
-      <section className="admin-ai-phone-purge-card" aria-label="AI 소개팅 전화번호 완전 삭제">
-        <div>
-          <span>위험 작업</span>
-          <strong>전화번호 완전 삭제</strong>
-          <p>입력한 전화번호의 프로필, 신청 기록, 좋아요, AI 사진 변환 횟수 기록과 업로드 이미지 파일을 삭제합니다. 삭제 후 같은 번호로 다시 회원가입하고 AI 변환을 사용할 수 있습니다.</p>
-        </div>
-        <form onSubmit={handlePhonePurge}>
-          <input
-            value={purgePhoneNumber}
-            onChange={(event) => setPurgePhoneNumber(event.target.value)}
-            placeholder="010-1234-5678"
-            inputMode="tel"
-            disabled={purgeBusy}
-          />
-          <button type="submit" disabled={purgeBusy || !purgePhoneNumber.trim()}>
-            {purgeBusy ? "삭제 중" : "완전 삭제"}
-          </button>
-        </form>
-      </section>
-
+      {adminTab === "tools" ? (
+      <>
       <section className="admin-ai-stat-panel" aria-label="간단 통계">
         <div className="admin-ai-stat-panel__head">
           <div>
@@ -699,7 +708,30 @@ export default function AiMatchAdminPage() {
         </div>
       </section>
 
+      <section className="admin-ai-phone-purge-card" aria-label="AI 소개팅 전화번호 완전 삭제">
+        <div>
+          <span>위험 작업</span>
+          <strong>전화번호 완전 삭제</strong>
+          <p>입력한 전화번호의 프로필, 신청 기록, 좋아요, AI 사진 변환 횟수 기록과 업로드 이미지 파일을 삭제합니다. 삭제 후 같은 번호로 다시 회원가입하고 AI 변환을 사용할 수 있습니다.</p>
+        </div>
+        <form onSubmit={handlePhonePurge}>
+          <input
+            value={purgePhoneNumber}
+            onChange={(event) => setPurgePhoneNumber(event.target.value)}
+            placeholder="010-1234-5678"
+            inputMode="tel"
+            disabled={purgeBusy}
+          />
+          <button type="submit" disabled={purgeBusy || !purgePhoneNumber.trim()}>
+            {purgeBusy ? "삭제 중" : "완전 삭제"}
+          </button>
+        </form>
+      </section>
+      </>
+      ) : null}
+
       <div className="admin-ai-dashboard-grid">
+      {adminTab === "matches" ? (
       <aside className="admin-ai-dashboard-side">
       <article className="admin-console-panel admin-console-panel--ai-match">
         <div className="admin-console-panel__head">
@@ -857,7 +889,11 @@ export default function AiMatchAdminPage() {
           })}
         </div>
       </article>
+      </aside>
+      ) : null}
 
+      {adminTab === "requests" ? (
+      <aside className="admin-ai-dashboard-side">
       <article className="admin-console-panel">
         <div className="admin-console-panel__head">
           <div>
@@ -938,7 +974,9 @@ export default function AiMatchAdminPage() {
         </div>
       </article>
       </aside>
+      ) : null}
 
+      {adminTab === "profiles" ? (
       <main className="admin-ai-dashboard-main">
       <article className="admin-console-panel">
         <div className="admin-console-panel__head">
@@ -1073,6 +1111,7 @@ export default function AiMatchAdminPage() {
         </div>
       </article>
       </main>
+      ) : null}
       </div>
     </section>
   );
