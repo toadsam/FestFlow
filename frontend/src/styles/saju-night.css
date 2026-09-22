@@ -1181,3 +1181,77 @@
 .app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__search:focus-within {
   box-shadow: 0 0 0 2px var(--nt-gold) !important;
 }
+
+/* ---------- 로그인 전 첫 화면: 4단계 카드 · 안내 문장 · 로그인 시트 ---------- */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-step-card {
+  background: var(--nt-glass) !important;
+  border: 0 !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line), 0 10px 28px rgba(0, 0, 0, 0.28) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-step-card h3 {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-step-row {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-step-row > span {
+  box-shadow: 0 0 0 2px #2a2160, 0 0 0 3.5px var(--nt-gold), 0 6px 14px rgba(0, 0, 0, 0.35) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-step-row strong {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-step-row p {
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night p.ai-match-note {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 0 !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night p.ai-match-note svg {
+  color: var(--nt-gold);
+}
+
+/* 로그인 시트: 밤하늘 유리 */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login {
+  background:
+    radial-gradient(120% 60% at 100% 0%, rgba(109, 79, 210, 0.45), rgba(29, 23, 64, 0) 55%),
+    #221a4f !important;
+  box-shadow: inset 0 1px 0 rgba(217, 180, 90, 0.4), 0 -16px 48px rgba(0, 0, 0, 0.5) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login__handle {
+  background: rgba(255, 255, 255, 0.25) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login :is(h2, h3, strong, label, .ai-match-field-head span) {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login :is(p, small, .ai-match-field-hint, .am-login__foot) {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login__moon {
+  color: var(--nt-gold) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login__close {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login .ai-match-field-error {
+  color: #ff9d94 !important;
+}
