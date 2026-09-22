@@ -39,6 +39,7 @@ import {
 } from "../api";
 import { SajuPanel } from "../components/SajuCard";
 import { ElementSeal } from "../components/SajuChart";
+import NightSky from "../components/NightSky";
 import SajuSplash, { shouldShowSajuSplash } from "../components/SajuSplash";
 import MeetupScheduler from "../components/MeetupScheduler";
 import SajuHero from "../components/SajuHero";
@@ -821,6 +822,8 @@ export default function AiMatchPage() {
         ? "웹툰 이미지로 변환 중입니다. 보통 20~60초 정도 걸립니다."
         : successMessage;
   const isDetailScreen = Boolean(selectedProfile);
+  // 로그인 뒤 목록과 프로필 상세는 밤 풍경 위 유리 카드(밤 모드)
+  const nightMode = isDetailScreen || Boolean(accessProfile && (activeScreen === "intro" || activeScreen === "people"));
   const decoratedProfiles = buildDecoratedProfiles(profiles);
   const filteredProfiles = decoratedProfiles
     .filter(
@@ -2456,6 +2459,18 @@ export default function AiMatchPage() {
 
     return (
       <div className="ai-match-flow">
+        <header className="nt-head">
+          <div className="nt-head__copy">
+            <h2>
+              좋은 인연이
+              <br />
+              기다리고 있어요
+            </h2>
+            <p>오늘도, 좋은 인연이 피어나길</p>
+          </div>
+          <img className="nt-head__chito" src="/images/chito-wave.png" alt="" />
+        </header>
+
         <SajuFortune
           compact
           nickname={accessProfile?.nickname}
@@ -2555,7 +2570,15 @@ export default function AiMatchPage() {
         ) : null}
 
         <section className="ai-match-list-meta am-meta">
-          <strong>{loading ? "불러오는 중..." : `${filteredProfiles.length}명`}</strong>
+          <strong>
+            {loading ? (
+              "불러오는 중..."
+            ) : (
+              <>
+                <b>{filteredProfiles.length}</b>명의 인연이 있어요
+              </>
+            )}
+          </strong>
           <button
             type="button"
             className="am-sort"
@@ -2678,7 +2701,7 @@ export default function AiMatchPage() {
                               ? "수락 상태 보기"
                               : requestQuotaExhausted
                                 ? "신청 마감"
-                                : "데이트 신청"}
+                                : "데이트 신청하기"}
                       </span>
                     </button>
                   </div>
@@ -3258,7 +3281,8 @@ export default function AiMatchPage() {
 
   if (isDetailScreen) {
     return (
-      <section className="uni-page ai-match-page ai-match-redesigned ai-match-redesigned--detail" data-i18n-skip>
+      <section className="uni-page ai-match-page ai-match-redesigned ai-match-redesigned--detail ai-match-page--night" data-i18n-skip>
+        <NightSky />
         <header className="ai-match-topbar">
           <button type="button" aria-label="사람 목록으로 돌아가기" onClick={closeDetail}>
             <IconArrowLeft className="h-5 w-5" />
@@ -3296,9 +3320,10 @@ export default function AiMatchPage() {
 
   return (
     <section
-      className={`uni-page ai-match-page ai-match-redesigned ai-match-redesigned--${activeScreen}${accessProfile ? " ai-match-redesigned--signed-in" : ""}`}
+      className={`uni-page ai-match-page ai-match-redesigned ai-match-redesigned--${activeScreen}${accessProfile ? " ai-match-redesigned--signed-in" : ""}${nightMode ? " ai-match-page--night" : ""}`}
       data-i18n-skip
     >
+      {nightMode ? <NightSky /> : null}
       {sajuSplash ? <SajuSplash onDone={() => setSajuSplash(false)} /> : null}
       <header className="ai-match-topbar">
         {activeScreen === "intro" ? (

@@ -1,0 +1,851 @@
+/*
+ * 밤 모드(nt-*): 로그인 뒤 목록 화면과 프로필 상세 화면은 아주대 밤 풍경 위에 반투명 유리 카드로 그린다.
+ * .ai-match-page--night 가 붙은 화면에서만 효과가 있다. main.jsx 에서 saju-theme.css 다음(맨 마지막)에 불러온다.
+ * 선택자 앞부분(.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night)이 saju-theme 보다 클래스 하나 더 많아서 이긴다.
+ */
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night {
+  --nt-ivory: #fff4dc;
+  --nt-ivory-2: rgba(255, 244, 220, 0.8);
+  --nt-ivory-3: rgba(255, 244, 220, 0.56);
+  --nt-line: rgba(196, 178, 255, 0.34);
+  --nt-line-soft: rgba(255, 255, 255, 0.2);
+  --nt-glass: linear-gradient(180deg, rgba(74, 56, 150, 0.46), rgba(38, 28, 92, 0.58));
+  --nt-glass-2: rgba(255, 255, 255, 0.08);
+  --nt-gold: #e6c878;
+  position: relative;
+  isolation: isolate;
+  background: #14102e !important;
+  color-scheme: dark;
+}
+
+/* ---------- 배경 그림 + 꽃잎 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-sky {
+  position: fixed !important;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-sky__img {
+  position: absolute;
+  inset: 0;
+  background: url("/images/saju/ajou-night-tall.webp") center top / cover no-repeat #14102e;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-sky__img::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(20, 16, 46, 0.12) 0%, rgba(20, 16, 46, 0.42) 34%, rgba(20, 16, 46, 0.6) 100%);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-sky__petals {
+  position: absolute;
+  inset: 0;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-petal {
+  position: absolute;
+  top: -4vh;
+  left: var(--x, 50%);
+  width: calc(11px * var(--s, 1));
+  height: calc(8px * var(--s, 1));
+  border-radius: 60% 40% 60% 40%;
+  background: rgba(255, 196, 214, 0.72);
+  box-shadow: 0 0 6px rgba(255, 196, 214, 0.35);
+  opacity: 0;
+  animation: nt-fall var(--d, 16s) linear infinite;
+  animation-delay: var(--delay, 0s);
+  will-change: transform;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-petal--gold {
+  width: calc(9px * var(--s, 1));
+  height: calc(9px * var(--s, 1));
+  border-radius: 50% 0 50% 0;
+  background: rgba(240, 200, 90, 0.66);
+  box-shadow: 0 0 6px rgba(240, 200, 90, 0.35);
+}
+
+@keyframes nt-fall {
+  0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 0; }
+  6% { opacity: 0.9; }
+  50% { transform: translate3d(26px, 52vh, 0) rotate(210deg); }
+  94% { opacity: 0.7; }
+  100% { transform: translate3d(-18px, 108vh, 0) rotate(430deg); opacity: 0; }
+}
+
+/* ---------- 상단 바 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-topbar {
+  background: rgba(20, 16, 46, 0.55) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 0 !important;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.08) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-topbar h1 {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-topbar button {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--nt-ivory) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-topbar-favorite--active {
+  color: #ff8a80 !important;
+}
+
+/* ---------- 글자 기본: 제목은 상아색, 본문은 옅은 상아색 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(h2, h3, h4, strong, b) {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(p, small, li, label) {
+  color: var(--nt-ivory-2) !important;
+}
+
+/* ---------- 머리글: 좋은 인연이 기다리고 있어요 + 치토 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  align-items: end;
+  gap: 8px;
+  padding: 4px 4px 0;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-head h2 {
+  margin: 0;
+  font-family: var(--saju-serif) !important;
+  font-size: 27px !important;
+  line-height: 1.25;
+  font-weight: 700 !important;
+  letter-spacing: -0.01em;
+  color: var(--nt-ivory) !important;
+  text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-head p {
+  margin: 8px 0 2px;
+  font-size: 13px !important;
+  color: var(--nt-ivory-2) !important;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-head__chito {
+  width: 96px;
+  height: auto;
+  justify-self: end;
+  filter: drop-shadow(0 10px 16px rgba(0, 0, 0, 0.5));
+  animation: sf-bob 3.4s ease-in-out infinite;
+}
+
+/* ---------- 산통 막대 · 필터 카드 · 부적 ---------- */
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sf-bar {
+  background: var(--nt-glass) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc {
+  background: var(--nt-glass) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__search {
+  background: var(--nt-glass-2) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__search svg {
+  color: var(--nt-ivory-3);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__search input {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__search input::placeholder {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__filter,
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__clear {
+  background: var(--nt-glass-2) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__filter.is-on {
+  background: #7457dc !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-chip {
+  background: var(--nt-glass-2) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-chip.is-on {
+  background: #7457dc !important;
+  box-shadow: 0 6px 14px rgba(116, 87, 220, 0.4) !important;
+  color: #fff !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__panel {
+  border-top-color: var(--nt-line-soft);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__panel-label,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-disc__select span {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sl-top {
+  background:
+    radial-gradient(90% 60% at 50% 0%, rgba(109, 79, 210, 0.45), rgba(29, 23, 64, 0) 70%),
+    rgba(29, 23, 64, 0.55) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ---------- N명의 인연이 있어요 · 정렬 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-meta strong {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 2px;
+  font-size: 15px !important;
+  color: var(--nt-ivory) !important;
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.45);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-meta strong b {
+  font-family: var(--saju-serif) !important;
+  font-size: 26px !important;
+  line-height: 1;
+  font-weight: 700 !important;
+  color: #ffe9b8 !important;
+  margin-right: 1px;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-sort {
+  background: var(--nt-glass-2) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line) !important;
+  color: var(--nt-ivory) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ---------- 사람 카드: 반투명 유리 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card {
+  background: var(--nt-glass) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line), 0 14px 34px rgba(0, 0, 0, 0.35) !important;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card::before {
+  display: none;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-photo {
+  background: rgba(255, 255, 255, 0.06) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28) !important;
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-copy strong {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-copy small {
+  color: var(--nt-ivory-2) !important;
+}
+
+/* 장소 앞 핀 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-copy small::before {
+  width: 12px;
+  height: 12px;
+  border-radius: 0;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23fff4dc'%3E%3Cpath d='M12 2a7 7 0 0 0-7 7c0 5.2 7 13 7 13s7-7.8 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-copy p {
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-favorite-button {
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory) !important;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-favorite-button--active {
+  color: #ff8a80 !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 138, 128, 0.5) !important;
+}
+
+/* 궁합 블록: 유리 패널, 링에 % */
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card,
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > button.sm-card--tap {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card .sm-ring__track {
+  stroke: rgba(255, 255, 255, 0.14);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card .sm-ring strong::after {
+  content: "%";
+  font-size: 0.55em;
+  margin-left: 1px;
+  opacity: 0.8;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card .sm-grade {
+  height: auto;
+  padding: 0 !important;
+  background: transparent !important;
+  color: var(--nt-ivory) !important;
+  font-size: 14px !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card .sm-grade::after {
+  content: "🍃";
+  margin-left: 4px;
+  font-size: 12px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card .sm-grade--high::after { content: "✨"; }
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card .sm-grade--mid::after { content: "🌱"; }
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card .sm-card__rel {
+  height: 20px;
+  padding: 0 7px;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft);
+  color: var(--nt-ivory-2) !important;
+  font-size: 10.5px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card .sm-card__body p {
+  font-family: inherit !important;
+  font-size: 12.5px !important;
+  font-weight: 500 !important;
+  color: var(--nt-ivory-2) !important;
+}
+
+/* 궁합 보기: 카드 아이콘 달린 알약 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card .sm-card__go {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 34px;
+  padding: 0 12px 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.32);
+  color: var(--nt-ivory) !important;
+  font-size: 12.5px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card .sm-card__go::before {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff4dc' stroke-width='1.8' stroke-linejoin='round'%3E%3Crect x='8' y='3' width='11' height='16' rx='2' transform='rotate(12 13.5 11)'/%3E%3Crect x='4' y='5' width='11' height='16' rx='2' transform='rotate(-8 9.5 13)' fill='%2314102e'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+
+/* 사주 없는 경우 */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card--empty {
+  background: rgba(255, 255, 255, 0.05) !important;
+  outline-color: var(--nt-line);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card--empty .sm-card__q {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-person-card > .sm-card--empty .sm-card__body p {
+  color: var(--nt-ivory-2) !important;
+}
+
+/* 태그 */
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-inline-tag,
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-inline-tags__toggle {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-inline-tag.is-on {
+  background: #7457dc !important;
+  box-shadow: none !important;
+  color: #fff !important;
+}
+
+/* 데이트 신청하기: 오른쪽 정렬 알약 */
+.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.ai-match-request-button--card,
+.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.ai-match-request-button--card:hover {
+  justify-self: end;
+  width: auto;
+  min-width: 62%;
+  height: 44px;
+  min-height: 44px !important;
+  padding: 0 18px !important;
+  border-radius: 999px !important;
+  background: linear-gradient(135deg, #8b6cf0 0%, #5a3fb0 100%) !important;
+  box-shadow: 0 10px 22px rgba(120, 90, 230, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.22) !important;
+  font-size: 14px !important;
+}
+
+.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.ai-match-request-button--card .ai-match-request-button__icon {
+  background: transparent;
+  width: auto;
+  height: auto;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-empty-card {
+  background: var(--nt-glass) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line) !important;
+  border: 0 !important;
+}
+
+/* ---------- 상세 화면 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-detail-hero {
+  box-shadow: inset 0 0 0 1px var(--nt-line), 0 14px 34px rgba(0, 0, 0, 0.35) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.ai-match-detail-card, .ai-match-safety-card, .ai-match-request-sheet, .saju-panel, .sm-section, .ai-match-meetup-box, .mu-picker, .mu-ticket, .ai-match-section-card) {
+  background: var(--nt-glass) !important;
+  border: 0 !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line), 0 10px 28px rgba(0, 0, 0, 0.28) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-detail-card strong,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-detail-card > small,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-detail-card p {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-detail-card p,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-detail-card > small {
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-detail-card .ai-match-inline-tags span,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-my-copy .ai-match-inline-tags span {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory-2) !important;
+}
+
+/* 궁합 리포트 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-report {
+  padding: 0 !important;
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-reveal {
+  background:
+    radial-gradient(90% 70% at 50% 0%, rgba(109, 79, 210, 0.5), rgba(29, 23, 64, 0) 65%),
+    rgba(29, 23, 64, 0.62) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-section h4 {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-section__copy {
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-el {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-el span {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-el small {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-elements__link span {
+  color: #c9b8f5 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-elements__link--clash span {
+  color: #ff9d94 !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-reasons li {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-reasons li::before {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--nt-gold);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-tip {
+  background: rgba(230, 200, 120, 0.1) !important;
+  box-shadow: inset 0 0 0 1px rgba(230, 200, 120, 0.3);
+  border-left: 3px solid var(--nt-gold);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-tip strong {
+  color: var(--nt-gold) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sm-tip p {
+  color: var(--nt-ivory) !important;
+}
+
+/* 명식 표 */
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.sc__toggle,
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.sc__toggle:hover {
+  border-color: var(--nt-line) !important;
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.sc__head,
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.sc__head:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.sc__head small {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.sc__head.is-on {
+  background: var(--nt-gold) !important;
+  color: #2a1f4d !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.sc__head.is-on b,
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night button.sc__head.is-on small {
+  color: #2a1f4d !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__axis {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__axis--rel {
+  color: var(--nt-gold) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__name strong {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__cell {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.22), 0 6px 14px rgba(0, 0, 0, 0.3);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__cell.is-on {
+  box-shadow: 0 0 0 2px #14102e, 0 0 0 4px var(--nt-gold), 0 8px 18px rgba(0, 0, 0, 0.4);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__cell--none {
+  background: repeating-linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0 6px, rgba(255, 255, 255, 0.1) 6px 12px);
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__cell--none b,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__cell--none small {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__rel {
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__rel.is-on {
+  box-shadow: inset 0 0 0 1px var(--nt-gold), 0 0 0 2px rgba(230, 200, 120, 0.3);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.sc__rel-mark--hap, .sc__rel-mark--sam) { color: #ffd97a !important; }
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.sc__rel-mark--give, .sc__rel-mark--take) { color: #7fe0a9 !important; }
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__rel-mark--same { color: rgba(255, 244, 220, 0.6) !important; }
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.sc__rel-mark--clash, .sc__rel-mark--chung) { color: #ff9d94 !important; }
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__rel-mark--none { color: rgba(255, 255, 255, 0.28) !important; }
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__legend li,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__hint {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__note {
+  background: rgba(255, 255, 255, 0.08);
+  border-left-color: var(--nt-gold);
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__note strong {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__note-copy {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__note li,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__note li span {
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__note li i {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.sc__note--hap, .sc__note--sam) i { color: #ffd97a !important; }
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.sc__note--give, .sc__note--take) i { color: #7fe0a9 !important; }
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.sc__note--clash, .sc__note--chung) i { color: #ff9d94 !important; }
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .sc__note--star i { background: var(--nt-gold); color: #2a1f4d !important; }
+
+/* 사주 패널(상대 사주만 있을 때) */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-panel__head small {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-zodiac {
+  background: var(--nt-gold);
+  border: 0;
+  color: #2a1f4d !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-daymaster {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-daymaster > span {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-daymaster strong {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-daymaster em {
+  color: var(--nt-gold) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-elements {
+  background: rgba(255, 255, 255, 0.06) !important;
+  border: 0 !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-element__name {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-element__count {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-element__bar {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-note {
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .saju-reading {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border: 0 !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft);
+  color: var(--nt-ivory-2) !important;
+}
+
+/* 안전 안내 · 신청 시트 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-safety-card svg {
+  color: var(--nt-gold);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-request-sheet-head strong {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-request-sheet-head button {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--nt-ivory) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-quota {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-quota__text strong {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-quota__text small {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-field-head span,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-section-head span,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-field-hint,
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-note {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(input, select, textarea) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(input, select, textarea):focus {
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: 0 0 0 2px var(--nt-gold) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(input, textarea)::placeholder {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night select option {
+  color: #2a1f4d;
+  background: #fff;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.ai-match-secondary-button, .ai-match-request-button, .ai-match-close) {
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-secondary-button--danger {
+  background: rgba(255, 138, 128, 0.14) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 138, 128, 0.4) !important;
+  color: #ff9d94 !important;
+}
+
+/* 부스 시간 예약 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.mu-title, .mu-head strong, .mu-ticket__time) {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.mu-copy, .mu-hour__label, .mu-legend, .mu-ticket__eyebrow, .mu-ticket__rules, .mu-head__timer) {
+  color: var(--nt-ivory-3) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.mu-slot, .mu-date, .mu-ghost) {
+  background: rgba(255, 255, 255, 0.08) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.mu-slot[disabled], .mu-slot--past) {
+  background: rgba(255, 255, 255, 0.03) !important;
+  color: rgba(255, 244, 220, 0.3) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night :is(.mu-slot--mine, .mu-date.is-on) {
+  background: var(--nt-gold) !important;
+  color: #2a1f4d !important;
+  box-shadow: none !important;
+}
+
+/* ---------- 움직임 줄이기 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-petal,
+  .app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-head__chito {
+    animation: none !important;
+  }
+}
+
+/* ---------- 화면 안 탭(처음·신청함·MY·문의) · 알림 배너 ---------- */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-bottom-nav {
+  background: rgba(20, 16, 46, 0.5) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  border: 0 !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-bottom-tab,
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-bottom-tab:hover {
+  background: transparent !important;
+  color: var(--nt-ivory-2) !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-bottom-tab * {
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-bottom-tab.is-active {
+  background: rgba(255, 255, 255, 0.14) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line) !important;
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-bottom-tab.is-active * {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-banner {
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory) !important;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-banner--success {
+  background: rgba(63, 178, 120, 0.18) !important;
+  box-shadow: inset 0 0 0 1px rgba(127, 224, 169, 0.45) !important;
+  color: #c8f5dc !important;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-banner--error {
+  background: rgba(224, 72, 61, 0.18) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 138, 128, 0.45) !important;
+  color: #ffd2cd !important;
+}
+
+/* 꽃잎을 조금 더 보이게 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-petal {
+  background: rgba(255, 200, 218, 0.85);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .nt-petal--gold {
+  background: rgba(245, 205, 100, 0.8);
+}

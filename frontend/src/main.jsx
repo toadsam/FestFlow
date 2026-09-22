@@ -15,6 +15,7 @@ import "./styles/v2-splash.css";
 import "./styles/v2-ops.css";
 import "./styles/v2-admin.css";
 import "./styles/saju-theme.css";
+import "./styles/saju-night.css";
 import AiMatchPage from "./pages/AiMatchPage";
 import AiMatchAdminPage from "./pages/AiMatchAdminPage";
 import AdminPage from "./pages/AdminPage";
