@@ -8,6 +8,8 @@ import {
   deleteEvent,
   deleteNotice,
   fetchAdminAiBriefing,
+  fetchAdminAiMatchSummary,
+  bulkUpdateAdminEventStatus,
   fetchAdminDashboardKpis,
   fetchAdminNotices,
   fetchAdminStaff,
@@ -138,6 +140,9 @@ export default function AdminPage() {
   const [showPassword, setShowPassword] = useState(false);
 
   const [kpi, setKpi] = useState(null);
+  const [aiMatchSummary, setAiMatchSummary] = useState(null);
+  const [bulk, setBulk] = useState({ day: "", place: "", statusOverride: "지연", delayMinutes: "30", liveMessage: "" });
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [booths, setBooths] = useState([]);
   const [events, setEvents] = useState([]);
@@ -199,12 +204,39 @@ export default function AdminPage() {
     }
   }
 
+  const bulkTargets = events.filter((event) => {
+    if (bulk.day && !`${event.startTime || ""}`.startsWith(bulk.day)) return false;
+    if (bulk.place && !`${event.liveMessage || ""}${event.title || ""}`.includes(bulk.place)) return false;
+    return true;
+  });
+
+  async function handleBulkEventStatus(clear = false) {
+    if (!bulkTargets.length) return;
+    const label = clear ? "자동 상태" : `${bulk.statusOverride}${bulk.statusOverride === "지연" && bulk.delayMinutes ? ` ${bulk.delayMinutes}분` : ""}`;
+    if (!window.confirm(`${bulkTargets.length}개 공연을 "${label}"(으)로 바꿀까요?`)) return;
+    setBulkBusy(true);
+    try {
+      await bulkUpdateAdminEventStatus({
+        eventIds: bulkTargets.map((event) => event.id),
+        statusOverride: clear ? "" : bulk.statusOverride,
+        delayMinutes: clear ? 0 : bulk.statusOverride === "지연" ? Number(bulk.delayMinutes) || 0 : null,
+        liveMessage: clear ? null : bulk.liveMessage || null,
+      });
+      setMessage(`${bulkTargets.length}개 공연을 ${label}(으)로 바꿨습니다.`);
+      await loadAll();
+    } catch (error) {
+      setMessage(adminErrorMessage(error));
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function loadAll() {
     setIsLoading(true);
     setMessage("관리자 대시보드 동기화 중...");
 
     try {
-      const [boothResult, eventResult, noticeResult, kpiResult, logResult, staffResult, aiResult] = await Promise.allSettled([
+      const [boothResult, eventResult, noticeResult, kpiResult, logResult, staffResult, aiResult, aiMatchResult] = await Promise.allSettled([
         fetchBooths(),
         fetchEvents(),
         fetchAdminNotices(),
@@ -212,6 +244,7 @@ export default function AdminPage() {
         fetchAuditLogs(),
         fetchAdminStaff(),
         fetchAdminAiBriefing(),
+        fetchAdminAiMatchSummary(),
       ]);
 
       const boothData = boothResult.status === "fulfilled" && Array.isArray(boothResult.value) ? boothResult.value : [];
@@ -221,6 +254,7 @@ export default function AdminPage() {
       const staffData = staffResult.status === "fulfilled" && Array.isArray(staffResult.value) ? staffResult.value : [];
       const kpiData = kpiResult.status === "fulfilled" ? kpiResult.value : null;
       const aiData = aiResult.status === "fulfilled" ? aiResult.value : null;
+      setAiMatchSummary(aiMatchResult.status === "fulfilled" ? aiMatchResult.value : null);
 
       setBooths(boothData);
       setEvents(eventData);
@@ -954,6 +988,26 @@ export default function AdminPage() {
             </article>
           </div>
 
+          {aiMatchSummary ? (
+            <a href="/ai-match/admin" className="admin-console-aimatch">
+              <div className="admin-console-aimatch__head">
+                <strong>사주 소개팅</strong>
+                <span>소개팅 관리자 열기 →</span>
+              </div>
+              <div className="admin-console-aimatch__grid">
+                <div><small>활성</small><b>{aiMatchSummary.activeProfileCount}</b></div>
+                <div><small>성사</small><b>{aiMatchSummary.matchedCount}</b></div>
+                <div><small>대기 신청</small><b>{aiMatchSummary.pendingRequestCount}</b></div>
+                <div className={aiMatchSummary.openReportCount + aiMatchSummary.pendingPhotoReviewCount ? "is-alert" : ""}><small>신고·검수</small><b>{aiMatchSummary.openReportCount + aiMatchSummary.pendingPhotoReviewCount}</b></div>
+              </div>
+              <p>
+                {aiMatchSummary.nextMeetupAt
+                  ? `다음 부스 약속 ${aiMatchSummary.nextMeetupAt.replace("T", " ").slice(5, 16)} · ${aiMatchSummary.nextMeetupPair} · 오늘 ${aiMatchSummary.meetupsToday}쌍`
+                  : "잡힌 부스 약속이 없어요"}
+              </p>
+            </a>
+          ) : null}
+
           {(message || isLoading) && (
             <p className="admin-console-status">
               <IconRefresh className="h-4 w-4" />
@@ -1253,6 +1307,7 @@ export default function AdminPage() {
                 <span className={notice.active ? "admin-console-badge admin-console-badge--green" : "admin-console-badge"}>
                   {notice.active ? "활성" : "비활성"}
                 </span>
+                <span className="admin-console-badge admin-console-badge--blue" title="펼쳐 본 기기 수">조회 {notice.viewCount ?? 0}</span>
               </div>
               <small>{notice.content}</small>
               <div className="admin-console-action-row">
@@ -1503,6 +1558,37 @@ export default function AdminPage() {
             {editingEventId ? "공연 수정" : "공연 추가"}
           </button>
         </form>
+        <div className="admin-console-bulk">
+          <div className="admin-console-bulk__head">
+            <div>
+              <strong>여러 공연 한 번에 바꾸기</strong>
+              <small>비가 오거나 무대가 밀리면 날짜·장소로 골라 한 번에 지연·취소해요.</small>
+            </div>
+            <em>{bulkTargets.length}개 대상</em>
+          </div>
+          <div className="admin-console-bulk__row">
+            <select className="admin-console-input" value={bulk.day} onChange={(e) => setBulk((p) => ({ ...p, day: e.target.value }))}>
+              <option value="">모든 날짜</option>
+              {[...new Set(events.map((event) => `${event.startTime || ""}`.slice(0, 10)).filter(Boolean))].sort().map((day) => (
+                <option key={day} value={day}>{day.slice(5).replace("-", ".")}</option>
+              ))}
+            </select>
+            <input className="admin-console-input" placeholder="장소·제목 포함 글자 (예: 노천극장)" value={bulk.place} onChange={(e) => setBulk((p) => ({ ...p, place: e.target.value }))} />
+            <select className="admin-console-input" value={bulk.statusOverride} onChange={(e) => setBulk((p) => ({ ...p, statusOverride: e.target.value }))}>
+              {["예정", "곧 시작", "지연", "진행중", "종료", "취소"].map((status) => (
+                <option key={status} value={status}>{status}</option>
+              ))}
+            </select>
+            <input className="admin-console-input" inputMode="numeric" placeholder="지연 분" value={bulk.delayMinutes} disabled={bulk.statusOverride !== "지연"} onChange={(e) => setBulk((p) => ({ ...p, delayMinutes: e.target.value }))} />
+          </div>
+          <input className="admin-console-input" placeholder="손님에게 보일 한 줄 (선택) 예: 우천으로 30분 늦게 시작해요" value={bulk.liveMessage} onChange={(e) => setBulk((p) => ({ ...p, liveMessage: e.target.value }))} />
+          <div className="admin-console-action-row">
+            <button type="button" disabled={bulkBusy || !bulkTargets.length} onClick={() => handleBulkEventStatus(true)}>자동 상태로 되돌리기</button>
+            <button type="button" className="danger" disabled={bulkBusy || !bulkTargets.length} onClick={() => handleBulkEventStatus(false)}>
+              {bulkBusy ? "적용 중…" : `${bulkTargets.length}개 적용`}
+            </button>
+          </div>
+        </div>
         <div className="admin-console-list">
           {events.map((event) => (
             <div key={event.id} className="admin-console-list-card">

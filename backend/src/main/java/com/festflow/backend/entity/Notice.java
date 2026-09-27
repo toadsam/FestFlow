@@ -31,6 +31,10 @@ public class Notice {
     @Column(nullable = false)
     private boolean active;
 
+    /** 손님이 공지를 펼쳐 본 횟수(기기당 한 번). */
+    @Column(name = "view_count")
+    private Long viewCount;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -80,6 +84,10 @@ public class Notice {
 
     public String getCategory() {
         return category;
+    }
+
+    public long getViewCount() {
+        return viewCount == null ? 0 : viewCount;
     }
 
     public boolean isActive() {

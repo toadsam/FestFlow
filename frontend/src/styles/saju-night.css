@@ -1333,3 +1333,90 @@
   color: var(--nt-ivory-3) !important;
   font-size: 11.5px !important;
 }
+
+/* 신고 폼 글자·칩·입력창 강제(전역 form 규칙 위) */
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night form.am-report {
+  border: 0 !important;
+  outline: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night form.am-report > strong,
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night form.am-report .am-report__foot small {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night form.am-report button.am-chip,
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night form.am-report button.am-chip:hover {
+  min-height: 0 !important;
+  height: 34px !important;
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory) !important;
+  filter: none !important;
+  text-shadow: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night form.am-report button.am-chip.is-on {
+  background: #e0483d !important;
+  color: #fff !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night form.am-report textarea {
+  background: rgba(255, 255, 255, 0.1) !important;
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft) !important;
+  color: var(--nt-ivory) !important;
+  border: 0 !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night form.am-report textarea::placeholder {
+  color: var(--nt-ivory-3) !important;
+}
+
+/* ---------- 만날 시간: 고른 칸이 확실히 보이게 ---------- */
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu-picker .mu-slot--mine:not(.is-on) {
+  background: rgba(233, 196, 106, 0.14) !important;
+  box-shadow: inset 0 0 0 2px var(--nt-gold) !important;
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu-picker .mu-slot.is-on {
+  background: linear-gradient(160deg, #ffe7a3 0%, var(--nt-gold) 55%, #c9962e 100%) !important;
+  color: #2a1f4d !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 0 2px #fff4dc, 0 0 18px 4px rgba(255, 214, 120, 0.55) !important;
+  outline: none !important;
+  position: relative;
+  z-index: 1;
+  animation: mu-slot-pick 0.32s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu-picker .mu-slot:focus-visible:not(.is-on) {
+  outline: 2px solid rgba(201, 184, 245, 0.7) !important;
+  outline-offset: 2px;
+}
+
+.app-shell .mu-slot__check {
+  margin-right: 2px;
+  font-size: 0.85em;
+  font-weight: 900;
+}
+
+@keyframes mu-slot-pick {
+  0% { transform: scale(0.9); }
+  60% { transform: scale(1.1); }
+  100% { transform: scale(1.04); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu-picker .mu-slot.is-on {
+    animation: none;
+    transform: none;
+  }
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu-picker .mu-slot--busy {
+  background: repeating-linear-gradient(135deg, rgba(230, 200, 120, 0.16) 0 4px, transparent 4px 10px) !important;
+  box-shadow: inset 0 0 0 1px rgba(230, 200, 120, 0.35) !important;
+  color: rgba(255, 244, 220, 0.45) !important;
+}

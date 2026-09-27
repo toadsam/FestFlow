@@ -215,6 +215,22 @@ public class ReservationService {
         return dto;
     }
 
+    /** 자리가 나서 손님을 부른다. 손님 화면에 "지금 들어오세요"가 뜬다. 예약 상태는 그대로다. */
+    @Transactional
+    public BoothReservationDto call(Long boothId, Long reservationId) {
+        LocalDateTime now = LocalDateTime.now();
+        BoothReservation reservation = boothReservationRepository.findByIdAndBoothId(reservationId, boothId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Reservation not found."));
+        if (reservation.getStatus() != ReservationStatus.RESERVED) {
+            throw new ResponseStatusException(CONFLICT, "체크인 전 예약만 호출할 수 있어요.");
+        }
+        reservation.markCalled(now);
+        boothReservationRepository.save(reservation);
+        BoothReservationDto dto = toReservationDto(reservation);
+        streamService.publishReservations(dto);
+        return dto;
+    }
+
     @Transactional
     public BoothReservationDto complete(Long boothId, Long reservationId) {
         BoothReservation reservation = boothReservationRepository.findByIdAndBoothId(reservationId, boothId)
@@ -484,7 +500,8 @@ public class ReservationService {
                 reservation.getReservedAt(),
                 reservation.getExpiresAt(),
                 reservation.getCheckedInAt(),
-                reservation.getExpiredAt()
+                reservation.getExpiredAt(),
+                reservation.getCalledAt()
         );
     }
 

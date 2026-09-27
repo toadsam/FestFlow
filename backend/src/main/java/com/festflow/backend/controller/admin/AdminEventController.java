@@ -40,6 +40,14 @@ public class AdminEventController {
         return updated;
     }
 
+    @PutMapping("/bulk-status")
+    public java.util.List<EventResponseDto> bulkUpdateStatus(@RequestBody com.festflow.backend.dto.EventBulkStatusRequestDto requestDto, Authentication authentication) {
+        java.util.List<EventResponseDto> updated = eventService.bulkUpdateStatus(requestDto);
+        auditLogService.log(authentication.getName(), "BULK_STATUS", "EVENT", null,
+                (requestDto.statusOverride() == null || requestDto.statusOverride().isBlank() ? "auto" : requestDto.statusOverride()) + " x" + updated.size());
+        return updated;
+    }
+
     @DeleteMapping("/{id}")
     public void deleteEvent(@PathVariable Long id, Authentication authentication) {
         eventService.deleteEvent(id);

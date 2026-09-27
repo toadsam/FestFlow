@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -68,6 +69,13 @@ public class AdminAiMatchController {
         return aiMatchService.purgeByPhoneNumber(requestDto);
     }
 
+    @PostMapping("/reset")
+    public com.festflow.backend.dto.AiMatchAdminResetResultDto resetAll(
+            @RequestBody(required = false) com.festflow.backend.dto.AiMatchAdminResetRequestDto requestDto
+    ) {
+        return aiMatchService.resetAll(requestDto);
+    }
+
     @PutMapping("/requests/{requestId}/arrival")
     public AiMatchAdminRequestDto markArrival(@PathVariable Long requestId, @RequestBody AiMatchAdminArrivalDto requestDto) {
         return aiMatchService.markArrival(requestId, requestDto);
@@ -99,12 +107,17 @@ public class AdminAiMatchController {
     }
 
     @GetMapping(value = "/export.csv", produces = "text/csv")
-    public org.springframework.http.ResponseEntity<String> exportCsv() {
-        String csv = aiMatchService.exportAdminCsv();
+    public org.springframework.http.ResponseEntity<String> exportCsv(@RequestParam(defaultValue = "false") boolean statsOnly) {
+        String csv = aiMatchService.exportAdminCsv(statsOnly);
         return org.springframework.http.ResponseEntity.ok()
                 .header("Content-Disposition", "attachment; filename=\"ai-match-report.csv\"")
                 .contentType(new org.springframework.http.MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
                 .body(csv);
+    }
+
+    @GetMapping("/summary")
+    public com.festflow.backend.dto.AiMatchMasterSummaryDto getSummary() {
+        return aiMatchService.getMasterSummary();
     }
 
     @GetMapping("/meetup-schedule")

@@ -1430,3 +1430,95 @@
     transition: none !important;
   }
 }
+
+/* ---------- 품절 바로 바꾸기 ---------- */
+.ops-soldout {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.app-shell .ops-soldout__chip,
+.app-shell .ops-soldout__chip:hover {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 0 !important;
+  height: 34px;
+  padding: 0 11px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #e8f5ee !important;
+  background-image: none !important;
+  box-shadow: inset 0 0 0 1px #bfe8cf !important;
+  color: #14532d !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  text-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+}
+
+.app-shell .ops-soldout__chip small {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  color: #1c7a4e;
+}
+
+.app-shell .ops-soldout__chip.is-out {
+  background: #f1f1f4 !important;
+  box-shadow: inset 0 0 0 1px #d9d9e3 !important;
+  color: #6b6b7b !important;
+  text-decoration: line-through;
+}
+
+.app-shell .ops-soldout__chip.is-out small {
+  color: #c93d30;
+  text-decoration: none;
+}
+
+.app-shell .ops-soldout__chip::before,
+.app-shell .ops-soldout__chip::after {
+  content: none !important;
+}
+
+/* ---------- 마감 정산 ---------- */
+.ops-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.ops-summary__items {
+  display: grid;
+  gap: 4px;
+}
+
+.ops-summary__item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f8f8fb;
+  font-size: 13px;
+}
+
+.ops-summary__item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ops-summary__item span {
+  color: #6b6b7b;
+}
+
+.ops-summary__item em {
+  font-style: normal;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}

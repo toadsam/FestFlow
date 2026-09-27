@@ -15,7 +15,8 @@ public record BoothReservationDto(
         LocalDateTime reservedAt,
         LocalDateTime expiresAt,
         LocalDateTime checkedInAt,
-        LocalDateTime expiredAt
+        LocalDateTime expiredAt,
+        LocalDateTime calledAt
 ) {
 }
 

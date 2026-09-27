@@ -60,6 +60,12 @@ public class NoticeService {
         return toDto(saved);
     }
 
+    /** 손님이 공지를 펼쳤다. 기기당 한 번만 보내도록 프런트가 거른다. */
+    @org.springframework.transaction.annotation.Transactional
+    public void recordView(Long noticeId) {
+        noticeRepository.incrementViewCount(noticeId);
+    }
+
     public void deleteNotice(Long noticeId) {
         if (!noticeRepository.existsById(noticeId)) {
             throw new ResponseStatusException(NOT_FOUND, "공지를 찾을 수 없습니다.");
@@ -81,7 +87,8 @@ public class NoticeService {
                 notice.getCategory(),
                 notice.isActive(),
                 notice.getCreatedAt(),
-                notice.getUpdatedAt()
+                notice.getUpdatedAt(),
+                notice.getViewCount()
         );
     }
 }

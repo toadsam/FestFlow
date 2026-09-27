@@ -471,6 +471,15 @@ export async function purgeAdminAiMatchPhone(phoneNumber) {
   return parseJson(response, "전화번호 완전 삭제에 실패했습니다.");
 }
 
+export async function resetAdminAiMatchAll(confirm) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/reset`, {
+    method: "POST",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ confirm }),
+  });
+  return parseJson(response, "소개팅 데이터 전체 삭제에 실패했습니다.");
+}
+
 export async function updateAdminStaff(id, payload) {
   const response = await fetch(`${API_BASE}/admin/staff/${id}`, {
     method: "PUT",
@@ -1405,8 +1414,8 @@ export async function resolveAdminAiMatchReport(reportId, action, note) {
   return parseJson(response, "신고 처리에 실패했습니다.");
 }
 
-export async function downloadAdminAiMatchCsv() {
-  const response = await fetch(`${API_BASE}/admin/ai-match/export.csv`, { headers: withAuth() });
+export async function downloadAdminAiMatchCsv({ statsOnly = false } = {}) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/export.csv${statsOnly ? "?statsOnly=true" : ""}`, { headers: withAuth() });
   if (!response.ok) {
     const error = new Error("CSV를 내려받지 못했습니다.");
     error.status = response.status;
@@ -1417,9 +1426,70 @@ export async function downloadAdminAiMatchCsv() {
   const link = document.createElement("a");
   const stamp = new Date().toISOString().slice(0, 10);
   link.href = url;
-  link.download = `사주소개팅-운영보고-${stamp}.csv`;
+  link.download = `사주소개팅-${statsOnly ? "통계" : "운영보고"}-${stamp}.csv`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// ---------- 부스: 손님 호출 · 마감 정산 / 공지 조회 / 공연 일괄 상태 ----------
+export async function callOpsBoothReservation(boothId, reservationId, key) {
+  const response = await fetch(opsUrl(`/ops/booth/${boothId}/reservations/${reservationId}/call`), {
+    method: "POST",
+    headers: opsHeaders(key),
+  });
+  return parseJson(response, "손님 호출에 실패했습니다.");
+}
+
+export async function fetchOpsBoothSummary(boothId, date, key) {
+  const query = date ? `?date=${encodeURIComponent(date)}` : "";
+  const response = await fetch(opsUrl(`/ops/booth/${boothId}/summary${query}`), { headers: opsHeaders(key) });
+  return parseJson(response, "마감 정산을 불러오지 못했습니다.");
+}
+
+const NOTICE_VIEW_KEY = "festa_notice_views";
+
+/** 공지를 펼쳐 봤다고 서버에 알린다. 같은 기기에서는 공지당 한 번만 보낸다. */
+export async function recordNoticeView(noticeId) {
+  let seen = [];
+  try {
+    seen = JSON.parse(localStorage.getItem(NOTICE_VIEW_KEY) || "[]");
+  } catch {
+    seen = [];
+  }
+  if (seen.includes(noticeId)) return;
+  try {
+    localStorage.setItem(NOTICE_VIEW_KEY, JSON.stringify([...seen, noticeId].slice(-200)));
+  } catch {
+    // 저장 못 해도 보낸다
+  }
+  try {
+    await fetch(`${API_BASE}/notices/${noticeId}/view`, { method: "POST" });
+  } catch {
+    // 조회 수는 실패해도 화면에 영향 없음
+  }
+}
+
+export async function bulkUpdateOpsMasterEventStatus(payload, key) {
+  const response = await fetch(opsUrl("/ops/master/events/bulk-status"), {
+    method: "PUT",
+    headers: opsHeaders(key, { "Content-Type": "application/json" }),
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "공연 상태 일괄 변경에 실패했습니다.");
+}
+
+export async function bulkUpdateAdminEventStatus(payload) {
+  const response = await fetch(`${API_BASE}/admin/events/bulk-status`, {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify(payload),
+  });
+  return parseJson(response, "공연 상태 일괄 변경에 실패했습니다.");
+}
+
+export async function fetchAdminAiMatchSummary() {
+  const response = await fetch(`${API_BASE}/admin/ai-match/summary`, { headers: withAuth() });
+  return parseJson(response, "소개팅 요약을 불러오지 못했습니다.");
 }

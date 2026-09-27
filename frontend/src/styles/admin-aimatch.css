@@ -1773,3 +1773,44 @@
   color: #c93d30;
   margin-right: 2px;
 }
+
+.aa-csv-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* 두 버튼을 한 줄에 두면서 전역 버튼 규칙보다 확실히 이기게 */
+.app-shell.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-csv-row .aa-csv {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  padding: 0 16px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: #2a2160 !important;
+  background-image: none !important;
+  color: #ffe9b8 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell.app-shell .cyber-page.admin-console-page.ai-match-admin-page .aa-csv-row .aa-csv.aa-csv--stats {
+  background: #eef6ff !important;
+  color: #1b64da !important;
+  box-shadow: inset 0 0 0 1px #c9defc !important;
+}
+
+.aa-csv-row {
+  margin: 4px 0 12px;
+}
+
+.aa-reset {
+  margin-top: 12px;
+}
+
+.aa-reset p b {
+  color: #d93a3a;
+}

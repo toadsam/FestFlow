@@ -1,5 +1,5 @@
 // 주점 상세. 메뉴·운영 시간·자리 예약. 예약 로직은 그대로 두고 화면만 ver2 로 다시 그렸다.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -14,6 +14,7 @@ import {
   verifyReservationAuthCode,
 } from "../api";
 import { IconArrowLeft, IconClock, IconMapPin, IconUsers } from "../components/UxIcons";
+import { showBrowserNotification } from "../utils/notifications";
 import { DishGrid, DishSheet } from "../components/v2/DishGrid";
 import { BottomSheet, IconPhone, useToast } from "../components/v2/V2Kit";
 import { resolveBoothImageUrl } from "../config/boothImages";
@@ -283,6 +284,22 @@ export default function BoothDetailPage() {
   );
 
   const myReservation = reservationState.myReservation;
+  const called = Boolean(myReservation?.calledAt) && myReservation?.status === "RESERVED";
+  const calledKeyRef = useRef("");
+
+  // 스태프가 호출하면 한 번만 알림·진동
+  useEffect(() => {
+    if (!called) return;
+    const keyValue = `${myReservation.id}-${myReservation.calledAt}`;
+    if (calledKeyRef.current === keyValue) return;
+    calledKeyRef.current = keyValue;
+    try {
+      window.navigator.vibrate?.([120, 60, 120]);
+    } catch {
+      // 진동 없는 기기
+    }
+    showBrowserNotification(`${booth?.name || "주점"} 자리가 났어요`, { body: `${myReservation.tableName} · 지금 부스로 와서 QR을 보여 주세요.` });
+  }, [called, myReservation, booth]);
   const penalty = reservationState.penalty;
   const isAuthComplete = Boolean(reservationToken);
   const remainingSeconds = myReservation ? Math.floor((parseTimeMs(myReservation.expiresAt) - nowTick) / 1000) : 0;
@@ -514,8 +531,14 @@ export default function BoothDetailPage() {
           </div>
 
           {myReservation ? (
-            <div className="v2-card v2-card--blue">
-              <span className="v2-badge v2-badge--blue v2-badge--live">예약 중</span>
+            <div className={`v2-card ${called ? "v2-card--called" : "v2-card--blue"}`}>
+              {called ? (
+                <div className="v2-called">
+                  <strong>지금 들어오세요!</strong>
+                  <span>자리가 났어요. 부스 입구에서 QR을 보여 주세요.</span>
+                </div>
+              ) : null}
+              <span className="v2-badge v2-badge--blue v2-badge--live">{called ? "호출됨" : "예약 중"}</span>
               <p style={{ margin: "0.6rem 0 0.2rem", fontSize: "1.05rem", fontWeight: 700 }}>
                 {myReservation.tableName} · {myReservation.seatCount}명
               </p>

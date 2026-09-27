@@ -1,6 +1,7 @@
 package com.festflow.backend.service;
 
 import com.festflow.backend.dto.EventResponseDto;
+import com.festflow.backend.dto.EventBulkStatusRequestDto;
 import com.festflow.backend.dto.EventUpsertRequestDto;
 import com.festflow.backend.entity.FestivalEvent;
 import com.festflow.backend.repository.EventRepository;
@@ -87,6 +88,33 @@ public class EventService {
         );
         FestivalEvent saved = eventRepository.save(event);
         return toDto(saved, resolveStatus(saved, LocalDateTime.now()));
+    }
+
+    /** 여러 공연의 현장 상태를 한 번에. 비가 오면 야외 일정 전부를 "지연 30분"으로 미는 용도. */
+    public List<EventResponseDto> bulkUpdateStatus(EventBulkStatusRequestDto requestDto) {
+        if (requestDto == null || requestDto.eventIds() == null || requestDto.eventIds().isEmpty()) {
+            return List.of();
+        }
+        String statusOverride = requestDto.statusOverride() == null || requestDto.statusOverride().isBlank() ? null : requestDto.statusOverride().trim();
+        LocalDateTime now = LocalDateTime.now();
+        List<FestivalEvent> events = eventRepository.findAllById(requestDto.eventIds());
+        for (FestivalEvent event : events) {
+            event.update(
+                    event.getTitle(),
+                    event.getStartTime(),
+                    event.getEndTime(),
+                    event.getImageUrl(),
+                    event.getImageCredit(),
+                    event.getImageFocus(),
+                    statusOverride,
+                    requestDto.liveMessage() == null ? event.getLiveMessage() : requestDto.liveMessage(),
+                    requestDto.delayMinutes() == null ? event.getDelayMinutes() : requestDto.delayMinutes()
+            );
+        }
+        List<FestivalEvent> saved = eventRepository.saveAll(events);
+        List<EventResponseDto> result = saved.stream().map(event -> toDto(event, resolveStatus(event, now))).toList();
+        streamService.publishEvents(getAllEvents());
+        return result;
     }
 
     public void deleteEvent(Long eventId) {

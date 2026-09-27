@@ -1,6 +1,7 @@
 package com.festflow.backend.service;
 
 import com.festflow.backend.dto.AiMatchAdminOverviewDto;
+import com.festflow.backend.dto.AiMatchMasterSummaryDto;
 import com.festflow.backend.dto.AiMatchAdminArrivalDto;
 import com.festflow.backend.dto.AiMatchAdminHiddenDto;
 import com.festflow.backend.dto.AiMatchAdminNoShowDto;
@@ -726,10 +727,42 @@ public class AiMatchService {
         return request;
     }
 
+    /** 마스터 콘솔 카드 한 칸. */
+    @Transactional(readOnly = true)
+    public AiMatchMasterSummaryDto getMasterSummary() {
+        List<AiMatchProfile> profiles = profileRepository.findAll();
+        List<AiMatchRequest> requests = requestRepository.findAllByOrderByCreatedAtDesc();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDate today = now.toLocalDate();
+        List<AiMatchRequest> withMeetup = requests.stream()
+                .filter(request -> request.getMeetupAt() != null && isMatchedStatus(request.getStatus()))
+                .toList();
+        AiMatchRequest next = withMeetup.stream()
+                .filter(request -> !request.getMeetupAt().plusMinutes(15).isBefore(now))
+                .min(Comparator.comparing(AiMatchRequest::getMeetupAt))
+                .orElse(null);
+        return new AiMatchMasterSummaryDto(
+                profiles.stream().filter(profile -> "ACTIVE".equals(profile.getStatus())).count(),
+                requests.stream().filter(request -> isMatchedStatus(request.getStatus())).count(),
+                requests.stream().filter(request -> "PENDING".equals(request.getStatus())).count(),
+                reportRepository.countByStatus("OPEN"),
+                profiles.stream().filter(profile -> "ACTIVE".equals(profile.getStatus()) && "PENDING".equals(profile.getPhotoReview())).count(),
+                withMeetup.stream().filter(request -> request.getMeetupAt().toLocalDate().equals(today)).count(),
+                next == null ? null : next.getMeetupAt(),
+                next == null ? "" : next.getRequesterNickname() + " · " + (next.getProfile() == null ? "" : next.getProfile().getNickname())
+        );
+    }
+
     // ---------- 보고서용 CSV ----------
 
     @Transactional(readOnly = true)
     public String exportAdminCsv() {
+        return exportAdminCsv(false);
+    }
+
+    /** statsOnly 면 닉네임·메모 없이 숫자만. 운영 끝나고 데이터를 지우기 전에 남겨 두는 용도. */
+    @Transactional(readOnly = true)
+    public String exportAdminCsv(boolean statsOnly) {
         List<AiMatchProfile> profiles = profileRepository.findAll();
         List<AiMatchRequest> requests = requestRepository.findAllByOrderByCreatedAtDesc();
         StringBuilder out = new StringBuilder();
@@ -757,6 +790,39 @@ public class AiMatchService {
         requests.stream()
                 .collect(Collectors.groupingBy(r -> r.getStatus() == null ? "" : r.getStatus(), java.util.TreeMap::new, Collectors.counting()))
                 .forEach((status, count) -> csvRow(out, "신청 상태", status, count));
+
+        profiles.stream()
+                .filter(p -> p.getCreatedAt() != null)
+                .collect(Collectors.groupingBy(p -> p.getCreatedAt().toLocalDate().toString(), java.util.TreeMap::new, Collectors.counting()))
+                .forEach((day, count) -> csvRow(out, "날짜별 가입", day, count));
+        profiles.stream()
+                .filter(p -> p.getCreatedAt() != null)
+                .collect(Collectors.groupingBy(p -> String.format("%02d시", p.getCreatedAt().getHour()), java.util.TreeMap::new, Collectors.counting()))
+                .forEach((hour, count) -> csvRow(out, "시간대별 가입", hour, count));
+        profiles.stream()
+                .collect(Collectors.groupingBy(p -> p.getGender() == null ? "미상" : p.getGender(), java.util.TreeMap::new, Collectors.counting()))
+                .forEach((gender, count) -> csvRow(out, "성별(탈퇴 포함)", gender, count));
+        profiles.stream()
+                .filter(p -> p.getBirthDate() != null)
+                .collect(Collectors.groupingBy(p -> p.getBirthDate().getYear() + "년생", java.util.TreeMap::new, Collectors.counting()))
+                .forEach((year, count) -> csvRow(out, "출생연도", year, count));
+        profiles.stream()
+                .collect(Collectors.groupingBy(p -> p.getStatus() == null ? "" : p.getStatus(), java.util.TreeMap::new, Collectors.counting()))
+                .forEach((status, count) -> csvRow(out, "프로필 상태", status, count));
+        csvRow(out, "요약", "사진 변환한 프로필", profiles.stream().filter(p -> p.getGeneratedImageUrl() != null && !p.getGeneratedImageUrl().isBlank()).count());
+        csvRow(out, "요약", "신고 접수", reportRepository.count());
+        requests.stream()
+                .filter(r -> r.getCreatedAt() != null && isMatchedStatus(r.getStatus()))
+                .collect(Collectors.groupingBy(r -> r.getCreatedAt().toLocalDate().toString(), java.util.TreeMap::new, Collectors.counting()))
+                .forEach((day, count) -> csvRow(out, "날짜별 성사", day, count));
+        requests.stream()
+                .filter(r -> r.getRequesterProfile() != null && r.getProfile() != null)
+                .collect(Collectors.groupingBy(r -> (r.getRequesterProfile().getGender() == null ? "미상" : r.getRequesterProfile().getGender())
+                        + "→" + (r.getProfile().getGender() == null ? "미상" : r.getProfile().getGender()), java.util.TreeMap::new, Collectors.counting()))
+                .forEach((pair, count) -> csvRow(out, "신청 방향(성별)", pair, count));
+        if (statsOnly) {
+            return out.toString();
+        }
 
         out.append("\n신청ID,신청 시각,신청자,신청자 성별,상대,상대 성별,상태,연결 상태,약속 시각,약속 장소,만남 결과,신청자 도착,상대 도착,관리자 메모\n");
         for (AiMatchRequest r : requests) {
@@ -914,6 +980,8 @@ public class AiMatchService {
 
         // 장소는 늘 소개팅 부스. 시간은 15분 슬롯이고, 고르는 순간 30분 동안 임시로 잠긴다.
         LocalDateTime meetupAt = requestDto.meetupAt();
+        meetupSlotService.purge();
+        ensureNoNearbyMeetup(request, meetupAt);
         meetupSlotService.hold(request.getId(), meetupAt);
         String meetupPlace = AiMatchMeetupSlotService.BOOTH_NAME;
 
@@ -934,6 +1002,13 @@ public class AiMatchService {
             throw new ResponseStatusException(CONFLICT, "상대방이 제안한 약속만 확정할 수 있습니다.");
         }
 
+        meetupSlotService.purge();
+        if (request.getMeetupAt() != null && hasNearbyMeetup(request, request.getMeetupAt())) {
+            meetupSlotService.release(request.getId());
+            request.clearMeetup();
+            requestRepository.saveAndFlush(request);
+            throw new ResponseStatusException(CONFLICT, NEARBY_MEETUP_MESSAGE);
+        }
         if (meetupSlotService.confirm(request.getId()).isEmpty()) {
             request.clearMeetup();
             requestRepository.saveAndFlush(request);
@@ -959,7 +1034,88 @@ public class AiMatchService {
 
     @Transactional
     public AiMatchMeetupSlotsDto getMeetupSlots(String date, Long requestId) {
-        return meetupSlotService.getSlots(date, requestId);
+        if (requestId == null) {
+            return meetupSlotService.getSlots(date, null);
+        }
+        meetupSlotService.purge();
+        List<LocalDateTime> busy = requestRepository.findById(requestId)
+                .map(this::otherMeetupTimes)
+                .orElse(List.of());
+        return meetupSlotService.getSlots(date, requestId, busy);
+    }
+
+    private static final String NEARBY_MEETUP_MESSAGE =
+            "두 사람 중 한 명의 다른 약속과 너무 가까워요. 앞뒤 " + AiMatchMeetupSlotService.PERSONAL_GAP_MINUTES + "분은 비워 두고 골라 주세요.";
+
+    /** 이 신청의 두 사람이 다른 신청으로 잡아 둔(임시 포함) 약속 시각들. */
+    private List<LocalDateTime> otherMeetupTimes(AiMatchRequest request) {
+        java.util.Set<Long> participantIds = new java.util.HashSet<>();
+        if (request.getRequesterProfile() != null) {
+            participantIds.add(request.getRequesterProfile().getId());
+        }
+        if (request.getProfile() != null) {
+            participantIds.add(request.getProfile().getId());
+        }
+        java.util.Set<Long> otherRequestIds = new java.util.HashSet<>();
+        for (Long participantId : participantIds) {
+            for (AiMatchRequest other : requestRepository.findAllByProfileIdOrRequesterProfileId(participantId, participantId)) {
+                if (!other.getId().equals(request.getId())) {
+                    otherRequestIds.add(other.getId());
+                }
+            }
+        }
+        return meetupSlotService.findByRequestIds(otherRequestIds).values().stream()
+                .map(com.festflow.backend.entity.AiMatchMeetupSlot::getSlotAt)
+                .toList();
+    }
+
+    private boolean hasNearbyMeetup(AiMatchRequest request, LocalDateTime meetupAt) {
+        return otherMeetupTimes(request).stream().anyMatch(at -> AiMatchMeetupSlotService.isTooClose(at, meetupAt));
+    }
+
+    private void ensureNoNearbyMeetup(AiMatchRequest request, LocalDateTime meetupAt) {
+        if (meetupAt != null && hasNearbyMeetup(request, meetupAt)) {
+            throw new ResponseStatusException(CONFLICT, NEARBY_MEETUP_MESSAGE);
+        }
+    }
+
+    public static final String RESET_CONFIRM_PHRASE = "소개팅 전체 삭제";
+
+    /** 지난 운영 데이터 전부 파기: 계정·신청·찜·시간 칸·신고·번호 기록과 사진 파일. 되돌릴 수 없다. */
+    @Transactional
+    public com.festflow.backend.dto.AiMatchAdminResetResultDto resetAll(com.festflow.backend.dto.AiMatchAdminResetRequestDto requestDto) {
+        String confirm = requestDto == null || requestDto.confirm() == null ? "" : requestDto.confirm().trim();
+        if (!RESET_CONFIRM_PHRASE.equals(confirm)) {
+            throw new ResponseStatusException(BAD_REQUEST, "확인 문구가 맞지 않아요. '" + RESET_CONFIRM_PHRASE + "'를 그대로 입력해 주세요.");
+        }
+        List<AiMatchProfile> profiles = profileRepository.findAll();
+        List<String> imageUrls = profiles.stream()
+                .flatMap(profile -> Stream.of(profile.getOriginalImageUrl(), profile.getGeneratedImageUrl()))
+                .filter(url -> url != null && !url.isBlank())
+                .distinct()
+                .toList();
+        long favorites = favoriteRepository.count();
+        long reports = reportRepository.count();
+        long requests = requestRepository.count();
+        long phoneUsages = phoneUsageRepository.count();
+        favoriteRepository.deleteAllInBatch();
+        reportRepository.deleteAllInBatch();
+        long slots = meetupSlotService.deleteAllSlots();
+        requestRepository.deleteAllInBatch();
+        profileRepository.deleteAllInBatch();
+        phoneUsageRepository.deleteAllInBatch();
+        ImageFileDeleteResult files = deleteProfileImageFiles(imageUrls);
+        // 가입 전 미리보기로 올라갔다가 계정에 안 붙은 사진도 개인 사진이라 같이 지운다.
+        int[] leftovers;
+        try {
+            leftovers = uploadStorageService.deleteAllWithPrefix("ai-profile-");
+        } catch (java.io.IOException exception) {
+            leftovers = new int[]{0, 1};
+        }
+        return new com.festflow.backend.dto.AiMatchAdminResetResultDto(
+                profiles.size(), requests, favorites, slots, reports, phoneUsages,
+                files.deletedCount() + leftovers[0], files.failedCount() + leftovers[1]
+        );
     }
 
     /** 운영진 시간표: 그날 잡힌 슬롯과 두 사람이 어디서 기다리는지. */

@@ -37,6 +37,8 @@ public class AiMatchMeetupSlotService {
     public static final LocalTime OPEN_TIME = LocalTime.of(9, 0);
     public static final LocalTime CLOSE_TIME = LocalTime.of(22, 0);
     public static final String BOOTH_NAME = "총학생회 소개팅 부스";
+    /** 한 사람의 약속끼리 이 분 안으로는 붙여 잡지 못한다(대기 장소 이동·부스 대화 시간). */
+    public static final int PERSONAL_GAP_MINUTES = 30;
     /** 블라인드 만남이라 두 사람은 서로 다른 곳에서 기다리고, 스태프가 부스로 데려온다. */
     public static final String WAITING_PLACE_FEMALE = "성호관 앞";
     public static final String WAITING_PLACE_MALE = "중앙도서관 앞";
@@ -72,8 +74,18 @@ public class AiMatchMeetupSlotService {
         slotRepository.deleteOrphans();
     }
 
+    public static boolean isTooClose(LocalDateTime a, LocalDateTime b) {
+        return Math.abs(java.time.Duration.between(a, b).toMinutes()) <= PERSONAL_GAP_MINUTES;
+    }
+
     @Transactional
     public AiMatchMeetupSlotsDto getSlots(String dateText, Long myRequestId) {
+        return getSlots(dateText, myRequestId, List.of());
+    }
+
+    /** busyTimes: 이 신청의 두 사람이 다른 신청으로 잡아 둔 시각. 그 앞뒤 칸은 BUSY 로 막는다. */
+    @Transactional
+    public AiMatchMeetupSlotsDto getSlots(String dateText, Long myRequestId, Collection<LocalDateTime> busyTimes) {
         purge();
         LocalDate date = resolveDate(dateText);
         LocalDateTime now = LocalDateTime.now();
@@ -91,6 +103,8 @@ public class AiMatchMeetupSlotService {
                 status = slot.isConfirmed() ? "TAKEN" : "HELD";
             } else if (at.isBefore(now)) {
                 status = "PAST";
+            } else if (isNearAny(at, busyTimes)) {
+                status = "BUSY";
             } else {
                 status = "FREE";
             }
@@ -125,6 +139,25 @@ public class AiMatchMeetupSlotService {
         Optional<AiMatchMeetupSlot> slot = slotRepository.findByRequestId(requestId);
         slot.ifPresent(AiMatchMeetupSlot::confirm);
         return slot;
+    }
+
+    private static boolean isNearAny(LocalDateTime at, Collection<LocalDateTime> busyTimes) {
+        if (busyTimes == null) {
+            return false;
+        }
+        for (LocalDateTime busy : busyTimes) {
+            if (busy != null && isTooClose(at, busy)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Transactional
+    public long deleteAllSlots() {
+        long count = slotRepository.count();
+        slotRepository.deleteAllInBatch();
+        return count;
     }
 
     @Transactional

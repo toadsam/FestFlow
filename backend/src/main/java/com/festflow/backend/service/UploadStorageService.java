@@ -14,6 +14,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
+import software.amazon.awssdk.services.s3.model.S3Object;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
@@ -136,6 +138,40 @@ public class UploadStorageService {
                 Files.readAllBytes(target),
                 contentType == null ? contentTypeForExtension(extensionFromKey(key)) : contentType
         );
+    }
+
+    /** 이름이 prefix 로 시작하는 업로드 파일을 모두 지운다. [지운 수, 실패 수]. */
+    public int[] deleteAllWithPrefix(String prefix) throws IOException {
+        String safePrefix = sanitizePrefix(prefix);
+        int deleted = 0;
+        int failed = 0;
+        if (s3Enabled) {
+            ListObjectsV2Request request = ListObjectsV2Request.builder().bucket(s3Bucket).prefix(safePrefix).build();
+            for (S3Object object : s3Client.listObjectsV2Paginator(request).contents()) {
+                try {
+                    deleteS3Object(object.key());
+                    deleted += 1;
+                } catch (RuntimeException exception) {
+                    failed += 1;
+                }
+            }
+            return new int[]{deleted, failed};
+        }
+        if (!Files.isDirectory(uploadPath)) {
+            return new int[]{0, 0};
+        }
+        try (var files = Files.list(uploadPath)) {
+            for (Path file : files.filter(f -> f.getFileName().toString().startsWith(safePrefix)).toList()) {
+                try {
+                    if (Files.deleteIfExists(file)) {
+                        deleted += 1;
+                    }
+                } catch (IOException exception) {
+                    failed += 1;
+                }
+            }
+        }
+        return new int[]{deleted, failed};
     }
 
     public boolean deleteUploadUrl(String imageUrl) throws IOException {

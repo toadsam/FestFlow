@@ -9,6 +9,7 @@ public record NoticeResponseDto(
         String category,
         boolean active,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        long viewCount
 ) {
 }

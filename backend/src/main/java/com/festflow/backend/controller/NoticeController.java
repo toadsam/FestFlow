@@ -18,6 +18,11 @@ public class NoticeController {
         this.noticeService = noticeService;
     }
 
+    @org.springframework.web.bind.annotation.PostMapping("/{id}/view")
+    public void recordView(@org.springframework.web.bind.annotation.PathVariable Long id) {
+        noticeService.recordView(id);
+    }
+
     @GetMapping("/active")
     public List<NoticeResponseDto> activeNotices() {
         return noticeService.getActiveNotices();

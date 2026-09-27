@@ -16,6 +16,7 @@ import {
   updateOpsMasterBoothLiveStatus,
   updateOpsMasterEvent,
   updateOpsMasterNotice,
+  bulkUpdateOpsMasterEventStatus,
 } from "../api";
 import {
   IconAlert,
@@ -115,6 +116,8 @@ export default function OpsMasterPage({ embedded = false }) {
   const [eventForm, setEventForm] = useState(initialEvent);
   const [boothForm, setBoothForm] = useState(initialBooth);
   const [eventEditorOpen, setEventEditorOpen] = useState(false);
+  const [bulk, setBulk] = useState({ day: "", place: "", statusOverride: "지연", delayMinutes: "30", liveMessage: "" });
+  const [bulkBusy, setBulkBusy] = useState(false);
   const [expandedEventIds, setExpandedEventIds] = useState(() => new Set());
 
   const [editingNoticeId, setEditingNoticeId] = useState(null);
@@ -362,6 +365,36 @@ export default function OpsMasterPage({ embedded = false }) {
     };
   }
 
+  const bulkTargets = (data?.events || []).filter((event) => {
+    if (bulk.day && !`${event.startTime || ""}`.startsWith(bulk.day)) return false;
+    if (bulk.place && !`${event.liveMessage || ""}${event.title || ""}`.includes(bulk.place)) return false;
+    return true;
+  });
+
+  async function handleBulkStatus(clear = false) {
+    if (!bulkTargets.length) return;
+    const label = clear ? "자동 상태로 되돌리기" : `${bulk.statusOverride}${bulk.statusOverride === "지연" && bulk.delayMinutes ? ` ${bulk.delayMinutes}분` : ""}`;
+    if (!window.confirm(`${bulkTargets.length}개 공연을 "${label}"(으)로 바꿀까요?`)) return;
+    setBulkBusy(true);
+    try {
+      await bulkUpdateOpsMasterEventStatus(
+        {
+          eventIds: bulkTargets.map((event) => event.id),
+          statusOverride: clear ? "" : bulk.statusOverride,
+          delayMinutes: clear ? 0 : bulk.statusOverride === "지연" ? Number(bulk.delayMinutes) || 0 : null,
+          liveMessage: clear ? null : bulk.liveMessage || null,
+        },
+        key,
+      );
+      setMessage(`${bulkTargets.length}개 공연을 ${label}(으)로 바꿨습니다.`);
+      await load();
+    } catch (error) {
+      setError(error.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   async function handleQuickEventStatus(event, statusOverride) {
     try {
       const draft = eventLiveDrafts[event.id] || {};
@@ -603,6 +636,26 @@ export default function OpsMasterPage({ embedded = false }) {
               </div>
             </div>
 
+            {data.aiMatch ? (
+              <a href="/ai-match/admin" className="block rounded-xl border border-violet-200 bg-violet-50 p-3 text-left">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-extrabold text-violet-950">사주 소개팅</p>
+                  <span className="text-[11px] font-bold text-violet-700">관리자 열기 →</span>
+                </div>
+                <div className="mt-2 grid grid-cols-4 gap-2 text-center">
+                  <div><p className="text-[10px] text-violet-700">활성</p><p className="font-bold text-violet-900">{data.aiMatch.activeProfileCount}</p></div>
+                  <div><p className="text-[10px] text-violet-700">성사</p><p className="font-bold text-violet-900">{data.aiMatch.matchedCount}</p></div>
+                  <div><p className="text-[10px] text-violet-700">대기 신청</p><p className="font-bold text-violet-900">{data.aiMatch.pendingRequestCount}</p></div>
+                  <div><p className="text-[10px] text-rose-700">신고·검수</p><p className="font-bold text-rose-800">{data.aiMatch.openReportCount + data.aiMatch.pendingPhotoReviewCount}</p></div>
+                </div>
+                <p className="mt-2 text-xs text-violet-800">
+                  {data.aiMatch.nextMeetupAt
+                    ? `다음 부스 약속 ${data.aiMatch.nextMeetupAt.replace("T", " ").slice(5, 16)} · ${data.aiMatch.nextMeetupPair} · 오늘 ${data.aiMatch.meetupsToday}쌍`
+                    : "잡힌 부스 약속이 없어요"}
+                </p>
+              </a>
+            ) : null}
+
             <div className="rounded-xl border border-cyan-200 bg-cyan-50 p-3">
               <div className="flex items-start justify-between gap-2">
                 <div>
@@ -824,6 +877,9 @@ export default function OpsMasterPage({ embedded = false }) {
                       >
                         {notice.active ? "노출중" : "숨김"}
                       </span>
+                      <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold text-sky-700" title="펼쳐 본 기기 수">
+                        조회 {notice.viewCount ?? 0}
+                      </span>
                     </div>
                     <p className="mt-1 text-xs text-slate-600">
                       {notice.content}
@@ -996,6 +1052,38 @@ export default function OpsMasterPage({ embedded = false }) {
                     </div>
                   </form>
                 )}
+              </article>
+
+              <article className="rounded-xl border border-rose-200 bg-rose-50/60 p-3 space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-semibold text-rose-900">여러 공연 한 번에 바꾸기</p>
+                    <p className="text-xs text-rose-800/80">비가 오거나 무대가 밀리면 날짜·장소로 골라서 한 번에 지연·취소해요.</p>
+                  </div>
+                  <span className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-rose-700">{bulkTargets.length}개 대상</span>
+                </div>
+                <div className="grid gap-2 sm:grid-cols-4">
+                  <select className="rounded border px-2 py-2 text-sm" value={bulk.day} onChange={(e) => setBulk((p) => ({ ...p, day: e.target.value }))}>
+                    <option value="">모든 날짜</option>
+                    {[...new Set((data.events || []).map((event) => `${event.startTime || ""}`.slice(0, 10)).filter(Boolean))].sort().map((day) => (
+                      <option key={day} value={day}>{day.slice(5).replace("-", ".")}</option>
+                    ))}
+                  </select>
+                  <input className="rounded border px-2 py-2 text-sm" placeholder="장소·제목 포함 글자 (예: 노천극장)" value={bulk.place} onChange={(e) => setBulk((p) => ({ ...p, place: e.target.value }))} />
+                  <select className="rounded border px-2 py-2 text-sm" value={bulk.statusOverride} onChange={(e) => setBulk((p) => ({ ...p, statusOverride: e.target.value }))}>
+                    {EVENT_STATUS_OPTIONS.map((status) => (
+                      <option key={status} value={status}>{status}</option>
+                    ))}
+                  </select>
+                  <input className="rounded border px-2 py-2 text-sm" inputMode="numeric" placeholder="지연 분" value={bulk.delayMinutes} disabled={bulk.statusOverride !== "지연"} onChange={(e) => setBulk((p) => ({ ...p, delayMinutes: e.target.value }))} />
+                </div>
+                <input className="w-full rounded border px-2 py-2 text-sm" placeholder="손님에게 보일 한 줄 (선택) 예: 우천으로 30분 늦게 시작해요" value={bulk.liveMessage} onChange={(e) => setBulk((p) => ({ ...p, liveMessage: e.target.value }))} />
+                <div className="flex flex-wrap gap-2 justify-end">
+                  <button type="button" className="rounded border px-3 py-2 text-xs font-semibold" disabled={bulkBusy || !bulkTargets.length} onClick={() => handleBulkStatus(true)}>자동 상태로 되돌리기</button>
+                  <button type="button" className="rounded bg-rose-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-40" disabled={bulkBusy || !bulkTargets.length} onClick={() => handleBulkStatus(false)}>
+                    {bulkBusy ? "적용 중…" : `${bulkTargets.length}개 적용`}
+                  </button>
+                </div>
               </article>
 
               <div className="space-y-3">

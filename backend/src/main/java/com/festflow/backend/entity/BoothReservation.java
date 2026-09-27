@@ -50,6 +50,9 @@ public class BoothReservation {
 
     private LocalDateTime expiredAt;
 
+    /** 스태프가 "다음 팀 들어오세요" 호출한 시각. */
+    private LocalDateTime calledAt;
+
     protected BoothReservation() {
     }
 
@@ -62,6 +65,14 @@ public class BoothReservation {
         this.status = status;
         this.reservedAt = reservedAt;
         this.expiresAt = expiresAt;
+    }
+
+    public void markCalled(LocalDateTime calledAt) {
+        this.calledAt = calledAt;
+    }
+
+    public LocalDateTime getCalledAt() {
+        return calledAt;
     }
 
     public void markCheckedIn(LocalDateTime checkedInAt) {

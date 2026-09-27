@@ -31,6 +31,10 @@ import com.festflow.backend.service.EventService;
 import com.festflow.backend.service.NoticeService;
 import com.festflow.backend.service.OpsAiService;
 import com.festflow.backend.service.OrderService;
+import com.festflow.backend.service.AiMatchService;
+import com.festflow.backend.service.BoothSummaryService;
+import com.festflow.backend.dto.EventBulkStatusRequestDto;
+import com.festflow.backend.dto.OpsBoothSummaryDto;
 import com.festflow.backend.service.ReservationService;
 import com.festflow.backend.service.SimulationService;
 import com.festflow.backend.service.UploadStorageService;
@@ -69,6 +73,8 @@ public class OpsController {
     private final OpsAiService opsAiService;
     private final SimulationService simulationService;
     private final OrderService orderService;
+    private final AiMatchService aiMatchService;
+    private final BoothSummaryService boothSummaryService;
 
     public OpsController(
             BoothService boothService,
@@ -82,8 +88,12 @@ public class OpsController {
             UploadStorageService uploadStorageService,
             OpsAiService opsAiService,
             SimulationService simulationService,
-            OrderService orderService
+            OrderService orderService,
+            AiMatchService aiMatchService,
+            BoothSummaryService boothSummaryService
     ) {
+        this.aiMatchService = aiMatchService;
+        this.boothSummaryService = boothSummaryService;
         this.orderService = orderService;
         this.boothService = boothService;
         this.eventService = eventService;
@@ -105,7 +115,8 @@ public class OpsController {
                 eventService.getAllEvents(),
                 noticeService.getAllNotices(),
                 adminDashboardService.getKpis(),
-                auditLogService.getRecentLogs()
+                auditLogService.getRecentLogs(),
+                aiMatchService.getMasterSummary()
         );
     }
 
@@ -203,6 +214,14 @@ public class OpsController {
         BoothResponseDto updated = boothService.updateLiveStatus(id, requestDto);
         auditLogService.log(authentication.getName(), "OPS_MASTER_LIVE_STATUS", "BOOTH", id, "update live status");
         streamService.publishBooths(boothService.getAllBooths());
+        return updated;
+    }
+
+    @PutMapping("/master/events/bulk-status")
+    public java.util.List<EventResponseDto> bulkUpdateEventStatus(@RequestBody EventBulkStatusRequestDto requestDto, Authentication authentication) {
+        java.util.List<EventResponseDto> updated = eventService.bulkUpdateStatus(requestDto);
+        auditLogService.log(authentication.getName(), "OPS_MASTER_BULK_STATUS", "EVENT", null,
+                (requestDto.statusOverride() == null ? "auto" : requestDto.statusOverride()) + " x" + updated.size());
         return updated;
     }
 
@@ -333,6 +352,26 @@ public class OpsController {
         BoothReservationDto checkedIn = reservationService.checkIn(id, reservationId);
         auditLogService.log(authentication.getName(), "OPS_BOOTH_RESERVATION_CHECKIN", "BOOTH", id, "reservation " + reservationId);
         return checkedIn;
+    }
+
+    @PostMapping("/booth/{id}/reservations/{reservationId}/call")
+    public BoothReservationDto callBoothReservation(
+            @PathVariable Long id,
+            @PathVariable Long reservationId,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        return reservationService.call(id, reservationId);
+    }
+
+    @GetMapping("/booth/{id}/summary")
+    public OpsBoothSummaryDto boothSummary(
+            @PathVariable Long id,
+            @RequestParam(required = false) String date,
+            Authentication authentication
+    ) {
+        ensureBoothAccess(authentication, id);
+        return boothSummaryService.summarize(id, date);
     }
 
     @PostMapping("/booth/{id}/reservations/{reservationId}/complete")

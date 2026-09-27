@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   deleteAdminAiMatchProfile,
   downloadAdminAiMatchCsv,
+  resetAdminAiMatchAll,
   resolveAdminAiMatchReport,
   reviewAdminAiMatchPhoto,
   setAdminAiMatchProfileHidden,
@@ -59,6 +60,8 @@ function adminErrorMessage(error) {
 function getStatusLabel(status) {
   return STATUS_LABELS[status] || status || "대기중";
 }
+
+const RESET_PHRASE = "소개팅 전체 삭제";
 
 const REPORT_REASON_LABELS = {
   INAPPROPRIATE_PHOTO: "부적절한 사진",
@@ -210,6 +213,8 @@ export default function AiMatchAdminPage() {
   const [noteDrafts, setNoteDrafts] = useState({});
   const [purgePhoneNumber, setPurgePhoneNumber] = useState("");
   const [purgeBusy, setPurgeBusy] = useState(false);
+  const [resetPhrase, setResetPhrase] = useState("");
+  const [resetBusy, setResetBusy] = useState(false);
   // 화면을 넷으로 나눈다: 성사·연락 / 신청 기록 / 사람들 / 통계·도구
   const [adminTab, setAdminTab] = useState("matches");
   const [reportBusyId, setReportBusyId] = useState(null);
@@ -606,12 +611,35 @@ export default function AiMatchAdminPage() {
     window.setTimeout(() => setCopiedKey((current) => (current === key ? "" : current)), 2000);
   }
 
-  async function handleDownloadCsv() {
+  async function handleDownloadCsv(statsOnly = false) {
     try {
-      await downloadAdminAiMatchCsv();
-      setMessage("운영 보고 CSV를 내려받았습니다.");
+      await downloadAdminAiMatchCsv({ statsOnly });
+      setMessage(statsOnly ? "통계 CSV를 내려받았습니다. 닉네임·메모 없이 숫자만 들어 있어요." : "운영 보고 CSV를 내려받았습니다.");
     } catch (error) {
       setMessage(adminErrorMessage(error));
+    }
+  }
+
+  async function handleResetAll(event) {
+    event.preventDefault();
+    if (resetPhrase.trim() !== RESET_PHRASE) return;
+    const ok = window.confirm(
+      "소개팅 데이터를 전부 지울까요?\n모든 계정, 신청, 찜, 약속 시간, 신고, 전화번호 기록, 업로드 사진 파일이 삭제되고 되돌릴 수 없습니다.\n통계 CSV를 먼저 내려받았는지 확인해 주세요.",
+    );
+    if (!ok) return;
+    setResetBusy(true);
+    setMessage("소개팅 데이터를 전부 지우는 중입니다.");
+    try {
+      const result = await resetAdminAiMatchAll(resetPhrase.trim());
+      setResetPhrase("");
+      await loadOverview({ force: true });
+      const done = `전체 삭제 완료\n계정 ${result.profiles}개, 신청 ${result.requests}개, 찜 ${result.favorites}개, 약속 시간 ${result.meetupSlots}개, 신고 ${result.reports}개, 전화번호 기록 ${result.phoneUsages}개, 사진 파일 ${result.deletedImageFiles}개${result.failedImageFiles ? ` (사진 ${result.failedImageFiles}개 실패)` : ""}`;
+      window.alert(done);
+      setMessage(done.replace("\n", " · "));
+    } catch (error) {
+      setMessage(adminErrorMessage(error));
+    } finally {
+      setResetBusy(false);
     }
   }
 
@@ -802,9 +830,14 @@ export default function AiMatchAdminPage() {
           </div>
           <em>성사율 {adminStats.matchedRate}%</em>
         </div>
-        <button type="button" className="aa-csv" onClick={handleDownloadCsv}>
-          운영 보고 CSV 내려받기
-        </button>
+        <div className="aa-csv-row">
+          <button type="button" className="aa-csv" onClick={() => handleDownloadCsv(false)}>
+            운영 보고 CSV 내려받기
+          </button>
+          <button type="button" className="aa-csv aa-csv--stats" onClick={() => handleDownloadCsv(true)}>
+            통계만 CSV (개인정보 없음)
+          </button>
+        </div>
         <div className="admin-ai-stat-grid">
           <article>
             <span>성별</span>
@@ -857,6 +890,29 @@ export default function AiMatchAdminPage() {
           />
           <button type="submit" disabled={purgeBusy || !purgePhoneNumber.trim()}>
             {purgeBusy ? "삭제 중" : "완전 삭제"}
+          </button>
+        </form>
+      </section>
+
+      <section className="admin-ai-phone-purge-card aa-reset" aria-label="소개팅 데이터 전체 삭제">
+        <div>
+          <span>위험 작업 · 되돌릴 수 없음</span>
+          <strong>소개팅 데이터 전체 삭제</strong>
+          <p>
+            지난 운영의 모든 계정·신청·찜·약속 시간·신고·전화번호 기록과 업로드 사진 파일을 지웁니다. 먼저 위의 <b>통계만 CSV</b>를 내려받아 두세요.
+            아래 칸에 <b>{RESET_PHRASE}</b> 를 그대로 입력해야 버튼이 켜집니다.
+          </p>
+        </div>
+        <form onSubmit={handleResetAll}>
+          <input
+            value={resetPhrase}
+            onChange={(event) => setResetPhrase(event.target.value)}
+            placeholder={RESET_PHRASE}
+            disabled={resetBusy}
+            aria-label="확인 문구"
+          />
+          <button type="submit" disabled={resetBusy || resetPhrase.trim() !== RESET_PHRASE}>
+            {resetBusy ? "삭제 중" : "전체 삭제"}
           </button>
         </form>
       </section>

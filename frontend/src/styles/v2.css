@@ -1900,3 +1900,40 @@
     animation: none !important;
   }
 }
+
+/* ---------- 예약 호출: 지금 들어오세요 ---------- */
+@keyframes v2-called-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(34, 160, 107, 0.45); }
+  50% { box-shadow: 0 0 0 10px rgba(34, 160, 107, 0); }
+}
+
+.app-shell[data-v2="true"] .v2-card--called {
+  background: linear-gradient(135deg, #22a06b, #157a4f) !important;
+  color: #fff;
+  animation: v2-called-pulse 1.6s ease-out infinite;
+}
+
+.app-shell[data-v2="true"] .v2-card--called p,
+.app-shell[data-v2="true"] .v2-card--called .v2-timer {
+  color: #fff !important;
+}
+
+.app-shell[data-v2="true"] .v2-called {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.app-shell[data-v2="true"] .v2-called strong {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+}
+
+.app-shell[data-v2="true"] .v2-called span {
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.9);
+}

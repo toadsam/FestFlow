@@ -7,7 +7,8 @@ public record OpsMasterBootstrapDto(
         List<EventResponseDto> events,
         List<NoticeResponseDto> notices,
         AdminDashboardKpiDto kpi,
-        List<AuditLogResponseDto> auditLogs
+        List<AuditLogResponseDto> auditLogs,
+        AiMatchMasterSummaryDto aiMatch
 ) {
 }
 

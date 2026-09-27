@@ -189,3 +189,21 @@ body:has(.app-shell[data-v2="true"]),
 .app-shell[data-v2="true"] .v2-sheet .v2-kv strong { color: var(--v2-text) !important; }
 
 .app-shell[data-v2="true"] .v2-toast { color: #fff !important; }
+
+/* 옛 전역 button:hover(흰 배경)가 폰에서 탭 뒤에 남아 선택 칩을 덮지 않게 */
+.app-shell.app-shell[data-v2="true"] :is(.v2-page, .v2-sheet) .v2-chip:is(:hover, :focus, :active) {
+  background: var(--v2-gray) !important;
+  color: var(--v2-text-2) !important;
+  border: 0 !important;
+  box-shadow: none !important;
+}
+
+.app-shell.app-shell[data-v2="true"] :is(.v2-page, .v2-sheet) .v2-chip.v2-chip--active,
+.app-shell.app-shell[data-v2="true"] :is(.v2-page, .v2-sheet) .v2-chip.v2-chip--active:is(:hover, :focus, :active) {
+  background: var(--v2-blue) !important;
+  color: #fff !important;
+}
+
+.app-shell.app-shell[data-v2="true"] :is(.v2-page, .v2-sheet) .v2-chip:focus:not(:focus-visible) {
+  outline: none !important;
+}

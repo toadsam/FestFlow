@@ -8,6 +8,7 @@ import {
   fetchActiveNotices,
   fetchBooths,
   fetchEvents,
+  recordNoticeView,
 } from "../api";
 import { IconBox, IconChevronRight } from "../components/UxIcons";
 import { CountUp, HeroReeds, IconBeer, IconHeartSaju, Mascot, PaperPlane } from "../components/v2/V2Kit";
@@ -303,7 +304,10 @@ export default function FestivalPage() {
                 type="button"
                 className={`v2-notice v2-card--press v2-rise${open ? " v2-notice--open" : ""}`}
                 style={{ "--i": index + 6, border: 0, width: "100%", textAlign: "left" }}
-                onClick={() => setOpenNoticeId(open ? null : notice.id)}
+                onClick={() => {
+                  setOpenNoticeId(open ? null : notice.id);
+                  if (!open) recordNoticeView(notice.id);
+                }}
               >
                 <span className="v2-notice__tag">{notice.category || "안내"}</span>
                 <div className="v2-notice__body">

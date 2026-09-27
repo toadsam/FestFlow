@@ -5,6 +5,8 @@ import { Link, useParams } from "react-router-dom";
 import {
   checkInOpsBoothReservation,
   checkInOpsBoothReservationByToken,
+  callOpsBoothReservation,
+  fetchOpsBoothSummary,
   completeOpsBoothReservation,
   createReservationStream,
   fetchOpsBoothBootstrap,
@@ -253,6 +255,8 @@ export default function OpsBoothPage() {
   const [orderCounts, setOrderCounts] = useState({ pending: 0, cooking: 0 });
   const [active, setActive] = useState("overview");
   const [saving, setSaving] = useState("");
+  const [summary, setSummary] = useState(null);
+  const [summaryBusy, setSummaryBusy] = useState(false);
 
   const [draft, setDraft] = useState({
     estimatedWaitMinutes: "",
@@ -405,6 +409,63 @@ export default function OpsBoothPage() {
   function jump(sectionId) {
     setActive(sectionId);
     document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /* ----- 품절 바로 바꾸기: 메뉴 한 개만 뒤집어서 바로 저장 ----- */
+  async function handleQuickSoldOut(index) {
+    const nextItems = menuItems.map((item, i) => (i === index ? { ...item, soldOut: !item.soldOut } : item));
+    setMenuItems(nextItems);
+    setSaving("soldout");
+    try {
+      await updateOpsBoothLiveStatus(
+        id,
+        {
+          estimatedWaitMinutes: draft.estimatedWaitMinutes === "" ? null : Number(draft.estimatedWaitMinutes),
+          remainingStock: draft.remainingStock === "" ? null : Number(draft.remainingStock),
+          liveStatusMessage: draft.liveStatusMessage || null,
+          boothIntro: draft.boothIntro || null,
+          menuImageUrl: draft.menuImageUrl || null,
+          menuBoardJson: JSON.stringify(nextItems),
+          category: draft.category || null,
+          dayPart: draft.dayPart || null,
+          openTime: draft.openTime || null,
+          closeTime: draft.closeTime || null,
+          tags: draft.tags || null,
+          contentJson: draft.contentJson || null,
+          reservationEnabled: draft.reservationEnabled,
+        },
+        key,
+      );
+      notify(`${nextItems[index].name || "메뉴"} ${nextItems[index].soldOut ? "품절" : "판매 재개"} · 손님 화면에 바로 반영돼요.`, "success");
+    } catch (e) {
+      setMenuItems(menuItems);
+      notify(friendlyError(e, "품절 상태를 바꾸지 못했어요."), "error");
+    } finally {
+      setSaving("");
+    }
+  }
+
+  /* ----- 호출: 자리가 났을 때 손님 화면에 "지금 들어오세요" ----- */
+  async function handleCallReservation(reservationId) {
+    try {
+      await callOpsBoothReservation(id, reservationId, key);
+      notify("손님을 불렀어요. 손님 화면에 '지금 들어오세요'가 떠요.", "success");
+      await load();
+    } catch (e) {
+      notify(friendlyError(e, "호출하지 못했어요."), "error");
+    }
+  }
+
+  /* ----- 마감 정산 ----- */
+  async function loadSummary() {
+    setSummaryBusy(true);
+    try {
+      setSummary(await fetchOpsBoothSummary(id, "", key));
+    } catch (e) {
+      notify(friendlyError(e, "정산을 불러오지 못했어요."), "error");
+    } finally {
+      setSummaryBusy(false);
+    }
   }
 
   /* ----- 저장 ----- */
@@ -849,6 +910,77 @@ export default function OpsBoothPage() {
                 </div>
               </Card>
 
+              {menuItems.length ? (
+                <Card title="품절 바로 바꾸기" desc="누르면 바로 저장되고 손님 메뉴판에서 회색으로 바뀌어요.">
+                  <div className="ops-soldout">
+                    {menuItems.map((item, index) => (
+                      <button
+                        key={`soldout-${index}`}
+                        type="button"
+                        className={`ops-soldout__chip${item.soldOut ? " is-out" : ""}`}
+                        disabled={saving === "soldout"}
+                        onClick={() => handleQuickSoldOut(index)}
+                      >
+                        <span>{item.name || `메뉴 ${index + 1}`}</span>
+                        <small>{item.soldOut ? "품절" : "판매 중"}</small>
+                      </button>
+                    ))}
+                  </div>
+                </Card>
+              ) : null}
+
+              <Card
+                title="마감 정산"
+                desc="오늘 06시부터 지금까지. 자정 넘긴 장사도 오늘로 잡혀요."
+                actions={
+                  <button type="button" className="ops-btn ops-btn--soft ops-btn--sm" onClick={loadSummary} disabled={summaryBusy}>
+                    {summaryBusy ? "계산 중…" : summary ? "다시 계산" : "정산 보기"}
+                  </button>
+                }
+              >
+                {summary ? (
+                  <div className="ops-summary">
+                    <div className="ops-kpis">
+                      <div className="ops-kpi ops-kpi--blue">
+                        <small>매출(입금 확인분)</small>
+                        <strong>{summary.revenue.toLocaleString()}<em>원</em></strong>
+                        <span>완료 {summary.completedRevenue.toLocaleString()}원</span>
+                      </div>
+                      <div className="ops-kpi">
+                        <small>주문</small>
+                        <strong>{summary.orderCount}<em>건</em></strong>
+                        <span>완료 {summary.completedOrderCount} · 취소 {summary.canceledOrderCount}</span>
+                      </div>
+                      <div className="ops-kpi ops-kpi--yellow">
+                        <small>예약</small>
+                        <strong>{summary.reservationCount}<em>건</em></strong>
+                        <span>체크인 {summary.checkedInCount} · 노쇼 {summary.noShowCount}</span>
+                      </div>
+                      <div className="ops-kpi ops-kpi--violet">
+                        <small>테이블 회전</small>
+                        <strong>{summary.tableTurns}<em>회</em></strong>
+                        <span>평균 대기 {summary.averageWaitMinutes}분{summary.peakHour ? ` · 피크 ${summary.peakHour}` : ""}</span>
+                      </div>
+                    </div>
+                    {summary.topItems?.length ? (
+                      <div className="ops-summary__items">
+                        {summary.topItems.map((item) => (
+                          <div key={item.name} className="ops-summary__item">
+                            <strong>{item.name}</strong>
+                            <span>{item.quantity}개</span>
+                            <em>{item.amount.toLocaleString()}원</em>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="ops-empty">아직 판매 기록이 없어요.</div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="ops-empty">정산 보기를 누르면 오늘 숫자가 나와요.</div>
+                )}
+              </Card>
+
               <Card
                 title="자리 한눈에"
                 desc="파랑이 빈 테이블, 회색이 이용 중. 입구 스태프가 현황판을 누르면 여기와 손님 화면이 같이 바뀌어요."
@@ -1054,6 +1186,7 @@ export default function OpsBoothPage() {
                             </span>
                             <span className="ops-resv__meta">
                               {checkedIn ? `체크인 ${formatTime(reservation.checkedInAt)}` : `만료 ${formatTime(reservation.expiresAt)}`}
+                              {!checkedIn && reservation.calledAt ? ` · 호출 ${formatTime(reservation.calledAt)}` : ""}
                             </span>
                           </div>
                           <div className="ops-resv__actions">
@@ -1061,6 +1194,13 @@ export default function OpsBoothPage() {
                               <button type="button" className="ops-btn ops-btn--dark ops-btn--sm" onClick={() => handleCompleteReservation(reservation.id)}>테이블 비우기</button>
                             ) : (
                               <>
+                                <button
+                                  type="button"
+                                  className={`ops-btn ops-btn--sm ${reservation.calledAt ? "ops-btn--ghost" : "ops-btn--soft"}`}
+                                  onClick={() => handleCallReservation(reservation.id)}
+                                >
+                                  {reservation.calledAt ? "다시 호출" : "호출"}
+                                </button>
                                 <button type="button" className="ops-btn ops-btn--primary ops-btn--sm" onClick={() => handleCheckIn(reservation.id)}>체크인</button>
                                 <button
                                   type="button"

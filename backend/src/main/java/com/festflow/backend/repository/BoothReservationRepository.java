@@ -33,6 +33,8 @@ public interface BoothReservationRepository extends JpaRepository<BoothReservati
 
     long countByBoothIdAndReservedAtBetween(Long boothId, LocalDateTime from, LocalDateTime to);
 
+    List<BoothReservation> findByBoothIdAndReservedAtBetween(Long boothId, LocalDateTime from, LocalDateTime to);
+
     long countByBoothIdAndCheckedInAtBetween(Long boothId, LocalDateTime from, LocalDateTime to);
 }
 

@@ -93,6 +93,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
   }, [data]);
 
   const freeCount = (data?.slots || []).filter((slot) => slot.status === "FREE").length;
+  const hasBusy = (data?.slots || []).some((slot) => slot.status === "BUSY");
 
   async function submit() {
     if (!selected) return;
@@ -137,6 +138,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
         <span className="mu-legend__free">고를 수 있어요</span>
         <span className="mu-legend__taken">다른 커플</span>
         <span className="mu-legend__past">지난 시간</span>
+        {hasBusy ? <span className="mu-legend__busy">약속 겹침</span> : null}
         <b className="mu-legend__count">{loading ? "불러오는 중…" : `${freeCount}칸 남음`}</b>
       </div>
 
@@ -155,9 +157,10 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
                     className={`mu-slot mu-slot--${slot.status.toLowerCase()}${slot.mine ? " mu-slot--mine" : ""}${selected === slot.startAt ? " is-on" : ""}`}
                     disabled={!free || busy}
                     aria-pressed={selected === slot.startAt}
-                    aria-label={`${pad(hour)}시 ${label.slice(1)}분 ${free ? "선택 가능" : slot.status === "PAST" ? "지난 시간" : "다른 커플이 잡음"}`}
+                    aria-label={`${pad(hour)}시 ${label.slice(1)}분 ${free ? "선택 가능" : slot.status === "PAST" ? "지난 시간" : slot.status === "BUSY" ? "다른 약속과 30분 안이라 못 고름" : "다른 커플이 잡음"}`}
                     onClick={() => setSelected(slot.startAt)}
                   >
+                    {selected === slot.startAt ? <span className="mu-slot__check" aria-hidden="true">✓</span> : null}
                     {label}
                   </button>
                 );
