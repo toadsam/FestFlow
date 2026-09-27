@@ -84,6 +84,8 @@ public class AiMatchService {
     public static final int MAX_SENT_REQUESTS_PER_PROFILE = 3;
     /** 같은 닉네임으로 비밀번호를 이만큼 틀리면 잠시 잠근다(IP 와 무관하게). */
     private static final int MAX_PIN_FAILURES = 10;
+    private static final int SELF_DELETE_COOLDOWN_HOURS = 24;
+    private static final String COOLDOWN_MESSAGE = "삭제한 번호는 24시간 뒤에 다시 가입할 수 있습니다.";
     private static final Duration PIN_FAILURE_WINDOW = Duration.ofMinutes(10);
     private final Map<String, PinFailure> pinFailures = new ConcurrentHashMap<>();
 
@@ -183,7 +185,7 @@ public class AiMatchService {
                     false,
                     usedCount,
                     remainingCount,
-                    "삭제된 프로필의 전화번호는 다시 가입할 수 없습니다."
+                    COOLDOWN_MESSAGE
             );
         }
         if (isPhoneNumberInUse(phoneNumberKey, null)) {
@@ -292,8 +294,10 @@ public class AiMatchService {
             throw new ResponseStatusException(BAD_REQUEST, "프로필 사진을 먼저 업로드해 주세요.");
         }
         if (safeGeneratedImageUrl != null) {
+            uploadStorageService.ensureProfileImageUrl(safeGeneratedImageUrl);
             uploadStorageService.resolveUploadUrl(safeGeneratedImageUrl);
             if (safeOriginalImageUrl != null) {
+                uploadStorageService.ensureProfileImageUrl(safeOriginalImageUrl);
                 uploadStorageService.resolveUploadUrl(safeOriginalImageUrl);
             }
         } else {
@@ -451,9 +455,11 @@ public class AiMatchService {
             ensurePhoneNumberAvailable(requestedPhoneNumberKey, profileId);
         }
         if (safeGeneratedImageUrl != null) {
+            uploadStorageService.ensureProfileImageUrl(safeGeneratedImageUrl);
             uploadStorageService.resolveUploadUrl(safeGeneratedImageUrl);
         }
         if (safeOriginalImageUrl != null) {
+            uploadStorageService.ensureProfileImageUrl(safeOriginalImageUrl);
             uploadStorageService.resolveUploadUrl(safeOriginalImageUrl);
         }
         ensureNicknameAvailable(safeNickname, profileId);
@@ -528,7 +534,7 @@ public class AiMatchService {
         }
         profile.deactivate();
         favoriteRepository.deleteAllByRequesterProfileIdOrProfileId(profileId, profileId);
-        blockPhoneNumber(profile.getPhoneNumber());
+        cooldownPhoneNumber(profile.getPhoneNumber());
         closeRequestsForDeletedProfile(profileId);
     }
 
@@ -861,7 +867,11 @@ public class AiMatchService {
         String text = value instanceof LocalDateTime dateTime
                 ? dateTime.toString().replace('T', ' ')
                 : String.valueOf(value);
-        if (text.contains(",") || text.contains("\"") || text.contains("\n")) {
+        // 엑셀이 수식으로 읽는 접두사(= + - @ 탭)는 따옴표로 막는다.
+        if (!text.isEmpty() && "=+-@\t\r".indexOf(text.charAt(0)) >= 0) {
+            text = "'" + text;
+        }
+        if (text.contains(",") || text.contains("\"") || text.contains("\n") || text.startsWith("'")) {
             return "\"" + text.replace("\"", "\"\"") + "\"";
         }
         return text;
@@ -1218,6 +1228,10 @@ public class AiMatchService {
         int deletedCount = 0;
         int failedCount = 0;
         for (String imageUrl : imageUrls) {
+            if (!uploadStorageService.isProfileImageUrl(imageUrl)) {
+                failedCount += 1;
+                continue;
+            }
             try {
                 if (uploadStorageService.deleteUploadUrl(imageUrl)) {
                     deletedCount += 1;
@@ -1639,6 +1653,9 @@ public class AiMatchService {
         if (phoneUsage.isBlocked()) {
             throw new ResponseStatusException(CONFLICT, "삭제된 프로필의 전화번호는 다시 가입할 수 없습니다.");
         }
+        if (phoneUsage.isInCooldown()) {
+            throw new ResponseStatusException(CONFLICT, COOLDOWN_MESSAGE);
+        }
     }
 
     private void ensurePhoneCanGenerateImage(AiMatchPhoneUsage phoneUsage) {
@@ -1650,8 +1667,17 @@ public class AiMatchService {
 
     private void ensurePhoneNumberNotDeleted(String phoneNumberKey) {
         if (isPhoneNumberDeleted(phoneNumberKey)) {
-            throw new ResponseStatusException(CONFLICT, "삭제된 프로필의 전화번호는 다시 가입할 수 없습니다.");
+            throw new ResponseStatusException(CONFLICT, COOLDOWN_MESSAGE);
         }
+    }
+
+    /** 본인이 지운 번호는 잠깐만 막는다. 남의 번호로 가입했다 지워서 영구 차단시키는 장난을 막기 위함. */
+    private void cooldownPhoneNumber(String phoneNumber) {
+        String phoneNumberKey = phoneNumberKeyFromStored(phoneNumber);
+        if (phoneNumberKey == null) {
+            return;
+        }
+        getOrCreatePhoneUsageForUpdate(phoneNumberKey).startCooldown(SELF_DELETE_COOLDOWN_HOURS);
     }
 
     private void blockPhoneNumber(String phoneNumber) {
@@ -1676,10 +1702,9 @@ public class AiMatchService {
     }
 
     private boolean isPhoneNumberDeleted(String phoneNumberKey) {
-        return profileRepository.findAll().stream()
-                .filter(profile -> "DELETED".equals(profile.getStatus()))
-                .map(profile -> phoneNumberKeyFromStored(profile.getPhoneNumber()))
-                .anyMatch(phoneNumberKey::equals);
+        return phoneUsageRepository.findByPhoneNumber(phoneNumberKey)
+                .map(AiMatchPhoneUsage::isInCooldown)
+                .orElse(false);
     }
 
     private String normalizePhoneNumberKey(String value, boolean required) {

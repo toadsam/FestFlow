@@ -11,6 +11,7 @@ import com.festflow.backend.entity.OrderStatus;
 import com.festflow.backend.entity.PaymentMethod;
 import com.festflow.backend.repository.BoothOrderRepository;
 import com.festflow.backend.repository.BoothRepository;
+import com.festflow.backend.repository.BoothReservationTableRepository;
 import com.festflow.backend.service.stream.StreamService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,7 +48,9 @@ class OrderServiceTest {
         boothRepository = Mockito.mock(BoothRepository.class);
         boothOrderRepository = Mockito.mock(BoothOrderRepository.class);
         streamService = Mockito.mock(StreamService.class);
-        orderService = new OrderService(boothRepository, boothOrderRepository, streamService, new ObjectMapper());
+        BoothReservationTableRepository tableRepository = Mockito.mock(BoothReservationTableRepository.class);
+        Mockito.when(tableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(anyLong())).thenReturn(List.of());
+        orderService = new OrderService(boothRepository, tableRepository, boothOrderRepository, streamService, new ObjectMapper());
 
         booth = new Booth("소프트웨어학과 주점", 37.28, 127.04, "설명", 1, "/img.jpg", 5, 10, null, null);
         setId(booth, 7L);

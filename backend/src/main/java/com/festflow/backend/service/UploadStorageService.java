@@ -174,6 +174,23 @@ public class UploadStorageService {
         return new int[]{deleted, failed};
     }
 
+    public static final String PROFILE_IMAGE_PREFIX = "ai-profile-";
+
+    /** 소개팅 프로필 사진은 서버가 발급한 ai-profile-* 키만 받는다(남의 사진·다른 업로드 재사용 방지). */
+    public void ensureProfileImageUrl(String imageUrl) {
+        if (!isProfileImageUrl(imageUrl)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "프로필 사진 주소가 올바르지 않습니다. 사진을 다시 올려 주세요.");
+        }
+    }
+
+    public boolean isProfileImageUrl(String imageUrl) {
+        try {
+            return extractObjectKey(imageUrl).startsWith(PROFILE_IMAGE_PREFIX);
+        } catch (RuntimeException exception) {
+            return false;
+        }
+    }
+
     public boolean deleteUploadUrl(String imageUrl) throws IOException {
         String value = imageUrl == null ? "" : imageUrl.trim();
         if (value.isBlank()) {

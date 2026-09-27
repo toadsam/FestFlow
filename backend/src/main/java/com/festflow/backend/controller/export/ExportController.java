@@ -79,7 +79,11 @@ public class ExportController {
     private String csvLine(String... values) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < values.length; i++) {
-            String escaped = values[i] != null ? values[i].replace("\"", "\"\"") : "";
+            String raw = values[i] != null ? values[i] : "";
+            if (!raw.isEmpty() && "=+-@\t\r".indexOf(raw.charAt(0)) >= 0) {
+                raw = "'" + raw;
+            }
+            String escaped = raw.replace("\"", "\"\"");
             sb.append('"').append(escaped).append('"');
             if (i < values.length - 1) {
                 sb.append(',');

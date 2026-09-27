@@ -1,5 +1,7 @@
 package com.festflow.backend.service;
 
+import com.festflow.backend.repository.BoothReservationTableRepository;
+import com.festflow.backend.entity.BoothReservationTable;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.festflow.backend.dto.BoothOrderConfigRequestDto;
@@ -51,6 +53,7 @@ public class OrderService {
     private static final String KEY_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
 
     private final BoothRepository boothRepository;
+    private final BoothReservationTableRepository boothReservationTableRepository;
     private final BoothOrderRepository boothOrderRepository;
     private final StreamService streamService;
     private final ObjectMapper objectMapper;
@@ -58,11 +61,13 @@ public class OrderService {
 
     public OrderService(
             BoothRepository boothRepository,
+            BoothReservationTableRepository boothReservationTableRepository,
             BoothOrderRepository boothOrderRepository,
             StreamService streamService,
             ObjectMapper objectMapper
     ) {
         this.boothRepository = boothRepository;
+        this.boothReservationTableRepository = boothReservationTableRepository;
         this.boothOrderRepository = boothOrderRepository;
         this.streamService = streamService;
         this.objectMapper = objectMapper;
@@ -104,6 +109,13 @@ public class OrderService {
         String tableLabel = normalizeTableLabel(requestDto.tableLabel());
         if (tableLabel.isBlank()) {
             throw new ResponseStatusException(BAD_REQUEST, "테이블 번호가 없습니다.");
+        }
+        List<String> tableNames = boothReservationTableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(boothId).stream()
+                .map(BoothReservationTable::getTableName)
+                .filter(Objects::nonNull)
+                .toList();
+        if (!tableNames.isEmpty() && !tableNames.contains(tableLabel)) {
+            throw new ResponseStatusException(BAD_REQUEST, "없는 테이블 번호입니다. 테이블의 QR을 다시 찍어 주세요.");
         }
 
         List<OrderMenuItemDto> menu = parseMenuBoard(booth.getMenuBoardJson());
@@ -165,7 +177,7 @@ public class OrderService {
         saved.assignOrderNo(buildOrderNo(booth.getId(), now, saved.getId()));
 
         BoothOrderDto dto = toDto(saved);
-        streamService.publishOrders(dto.withoutClientKey());
+        streamService.publishOrders(dto.forPublicStream());
         return dto;
     }
 
@@ -218,7 +230,7 @@ public class OrderService {
         order.transitionTo(next, LocalDateTime.now());
         BoothOrder saved = boothOrderRepository.save(order);
         BoothOrderDto dto = toDto(saved).withoutClientKey();
-        streamService.publishOrders(dto);
+        streamService.publishOrders(dto.forPublicStream());
         return dto;
     }
 

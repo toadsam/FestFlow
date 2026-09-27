@@ -36,6 +36,11 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
             new Rule("POST", Pattern.compile("^/api/ai-match/profiles/\\d+/(requests|favorite|report)$"), "ai-match-profile-action", 300, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/ai-match/requests/\\d+/(accept|reject|cancel|meetup/propose|meetup/confirm|meetup/cancel)$"), "ai-match-request-action", 300, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/reservations/auth/send-code$"), "reservation-auth", 5, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/booths/\\d+/orders$"), "order-create", 60, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/notices/\\d+/view$"), "notice-view", 120, Duration.ofMinutes(10)),
+            new Rule("GET", Pattern.compile("^/api/ai-match/meetup-slots$"), "ai-match-meetup-slots", 600, Duration.ofMinutes(10)),
+            new Rule("*", Pattern.compile("^/api/ai-match/profiles/\\d+(/delete)?$"), "ai-match-profile-edit", 60, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/translate.*"), "translate", 30, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/lost-items$"), "lost-item-create", 5, Duration.ofMinutes(10)),
             new Rule("PUT", Pattern.compile("^/api/lost-items/\\d+/claim$"), "lost-item-claim", 60, Duration.ofMinutes(1))
     );
@@ -101,9 +106,11 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
     }
 
     private String clientIp(HttpServletRequest request) {
+        // 프록시(Railway)는 접속 IP를 목록 맨 뒤에 붙인다. 앞쪽 값은 클라이언트가 마음대로 넣을 수 있으니 마지막 값만 믿는다.
         String forwardedFor = request.getHeader("X-Forwarded-For");
         if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
+            String[] parts = forwardedFor.split(",");
+            return parts[parts.length - 1].trim();
         }
         String realIp = request.getHeader("X-Real-IP");
         if (realIp != null && !realIp.isBlank()) {

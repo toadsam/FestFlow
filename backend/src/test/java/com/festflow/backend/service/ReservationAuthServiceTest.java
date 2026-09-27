@@ -21,6 +21,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verifyNoInteractions;
 import org.mockito.ArgumentCaptor;
 
@@ -98,23 +99,25 @@ class ReservationAuthServiceTest {
         verify(authSessionRepository).save(any(ReservationAuthSession.class));
     }
 
+    // 예전 무서명 토큰(reservation-전화-만료-아무값)은 더 이상 전화번호로 인정하지 않는다. DB 세션에 없으면 그냥 무효.
     @Test
-    void resolveUserKeyOrNullIgnoresExpiredStatelessToken() {
+    void resolveUserKeyOrNullDoesNotTrustStatelessToken() {
         ReservationAuthService service = reservationAuthService();
+        when(authSessionRepository.findByToken("reservation-01012345678-9999999999999-deadbeef")).thenReturn(Optional.empty());
 
-        String userKey = service.resolveUserKeyOrNull("reservation-01012345678-1-deadbeef");
+        String userKey = service.resolveUserKeyOrNull("reservation-01012345678-9999999999999-deadbeef");
 
         assertThat(userKey).isNull();
-        verifyNoInteractions(authSessionRepository);
     }
 
     @Test
-    void requireUserKeyStillRejectsExpiredStatelessToken() {
+    void requireUserKeyRejectsStatelessToken() {
         ReservationAuthService service = reservationAuthService();
+        when(authSessionRepository.findByToken("reservation-01012345678-9999999999999-deadbeef")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.requireUserKey("reservation-01012345678-1-deadbeef"))
+        assertThatThrownBy(() -> service.requireUserKey("reservation-01012345678-9999999999999-deadbeef"))
                 .isInstanceOf(ResponseStatusException.class)
-                .hasMessageContaining("expired");
+                .hasMessageContaining("Invalid reservation authentication token");
     }
 
     private ReservationAuthService reservationAuthService() {

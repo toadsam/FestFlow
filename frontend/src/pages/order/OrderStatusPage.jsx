@@ -56,7 +56,8 @@ export default function OrderStatusPage() {
       try {
         const payload = JSON.parse(event.data);
         if (String(payload.id) !== String(orderId)) return;
-        setOrder((current) => ({ ...(current || {}), ...payload, clientKey: current?.clientKey ?? key }));
+        const patch = Object.fromEntries(Object.entries(payload).filter(([, value]) => value !== null && value !== undefined));
+        setOrder((current) => ({ ...(current || {}), ...patch, clientKey: current?.clientKey ?? key }));
       } catch {
         // ignore
       }

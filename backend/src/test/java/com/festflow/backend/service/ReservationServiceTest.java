@@ -148,7 +148,7 @@ class ReservationServiceTest {
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.COMPLETED);
         assertThat(table.getAvailableSeats()).isEqualTo(4);
         verify(boothReservationTableRepository).save(table);
-        verify(streamService).publishReservations(completed);
+        verify(streamService).publishReservations(completed.masked());
     }
 
     @Test
@@ -170,7 +170,7 @@ class ReservationServiceTest {
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.CANCELED);
         assertThat(table.getAvailableSeats()).isEqualTo(4);
         verify(boothReservationTableRepository).save(table);
-        verify(streamService).publishReservations(released);
+        verify(streamService).publishReservations(released.masked());
     }
 
     @Test
@@ -193,7 +193,7 @@ class ReservationServiceTest {
         assertThat(reservation.getStatus()).isEqualTo(ReservationStatus.COMPLETED);
         assertThat(table.getAvailableSeats()).isEqualTo(4);
         verify(boothReservationTableRepository).save(table);
-        verify(streamService).publishReservations(released);
+        verify(streamService).publishReservations(released.masked());
     }
 
     @Test

@@ -34,6 +34,8 @@ public class AiMatchPhoneUsage {
 
     private LocalDateTime blockedAt;
 
+    private LocalDateTime cooldownUntil;
+
     @Column(nullable = false)
     private LocalDateTime createdAt;
 
@@ -75,6 +77,14 @@ public class AiMatchPhoneUsage {
 
     public void recordSuccessfulImageConversion() {
         this.successfulImageConversionCount += 1;
+    }
+
+    public boolean isInCooldown() {
+        return cooldownUntil != null && cooldownUntil.isAfter(LocalDateTime.now());
+    }
+
+    public void startCooldown(int hours) {
+        this.cooldownUntil = LocalDateTime.now().plusHours(hours);
     }
 
     public void block() {

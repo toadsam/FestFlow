@@ -116,11 +116,6 @@ public class ReservationAuthService {
             throw new ResponseStatusException(UNAUTHORIZED, "Reservation authentication is required.");
         }
 
-        String statelessPhoneNumber = resolveStatelessReservationToken(token);
-        if (statelessPhoneNumber != null) {
-            return statelessPhoneNumber;
-        }
-
         LocalDateTime now = LocalDateTime.now();
         ReservationAuthSession session = authSessionRepository.findByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid reservation authentication token."));
@@ -139,14 +134,6 @@ public class ReservationAuthService {
             return null;
         }
 
-        try {
-            String statelessPhoneNumber = resolveStatelessReservationToken(token);
-            if (statelessPhoneNumber != null) {
-                return statelessPhoneNumber;
-            }
-        } catch (ResponseStatusException ignored) {
-            return null;
-        }
 
         LocalDateTime now = LocalDateTime.now();
         return authSessionRepository.findByToken(token)
@@ -196,22 +183,6 @@ public class ReservationAuthService {
                 + UUID.randomUUID().toString().replace("-", "");
     }
 
-    private String resolveStatelessReservationToken(String token) {
-        String[] parts = token.split("-", 4);
-        if (parts.length != 4 || !"reservation".equals(parts[0])) {
-            return null;
-        }
-
-        try {
-            long expiresAtMillis = Long.parseLong(parts[2]);
-            if (System.currentTimeMillis() > expiresAtMillis) {
-                throw new ResponseStatusException(UNAUTHORIZED, "Reservation authentication token has expired.");
-            }
-            return normalizePhoneNumber(parts[1]);
-        } catch (NumberFormatException e) {
-            throw new ResponseStatusException(UNAUTHORIZED, "Invalid reservation authentication token.");
-        }
-    }
 
     private boolean matchesVerificationCode(String storedCode, String inputCode) {
         if (storedCode == null || storedCode.isBlank()) {

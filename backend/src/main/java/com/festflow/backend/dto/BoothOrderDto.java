@@ -30,4 +30,10 @@ public record BoothOrderDto(
         return new BoothOrderDto(id, orderNo, boothId, boothName, tableLabel, depositorName, phoneNumber, request,
                 paymentMethod, status, totalAmount, createdAt, paidAt, readyAt, completedAt, canceledAt, items, null);
     }
+
+    /** 공개 SSE 용. 손님 이름·전화·요청 사항은 내보내지 않는다. */
+    public BoothOrderDto forPublicStream() {
+        return new BoothOrderDto(id, orderNo, boothId, boothName, tableLabel, null, null, null,
+                paymentMethod, status, totalAmount, createdAt, paidAt, readyAt, completedAt, canceledAt, items, null);
+    }
 }

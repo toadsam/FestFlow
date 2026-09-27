@@ -1,5 +1,8 @@
 package com.festflow.backend.controller;
 
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
+import org.springframework.beans.factory.annotation.Value;
 import com.festflow.backend.dto.BoothResponseDto;
 import com.festflow.backend.dto.ReservationCheckInTokenDto;
 import com.festflow.backend.dto.BoothReservationDto;
@@ -22,6 +25,15 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/booths")
 public class BoothController {
+
+    @Value("${app.reservations.enabled:false}")
+    private boolean reservationsEnabled;
+
+    private void ensureReservationsEnabled() {
+        if (!reservationsEnabled) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "예약 기능은 운영하지 않습니다.");
+        }
+    }
 
     private final BoothService boothService;
     private final ReservationService reservationService;
@@ -60,6 +72,7 @@ public class BoothController {
             @RequestHeader(value = "X-Reservation-Token", required = false) String reservationToken,
             @Valid @RequestBody ReservationCreateRequestDto requestDto
     ) {
+        ensureReservationsEnabled();
         return reservationService.createReservation(id, requestDto, reservationToken);
     }
 
@@ -69,6 +82,7 @@ public class BoothController {
             @PathVariable Long reservationId,
             @RequestHeader(value = "X-Reservation-Token", required = false) String reservationToken
     ) {
+        ensureReservationsEnabled();
         return reservationService.issueCheckInToken(id, reservationId, reservationToken);
     }
 }

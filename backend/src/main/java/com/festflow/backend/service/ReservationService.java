@@ -85,6 +85,7 @@ public class ReservationService {
 
         List<BoothReservationDto> activeReservations = activeReservationEntities.stream()
                 .map(this::toReservationDto)
+                .map(BoothReservationDto::masked)
                 .toList();
 
         BoothReservationDto myReservation = null;
@@ -211,7 +212,7 @@ public class ReservationService {
         ));
 
         BoothReservationDto dto = toReservationDto(created);
-        streamService.publishReservations(dto);
+        streamService.publishReservations(dto.masked());
         return dto;
     }
 
@@ -227,7 +228,7 @@ public class ReservationService {
         reservation.markCalled(now);
         boothReservationRepository.save(reservation);
         BoothReservationDto dto = toReservationDto(reservation);
-        streamService.publishReservations(dto);
+        streamService.publishReservations(dto.masked());
         return dto;
     }
 
@@ -245,7 +246,7 @@ public class ReservationService {
         restoreReservationSeats(reservation);
 
         BoothReservationDto dto = toReservationDto(reservation);
-        streamService.publishReservations(dto);
+        streamService.publishReservations(dto.masked());
         return dto;
     }
 
@@ -299,7 +300,7 @@ public class ReservationService {
         restoreReservationSeats(reservation);
 
         BoothReservationDto dto = toReservationDto(reservation);
-        streamService.publishReservations(dto);
+        streamService.publishReservations(dto.masked());
         return dto;
     }
 
@@ -360,7 +361,7 @@ public class ReservationService {
         reservation.markCheckedIn(now);
         boothReservationRepository.save(reservation);
         BoothReservationDto dto = toReservationDto(reservation);
-        streamService.publishReservations(dto);
+        streamService.publishReservations(dto.masked());
         return dto;
     }
 
