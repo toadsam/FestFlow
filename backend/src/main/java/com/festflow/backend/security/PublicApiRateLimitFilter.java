@@ -106,10 +106,17 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
     }
 
     private String clientIp(HttpServletRequest request) {
-        // 프록시(Railway)는 접속 IP를 목록 맨 뒤에 붙인다. 앞쪽 값은 클라이언트가 마음대로 넣을 수 있으니 마지막 값만 믿는다.
+        // 프록시는 접속 IP를 목록 맨 뒤에 붙인다. 앞쪽은 클라이언트가 마음대로 넣을 수 있으니 오른쪽부터 보되,
+        // 프록시 내부 주소(사설·CGNAT·루프백)는 건너뛰고 처음 나오는 공인 IP를 쓴다. 모두 내부 주소면(로컬) 마지막 값.
         String forwardedFor = request.getHeader("X-Forwarded-For");
         if (forwardedFor != null && !forwardedFor.isBlank()) {
             String[] parts = forwardedFor.split(",");
+            for (int i = parts.length - 1; i >= 0; i--) {
+                String candidate = parts[i].trim();
+                if (!candidate.isEmpty() && !isInternalAddress(candidate)) {
+                    return candidate;
+                }
+            }
             return parts[parts.length - 1].trim();
         }
         String realIp = request.getHeader("X-Real-IP");
@@ -117,6 +124,26 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
             return realIp.trim();
         }
         return request.getRemoteAddr();
+    }
+
+    static boolean isInternalAddress(String ip) {
+        String v = ip.toLowerCase();
+        if (v.startsWith("[")) v = v.substring(1, v.indexOf(']') > 0 ? v.indexOf(']') : v.length());
+        if (v.equals("::1") || v.startsWith("fc") || v.startsWith("fd") || v.startsWith("fe80:")) return true;
+        if (v.startsWith("::ffff:")) v = v.substring(7);
+        String[] o = v.split("\\.");
+        if (o.length != 4) return false;
+        try {
+            int a = Integer.parseInt(o[0]);
+            int b = Integer.parseInt(o[1]);
+            return a == 10 || a == 127 || a == 0
+                    || (a == 172 && b >= 16 && b <= 31)
+                    || (a == 192 && b == 168)
+                    || (a == 169 && b == 254)
+                    || (a == 100 && b >= 64 && b <= 127);
+        } catch (NumberFormatException e) {
+            return false;
+        }
     }
 
     private void pruneExpiredBuckets(Instant now) {
