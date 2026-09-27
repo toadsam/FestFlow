@@ -77,6 +77,8 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 @Service
 public class AiMatchService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AiMatchService.class);
+
     private static final int MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE = 2;
     /** 한 사람이 축제 동안 보낼 수 있는 데이트 신청 수. 취소·거절도 센다(보내는 행동 자체를 제한). */
     public static final int MAX_SENT_REQUESTS_PER_PROFILE = 3;
@@ -1106,10 +1108,12 @@ public class AiMatchService {
         phoneUsageRepository.deleteAllInBatch();
         ImageFileDeleteResult files = deleteProfileImageFiles(imageUrls);
         // 가입 전 미리보기로 올라갔다가 계정에 안 붙은 사진도 개인 사진이라 같이 지운다.
+        // S3 목록 조회 권한(s3:ListBucket)이 없으면 이 단계만 건너뛰고 나머지 삭제는 그대로 끝낸다.
         int[] leftovers;
         try {
             leftovers = uploadStorageService.deleteAllWithPrefix("ai-profile-");
-        } catch (java.io.IOException exception) {
+        } catch (Exception exception) {
+            log.warn("남은 프로필 사진 정리 실패(권한 확인 필요): {}", exception.getMessage());
             leftovers = new int[]{0, 1};
         }
         return new com.festflow.backend.dto.AiMatchAdminResetResultDto(
