@@ -8,7 +8,7 @@
 |---|---|
 | 기간 | 2026.04 ~ 2026.06 (첫 커밋 2026-04-01, 마지막 2026-06-13, 183 커밋) · 현장 운영 2026-05-20 ~ 22 |
 | 인원 | 1명 — 기획 · 프론트 · 백엔드 · 혼잡 예측 모델 · 배포 · 현장 운영 전부 |
-| 배포 | https://fest-flow-smoky.vercel.app (프론트 Vercel · 백엔드 Railway · MySQL) |
+| 배포 | https://ajoufesta.com (예전 주소 https://fest-flow-smoky.vercel.app 도 동작 · 프론트 Vercel · 백엔드 Railway · MySQL) |
 | 영상 | https://www.youtube.com/watch?v=-RomuYp93TQ |
 
 ## 5분만 있다면
