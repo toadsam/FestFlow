@@ -1,7 +1,9 @@
 // 관리자 페이지의 분실물 관리. 등록·상태 변경·삭제. 관리자 JWT 는 api.js 가 자동으로 붙인다.
 // 손님 화면에는 신청자 정보가 안 나가고, 여기(와 /staff)에서만 보인다.
+// PC 는 왼쪽 등록 폼 + 오른쪽 목록, 모바일은 등록 폼을 접어 두고 목록을 먼저 보여 준다.
 import { useEffect, useMemo, useState } from "react";
 import { createLostItem, createLostItemStream, deleteLostItem, fetchLostItems, updateLostItemStatus } from "../../api";
+import "../../styles/admin-lost.css";
 
 const CATEGORIES = ["전자기기", "지갑/카드", "학생증", "의류", "가방", "파우치", "열쇠", "생활용품", "기타"];
 const STATUS_OPTIONS = [
@@ -9,6 +11,8 @@ const STATUS_OPTIONS = [
   { value: "OWNER_CLAIMED", label: "주인 확인", tone: "amber" },
   { value: "RETURNED", label: "반환 완료", tone: "gray" },
 ];
+// 지금 상태에서 보통 다음으로 누르는 버튼.
+const NEXT_STEP = { REGISTERED: "OWNER_CLAIMED", OWNER_CLAIMED: "RETURNED" };
 const EMPTY_FORM = { title: "", category: CATEGORIES[0], foundLocation: "", description: "", finderContact: "" };
 
 function statusOf(item) {
@@ -27,8 +31,11 @@ export default function AdminLostItems({ onMessage }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
+  const [query, setQuery] = useState("");
   const [form, setForm] = useState(EMPTY_FORM);
   const [file, setFile] = useState(null);
+  const [preview, setPreview] = useState("");
+  const [formOpen, setFormOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [busyId, setBusyId] = useState(null);
   const [noteDrafts, setNoteDrafts] = useState({});
@@ -61,6 +68,16 @@ export default function AdminLostItems({ onMessage }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (!file) {
+      setPreview("");
+      return undefined;
+    }
+    const url = URL.createObjectURL(file);
+    setPreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+
   const counts = useMemo(() => {
     const result = { ALL: items.length };
     STATUS_OPTIONS.forEach((option) => {
@@ -69,10 +86,17 @@ export default function AdminLostItems({ onMessage }) {
     return result;
   }, [items]);
 
-  const visible = useMemo(
-    () => (filter === "ALL" ? items : items.filter((item) => statusOf(item).value === filter)),
-    [items, filter],
-  );
+  const visible = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter((item) => {
+      if (filter !== "ALL" && statusOf(item).value !== filter) return false;
+      if (!q) return true;
+      return [item.title, item.category, item.foundLocation, item.description, item.claimantName]
+        .some((value) => `${value || ""}`.toLowerCase().includes(q));
+    });
+  }, [items, filter, query]);
+
+  const setField = (key) => (event) => setForm((prev) => ({ ...prev, [key]: event.target.value }));
 
   async function handleCreate(event) {
     event.preventDefault();
@@ -85,6 +109,7 @@ export default function AdminLostItems({ onMessage }) {
       await createLostItem(form, file);
       setForm(EMPTY_FORM);
       setFile(null);
+      setFormOpen(false);
       say("분실물을 등록했어요. 손님 화면에 바로 떠요.");
       await load(true);
     } catch (error) {
@@ -122,114 +147,170 @@ export default function AdminLostItems({ onMessage }) {
   }
 
   return (
-    <div className="admin-lost">
-      <article id="admin-lost" className="admin-console-panel">
-        <div className="admin-console-panel__head">
-          <div>
-            <span>분실물 센터</span>
-            <h3>주운 물건 등록</h3>
-          </div>
-          <strong>{counts.REGISTERED}개 보관 중</strong>
+    <div className="alost">
+      <section className={`alost-form${formOpen ? " is-open" : ""}`} aria-label="주운 물건 등록">
+        <button type="button" className="alost-form__toggle" onClick={() => setFormOpen((open) => !open)} aria-expanded={formOpen}>
+          <span>
+            <b>주운 물건 등록</b>
+            <small>등록하면 손님 분실물 화면에 바로 떠요</small>
+          </span>
+          <i aria-hidden="true">{formOpen ? "−" : "+"}</i>
+        </button>
+        <div className="alost-form__head">
+          <b>주운 물건 등록</b>
+          <small>등록하면 손님 분실물 화면에 바로 떠요</small>
         </div>
-        <form className="admin-console-form" onSubmit={handleCreate}>
-          <div className="admin-console-inline-grid">
-            <input className="admin-console-input" placeholder="물건 이름 (예: 검은색 가죽 지갑)" value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} />
-            <select className="admin-console-input" value={form.category} onChange={(e) => setForm((prev) => ({ ...prev, category: e.target.value }))}>
-              {CATEGORIES.map((category) => (
-                <option key={category} value={category}>{category}</option>
-              ))}
-            </select>
-          </div>
-          <div className="admin-console-inline-grid">
-            <input className="admin-console-input" placeholder="발견 위치 (예: 노천극장 입구 계단)" value={form.foundLocation} onChange={(e) => setForm((prev) => ({ ...prev, foundLocation: e.target.value }))} />
-            <input className="admin-console-input" placeholder="습득자 연락처 (선택, 손님에겐 가려져요)" value={form.finderContact} onChange={(e) => setForm((prev) => ({ ...prev, finderContact: e.target.value }))} />
-          </div>
-          <textarea className="admin-console-input" rows={2} placeholder="특징 (색, 브랜드, 안에 든 것)" value={form.description} onChange={(e) => setForm((prev) => ({ ...prev, description: e.target.value }))} />
-          <label className="admin-console-file-input">
-            <span>{file ? file.name : "사진 고르기 (선택)"}</span>
-            <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+
+        <form className="alost-form__body" onSubmit={handleCreate}>
+          <label className="alost-field">
+            <span>물건 이름 <em>필수</em></span>
+            <input value={form.title} onChange={setField("title")} placeholder="예: 검은색 가죽 지갑" />
           </label>
-          <button type="submit" className="admin-console-submit" disabled={saving}>
-            {saving ? "등록 중…" : "분실물 등록"}
+
+          <div className="alost-field">
+            <span>종류</span>
+            <div className="alost-cats" role="radiogroup" aria-label="종류">
+              {CATEGORIES.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  role="radio"
+                  aria-checked={form.category === category}
+                  className={form.category === category ? "is-on" : ""}
+                  onClick={() => setForm((prev) => ({ ...prev, category }))}
+                >
+                  {category}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <label className="alost-field">
+            <span>발견 위치 <em>필수</em></span>
+            <input value={form.foundLocation} onChange={setField("foundLocation")} placeholder="예: 노천극장 입구 계단" />
+          </label>
+
+          <label className="alost-field">
+            <span>특징</span>
+            <textarea rows={2} value={form.description} onChange={setField("description")} placeholder="색, 브랜드, 안에 든 것" />
+          </label>
+
+          <label className="alost-field">
+            <span>습득자 연락처 <small>손님에겐 안 보여요</small></span>
+            <input value={form.finderContact} onChange={setField("finderContact")} placeholder="선택" />
+          </label>
+
+          <label className="alost-photo">
+            <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+            {preview ? <img src={preview} alt="" /> : <i aria-hidden="true">+</i>}
+            <span>
+              <b>{file ? "사진 바꾸기" : "사진 추가"}</b>
+              <small>{file ? file.name : "선택 · 물건이 잘 보이게"}</small>
+            </span>
+          </label>
+
+          <button type="submit" className="alost-submit" disabled={saving}>
+            {saving ? "등록 중…" : "등록하기"}
           </button>
         </form>
-      </article>
+      </section>
 
-      <article className="admin-console-panel">
-        <div className="admin-console-panel__head">
-          <div>
-            <span>분실물 센터</span>
-            <h3>보관 목록</h3>
-          </div>
-          <div className="admin-lost__filters">
+      <section className="alost-list" aria-label="보관 목록">
+        <div className="alost-list__top">
+          <div className="alost-tabs" role="tablist">
             {[{ value: "ALL", label: "전체" }, ...STATUS_OPTIONS].map((option) => (
               <button
                 key={option.value}
                 type="button"
-                className={`admin-lost__filter${filter === option.value ? " is-active" : ""}`}
+                role="tab"
+                aria-selected={filter === option.value}
+                className={filter === option.value ? "is-on" : ""}
                 onClick={() => setFilter(option.value)}
               >
-                {option.label} {counts[option.value] ?? 0}
+                {option.label}
+                <b>{counts[option.value] ?? 0}</b>
               </button>
             ))}
           </div>
+          <input
+            className="alost-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="이름·위치·특징으로 찾기"
+            aria-label="분실물 검색"
+          />
         </div>
 
-        {loading && !items.length ? <p className="admin-console-hint">불러오는 중…</p> : null}
-        {!loading && !visible.length ? <p className="admin-console-hint">여기에 해당하는 물건이 없어요.</p> : null}
+        {loading && !items.length ? <p className="alost-empty">불러오는 중…</p> : null}
+        {!loading && !visible.length ? (
+          <p className="alost-empty">{query ? "검색 결과가 없어요." : "여기에 해당하는 물건이 없어요."}</p>
+        ) : null}
 
-        <div className="admin-lost__list">
+        <ul className="alost-items">
           {visible.map((item) => {
             const status = statusOf(item);
             const busy = busyId === item.id;
+            const next = NEXT_STEP[status.value];
+            const others = STATUS_OPTIONS.filter((option) => option.value !== status.value && option.value !== next);
+            const hasClaim = item.claimantName || item.claimantContact;
             return (
-              <div key={item.id} className={`admin-lost__item admin-lost__item--${status.tone}`}>
-                <div className="admin-lost__thumb">
-                  {item.imageUrl ? <img src={item.imageUrl} alt="" /> : <span>{item.category?.slice(0, 2) || "물건"}</span>}
-                </div>
-                <div className="admin-lost__body">
-                  <div className="admin-lost__title">
-                    <strong>{item.title}</strong>
-                    <span className={`admin-lost__badge admin-lost__badge--${status.tone}`}>{status.label}</span>
+              <li key={item.id} className={`alost-item alost-item--${status.tone}`}>
+                <div className="alost-item__main">
+                  <div className="alost-item__thumb">
+                    {item.imageUrl ? <img src={item.imageUrl} alt="" /> : <span>{item.category?.slice(0, 2) || "물건"}</span>}
                   </div>
-                  <p className="admin-lost__meta">
-                    {item.category || "기타"} · {item.foundLocation || "위치 미상"} · {timeLabel(item.createdAt)}
-                    {item.finderContact ? ` · 습득자 ${item.finderContact}` : ""}
-                  </p>
-                  {item.description ? <p className="admin-lost__desc">{item.description}</p> : null}
-
-                  {item.claimantName || item.claimantContact ? (
-                    <div className="admin-lost__claim">
-                      <strong>주인 확인 요청</strong>
-                      <span>{item.claimantName || "이름 없음"} · {item.claimantContact || "연락처 없음"}</span>
-                      {item.claimantNote ? <em>"{item.claimantNote}"</em> : null}
+                  <div className="alost-item__info">
+                    <div className="alost-item__title">
+                      <strong>{item.title}</strong>
+                      <span className={`alost-badge alost-badge--${status.tone}`}>{status.label}</span>
                     </div>
-                  ) : null}
+                    <p className="alost-item__meta">
+                      <span>{item.category || "기타"}</span>
+                      <span>{item.foundLocation || "위치 미상"}</span>
+                      <span>{timeLabel(item.createdAt)}</span>
+                    </p>
+                    {item.description ? <p className="alost-item__desc">{item.description}</p> : null}
+                    {item.finderContact ? <p className="alost-item__finder">습득자 {item.finderContact}</p> : null}
+                  </div>
+                </div>
 
-                  <div className="admin-lost__actions">
-                    <input
-                      className="admin-console-input admin-lost__note"
-                      placeholder="처리 메모 (예: 본인 확인 후 반환)"
-                      value={noteDrafts[item.id] ?? item.resolveNote ?? ""}
-                      onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [item.id]: e.target.value }))}
-                    />
-                    <div className="admin-lost__buttons">
-                      {STATUS_OPTIONS.filter((option) => option.value !== status.value).map((option) => (
-                        <button key={option.value} type="button" className="admin-console-mini-button" disabled={busy} onClick={() => changeStatus(item, option.value)}>
-                          {option.label}으로
-                        </button>
-                      ))}
-                      <button type="button" className="admin-console-mini-button admin-lost__delete" disabled={busy} onClick={() => remove(item)}>
-                        삭제
+                {hasClaim ? (
+                  <div className="alost-claim">
+                    <b>주인이라고 연락 왔어요</b>
+                    <span>{item.claimantName || "이름 없음"} · {item.claimantContact || "연락처 없음"}</span>
+                    {item.claimantNote ? <em>“{item.claimantNote}”</em> : null}
+                  </div>
+                ) : null}
+
+                <div className="alost-item__foot">
+                  <input
+                    className="alost-note"
+                    placeholder="처리 메모 (예: 학생증으로 본인 확인)"
+                    value={noteDrafts[item.id] ?? item.resolveNote ?? ""}
+                    onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [item.id]: e.target.value }))}
+                  />
+                  <div className="alost-item__buttons">
+                    {next ? (
+                      <button type="button" className="alost-btn alost-btn--primary" disabled={busy} onClick={() => changeStatus(item, next)}>
+                        {next === "OWNER_CLAIMED" ? "주인 확인됨" : "반환 완료"}
                       </button>
-                    </div>
+                    ) : null}
+                    {others.map((option) => (
+                      <button key={option.value} type="button" className="alost-btn" disabled={busy} onClick={() => changeStatus(item, option.value)}>
+                        {option.value === "REGISTERED" ? "보관 중으로 되돌리기" : option.value === "OWNER_CLAIMED" ? "주인 확인으로" : "반환 완료로"}
+                      </button>
+                    ))}
+                    <button type="button" className="alost-btn alost-btn--danger" disabled={busy} onClick={() => remove(item)}>
+                      삭제
+                    </button>
                   </div>
                 </div>
-              </div>
+              </li>
             );
           })}
-        </div>
-      </article>
+        </ul>
+      </section>
     </div>
   );
 }
