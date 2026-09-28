@@ -575,3 +575,42 @@
     animation: none;
   }
 }
+
+/* 부스 관리: 총학 주점만 남기기 */
+.app-shell.app-shell.app-shell .ahome-cleanup {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #fff8e6;
+}
+
+.app-shell.app-shell.app-shell .ahome-cleanup p {
+  flex: 1 1 16rem;
+  margin: 0 !important;
+  color: #8a5a00 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+}
+
+.app-shell.app-shell.app-shell .ahome-cleanup button {
+  min-height: 40px !important;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: #f04452 !important;
+  color: #fff !important;
+  box-shadow: none !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  cursor: pointer;
+}
+
+.app-shell.app-shell.app-shell .ahome-cleanup button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}

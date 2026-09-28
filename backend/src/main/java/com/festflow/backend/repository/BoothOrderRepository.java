@@ -22,5 +22,7 @@ public interface BoothOrderRepository extends JpaRepository<BoothOrder, Long> {
 
     Optional<BoothOrder> findByIdAndBoothId(Long id, Long boothId);
 
+    List<BoothOrder> findByBoothId(Long boothId);
+
     long countByBoothIdAndCreatedAtBetween(Long boothId, LocalDateTime from, LocalDateTime to);
 }

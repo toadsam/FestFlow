@@ -678,11 +678,40 @@ export default function AdminPage() {
   }
 
   async function handleDeleteBooth(id) {
-    if (!window.confirm("선택한 부스를 삭제할까요?")) return;
+    if (!window.confirm("선택한 부스를 삭제할까요?\n이 부스의 테이블·주문 기록도 같이 지워집니다.")) return;
     await runAdminAction(`booth-delete-${id}`, "부스 삭제 중입니다.", async () => {
       await deleteBooth(id);
       setMessage("부스 삭제가 완료되었습니다.");
       await loadAll();
+    });
+  }
+
+  // 이번 축제는 총학 주점 하나만 운영한다. 나머지 부스(테이블·주문 포함)를 한 번에 지운다.
+  async function handleKeepOnlyMainBooth() {
+    if (!mainBooth) return;
+    const targets = sortedBooths.filter((booth) => booth.id !== mainBooth.id);
+    if (!targets.length) return;
+    const ok = window.confirm(
+      `‘${mainBooth.name}’만 남기고 부스 ${targets.length}개를 삭제할까요?\n`
+      + "지운 부스의 테이블·주문 기록도 같이 지워지고 되돌릴 수 없습니다.",
+    );
+    if (!ok) return;
+    await runAdminAction("booth-keep-main", `부스 ${targets.length}개 삭제 중…`, async () => {
+      let failed = 0;
+      for (const booth of targets) {
+        try {
+          await deleteBooth(booth.id);
+        } catch (error) {
+          if (isUnauthorizedLike(error)) throw error;
+          failed += 1;
+        }
+      }
+      await loadAll();
+      setMessage(
+        failed
+          ? `부스 ${targets.length - failed}개를 지웠고 ${failed}개는 실패했습니다. 다시 눌러 주세요.`
+          : `부스 ${targets.length}개를 지웠습니다. 이제 ‘${mainBooth.name}’만 남았습니다.`,
+      );
     });
   }
 
@@ -1296,6 +1325,20 @@ export default function AdminPage() {
           </div>
           <strong>{sortedBooths.length}개 운영중</strong>
         </div>
+        {mainBooth && extraBoothCount > 0 ? (
+          <div className="ahome-cleanup">
+            <p>
+              이번 축제는 <b>{mainBooth.name}</b> 하나만 운영해요. 나머지 부스 {extraBoothCount}개는 한 번에 지울 수 있어요.
+            </p>
+            <button
+              type="button"
+              onClick={() => handleKeepOnlyMainBooth().catch((error) => setMessage(adminErrorMessage(error)))}
+              disabled={isBusy}
+            >
+              {isActionBusy("booth-keep-main") ? "삭제 중…" : `총학 주점만 남기고 ${extraBoothCount}개 삭제`}
+            </button>
+          </div>
+        ) : null}
         <form
           className="admin-console-form"
           onSubmit={(e) => handleBoothSubmit(e).catch((error) => setMessage(adminErrorMessage(error)))}

@@ -15,6 +15,8 @@ public interface BoothReservationRepository extends JpaRepository<BoothReservati
 
     Optional<BoothReservation> findByIdAndBoothId(Long id, Long boothId);
 
+    List<BoothReservation> findByBoothId(Long boothId);
+
     Optional<BoothReservation> findFirstByBoothIdAndTableIdAndStatusInOrderByReservedAtDesc(
             Long boothId,
             Long tableId,

@@ -10,11 +10,15 @@ import com.festflow.backend.entity.BoothReservation;
 import com.festflow.backend.entity.BoothReservationTable;
 import com.festflow.backend.entity.GpsLog;
 import com.festflow.backend.entity.ReservationStatus;
+import com.festflow.backend.repository.BoothOrderRepository;
 import com.festflow.backend.repository.BoothRepository;
 import com.festflow.backend.repository.BoothReservationRepository;
 import com.festflow.backend.repository.BoothReservationTableRepository;
 import com.festflow.backend.repository.GpsLogRepository;
+import com.festflow.backend.repository.ReservationCheckInTokenRepository;
+import com.festflow.backend.repository.StaffMemberRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Duration;
@@ -40,19 +44,28 @@ public class BoothService {
     private final BoothReservationTableRepository boothReservationTableRepository;
     private final BoothReservationRepository boothReservationRepository;
     private final SimulationStateService simulationStateService;
+    private final BoothOrderRepository boothOrderRepository;
+    private final ReservationCheckInTokenRepository checkInTokenRepository;
+    private final StaffMemberRepository staffMemberRepository;
 
     public BoothService(
             BoothRepository boothRepository,
             GpsLogRepository gpsLogRepository,
             BoothReservationTableRepository boothReservationTableRepository,
             BoothReservationRepository boothReservationRepository,
-            SimulationStateService simulationStateService
+            SimulationStateService simulationStateService,
+            BoothOrderRepository boothOrderRepository,
+            ReservationCheckInTokenRepository checkInTokenRepository,
+            StaffMemberRepository staffMemberRepository
     ) {
         this.boothRepository = boothRepository;
         this.gpsLogRepository = gpsLogRepository;
         this.boothReservationTableRepository = boothReservationTableRepository;
         this.boothReservationRepository = boothReservationRepository;
         this.simulationStateService = simulationStateService;
+        this.boothOrderRepository = boothOrderRepository;
+        this.checkInTokenRepository = checkInTokenRepository;
+        this.staffMemberRepository = staffMemberRepository;
     }
 
     public List<BoothResponseDto> getAllBooths() {
@@ -182,10 +195,23 @@ public class BoothService {
         }
     }
 
+    // 부스에 딸린 테이블·예약·주문이 외래키로 묶여 있어서 부스만 지우면 실패한다. 딸린 것부터 지우고 부스를 지운다.
+    @Transactional
     public void deleteBooth(Long boothId) {
         if (!boothRepository.existsById(boothId)) {
             throw new ResponseStatusException(NOT_FOUND, "부스를 찾을 수 없습니다.");
         }
+        List<BoothReservation> reservations = boothReservationRepository.findByBoothId(boothId);
+        if (!reservations.isEmpty()) {
+            checkInTokenRepository.deleteAll(
+                    checkInTokenRepository.findByReservationIdIn(reservations.stream().map(BoothReservation::getId).toList())
+            );
+            boothReservationRepository.deleteAll(reservations);
+        }
+        boothOrderRepository.deleteAll(boothOrderRepository.findByBoothId(boothId));
+        boothReservationTableRepository.deleteAll(boothReservationTableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(boothId));
+        staffMemberRepository.findByAssignedBoothId(boothId).forEach(staff -> staff.setAssignedBoothId(null));
+        boothRepository.flush();
         boothRepository.deleteById(boothId);
     }
 
