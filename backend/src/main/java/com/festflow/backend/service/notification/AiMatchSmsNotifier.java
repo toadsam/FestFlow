@@ -10,17 +10,20 @@ import org.springframework.stereotype.Component;
 public class AiMatchSmsNotifier {
 
     private static final Logger log = LoggerFactory.getLogger(AiMatchSmsNotifier.class);
-    private static final String AI_MATCH_URL = "https://fest-flow-smoky.vercel.app/ai-match";
 
     private final SolapiMessageClient solapiMessageClient;
     private final boolean enabled;
+    // 문자 속 링크. 도메인을 바꾸면 APP_PUBLIC_URL 만 바꾸면 된다(예: https://ajoufesta.com).
+    private final String aiMatchUrl;
 
     public AiMatchSmsNotifier(
             SolapiMessageClient solapiMessageClient,
-            @Value("${app.ai-match.sms.enabled:true}") boolean enabled
+            @Value("${app.ai-match.sms.enabled:true}") boolean enabled,
+            @Value("${app.public-url:https://fest-flow-smoky.vercel.app}") String publicUrl
     ) {
         this.solapiMessageClient = solapiMessageClient;
         this.enabled = enabled;
+        this.aiMatchUrl = publicUrl.trim().replaceAll("/+$", "") + "/ai-match";
     }
 
     public void notifyRequestCreated(String targetPhoneNumber) {
@@ -28,7 +31,7 @@ public class AiMatchSmsNotifier {
                 targetPhoneNumber,
                 "[\uC544\uC8FC\uB300AI\uC18C\uAC1C\uD305\uBD80\uC2A4] \uC0C8 \uB370\uC774\uD2B8 \uC2E0\uCCAD\uC774 \uC654\uC5B4\uC694. "
                         + "\uC2E0\uCCAD\uD568\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694. "
-                        + AI_MATCH_URL
+                        + aiMatchUrl
         );
     }
 
@@ -37,7 +40,7 @@ public class AiMatchSmsNotifier {
                 requesterPhoneNumber,
                 "[\uC544\uC8FC\uB300AI\uC18C\uAC1C\uD305\uBD80\uC2A4] \uC2E0\uCCAD\uC774 \uC218\uB77D\uB410\uC5B4\uC694. "
                         + "\uACE7 \uAD00\uB9AC\uC790\uAC00 \uC5F0\uB77D\uD574 \uC77C\uC815\uC744 \uC870\uC728\uD574\uB4DC\uB9B4\uAC8C\uC694. "
-                        + AI_MATCH_URL
+                        + aiMatchUrl
         );
     }
 
