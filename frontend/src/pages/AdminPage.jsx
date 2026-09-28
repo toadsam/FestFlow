@@ -47,6 +47,8 @@ import {
   IconUsers,
 } from "../components/UxIcons";
 import OpsMasterPage from "./OpsMasterPage";
+import { FESTIVAL, findMainBooth } from "../config/festival";
+import "../styles/admin-home.css";
 import { clearLogin, getAdminName, isLoggedIn, saveLogin } from "../utils/auth";
 
 const NOTICE_CATEGORIES = ["긴급", "분실물", "우천", "일반"];
@@ -120,6 +122,44 @@ function normalizeNoticeCategory(category) {
   if (category === "분실물") return "분실물";
   if (category === "긴급") return "긴급";
   return "일반";
+}
+
+const LOG_TARGETS = { BOOTH: "부스", EVENT: "공연", NOTICE: "공지", STAFF: "스태프", SIMULATION: "시뮬레이션" };
+const LOG_ACTIONS = {
+  CREATE: "등록",
+  UPDATE: "수정",
+  DELETE: "삭제",
+  LIVE_STATUS: "현장 상태 변경",
+  REORDER: "순서 변경",
+  UPLOAD_IMAGE: "사진 등록",
+  MENU_IMAGE: "메뉴판 등록",
+  MENU_ITEM_IMAGE: "메뉴 사진 등록",
+  BULK_STATUS: "상태 일괄 변경",
+  IMPORT: "CSV 가져오기",
+  ACTION: "자동 공지 발행",
+  QUICK_ACTION: "자동 공지 발행",
+  ORDER_STATUS: "주문 상태 변경",
+  ORDER_CONFIG: "주문 설정 변경",
+  RESERVATION_CONFIG: "테이블 설정 변경",
+  RESERVATION_TABLE_OCCUPY: "테이블 사용 처리",
+  RESERVATION_TABLE_RELEASE: "테이블 비움 처리",
+  RESERVATION_CHECKIN: "예약 입장 처리",
+  RESERVATION_COMPLETE: "예약 완료 처리",
+  START: "시작",
+  STOP: "중지",
+  RESET: "초기화",
+  SCENARIO: "시나리오 변경",
+};
+
+// 운영 로그 한 줄을 사람이 읽는 말로. 서버 action 코드(OPS_MASTER_UPDATE 등)에서 접두사를 떼고 뜻을 붙인다.
+function describeAuditLog(log) {
+  const code = `${log?.action || ""}`.replace(/^OPS_(MASTER|BOOTH|SIMULATION)_/, "");
+  const target = LOG_TARGETS[log?.targetType] || "";
+  const action = LOG_ACTIONS[code] || code.toLowerCase();
+  const details = `${log?.details || ""}`.trim();
+  const title = [target, action].filter(Boolean).join(" ");
+  const readableDetail = /[가-힣]/.test(details) && details !== title ? details : "";
+  return readableDetail ? `${title} · ${readableDetail}` : title;
 }
 
 function moveItem(list, fromId, toId) {
@@ -236,14 +276,14 @@ export default function AdminPage() {
     setMessage("관리자 대시보드 동기화 중...");
 
     try {
-      const [boothResult, eventResult, noticeResult, kpiResult, logResult, staffResult, aiResult, aiMatchResult] = await Promise.allSettled([
+      // AI 브리핑은 수십 초 걸릴 수 있어 여기서 기다리지 않는다. 혼잡도 모니터링 화면을 열 때 따로 부른다.
+      const [boothResult, eventResult, noticeResult, kpiResult, logResult, staffResult, aiMatchResult] = await Promise.allSettled([
         fetchBooths(),
         fetchEvents(),
         fetchAdminNotices(),
         fetchAdminDashboardKpis(),
         fetchAuditLogs(),
         fetchAdminStaff(),
-        fetchAdminAiBriefing(),
         fetchAdminAiMatchSummary(),
       ]);
 
@@ -253,7 +293,6 @@ export default function AdminPage() {
       const logData = logResult.status === "fulfilled" && Array.isArray(logResult.value) ? logResult.value : [];
       const staffData = staffResult.status === "fulfilled" && Array.isArray(staffResult.value) ? staffResult.value : [];
       const kpiData = kpiResult.status === "fulfilled" ? kpiResult.value : null;
-      const aiData = aiResult.status === "fulfilled" ? aiResult.value : null;
       setAiMatchSummary(aiMatchResult.status === "fulfilled" ? aiMatchResult.value : null);
 
       setBooths(boothData);
@@ -262,9 +301,6 @@ export default function AdminPage() {
       setKpi(kpiData);
       setAuditLogs(logData);
       setStaffMembers(staffData);
-      if (aiData) {
-        setAiBriefing(aiData);
-      }
 
       if (boothResult.status === "fulfilled") {
         setBoothLiveDrafts(
@@ -302,7 +338,7 @@ export default function AdminPage() {
         setStaffDrafts({});
       }
 
-      const anyUnauthorized = [noticeResult, kpiResult, logResult, staffResult, aiResult].some(
+      const anyUnauthorized = [noticeResult, kpiResult, logResult, staffResult].some(
         (result) => result.status === "rejected" && isUnauthorizedLike(result.reason),
       );
       if (anyUnauthorized) {
@@ -338,13 +374,10 @@ export default function AdminPage() {
       if (staffResult.status === "rejected") {
         setMessage(adminErrorMessage(staffResult.reason));
       }
-      if (aiResult.status === "rejected" && !isUnauthorizedLike(aiResult.reason)) {
-        setMessage(adminErrorMessage(aiResult.reason));
-      }
       if (boothResult.status === "rejected") {
         setMessage(adminErrorMessage(boothResult.reason));
       }
-      const anyRejected = [boothResult, eventResult, noticeResult, kpiResult, logResult, staffResult, aiResult].some(
+      const anyRejected = [boothResult, eventResult, noticeResult, kpiResult, logResult, staffResult].some(
         (result) => result.status === "rejected",
       );
       if (!anyRejected) {
@@ -437,13 +470,15 @@ export default function AdminPage() {
     }
   }, [loggedIn]);
 
+  // AI 브리핑은 혼잡도 모니터링 화면을 보고 있을 때만 부르고 갱신한다(다른 화면에선 호출하지 않는다).
   useEffect(() => {
-    if (!loggedIn) return undefined;
+    if (!loggedIn || activeAdminView !== "ai") return undefined;
+    refreshAiBriefing({ silent: true });
     const timer = window.setInterval(() => {
       refreshAiBriefing({ silent: true });
     }, 15000);
     return () => window.clearInterval(timer);
-  }, [loggedIn]);
+  }, [loggedIn, activeAdminView]);
 
   async function handleLogin(e) {
     e.preventDefault();
@@ -716,18 +751,6 @@ export default function AdminPage() {
   }
 
   const activeNoticeCount = notices.filter((notice) => notice.active).length;
-  const liveEventCount = events.filter((event) => {
-    const start = new Date(event.startTime || "").getTime();
-    const end = new Date(event.endTime || "").getTime();
-    const now = Date.now();
-    return Number.isFinite(start) && Number.isFinite(end) && start <= now && now <= end;
-  }).length;
-  const urgentNotice = notices.find((notice) => notice.active && notice.category === "긴급")
-    || notices.find((notice) => notice.active)
-    || null;
-  const congestionPercent = Math.max(0, Math.min(100, Math.round(Number(kpi?.mostCongestedBooth?.score ?? 0))));
-  const congestionLabel =
-    congestionPercent >= 85 ? "혼잡" : congestionPercent >= 60 ? "주의" : congestionPercent >= 30 ? "보통" : "원활";
   const isDashboardPending =
     isLoading
     && !kpi
@@ -736,23 +759,6 @@ export default function AdminPage() {
     && notices.length === 0
     && staffMembers.length === 0
     && auditLogs.length === 0;
-  const displayBoothCount = isDashboardPending ? "..." : String(sortedBooths.length);
-  const displayLiveEventCount = isDashboardPending ? "..." : String(liveEventCount);
-  const displayUrgentNoticeCount = isDashboardPending
-    ? "..."
-    : String(notices.filter((notice) => notice.active && notice.category === "긴급").length);
-  const displayCongestionValue = isDashboardPending ? "..." : `${congestionPercent}%`;
-  const displayCongestionLabel = isDashboardPending ? "불러오는 중" : congestionLabel;
-  const nextEventTitle = isDashboardPending ? "공연 확인 중" : kpi?.upcomingWithin30Minutes?.title || "예정 공연 없음";
-  const nextEventTime = isDashboardPending
-    ? "데이터 동기화 중"
-    : kpi?.upcomingWithin30Minutes?.startTime?.slice(11, 16) || "대기중";
-  const hotBoothTitle = isDashboardPending ? "혼잡도 확인 중" : kpi?.mostCongestedBooth?.boothName || "혼잡 부스 없음";
-  const hotBoothMeta = isDashboardPending
-    ? "실시간 수집 중"
-    : kpi?.mostCongestedBooth?.score != null
-      ? `혼잡도 ${Math.round(Number(kpi.mostCongestedBooth.score))}%`
-      : "원활";
   const adminNavItems = [
     { id: "dashboard", label: "대시보드", icon: IconHome },
     { id: "booths", label: "부스 관리", icon: IconBox },
@@ -764,59 +770,41 @@ export default function AdminPage() {
     { id: "staff", label: "사용자 관리", icon: IconUsers },
     { id: "logs", label: "운영 로그", icon: IconClipboard },
   ];
-  const topCrowdRows = sortedBooths
-    .map((booth) => ({
-      id: booth.id,
-      name: booth.name,
-      percent: Math.max(
-        0,
-        Math.min(100, Math.round(Number(booth.congestionScore ?? booth.estimatedWaitMinutes ?? 0))),
-      ),
-    }))
-    .sort((a, b) => b.percent - a.percent)
-    .slice(0, 5);
-  const recentNoticeRows = notices.slice(0, 5);
-  const adminShortcutCards = [
-    {
-      id: "booths",
-      title: "부스 관리",
-      description: "부스 정보, 상태 및 운영 관리",
-      icon: IconBox,
-      tone: "blue",
-      meta: `${sortedBooths.length}개`,
-    },
-    {
-      id: "events",
-      title: "공연 관리",
-      description: "공연 일정, 상태 및 알림 관리",
-      icon: IconCalendar,
-      tone: "blue",
-      meta: `${events.length}개`,
-    },
-    {
-      id: "notices",
-      title: "긴급 공지 관리",
-      description: "긴급 공지 등록 및 전송 관리",
-      icon: IconAlert,
-      tone: "blue",
-      meta: `${activeNoticeCount}개`,
-    },
-    {
-      id: "lost",
-      title: "분실물 관리",
-      description: "주운 물건 등록, 주인 확인, 반환 처리",
-      icon: IconBox,
-      tone: "blue",
-      meta: "본부 접수",
-    },
-    {
-      id: "logs",
-      title: "운영 로그",
-      description: "시스템 로그 및 활동 기록 확인",
-      icon: IconClock,
-      tone: "blue",
-      meta: `${auditLogs.length}건`,
-    },
+  // 새 대시보드(홈)용 값. 이번 축제는 총학 주점 하나만 운영하므로 부스 수·혼잡도 대신 주점 한 곳의 상태를 보여 준다.
+  const mainBooth = findMainBooth(sortedBooths);
+  const extraBoothCount = mainBooth ? sortedBooths.length - 1 : sortedBooths.length;
+  const activeViewLabel = adminNavItems.find((item) => item.id === activeAdminView)?.label || "대시보드";
+  const nowMs = Date.now();
+  const timedEvents = events
+    .map((event) => ({ ...event, startMs: new Date(event.startTime || "").getTime(), endMs: new Date(event.endTime || "").getTime() }))
+    .filter((event) => Number.isFinite(event.startMs))
+    .sort((a, b) => a.startMs - b.startMs);
+  const liveEvent = timedEvents.find((event) => event.startMs <= nowMs && Number.isFinite(event.endMs) && nowMs <= event.endMs) || null;
+  const nextEvent = timedEvents.find((event) => event.startMs > nowMs) || null;
+  const urgentNoticeCount = notices.filter((notice) => notice.active && notice.category === "긴급").length;
+  const latestActiveNotice = notices.find((notice) => notice.active) || null;
+  const recentLogs = auditLogs.slice(0, 5);
+  const festivalBadge = (() => {
+    const today = new Date();
+    const dayMs = 24 * 60 * 60 * 1000;
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+    const [sy, sm, sd] = FESTIVAL.startDate.split("-").map(Number);
+    const [ey, em, ed] = FESTIVAL.endDate.split("-").map(Number);
+    const start = new Date(sy, sm - 1, sd).getTime();
+    const end = new Date(ey, em - 1, ed).getTime();
+    if (todayStart < start) return `축제 D-${Math.round((start - todayStart) / dayMs)}`;
+    if (todayStart <= end) return `축제 ${Math.round((todayStart - start) / dayMs) + 1}일차`;
+    return "축제 종료";
+  })();
+  const festivalRange = `${FESTIVAL.startDate.slice(5).replace("-", ".")} – ${FESTIVAL.endDate.slice(5).replace("-", ".")}`;
+  const shortTime = (value) => (value ? value.replace("T", " ").slice(5, 16).replace("-", ".") : "");
+  const homeLinks = [
+    { id: "booths", label: "부스 관리", icon: IconBox },
+    { id: "events", label: "공연 관리", icon: IconCalendar },
+    { id: "notices", label: "긴급 공지", icon: IconAlert },
+    { id: "lost", label: "분실물", icon: IconClipboard },
+    { id: "staff", label: "사용자 관리", icon: IconUsers },
+    { id: "logs", label: "운영 로그", icon: IconClock },
   ];
 
   function scrollToAdminSection(id) {
@@ -927,95 +915,35 @@ export default function AdminPage() {
       </aside>
 
       <main className="admin-console-main">
-        <header className="admin-console-hero">
-          <div className="admin-console-hero__top">
-            <div className="admin-console-hero__copy">
-              <span className="admin-console-hero__eyebrow">Fest-A Control</span>
-              <h1>관리자 대시보드</h1>
-              <p>{adminName} 계정으로 로그인됨 · 축제 운영 흐름을 한 화면에서 관리합니다.</p>
-            </div>
-            <div className="admin-console-hero__actions">
-              <button
-                type="button"
-                className="admin-console-icon-button"
-                aria-label="알림"
-              >
-                <IconBell className="h-4 w-4" />
-              </button>
-              <button type="button" className="admin-console-account-button" onClick={handleLogout}>
-                <span>{adminName}</span>
-                <small>관리자</small>
-              </button>
-            </div>
+        <header className="ahome-top">
+          <div className="ahome-top__title">
+            <span>총학생회 운영 관리</span>
+            <h1>{activeViewLabel}</h1>
           </div>
-
-          <div className="admin-console-hero__summary-grid">
-            <article className="admin-console-hero__summary-card">
-              <span>다음 공연</span>
-              <strong>{nextEventTitle}</strong>
-              <small>
-                <IconClock className="h-4 w-4" />
-                <em>{nextEventTime}</em>
-              </small>
-            </article>
-            <article className="admin-console-hero__summary-card admin-console-hero__summary-card--warm">
-              <span>주의 부스</span>
-              <strong>{hotBoothTitle}</strong>
-              <small>{hotBoothMeta}</small>
-            </article>
+          <div className="ahome-top__actions">
+            <button
+              type="button"
+              className="ahome-top__icon"
+              aria-label="새로고침"
+              onClick={() => loadAll().catch((error) => setMessage(adminErrorMessage(error)))}
+              disabled={isBusy}
+            >
+              <IconRefresh className={`h-4 w-4${isLoading ? " is-spin" : ""}`} />
+            </button>
+            <span className="ahome-top__who">
+              <i aria-hidden="true">{(adminName || "관").slice(0, 1)}</i>
+              <span>{adminName}</span>
+            </span>
+            <button type="button" className="ahome-top__logout" onClick={handleLogout}>로그아웃</button>
           </div>
-
-          <div className="admin-console-kpi-grid">
-            <article className="admin-console-kpi-card">
-              <span>부스 수</span>
-              <strong>{displayBoothCount}</strong>
-              <small>전체</small>
-            </article>
-            <article className="admin-console-kpi-card">
-              <span>진행 공연</span>
-              <strong>{displayLiveEventCount}</strong>
-              <small>진행중</small>
-            </article>
-            <article className="admin-console-kpi-card admin-console-kpi-card--alert">
-              <span>긴급 공지</span>
-              <strong>{displayUrgentNoticeCount}</strong>
-              <small>활성중</small>
-            </article>
-            <article className="admin-console-kpi-card">
-              <span>실시간 혼잡도</span>
-              <strong>{displayCongestionValue}</strong>
-              <small>{displayCongestionLabel}</small>
-            </article>
-          </div>
-
-          {aiMatchSummary ? (
-            <a href="/ai-match/admin" className="admin-console-aimatch">
-              <div className="admin-console-aimatch__head">
-                <strong>사주 소개팅</strong>
-                <span>소개팅 관리자 열기 →</span>
-              </div>
-              <div className="admin-console-aimatch__grid">
-                <div><small>활성</small><b>{aiMatchSummary.activeProfileCount}</b></div>
-                <div><small>성사</small><b>{aiMatchSummary.matchedCount}</b></div>
-                <div><small>대기 신청</small><b>{aiMatchSummary.pendingRequestCount}</b></div>
-                <div className={aiMatchSummary.openReportCount + aiMatchSummary.pendingPhotoReviewCount ? "is-alert" : ""}><small>신고·검수</small><b>{aiMatchSummary.openReportCount + aiMatchSummary.pendingPhotoReviewCount}</b></div>
-              </div>
-              <p>
-                {aiMatchSummary.nextMeetupAt
-                  ? `다음 부스 약속 ${aiMatchSummary.nextMeetupAt.replace("T", " ").slice(5, 16)} · ${aiMatchSummary.nextMeetupPair} · 오늘 ${aiMatchSummary.meetupsToday}쌍`
-                  : "잡힌 부스 약속이 없어요"}
-              </p>
-            </a>
-          ) : null}
-
-          {(message || isLoading) && (
-            <p className="admin-console-status">
-              <IconRefresh className="h-4 w-4" />
-              <span>{isLoading ? "관리자 대시보드 동기화 중..." : message}</span>
-              <em>실시간</em>
-            </p>
-          )}
         </header>
+
+        {(message || isLoading) && (
+          <p className="ahome-status" role="status">
+            <IconRefresh className={`h-4 w-4${isLoading ? " is-spin" : ""}`} />
+            <span>{isLoading ? "최신 정보를 불러오는 중…" : message}</span>
+          </p>
+        )}
 
         <section className="admin-console-mobile-tabs" aria-label="관리자 빠른 메뉴">
           {adminNavItems.map((item) => {
@@ -1035,126 +963,158 @@ export default function AdminPage() {
         </section>
 
         {activeAdminView === "dashboard" && (
-          <>
-            <section className="admin-console-section-shell">
-              <div className="admin-console-section-headline">
-                <h3>빠른 관리</h3>
-                <span>주요 기능</span>
+          <div className="ahome">
+            <section className="ahome-hello">
+              <div>
+                <span className="ahome-hello__badge">{festivalBadge}</span>
+                <h2>{FESTIVAL.title}</h2>
+                <p>{festivalRange} · {FESTIVAL.place}</p>
               </div>
-              <div className="admin-console-shortcut-grid">
-                {adminShortcutCards.map((card) => {
-                  const Icon = card.icon;
-                  return (
-                    <button
-                      key={`${card.id}-${card.title}`}
-                      type="button"
-                      className={`admin-console-shortcut admin-console-shortcut--${card.tone}`}
-                      onClick={() => setActiveAdminView(card.id)}
-                    >
-                      <div className="admin-console-shortcut__icon">
-                        <Icon className="h-5 w-5" />
+              <a className="ahome-hello__link" href="/guide/" target="_blank" rel="noreferrer">운영 매뉴얼 ↗</a>
+            </section>
+
+            <div className="ahome-grid">
+              <article className="ahome-card ahome-booth">
+                <div className="ahome-card__head">
+                  <span className="ahome-card__label">주점</span>
+                  {mainBooth?.liveStatusUpdatedAt ? (
+                    <small>{shortTime(mainBooth.liveStatusUpdatedAt)} 갱신</small>
+                  ) : null}
+                </div>
+                {mainBooth ? (
+                  <>
+                    <h3>{mainBooth.name}</h3>
+                    <p className="ahome-booth__memo">{mainBooth.liveStatusMessage || "현장 안내 문구가 비어 있어요."}</p>
+                    <dl className="ahome-stats">
+                      <div>
+                        <dt>대기</dt>
+                        <dd>{mainBooth.estimatedWaitMinutes != null ? `${mainBooth.estimatedWaitMinutes}분` : "–"}</dd>
                       </div>
-                      <span>
-                        <strong>{card.title}</strong>
-                        <small>{card.description}</small>
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className="admin-console-action-strip">
-              <button
-                type="button"
-                className="admin-console-action-card admin-console-action-card--rose"
-                onClick={() => handleQuickCongestionNotice().catch((error) => setMessage(adminErrorMessage(error)))}
-                disabled={isBusy || isActionBusy("quick-congestion-notice")}
-              >
-                <span>즉시 대응</span>
-                <strong>혼잡 완화 공지</strong>
-                <small>메인 홈에 빠르게 안내를 발행합니다.</small>
-              </button>
-              <button
-                type="button"
-                className="admin-console-action-card admin-console-action-card--blue"
-                onClick={() => setActiveAdminView("notices")}
-              >
-                <span>공지 센터</span>
-                <strong>긴급 공지 관리</strong>
-                <small>{activeNoticeCount}개 활성 공지를 바로 수정합니다.</small>
-              </button>
-              <button
-                type="button"
-                className="admin-console-action-card admin-console-action-card--violet"
-                onClick={() => handleAiNoticeDraft().catch((error) => setMessage(adminErrorMessage(error)))}
-                disabled={isBusy || isActionBusy("admin-ai-notice-draft")}
-              >
-                <span>AI 대응</span>
-                <strong>공지 추천 생성</strong>
-                <small>현재 혼잡 상황에 맞는 안내 문구를 준비합니다.</small>
-              </button>
-            </section>
-
-            <section className="admin-console-overview-grid">
-              <article className="admin-console-panel admin-console-panel--table">
-                <div className="admin-console-panel__head">
-                  <div>
-                    <span>최근 긴급 공지</span>
-                    <h3>공지 현황</h3>
-                  </div>
-                  <button type="button" className="admin-console-mini-button" onClick={() => setActiveAdminView("notices")}>전체 보기</button>
-                </div>
-                <div className="admin-console-table-list">
-                  {(recentNoticeRows.length ? recentNoticeRows : [{ id: "empty", title: "등록된 공지가 없습니다.", category: "대기", active: false }]).map((notice) => (
-                    <div key={notice.id}>
-                      <span>{notice.title}</span>
-                      <small>{notice.createdAt?.replace("T", " ").slice(0, 16) || "대기중"}</small>
-                      <em className={notice.active ? "is-green" : ""}>{notice.active ? "발송 완료" : "대기"}</em>
+                      <div>
+                        <dt>테이블 사용</dt>
+                        <dd>
+                          {mainBooth.reservationTableCount
+                            ? `${mainBooth.reservationInUseTables ?? 0}/${mainBooth.reservationTableCount}`
+                            : "–"}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>남은 재고</dt>
+                        <dd>{mainBooth.remainingStock != null ? mainBooth.remainingStock : "–"}</dd>
+                      </div>
+                    </dl>
+                    <div className="ahome-actions">
+                      <a className="ahome-btn ahome-btn--primary" href={`/ops/booth/${mainBooth.id}`}>주문 콘솔 열기</a>
+                      <a className="ahome-btn" href={`/ops/booth/${mainBooth.id}/table-qr`}>테이블 QR</a>
+                      <button type="button" className="ahome-btn" onClick={() => setActiveAdminView("booths")}>정보 수정</button>
                     </div>
-                  ))}
-                </div>
+                  </>
+                ) : (
+                  <>
+                    <h3>{isDashboardPending ? "불러오는 중" : "총학 주점이 없어요"}</h3>
+                    <p className="ahome-booth__memo">
+                      {isDashboardPending ? "부스 정보를 확인하고 있어요." : "부스 관리에서 이름에 ‘총학’이 들어간 부스를 만들면 여기에 나와요."}
+                    </p>
+                    <div className="ahome-actions">
+                      <button type="button" className="ahome-btn ahome-btn--primary" onClick={() => setActiveAdminView("booths")}>부스 관리</button>
+                    </div>
+                  </>
+                )}
+                {!isDashboardPending && extraBoothCount > 0 ? (
+                  <button type="button" className="ahome-booth__extra" onClick={() => setActiveAdminView("booths")}>
+                    총학 주점 말고 부스 {extraBoothCount}개가 더 등록돼 있어요 · 부스 관리에서 정리
+                  </button>
+                ) : null}
               </article>
 
-              <article className="admin-console-panel admin-console-panel--table">
-                <div className="admin-console-panel__head">
-                  <div>
-                    <span>실시간</span>
-                    <h3>혼잡도 현황</h3>
+              <a href="/ai-match/admin" className="ahome-card ahome-match">
+                <div className="ahome-card__head">
+                  <span className="ahome-card__label">사주 소개팅</span>
+                  <small>관리자 열기 →</small>
+                </div>
+                <dl className="ahome-match__grid">
+                  <div><dt>활성</dt><dd>{aiMatchSummary?.activeProfileCount ?? "–"}</dd></div>
+                  <div><dt>성사</dt><dd>{aiMatchSummary?.matchedCount ?? "–"}</dd></div>
+                  <div><dt>대기 신청</dt><dd>{aiMatchSummary?.pendingRequestCount ?? "–"}</dd></div>
+                  <div className={aiMatchSummary && aiMatchSummary.openReportCount + aiMatchSummary.pendingPhotoReviewCount ? "is-alert" : ""}>
+                    <dt>신고·검수</dt>
+                    <dd>{aiMatchSummary ? aiMatchSummary.openReportCount + aiMatchSummary.pendingPhotoReviewCount : "–"}</dd>
                   </div>
-                  <button type="button" className="admin-console-mini-button" onClick={() => setActiveAdminView("ai")}>전체 보기</button>
-                </div>
-                <div className="admin-console-crowd-list">
-                  {(topCrowdRows.length ? topCrowdRows : [{ id: "empty", name: "현장 데이터 없음", percent: 0 }]).map((row) => (
-                    <div key={row.id}>
-                      <span>{row.name}</span>
-                      <small>혼잡도 {row.percent}%</small>
-                      <i><b style={{ width: `${row.percent}%` }} /></i>
-                      <em>{row.percent >= 60 ? "주의" : "원활"}</em>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            </section>
+                </dl>
+                <p className="ahome-match__foot">
+                  {!aiMatchSummary
+                    ? "소개팅 현황을 불러오지 못했어요"
+                    : aiMatchSummary.nextMeetupAt
+                      ? `다음 부스 약속 ${shortTime(aiMatchSummary.nextMeetupAt)} · ${aiMatchSummary.nextMeetupPair} · 오늘 ${aiMatchSummary.meetupsToday}쌍`
+                      : "잡힌 부스 약속이 없어요"}
+                </p>
+              </a>
 
-            <section className="admin-console-panel admin-console-system-panel">
-              <div className="admin-console-panel__head">
-                <div>
-                  <span>시스템</span>
-                  <h3>시스템 상태</h3>
+              <article className="ahome-card ahome-mini">
+                <div className="ahome-card__head">
+                  <span className="ahome-card__label">공연</span>
+                  {liveEvent ? <em className="ahome-live">진행 중</em> : null}
                 </div>
-              </div>
-              <div className="admin-console-system-grid">
-                {["실시간 데이터 수집", "서버 상태", "알림 서비스", "디스플레이 연동"].map((item) => (
-                  <div key={item}>
-                    <IconShield className="h-4 w-4" />
-                    <span>{item}</span>
-                    <strong>정상</strong>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </>
+                <h3>{liveEvent ? liveEvent.title : nextEvent ? nextEvent.title : "예정 공연 없음"}</h3>
+                <p>
+                  {liveEvent
+                    ? `${shortTime(liveEvent.startTime).slice(6)} – ${shortTime(liveEvent.endTime).slice(6)}`
+                    : nextEvent
+                      ? `다음 공연 · ${shortTime(nextEvent.startTime)}`
+                      : `등록된 공연 ${events.length}개`}
+                </p>
+                <button type="button" className="ahome-btn" onClick={() => setActiveAdminView("events")}>공연 관리</button>
+              </article>
+
+              <article className="ahome-card ahome-mini">
+                <div className="ahome-card__head">
+                  <span className="ahome-card__label">공지</span>
+                  {urgentNoticeCount ? <em className="ahome-urgent">긴급 {urgentNoticeCount}</em> : null}
+                </div>
+                <h3>{latestActiveNotice ? latestActiveNotice.title : "띄운 공지 없음"}</h3>
+                <p>{activeNoticeCount ? `지금 보이는 공지 ${activeNoticeCount}개` : "홈 화면에 나가는 공지가 없어요"}</p>
+                <button type="button" className="ahome-btn" onClick={() => setActiveAdminView("notices")}>공지 쓰기</button>
+              </article>
+            </div>
+
+            <div className="ahome-bottom">
+              <section className="ahome-card">
+                <div className="ahome-card__head">
+                  <span className="ahome-card__label">바로 가기</span>
+                </div>
+                <div className="ahome-links">
+                  {homeLinks.map((link) => {
+                    const Icon = link.icon;
+                    return (
+                      <button key={link.id} type="button" onClick={() => setActiveAdminView(link.id)}>
+                        <i><Icon className="h-5 w-5" /></i>
+                        <span>{link.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="ahome-card">
+                <div className="ahome-card__head">
+                  <span className="ahome-card__label">최근 기록</span>
+                  <button type="button" className="ahome-textbtn" onClick={() => setActiveAdminView("logs")}>전체 보기</button>
+                </div>
+                {recentLogs.length ? (
+                  <ul className="ahome-logs">
+                    {recentLogs.map((log) => (
+                      <li key={log.id}>
+                        <span>{describeAuditLog(log)}</span>
+                        <small>{log.adminUsername} · {shortTime(log.createdAt)}</small>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="ahome-empty">아직 남은 기록이 없어요.</p>
+                )}
+              </section>
+            </div>
+          </div>
         )}
 
         {activeAdminView === "master" && (
