@@ -42,7 +42,7 @@ import { SajuPanel } from "../components/SajuCard";
 import { ElementSeal } from "../components/SajuChart";
 import NightSky from "../components/NightSky";
 import SajuSplash, { shouldShowSajuSplash } from "../components/SajuSplash";
-import MeetupScheduler from "../components/MeetupScheduler";
+import MeetupScheduler, { ORGANIZER_DISCLAIMER } from "../components/MeetupScheduler";
 import SajuHero from "../components/SajuHero";
 import SajuFortune from "../components/SajuFortune";
 import { MatchCardBlock, MatchMissingBanner, MatchReport, MatchTop3 } from "../components/SajuMatch";
@@ -366,8 +366,8 @@ function getSentStatusNotice(request) {
   if (isProfileDeletedRequest(request)) return "상대가 계정을 삭제했습니다.";
   if (request.status === "ACCEPTED") return `${name}님이 데이트 신청을 수락했어요.`;
   if (request.status === "REJECTED") return `${name}님이 데이트 신청을 거절했어요.`;
-  if (request.status === "PROPOSED") return `${name}님과의 만남이 관리자 조율 중이에요.`;
-  if (request.status === "CONFIRMED") return `${name}님과의 만남 안내가 확정됐어요.`;
+  if (request.status === "PROPOSED") return `${name}님과 만날 시간이 제안됐어요. 신청함에서 확인해 주세요.`;
+  if (request.status === "CONFIRMED") return `${name}님과의 약속이 확정됐어요.`;
   if (request.status === "CANCELED") return `${name}님에게 보낸 신청이 취소됐어요.`;
   return `${name}님과의 신청 상태가 ${getRequestStatusLabel(request.status, request.statusReason)}(으)로 바뀌었어요.`;
 }
@@ -1944,13 +1944,13 @@ export default function AiMatchPage() {
 
   async function handleCancelMeetup(requestId) {
     if (!accessNickname || !accessPin) return;
-    if (!window.confirm("약속을 취소할까요? 잡아 둔 시간은 다른 커플에게 다시 열려요.")) return;
+    if (!window.confirm("이 시간 제안을 취소할까요? 잡아 둔 시간은 다른 커플에게 다시 열리고, 상대에게 문자로 알려요.")) return;
     setSubmitting(true);
     setErrorMessage("");
     try {
       await cancelAiMatchMeetup(requestId, accessNickname, accessPin);
       await loadAccessProfile(accessNickname, accessPin, "requests");
-      setSuccessMessage("약속을 취소했어요. 시간은 다시 고를 수 있어요.");
+      setSuccessMessage("시간 제안을 취소했어요. 시간은 다시 고를 수 있어요.");
     } catch (error) {
       showAuthenticatedActionError(error, "약속 취소에 실패했습니다.");
     } finally {
@@ -2438,6 +2438,7 @@ export default function AiMatchPage() {
             <span className="am-consent__box" aria-hidden="true"><IconCheckSmall /></span>
             <span>사진과 소개가 공개 목록에 보이는 것에 동의해요.</span>
           </label>
+          <p className="am-consent-note">{ORGANIZER_DISCLAIMER}</p>
           {consentMissing && registerAttempted ? <Msg tone="error">동의가 필요해요.</Msg> : null}
         </section>
 

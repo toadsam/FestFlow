@@ -989,6 +989,10 @@ public class AiMatchService {
         AiMatchRequest request = getParticipatingRequest(requestId, profile);
         ensureRequestParticipantsActive(request);
         ensureMeetupProposalAllowed(request);
+        // 상대가 이미 제안해 둔 걸 두고 내가 다른 시간을 내면 '다른 시간 제안'이다.
+        boolean counter = "PROPOSED".equals(request.getStatus())
+                && request.getMeetupProposerProfileId() != null
+                && !request.getMeetupProposerProfileId().equals(profile.getId());
 
         // 장소는 늘 소개팅 부스. 시간은 15분 슬롯이고, 고르는 순간 30분 동안 임시로 잠긴다.
         LocalDateTime meetupAt = requestDto.meetupAt();
@@ -998,6 +1002,9 @@ public class AiMatchService {
         String meetupPlace = AiMatchMeetupSlotService.BOOTH_NAME;
 
         request.proposeMeetup(meetupPlace, meetupAt, profile.getId(), profile.getNickname());
+        String partnerPhone = partnerPhoneNumber(request, profile);
+        int holdMinutes = meetupSlotService.getHoldMinutes();
+        afterCommit(() -> aiMatchSmsNotifier.notifyMeetupProposed(partnerPhone, meetupAt, holdMinutes, counter));
         return toRequestDto(request);
     }
 
@@ -1027,21 +1034,48 @@ public class AiMatchService {
             throw new ResponseStatusException(CONFLICT, "제안한 시간의 임시 예약이 풀렸어요. 시간을 다시 골라 주세요.");
         }
         request.confirmMeetup();
+        String proposerPhone = partnerPhoneNumber(request, profile);
+        LocalDateTime confirmedAt = request.getMeetupAt();
+        afterCommit(() -> aiMatchSmsNotifier.notifyMeetupConfirmed(proposerPhone, confirmedAt));
         return toRequestDto(request);
     }
 
-    /** 약속 취소(제안 중이든 확정이든). 슬롯을 다시 열고 매칭 상태로 되돌린다. */
+    /**
+     * 확정 전 시간 제안을 취소(제안한 사람)하거나 거절(받은 사람)한다. 슬롯을 다시 열고 매칭 상태로 되돌린다.
+     * 확정된 약속은 참가자가 바꾸거나 취소할 수 없다. 부득이한 경우 부스 스태프가 관리자 화면에서 노쇼·슬롯 반납으로 처리한다.
+     */
     @Transactional
     public AiMatchRequestResponseDto cancelMeetup(Long requestId, AiMatchProfileAccessRequestDto requestDto) {
         AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
         AiMatchRequest request = getParticipatingRequest(requestId, profile);
         ensureRequestParticipantsActive(request);
-        if (!"PROPOSED".equals(request.getStatus()) && !"CONFIRMED".equals(request.getStatus())) {
+        if ("CONFIRMED".equals(request.getStatus())) {
+            throw new ResponseStatusException(CONFLICT, CONFIRMED_LOCKED_MESSAGE);
+        }
+        if (!"PROPOSED".equals(request.getStatus())) {
             throw new ResponseStatusException(CONFLICT, "취소할 약속이 없습니다.");
         }
+        boolean withdrawnByProposer = profile.getId().equals(request.getMeetupProposerProfileId());
+        String partnerPhone = partnerPhoneNumber(request, profile);
         meetupSlotService.release(request.getId());
         request.clearMeetup();
+        afterCommit(() -> {
+            if (withdrawnByProposer) {
+                aiMatchSmsNotifier.notifyMeetupWithdrawn(partnerPhone);
+            } else {
+                aiMatchSmsNotifier.notifyMeetupDeclined(partnerPhone);
+            }
+        });
         return toRequestDto(request);
+    }
+
+    /** 요청의 두 사람 중 me 가 아닌 쪽의 전화번호. 없으면 빈 문자열. */
+    private String partnerPhoneNumber(AiMatchRequest request, AiMatchProfile me) {
+        AiMatchProfile requester = request.getRequesterProfile();
+        AiMatchProfile target = request.getProfile();
+        AiMatchProfile partner = requester != null && requester.getId().equals(me.getId()) ? target : requester;
+        String phone = partner == null ? null : partner.getPhoneNumber();
+        return phone == null ? "" : phone;
     }
 
     @Transactional
@@ -1055,6 +1089,9 @@ public class AiMatchService {
                 .orElse(List.of());
         return meetupSlotService.getSlots(date, requestId, busy);
     }
+
+    private static final String CONFIRMED_LOCKED_MESSAGE =
+            "확정된 약속은 앱에서 바꾸거나 취소할 수 없어요. 부득이하게 못 오면 소개팅 부스 스태프에게 알려 주세요.";
 
     private static final String NEARBY_MEETUP_MESSAGE =
             "두 사람 중 한 명의 다른 약속과 너무 가까워요. 앞뒤 " + AiMatchMeetupSlotService.PERSONAL_GAP_MINUTES + "분은 비워 두고 골라 주세요.";

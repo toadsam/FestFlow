@@ -34,6 +34,10 @@ import static org.springframework.http.HttpStatus.CONFLICT;
 public class AiMatchMeetupSlotService {
 
     public static final int SLOT_MINUTES = 15;
+
+    public int getHoldMinutes() {
+        return holdMinutes;
+    }
     public static final LocalTime OPEN_TIME = LocalTime.of(9, 0);
     public static final LocalTime CLOSE_TIME = LocalTime.of(22, 0);
     public static final String BOOTH_NAME = "총학생회 소개팅 부스";

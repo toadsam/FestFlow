@@ -5,6 +5,10 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchAiMatchMeetupSlots } from "../api";
 import "../styles/saju-meetup.css";
 
+// 확정 뒤 약속 불이행·참가자 사이 일에 대한 안내. 확정 창·티켓·가입 화면에 같은 말을 쓴다.
+export const ORGANIZER_DISCLAIMER =
+  "약속을 지키지 않거나 만남 중·이후 참가자 사이에 생긴 일은 주최 측(총학생회)이 책임지지 않아요. 불편한 일이 생기면 바로 부스 스태프나 '신고하기'로 알려 주세요.";
+
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 
 function pad(value) {
@@ -176,6 +180,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
         <p>
           고르면 <b>{data?.holdMinutes || 30}분 동안</b> 이 시간이 우리 몫으로 잠겨요. 그 안에 상대가 확정하면 끝!
         </p>
+        <p className="mu-picker__warn">상대가 확정하면 두 사람 모두 시간을 바꾸거나 취소할 수 없어요.</p>
         <button type="button" className="mu-primary" disabled={!selected || busy} onClick={submit}>
           {selected ? `${fullLabel(selected)} 로 제안하기` : "시간을 골라 주세요"}
         </button>
@@ -230,10 +235,11 @@ export default function MeetupScheduler({ request, myProfileId, busy, onPropose,
             <button type="button" className="mu-ghost" onClick={onOpenMap}>
               부스 길찾기
             </button>
-            <button type="button" className="mu-link mu-link--danger" disabled={busy} onClick={() => onCancel(request.id)}>
-              약속 취소
-            </button>
           </div>
+          <p className="mu-ticket__lock">
+            확정된 약속은 바꾸거나 취소할 수 없어요. 부득이하게 못 오면 소개팅 부스 스태프에게 꼭 알려 주세요.
+          </p>
+          <p className="mu-ticket__disclaimer">{ORGANIZER_DISCLAIMER}</p>
         </div>
       </div>
     );
@@ -249,13 +255,30 @@ export default function MeetupScheduler({ request, myProfileId, busy, onPropose,
         <strong className="mu-time">{fullLabel(request.meetupAt)}</strong>
         <p className="mu-copy">
           {iProposed
-            ? `${partner} 님이 확정하면 약속이 굳어요. 시간이 다 되면 이 자리는 다시 풀려요.`
-            : `${partner} 님이 이 시간을 제안했어요. 괜찮으면 확정해 주세요.`}
+            ? `${partner} 님이 확정하면 약속이 굳어서 둘 다 바꿀 수 없어요. 시간이 다 되면 이 자리는 다시 풀려요.`
+            : `${partner} 님이 이 시간을 제안했어요. 확정하면 바꾸거나 취소할 수 없으니 꼭 올 수 있는 시간인지 확인해 주세요.`}
         </p>
         {!pickerOpen ? (
           <div className="mu-actions">
             {!iProposed ? (
-              <button type="button" className="mu-primary" disabled={busy} onClick={() => onConfirm(request.id)}>
+              <button
+                type="button"
+                className="mu-primary"
+                disabled={busy}
+                onClick={() => {
+                  const ok = window.confirm(
+                    [
+                      `${fullLabel(request.meetupAt)} · ${request.meetupPlace || "총학생회 소개팅 부스"}`,
+                      "",
+                      "이 시간으로 확정할까요?",
+                      "한 번 확정하면 바꾸거나 취소할 수 없어요.",
+                      "",
+                      ORGANIZER_DISCLAIMER,
+                    ].join("\n"),
+                  );
+                  if (ok) onConfirm(request.id);
+                }}
+              >
                 이 시간으로 확정
               </button>
             ) : null}
