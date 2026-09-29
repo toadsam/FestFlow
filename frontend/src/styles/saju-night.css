@@ -1256,6 +1256,20 @@
   color: #ff9d94 !important;
 }
 
+/* 로그인 시트 입력칸은 흰·회색 칸이라, 밤 테마의 크림색 글자를 쓰면 안 보인다. 입력 글자는 검정, 예시 글자는 회색. */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login .ai-match-field input,
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login .ai-match-field input:focus {
+  color: #1d1740 !important;
+  caret-color: #1d1740;
+  -webkit-text-fill-color: #1d1740;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-login .ai-match-field input::placeholder {
+  color: #9a97a8 !important;
+  -webkit-text-fill-color: #9a97a8;
+  opacity: 1;
+}
+
 
 /* ---------- 상세 화면: 신고 ---------- */
 .app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .ai-match-safety-card {
