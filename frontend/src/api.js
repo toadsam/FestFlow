@@ -1342,6 +1342,24 @@ export async function cancelAiMatchMeetup(requestId, nickname, pin) {
   return parseJson(response, "약속 취소에 실패했습니다.");
 }
 
+export async function markAiMatchMeetupArrived(requestId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/meetup/arrived`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "도착을 알리지 못했습니다.");
+}
+
+export async function setAdminAiMatchEscortStage(requestId, side, stage) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/escort`, {
+    method: "PUT",
+    headers: withAuth({ "Content-Type": "application/json" }),
+    body: JSON.stringify({ side, stage }),
+  });
+  return parseJson(response, "단계를 바꾸지 못했습니다.");
+}
+
 export async function confirmAiMatchMeetup(requestId, nickname, pin) {
   const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/meetup/confirm`, {
     method: "POST",

@@ -1,0 +1,106 @@
+// 확정 티켓 아래의 '오늘의 동선'. 배달 앱 주문 현황처럼 단계 바로 보여 준다.
+// 대기 장소로 가기 → 도착(내가 누르거나 스태프가 체크) → 스태프가 가고 있어요 → 스태프와 만남 → 부스 도착.
+// 단계는 스태프가 관리자 시간표에서 넘긴다. 신청함이 15초마다 새로 받아서 곧 반영된다.
+// 블라인드 만남이라 상대의 단계는 보여 주지 않는다.
+import { useEffect, useState } from "react";
+import "../styles/saju-escort.css";
+
+// 대기 장소 사진. frontend/public/images/meetup/ 에 파일을 넣으면 티켓에 뜬다(없으면 사진 칸을 숨긴다).
+const WAITING_PLACE_PHOTOS = {
+  "성호관 앞": "/images/meetup/seongho.jpg",
+  "중앙도서관 앞": "/images/meetup/library.jpg",
+};
+
+const STAGE_INDEX = { NONE: 0, ARRIVED: 1, DEPARTED: 2, PICKED_UP: 3, AT_BOOTH: 4 };
+const ARRIVAL_OPEN_MS = 60 * 60_000;
+const ARRIVAL_CLOSE_MS = 30 * 60_000;
+
+function parseLocal(value) {
+  if (!value) return null;
+  const [datePart, timePart = "00:00:00"] = `${value}`.split("T");
+  const [y, m, d] = datePart.split("-").map(Number);
+  const [hh, mm] = timePart.split(":").map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0);
+}
+
+function clock(date) {
+  return date ? `${`${date.getHours()}`.padStart(2, "0")}:${`${date.getMinutes()}`.padStart(2, "0")}` : "";
+}
+
+function useNow(intervalMs) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), intervalMs);
+    return () => window.clearInterval(id);
+  }, [intervalMs]);
+  return now;
+}
+
+function PlacePhoto({ place }) {
+  const src = WAITING_PLACE_PHOTOS[place];
+  const [ok, setOk] = useState(Boolean(src));
+  if (!src || !ok) return null;
+  return (
+    <figure className="esc-photo">
+      <img src={src} alt={`${place} 대기 위치`} onError={() => setOk(false)} />
+      <figcaption>{place} · 이 자리에서 기다려 주세요</figcaption>
+    </figure>
+  );
+}
+
+export default function MeetupEscort({ request, iAmRequester, myPlace, busy, onArrived }) {
+  const now = useNow(15_000);
+  const stage = (iAmRequester ? request.requesterEscortStage : request.profileEscortStage) || "NONE";
+  const stageAt = parseLocal(iAmRequester ? request.requesterEscortStageAt : request.profileEscortStageAt);
+  const meetupAt = parseLocal(request.meetupAt);
+  const met = request.meetupOutcome === "MET";
+  const index = met ? 5 : STAGE_INDEX[stage] ?? 0;
+  const arriveBy = meetupAt ? new Date(meetupAt.getTime() - 5 * 60_000) : null;
+  const minutesSince = stageAt ? Math.max(0, Math.floor((now - stageAt.getTime()) / 60_000)) : 0;
+  const canPressArrived = meetupAt
+    && now >= meetupAt.getTime() - ARRIVAL_OPEN_MS
+    && now <= meetupAt.getTime() + ARRIVAL_CLOSE_MS;
+
+  const steps = [
+    { label: "이동", title: "대기 장소로 가요", sub: `${clock(arriveBy)}까지 ${myPlace}` },
+    { label: "도착", title: "도착했어요", sub: "스태프가 곧 데리러 가요" },
+    { label: "스태프 출발", title: "스태프가 가고 있어요", sub: `출발한 지 ${minutesSince}분 · 보통 5분 안에 도착해요` },
+    { label: "만남", title: "스태프와 만났어요", sub: "함께 부스로 이동 중이에요" },
+    { label: "부스", title: "부스에 도착했어요", sub: "얼굴을 가린 채 먼저 이야기를 나눠요" },
+    { label: "완료", title: "만남 완료", sub: "즐거운 시간 보내셨길 바라요" },
+  ];
+  const current = steps[Math.min(index, steps.length - 1)];
+  const barSteps = steps.slice(0, 5);
+
+  return (
+    <section className={`esc esc--${met ? "done" : stage.toLowerCase()}`} aria-label="오늘의 동선">
+      <div className="esc-head">
+        <small>오늘의 동선</small>
+        <strong>
+          {current.title}
+          {stage === "DEPARTED" && !met ? <span className="esc-walker" aria-hidden="true">🚶</span> : null}
+        </strong>
+        <p>{current.sub}</p>
+      </div>
+
+      <ol className="esc-bar" aria-label={`진행 ${Math.min(index, 4) + 1}/5단계`}>
+        {barSteps.map((step, i) => (
+          <li key={step.label} className={i < index ? "is-done" : i === index ? "is-now" : ""}>
+            <i aria-hidden="true">{i < index ? "✓" : ""}</i>
+            <span>{step.label}</span>
+          </li>
+        ))}
+      </ol>
+
+      {index === 0 ? (
+        <>
+          <PlacePhoto place={myPlace} />
+          <button type="button" className="esc-arrived" disabled={busy || !canPressArrived} onClick={onArrived}>
+            {canPressArrived ? `${myPlace}에 도착했어요` : "약속 1시간 전부터 누를 수 있어요"}
+          </button>
+        </>
+      ) : null}
+      {index === 1 ? <PlacePhoto place={myPlace} /> : null}
+    </section>
+  );
+}

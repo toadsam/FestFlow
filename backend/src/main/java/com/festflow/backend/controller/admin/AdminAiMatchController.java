@@ -2,6 +2,7 @@ package com.festflow.backend.controller.admin;
 
 import com.festflow.backend.dto.AiMatchAdminOverviewDto;
 import com.festflow.backend.dto.AiMatchAdminArrivalDto;
+import com.festflow.backend.dto.AiMatchAdminEscortDto;
 import com.festflow.backend.dto.AiMatchAdminHiddenDto;
 import com.festflow.backend.dto.AiMatchAdminNoShowDto;
 import com.festflow.backend.dto.AiMatchAdminPhotoReviewDto;
@@ -79,6 +80,11 @@ public class AdminAiMatchController {
     @PutMapping("/requests/{requestId}/arrival")
     public AiMatchAdminRequestDto markArrival(@PathVariable Long requestId, @RequestBody AiMatchAdminArrivalDto requestDto) {
         return aiMatchService.markArrival(requestId, requestDto);
+    }
+
+    @PutMapping("/requests/{requestId}/escort")
+    public AiMatchAdminRequestDto setEscortStage(@PathVariable Long requestId, @RequestBody AiMatchAdminEscortDto requestDto) {
+        return aiMatchService.setEscortStage(requestId, requestDto);
     }
 
     @PostMapping("/requests/{requestId}/met")

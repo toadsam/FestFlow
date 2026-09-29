@@ -1,12 +1,14 @@
 // 운영진용 소개팅 부스 시간표. 그날 잡힌 15분 슬롯과 두 사람이 어디서 기다리는지.
 // 맨 위 '지금' 카드는 이 순간 부스에 있어야 할 쌍·다음 쌍·5분 뒤 대기 장소로 가야 할 사람을 보여 준다.
 // 줄마다 도착 체크 · 만남 완료 · 노쇼(슬롯 반납)를 누를 수 있다. 30초마다 새로 받는다.
+// '대기 장소' 명단: 성호관·중앙도서관 담당 스태프가 자기 장소 사람만 보고 도착 확인 → 출발하기 → 만났어요 → 부스 도착을 넘긴다.
+// 넘긴 단계는 참가자 티켓의 단계 바(배달 앱처럼)에 그대로 보인다.
 import { useCallback, useEffect, useState } from "react";
 import {
   fetchAdminAiMatchMeetupSchedule,
-  markAdminAiMatchArrival,
   markAdminAiMatchMet,
   markAdminAiMatchNoShow,
+  setAdminAiMatchEscortStage,
 } from "../../api";
 import "../../styles/saju-meetup.css";
 
@@ -49,24 +51,127 @@ const OUTCOME_LABELS = {
   NO_SHOW_BOTH: "둘 다 노쇼",
 };
 
-function Person({ nickname, gender, place, phone, arrivedAt, onToggle, busy }) {
-  const arrived = Boolean(arrivedAt);
+// 대기 장소 → 부스 안내 단계. next 는 스태프가 다음에 누를 버튼.
+const ESCORT_STEPS = ["NONE", "ARRIVED", "DEPARTED", "PICKED_UP", "AT_BOOTH"];
+const ESCORT_LABELS = {
+  NONE: "아직 안 옴",
+  ARRIVED: "대기 장소 도착",
+  DEPARTED: "스태프 가는 중",
+  PICKED_UP: "스태프와 이동 중",
+  AT_BOOTH: "부스 도착",
+};
+const ESCORT_NEXT = {
+  NONE: "도착 확인",
+  ARRIVED: "출발하기",
+  DEPARTED: "만났어요",
+  PICKED_UP: "부스 도착",
+};
+const PLACE_TAB_KEY = "festflow.meetupPlaceTab";
+
+function EscortControl({ stage = "NONE", stageAt, busy, onStage }) {
+  const index = Math.max(0, ESCORT_STEPS.indexOf(stage));
+  const next = ESCORT_STEPS[index + 1];
+  return (
+    <span className="mu-esc">
+      <span className={`mu-esc__chip mu-esc__chip--${stage.toLowerCase()}`}>
+        {ESCORT_LABELS[stage] || stage}
+        {stageAt && stage !== "NONE" ? ` · ${timeLabel(stageAt)}` : ""}
+      </span>
+      {next ? (
+        <button type="button" className="mu-esc__next" disabled={busy} onClick={() => onStage(next)}>
+          {ESCORT_NEXT[stage]}
+        </button>
+      ) : null}
+      {index > 0 ? (
+        <button type="button" className="mu-esc__undo" disabled={busy} onClick={() => onStage(ESCORT_STEPS[index - 1])} title="한 단계 되돌리기">
+          되돌리기
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
+function Person({ nickname, gender, place, phone, stage, stageAt, onStage, busy }) {
+  const arrived = stage && stage !== "NONE";
   return (
     <div className={`mu-admin__pair${arrived ? " is-arrived" : ""}`}>
-      <button
-        type="button"
-        className={`mu-admin__check${arrived ? " is-on" : ""}`}
-        onClick={onToggle}
-        disabled={busy}
-        aria-pressed={arrived}
-        title={arrived ? `${timeLabel(arrivedAt)} 도착 · 누르면 취소` : "도착하면 누르세요"}
-      >
-        {arrived ? "✓ 도착" : "도착"}
-      </button>
       <b>{nickname || "?"}</b>
       <span>{gender || ""}</span>
       <em>{place}</em>
       {phone ? <a href={`tel:${phone}`}>{phone}</a> : null}
+      <EscortControl stage={stage || "NONE"} stageAt={stageAt} busy={busy} onStage={onStage} />
+    </div>
+  );
+}
+
+// 대기 장소 담당 스태프용 명단. 아직 안 끝난 확정 약속에서 그 장소 사람들을 시간순으로.
+function PlaceBoard({ items, now, busyId, onStage }) {
+  const places = [...new Set(items.flatMap((item) => [item.requesterWaitingPlace, item.profileWaitingPlace]).filter(Boolean))].sort();
+  const [tab, setTab] = useState(() => {
+    try {
+      return window.localStorage.getItem(PLACE_TAB_KEY) || "";
+    } catch {
+      return "";
+    }
+  });
+  const place = places.includes(tab) ? tab : places[0] || "";
+  function choose(next) {
+    setTab(next);
+    try {
+      window.localStorage.setItem(PLACE_TAB_KEY, next);
+    } catch {
+      // 저장이 안 돼도 탭은 바뀐다.
+    }
+  }
+  const people = items
+    .filter((item) => item.confirmed && item.meetupOutcome !== "MET")
+    .filter((item) => (parseLocal(item.slotAt)?.getTime() || 0) + SLOT_MS > now)
+    .flatMap((item) => [
+      { item, side: "REQUESTER", nickname: item.requesterNickname, phone: item.requesterPhoneNumber, place: item.requesterWaitingPlace, stage: item.requesterEscortStage, stageAt: item.requesterEscortStageAt },
+      { item, side: "PROFILE", nickname: item.profileNickname, phone: item.profilePhoneNumber, place: item.profileWaitingPlace, stage: item.profileEscortStage, stageAt: item.profileEscortStageAt },
+    ])
+    .filter((person) => person.place === place && person.stage !== "AT_BOOTH")
+    .slice(0, 12);
+  if (!places.length) return null;
+  return (
+    <div className="mu-board" aria-label="대기 장소 명단">
+      <div className="mu-board__head">
+        <strong>대기 장소 명단</strong>
+        <div className="mu-board__tabs" role="tablist">
+          {places.map((item) => (
+            <button key={item} type="button" role="tab" aria-selected={item === place} className={item === place ? "is-on" : ""} onClick={() => choose(item)}>
+              {item}
+            </button>
+          ))}
+        </div>
+      </div>
+      {people.length ? (
+        <ul className="mu-board__list">
+          {people.map((person) => {
+            const mins = minutesUntil(person.item.slotAt, now);
+            return (
+              <li key={`${person.item.requestId}-${person.side}`} className={`mu-board__row mu-board__row--${(person.stage || "NONE").toLowerCase()}`}>
+                <span className="mu-board__time">
+                  <b>{timeLabel(person.item.slotAt)}</b>
+                  <small>{mins > 0 ? `${mins}분 뒤` : mins > -15 ? "진행 중" : "지남"}</small>
+                </span>
+                <span className="mu-board__who">
+                  <b>{person.nickname}</b>
+                  {person.phone ? <a href={`tel:${person.phone}`}>{person.phone}</a> : null}
+                </span>
+                <EscortControl
+                  stage={person.stage || "NONE"}
+                  stageAt={person.stageAt}
+                  busy={busyId === person.item.requestId}
+                  onStage={(stage) => onStage(person.item.requestId, person.side, stage)}
+                />
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="mu-admin__empty">{place}에서 기다릴 사람이 지금은 없어요.</p>
+      )}
     </div>
   );
 }
@@ -203,6 +308,13 @@ export default function AdminMeetupSchedule({ onChanged }) {
 
       {isToday || !data ? <NowCard items={items} now={now} /> : null}
 
+      <PlaceBoard
+        items={items}
+        now={now}
+        busyId={busyId}
+        onStage={(requestId, side, stage) => run(requestId, () => setAdminAiMatchEscortStage(requestId, side, stage))}
+      />
+
       {error ? <p className="mu-admin__empty">{error}</p> : null}
 
       {items.length ? (
@@ -226,18 +338,20 @@ export default function AdminMeetupSchedule({ onChanged }) {
                     gender={item.requesterGender}
                     place={item.requesterWaitingPlace}
                     phone={item.requesterPhoneNumber}
-                    arrivedAt={item.requesterArrivedAt}
+                    stage={item.requesterEscortStage}
+                    stageAt={item.requesterEscortStageAt}
                     busy={busy || done}
-                    onToggle={() => run(item.requestId, () => markAdminAiMatchArrival(item.requestId, "REQUESTER", !item.requesterArrivedAt))}
+                    onStage={(stage) => run(item.requestId, () => setAdminAiMatchEscortStage(item.requestId, "REQUESTER", stage))}
                   />
                   <Person
                     nickname={item.profileNickname}
                     gender={item.profileGender}
                     place={item.profileWaitingPlace}
                     phone={item.profilePhoneNumber}
-                    arrivedAt={item.profileArrivedAt}
+                    stage={item.profileEscortStage}
+                    stageAt={item.profileEscortStageAt}
                     busy={busy || done}
-                    onToggle={() => run(item.requestId, () => markAdminAiMatchArrival(item.requestId, "PROFILE", !item.profileArrivedAt))}
+                    onStage={(stage) => run(item.requestId, () => setAdminAiMatchEscortStage(item.requestId, "PROFILE", stage))}
                   />
                   {!done ? (
                     <div className="mu-admin__actions">

@@ -80,6 +80,32 @@ public class AiMatchRequest {
     @Column(name = "profile_arrived_at")
     private LocalDateTime profileArrivedAt;
 
+    /**
+     * 대기 장소 → 부스 안내 단계(사람마다). 대기 장소 도착(*_arrived_at) 다음에
+     * 스태프 출발 → 스태프와 만남 → 부스 도착 순서로 채운다. 참가자 화면의 단계 바가 이 값을 읽는다.
+     */
+    @Column(name = "requester_staff_departed_at")
+    private LocalDateTime requesterStaffDepartedAt;
+
+    @Column(name = "requester_picked_up_at")
+    private LocalDateTime requesterPickedUpAt;
+
+    @Column(name = "requester_at_booth_at")
+    private LocalDateTime requesterAtBoothAt;
+
+    @Column(name = "profile_staff_departed_at")
+    private LocalDateTime profileStaffDepartedAt;
+
+    @Column(name = "profile_picked_up_at")
+    private LocalDateTime profilePickedUpAt;
+
+    @Column(name = "profile_at_booth_at")
+    private LocalDateTime profileAtBoothAt;
+
+    /** 약속 전 알림 문자를 보낸 시각. 한 번만 보내려고 적어 둔다. */
+    @Column(name = "meetup_reminder_sent_at")
+    private LocalDateTime meetupReminderSentAt;
+
     /** 만남 결과. MET / NO_SHOW_REQUESTER / NO_SHOW_PROFILE / NO_SHOW_BOTH. null 이면 아직. */
     @Column(name = "meetup_outcome", length = 30)
     private String meetupOutcome;
@@ -211,8 +237,7 @@ public class AiMatchRequest {
         this.meetupAt = meetupAt;
         this.meetupProposerProfileId = proposerProfileId;
         this.meetupProposerNickname = proposerNickname;
-        this.requesterArrivedAt = null;
-        this.profileArrivedAt = null;
+        clearEscort();
         this.meetupOutcome = null;
         this.updatedAt = LocalDateTime.now();
     }
@@ -249,14 +274,106 @@ public class AiMatchRequest {
         return meetupOutcome;
     }
 
-    public void markArrival(boolean requesterSide, boolean arrived) {
-        LocalDateTime value = arrived ? LocalDateTime.now() : null;
-        if (requesterSide) {
-            this.requesterArrivedAt = value;
-        } else {
-            this.profileArrivedAt = value;
+    public LocalDateTime getRequesterStaffDepartedAt() {
+        return requesterStaffDepartedAt;
+    }
+
+    public LocalDateTime getRequesterPickedUpAt() {
+        return requesterPickedUpAt;
+    }
+
+    public LocalDateTime getRequesterAtBoothAt() {
+        return requesterAtBoothAt;
+    }
+
+    public LocalDateTime getProfileStaffDepartedAt() {
+        return profileStaffDepartedAt;
+    }
+
+    public LocalDateTime getProfilePickedUpAt() {
+        return profilePickedUpAt;
+    }
+
+    public LocalDateTime getProfileAtBoothAt() {
+        return profileAtBoothAt;
+    }
+
+    public LocalDateTime getMeetupReminderSentAt() {
+        return meetupReminderSentAt;
+    }
+
+    public void markReminderSent() {
+        this.meetupReminderSentAt = LocalDateTime.now();
+    }
+
+    /** 안내 단계 순서. NONE 은 아직 대기 장소에 안 온 상태. */
+    public static final java.util.List<String> ESCORT_STAGES = java.util.List.of("NONE", "ARRIVED", "DEPARTED", "PICKED_UP", "AT_BOOTH");
+
+    /**
+     * 한 사람의 안내 단계를 stage 로 맞춘다. 그 단계까지 비어 있는 시각은 지금으로 채우고(이미 있으면 둔다),
+     * 그 뒤 단계는 지운다. 그래서 한 칸 되돌리기도 같은 메서드로 된다.
+     */
+    public void setEscortStage(boolean requesterSide, String stage) {
+        int target = ESCORT_STAGES.indexOf(stage);
+        if (target < 0) {
+            throw new IllegalArgumentException("unknown escort stage: " + stage);
         }
-        this.updatedAt = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime[] current = requesterSide
+                ? new LocalDateTime[]{requesterArrivedAt, requesterStaffDepartedAt, requesterPickedUpAt, requesterAtBoothAt}
+                : new LocalDateTime[]{profileArrivedAt, profileStaffDepartedAt, profilePickedUpAt, profileAtBoothAt};
+        LocalDateTime[] next = new LocalDateTime[4];
+        for (int i = 0; i < 4; i++) {
+            next[i] = i < target ? (current[i] != null ? current[i] : now) : null;
+        }
+        if (requesterSide) {
+            requesterArrivedAt = next[0];
+            requesterStaffDepartedAt = next[1];
+            requesterPickedUpAt = next[2];
+            requesterAtBoothAt = next[3];
+        } else {
+            profileArrivedAt = next[0];
+            profileStaffDepartedAt = next[1];
+            profilePickedUpAt = next[2];
+            profileAtBoothAt = next[3];
+        }
+        this.updatedAt = now;
+    }
+
+    /** 지금 단계 이름(ESCORT_STAGES 중 하나). */
+    public String escortStage(boolean requesterSide) {
+        LocalDateTime[] values = requesterSide
+                ? new LocalDateTime[]{requesterArrivedAt, requesterStaffDepartedAt, requesterPickedUpAt, requesterAtBoothAt}
+                : new LocalDateTime[]{profileArrivedAt, profileStaffDepartedAt, profilePickedUpAt, profileAtBoothAt};
+        int stage = 0;
+        for (int i = 0; i < 4; i++) {
+            if (values[i] != null) {
+                stage = i + 1;
+            }
+        }
+        return ESCORT_STAGES.get(stage);
+    }
+
+    private void clearEscort() {
+        this.requesterArrivedAt = null;
+        this.profileArrivedAt = null;
+        this.requesterStaffDepartedAt = null;
+        this.requesterPickedUpAt = null;
+        this.requesterAtBoothAt = null;
+        this.profileStaffDepartedAt = null;
+        this.profilePickedUpAt = null;
+        this.profileAtBoothAt = null;
+        this.meetupReminderSentAt = null;
+    }
+
+    public void markArrival(boolean requesterSide, boolean arrived) {
+        if (arrived) {
+            if ("NONE".equals(escortStage(requesterSide))) {
+                setEscortStage(requesterSide, "ARRIVED");
+            }
+        } else {
+            setEscortStage(requesterSide, "NONE");
+        }
     }
 
     /** 두 사람이 부스에서 만났다. 연결 완료로 본다. */
@@ -282,8 +399,7 @@ public class AiMatchRequest {
         this.meetupAt = null;
         this.meetupProposerProfileId = null;
         this.meetupProposerNickname = null;
-        this.requesterArrivedAt = null;
-        this.profileArrivedAt = null;
+        clearEscort();
         this.updatedAt = LocalDateTime.now();
     }
 

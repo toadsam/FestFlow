@@ -24,6 +24,9 @@ public interface AiMatchRequestRepository extends JpaRepository<AiMatchRequest, 
 
     Optional<AiMatchRequest> findByIdAndRequesterProfileId(Long id, Long requesterProfileId);
 
+    List<AiMatchRequest> findAllByStatusAndMeetupAtBetweenAndMeetupReminderSentAtIsNull(
+            String status, java.time.LocalDateTime from, java.time.LocalDateTime to);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query(value = """
             delete from ai_match_requests

@@ -1814,3 +1814,195 @@
 .aa-reset p b {
   color: #d93a3a;
 }
+
+/* ---- 대기 장소 → 부스 안내 단계(mu-esc) · 대기 장소 명단(mu-board) ---- */
+.mu-esc {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  flex-basis: 100%;
+  margin-top: 2px;
+}
+
+.mu-esc__chip {
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: #f2f4f6;
+  color: #6b7684;
+  font-size: 11.5px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.mu-esc__chip--arrived { background: #e8f3ff; color: #1b64da; }
+.mu-esc__chip--departed { background: #fff5d6; color: #9a6700; }
+.mu-esc__chip--picked_up { background: #efe9ff; color: #55389f; }
+.mu-esc__chip--at_booth { background: #e6f5ec; color: #1c7a4e; }
+
+.app-shell .mu-esc__next:not(#_esc),
+.app-shell .mu-esc__undo:not(#_esc) {
+  min-height: 0 !important;
+  height: 30px;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  text-shadow: none !important;
+  filter: none !important;
+  transform: none !important;
+  cursor: pointer;
+}
+
+.app-shell .mu-esc__next:not(#_esc) {
+  background: #55389f !important;
+  color: #fff !important;
+}
+
+.app-shell .mu-esc__next:not(#_esc):hover:not(:disabled) {
+  background: #45297f !important;
+}
+
+.app-shell .mu-esc__undo:not(#_esc) {
+  height: 26px;
+  padding: 0 8px !important;
+  background: transparent !important;
+  color: #8b95a1 !important;
+  font-size: 11.5px !important;
+}
+
+.app-shell .mu-esc__undo:not(#_esc):hover:not(:disabled) {
+  color: #4e5968 !important;
+  background: #f2f4f6 !important;
+}
+
+.app-shell :is(.mu-esc__next, .mu-esc__undo):not(#_esc):disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.mu-board {
+  display: grid;
+  gap: 10px;
+  margin: 4px 0 14px;
+  padding: 14px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #e5e0f0;
+}
+
+.mu-board__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mu-board__head > strong {
+  color: #191f28;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.mu-board__tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 10px;
+  background: #f2f0f7;
+}
+
+.app-shell .mu-board__tabs button:not(#_esc) {
+  min-height: 0 !important;
+  height: 32px;
+  padding: 0 14px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color: #6b6a85 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  text-shadow: none !important;
+  transform: none !important;
+}
+
+.app-shell .mu-board__tabs button.is-on:not(#_esc) {
+  background: #fff !important;
+  color: #2a1f4d !important;
+  box-shadow: 0 1px 3px rgba(42, 31, 77, 0.12) !important;
+}
+
+.mu-board__list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mu-board__row {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 4px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #faf9fc;
+  box-shadow: inset 0 0 0 1px #ece8f4;
+}
+
+.mu-board__row--arrived { background: #f2f8ff; box-shadow: inset 0 0 0 1.5px #b9d7fb; }
+.mu-board__row--departed,
+.mu-board__row--picked_up { background: #fffaf0; box-shadow: inset 0 0 0 1.5px #f3d98b; }
+
+.mu-board__time {
+  display: grid;
+  grid-row: span 2;
+  gap: 1px;
+}
+
+.mu-board__time b {
+  color: #191f28;
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.mu-board__time small {
+  color: #8b95a1;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.mu-board__who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.mu-board__who b {
+  color: #191f28;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.app-shell .mu-board__who a:not(#_esc) {
+  padding: 0 !important;
+  background: none !important;
+  box-shadow: none !important;
+  color: #3182f6;
+  font-size: 12.5px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.mu-board__row .mu-esc {
+  margin-top: 0;
+}

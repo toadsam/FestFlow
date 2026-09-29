@@ -19,6 +19,11 @@ public record AiMatchMeetupScheduleItemDto(
         String profileWaitingPlace,
         LocalDateTime requesterArrivedAt,
         LocalDateTime profileArrivedAt,
-        String meetupOutcome
+        String meetupOutcome,
+        String requesterEscortStage,
+        LocalDateTime requesterEscortStageAt,
+        String profileEscortStage,
+        LocalDateTime profileEscortStageAt,
+        LocalDateTime reminderSentAt
 ) {
 }

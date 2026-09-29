@@ -3,6 +3,7 @@
 // 블라인드 만남이라 두 사람은 서로 다른 대기 장소로 가고, 스태프가 부스로 데려온다.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchAiMatchMeetupSlots } from "../api";
+import MeetupEscort from "./MeetupEscort";
 import "../styles/saju-meetup.css";
 
 // 확정 뒤 약속 불이행·참가자 사이 일에 대한 안내. 확정 창·티켓·가입 화면에 같은 말을 쓴다.
@@ -189,7 +190,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
   );
 }
 
-export default function MeetupScheduler({ request, myProfileId, busy, onPropose, onConfirm, onCancel, onOpenMap }) {
+export default function MeetupScheduler({ request, myProfileId, busy, onPropose, onConfirm, onCancel, onOpenMap, onArrived }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const countdown = useCountdown(request.status === "PROPOSED" ? request.meetupHeldUntil : "");
 
@@ -226,6 +227,13 @@ export default function MeetupScheduler({ request, myProfileId, busy, onPropose,
               <b>{request.meetupPlace || "총학생회 소개팅 부스"}</b>
             </div>
           </div>
+          <MeetupEscort
+            request={request}
+            iAmRequester={iAmRequester}
+            myPlace={myPlace}
+            busy={busy}
+            onArrived={() => onArrived?.(request.id)}
+          />
           <ul className="mu-ticket__rules">
             <li>약속 5분 전까지 <b>{myPlace}</b>(으)로 와 주세요. {partner} 님은 다른 곳에서 기다려요.</li>
             <li>스태프가 닉네임을 확인하고 부스로 안내해요.</li>

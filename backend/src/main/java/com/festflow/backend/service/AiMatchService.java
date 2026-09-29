@@ -3,6 +3,7 @@ package com.festflow.backend.service;
 import com.festflow.backend.dto.AiMatchAdminOverviewDto;
 import com.festflow.backend.dto.AiMatchMasterSummaryDto;
 import com.festflow.backend.dto.AiMatchAdminArrivalDto;
+import com.festflow.backend.dto.AiMatchAdminEscortDto;
 import com.festflow.backend.dto.AiMatchAdminHiddenDto;
 import com.festflow.backend.dto.AiMatchAdminNoShowDto;
 import com.festflow.backend.dto.AiMatchAdminPhotoReviewDto;
@@ -100,6 +101,10 @@ public class AiMatchService {
     private final SajuService sajuService;
     private final AiMatchMeetupSlotService meetupSlotService;
     private final AiMatchReportRepository reportRepository;
+
+    /** 약속 몇 분 전에 알림 문자를 보낼지. */
+    @org.springframework.beans.factory.annotation.Value("${app.ai-match.meetup-reminder-minutes:30}")
+    private int meetupReminderMinutes = 30;
 
     public AiMatchService(
             AiMatchProfileRepository profileRepository,
@@ -703,6 +708,73 @@ public class AiMatchService {
         return toAdminRequestDto(request);
     }
 
+    /** 스태프가 한 사람의 안내 단계를 바꾼다(출발하기 · 만났어요 · 부스 도착 · 되돌리기). */
+    @Transactional
+    public AiMatchAdminRequestDto setEscortStage(Long requestId, AiMatchAdminEscortDto requestDto) {
+        AiMatchRequest request = findMeetupRequest(requestId);
+        if (request.getMeetupAt() == null) {
+            throw new ResponseStatusException(CONFLICT, "잡힌 약속이 없습니다.");
+        }
+        String side = requestDto == null || requestDto.side() == null ? "" : requestDto.side().trim().toUpperCase();
+        if (!"REQUESTER".equals(side) && !"PROFILE".equals(side)) {
+            throw new ResponseStatusException(BAD_REQUEST, "누구의 단계인지 골라 주세요.");
+        }
+        String stage = requestDto.stage() == null ? "" : requestDto.stage().trim().toUpperCase();
+        if (!AiMatchRequest.ESCORT_STAGES.contains(stage)) {
+            throw new ResponseStatusException(BAD_REQUEST, "알 수 없는 단계입니다.");
+        }
+        request.setEscortStage("REQUESTER".equals(side), stage);
+        return toAdminRequestDto(request);
+    }
+
+    /** 참가자가 대기 장소에 도착해 '도착했어요'를 누른다. 확정된 약속, 약속 1시간 전부터 30분 뒤까지. */
+    @Transactional
+    public AiMatchRequestResponseDto markSelfArrived(Long requestId, AiMatchProfileAccessRequestDto requestDto) {
+        AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
+        AiMatchRequest request = getParticipatingRequest(requestId, profile);
+        if (!"CONFIRMED".equals(request.getStatus()) || request.getMeetupAt() == null) {
+            throw new ResponseStatusException(CONFLICT, "확정된 약속이 없습니다.");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isBefore(request.getMeetupAt().minusMinutes(SELF_ARRIVAL_OPEN_MINUTES))) {
+            throw new ResponseStatusException(CONFLICT, "약속 " + SELF_ARRIVAL_OPEN_MINUTES + "분 전부터 누를 수 있어요.");
+        }
+        if (now.isAfter(request.getMeetupAt().plusMinutes(30))) {
+            throw new ResponseStatusException(CONFLICT, "약속 시간이 지났어요. 부스 스태프에게 알려 주세요.");
+        }
+        boolean requesterSide = request.getRequesterProfile() != null && request.getRequesterProfile().getId().equals(profile.getId());
+        request.markArrival(requesterSide, true);
+        return toRequestDto(request);
+    }
+
+    /**
+     * 약속 전 알림 문자. 1분마다 돌며 앞으로 meetupReminderMinutes 분 안에 시작하는 확정 약속에 한 번씩 보낸다.
+     * 두 사람에게 각자 기다릴 곳을 알린다. 보냈다는 표시를 먼저 저장해 중복 발송을 막는다.
+     */
+    @Transactional
+    public int sendDueMeetupReminders() {
+        LocalDateTime now = LocalDateTime.now();
+        List<AiMatchRequest> due = requestRepository.findAllByStatusAndMeetupAtBetweenAndMeetupReminderSentAtIsNull(
+                "CONFIRMED", now, now.plusMinutes(meetupReminderMinutes));
+        List<Runnable> sends = new java.util.ArrayList<>();
+        for (AiMatchRequest request : due) {
+            if (request.getMeetupOutcome() != null) {
+                continue;
+            }
+            request.markReminderSent();
+            String[] places = waitingPlaces(request.getRequesterProfile(), request.getProfile());
+            LocalDateTime at = request.getMeetupAt();
+            String requesterPhone = request.getRequesterProfile() == null ? "" : request.getRequesterProfile().getPhoneNumber();
+            String profilePhone = request.getProfile() == null ? "" : request.getProfile().getPhoneNumber();
+            sends.add(() -> aiMatchSmsNotifier.notifyMeetupReminder(requesterPhone, at, places[0]));
+            sends.add(() -> aiMatchSmsNotifier.notifyMeetupReminder(profilePhone, at, places[1]));
+        }
+        if (!sends.isEmpty()) {
+            afterCommit(() -> sends.forEach(Runnable::run));
+        }
+        return sends.size() / 2;
+    }
+
     @Transactional
     public AiMatchAdminRequestDto markMet(Long requestId) {
         AiMatchRequest request = findMeetupRequest(requestId);
@@ -1090,6 +1162,8 @@ public class AiMatchService {
         return meetupSlotService.getSlots(date, requestId, busy);
     }
 
+    private static final int SELF_ARRIVAL_OPEN_MINUTES = 60;
+
     private static final String CONFIRMED_LOCKED_MESSAGE =
             "확정된 약속은 앱에서 바꾸거나 취소할 수 없어요. 부득이하게 못 오면 소개팅 부스 스태프에게 알려 주세요.";
 
@@ -1209,8 +1283,24 @@ public class AiMatchService {
                 places[1],
                 request.getRequesterArrivedAt(),
                 request.getProfileArrivedAt(),
-                request.getMeetupOutcome()
+                request.getMeetupOutcome(),
+                request.escortStage(true),
+                escortStageAt(request, true),
+                request.escortStage(false),
+                escortStageAt(request, false),
+                request.getMeetupReminderSentAt()
         );
+    }
+
+    /** 지금 단계가 된 시각. 단계가 NONE 이면 null. */
+    private static LocalDateTime escortStageAt(AiMatchRequest request, boolean requesterSide) {
+        return switch (request.escortStage(requesterSide)) {
+            case "ARRIVED" -> requesterSide ? request.getRequesterArrivedAt() : request.getProfileArrivedAt();
+            case "DEPARTED" -> requesterSide ? request.getRequesterStaffDepartedAt() : request.getProfileStaffDepartedAt();
+            case "PICKED_UP" -> requesterSide ? request.getRequesterPickedUpAt() : request.getProfilePickedUpAt();
+            case "AT_BOOTH" -> requesterSide ? request.getRequesterAtBoothAt() : request.getProfileAtBoothAt();
+            default -> null;
+        };
     }
 
     /**
@@ -1518,7 +1608,12 @@ public class AiMatchService {
                 request.getUpdatedAt(),
                 heldUntil,
                 places[0],
-                places[1]
+                places[1],
+                request.escortStage(true),
+                escortStageAt(request, true),
+                request.escortStage(false),
+                escortStageAt(request, false),
+                request.getMeetupOutcome()
         );
     }
 

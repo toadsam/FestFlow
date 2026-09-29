@@ -70,6 +70,15 @@ public class AiMatchSmsNotifier {
                 + " · 총학생회 소개팅 부스. 확정된 약속은 바꾸거나 취소할 수 없어요. " + aiMatchUrl);
     }
 
+    /** 약속 전 알림. 각자 기다릴 곳과 도착 시각(약속 5분 전)을 알린다. */
+    public void notifyMeetupReminder(String phoneNumber, LocalDateTime meetupAt, String waitingPlace) {
+        if (meetupAt == null) return;
+        LocalDateTime arriveBy = meetupAt.minusMinutes(5);
+        send(phoneNumber, PREFIX + "오늘 " + String.format("%02d:%02d", meetupAt.getHour(), meetupAt.getMinute())
+                + " 약속이에요. " + String.format("%02d:%02d", arriveBy.getHour(), arriveBy.getMinute())
+                + "까지 " + waitingPlace + "(으)로 와 주세요. 도착하면 앱에서 '도착했어요'를 눌러 주세요. " + aiMatchUrl);
+    }
+
     static String timeLabel(LocalDateTime at) {
         if (at == null) return "";
         DayOfWeek day = at.getDayOfWeek();

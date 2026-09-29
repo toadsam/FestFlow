@@ -26,6 +26,13 @@ public record AiMatchRequestResponseDto(
         LocalDateTime meetupHeldUntil,
         /** 블라인드 만남: 신청한 사람이 기다릴 곳 / 신청받은 사람이 기다릴 곳. */
         String requesterWaitingPlace,
-        String profileWaitingPlace
+        String profileWaitingPlace,
+        /** 대기 장소 → 부스 안내 단계(NONE·ARRIVED·DEPARTED·PICKED_UP·AT_BOOTH)와 그 단계가 된 시각. */
+        String requesterEscortStage,
+        LocalDateTime requesterEscortStageAt,
+        String profileEscortStage,
+        LocalDateTime profileEscortStageAt,
+        /** 만남 결과. MET / NO_SHOW_* / null. */
+        String meetupOutcome
 ) {
 }

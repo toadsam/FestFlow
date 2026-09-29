@@ -191,6 +191,14 @@ public class AiMatchController {
         return aiMatchService.confirmMeetup(requestId, requestDto);
     }
 
+    @PostMapping("/requests/{requestId}/meetup/arrived")
+    public AiMatchRequestResponseDto markMeetupArrived(
+            @PathVariable Long requestId,
+            @RequestBody AiMatchProfileAccessRequestDto requestDto
+    ) {
+        return aiMatchService.markSelfArrived(requestId, requestDto);
+    }
+
     @PostMapping("/requests/{requestId}/meetup/cancel")
     public AiMatchRequestResponseDto cancelMeetup(
             @PathVariable Long requestId,

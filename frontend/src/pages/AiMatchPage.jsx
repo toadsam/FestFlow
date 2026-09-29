@@ -26,6 +26,7 @@ import {
   checkAiMatchPhoneNumber,
   previewAiMatchSaju,
   cancelAiMatchMeetup,
+  markAiMatchMeetupArrived,
   reportAiMatchProfile,
   confirmAiMatchMeetup,
   createAiMatchImagePreview,
@@ -1958,6 +1959,21 @@ export default function AiMatchPage() {
     }
   }
 
+  async function handleMeetupArrived(requestId) {
+    if (!accessNickname || !accessPin) return;
+    setSubmitting(true);
+    setErrorMessage("");
+    try {
+      await markAiMatchMeetupArrived(requestId, accessNickname, accessPin);
+      await loadAccessProfile(accessNickname, accessPin, "requests");
+      setSuccessMessage("도착을 알렸어요. 스태프가 곧 데리러 가요.");
+    } catch (error) {
+      showAuthenticatedActionError(error, "도착을 알리지 못했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleConfirmMeetup(requestId) {
     if (!accessNickname || !accessPin) return;
 
@@ -2772,6 +2788,7 @@ export default function AiMatchPage() {
         onConfirm={handleConfirmMeetup}
         onCancel={handleCancelMeetup}
         onOpenMap={openMeetPlaceMap}
+        onArrived={handleMeetupArrived}
       />
     );
   }
