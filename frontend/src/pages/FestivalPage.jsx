@@ -1,6 +1,6 @@
 // 축제 살펴보기. 바람 축제의 첫 화면. 포스터 컨셉(뷰파인더·하늘·갈대·종이비행기) 위에 일정·공지·공연·주점을 얹는다.
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   createBoothStream,
   createEventStream,
@@ -16,6 +16,8 @@ import { resolveBoothImageUrl } from "../config/boothImages";
 import { TableDots } from "../components/v2/TableMap";
 import { FESTIVAL, MAIN_BOOTH_FALLBACK, findMainBooth } from "../config/festival";
 import { normalizeEvents } from "../data/eventExperience";
+import { findCardNews } from "../data/cardNews";
+import CardNewsViewer, { CardNewsShelf } from "../components/cardnews/CardNewsViewer";
 
 const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -76,6 +78,22 @@ export default function FestivalPage() {
   const [boothsUpdatedAt, setBoothsUpdatedAt] = useState(0);
   // 공연 목록은 기본으로 접혀 있다. 지난 공연은 숨기고 진행 중 + 다음 몇 개만 보여 준다.
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  // 총학 카드뉴스 뷰어. 공유 링크(/?news=묶음&p=장)로 들어오면 바로 연다.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [cardNews, setCardNews] = useState(null);
+
+  useEffect(() => {
+    const id = searchParams.get("news");
+    if (!id || !findCardNews(id)) return;
+    const page = Math.max(0, (Number(searchParams.get("p")) || 1) - 1);
+    setCardNews({ id, page });
+    const next = new URLSearchParams(searchParams);
+    next.delete("news");
+    next.delete("p");
+    setSearchParams(next, { replace: true });
+    // 처음 들어올 때 한 번만 본다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -290,6 +308,14 @@ export default function FestivalPage() {
         </Link>
       </nav>
 
+      <section className="v2-section">
+        <div className="v2-section__head">
+          <h2>축제 소식</h2>
+          <span>총학생회 카드뉴스</span>
+        </div>
+        <CardNewsShelf onOpen={(id, page) => setCardNews({ id, page })} />
+      </section>
+
       {activeNotices.length > 0 && (
         <section className="v2-section">
           <div className="v2-section__head">
@@ -344,7 +370,7 @@ export default function FestivalPage() {
         </Link>
       </section>
 
-      <section className="v2-section">
+      <section className="v2-section" id="festival-schedule">
         <div className="v2-section__head">
           <h2>{schedule.dayLabel ? `${schedule.dayLabel} 공연` : "공연"}</h2>
           {liveCount > 0 ? <span className="v2-badge v2-badge--blue v2-badge--live">진행 중</span> : null}
@@ -424,6 +450,10 @@ export default function FestivalPage() {
           </span>
         </Link>
       </section>
+
+      {cardNews ? (
+        <CardNewsViewer key={cardNews.id} setId={cardNews.id} startIndex={cardNews.page} onClose={() => setCardNews(null)} />
+      ) : null}
     </section>
   );
 }
