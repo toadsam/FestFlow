@@ -1210,3 +1210,13 @@ textarea.od-input {
 .app-shell[data-order-route="true"] .od-page .od-pick { border: 2px solid transparent !important; background: var(--od-surface) !important; box-shadow: var(--od-shadow-soft) !important; color: var(--od-ink) !important; }
 .app-shell[data-order-route="true"] .od-page .od-pick--on { border-color: var(--od-blue) !important; background: var(--od-blue-soft) !important; color: var(--od-blue-dark) !important; }
 .app-shell[data-order-route="true"] .od-page .od-table-confirm button { background: #fff !important; color: var(--od-blue-dark) !important; }
+
+/* 사진 위 머리글: 전역 글자색 규칙에 눌려 어둡게 나오던 것을 흰색으로 되돌리고, 밝은 사진에서도 읽히게 그늘을 짙게 한다. */
+.app-shell[data-order-route="true"] .od-page .od-hero__shade {
+  background: linear-gradient(180deg, rgba(20, 28, 48, 0.28) 0%, rgba(20, 28, 48, 0.5) 45%, rgba(20, 28, 48, 0.84) 100%);
+}
+
+.app-shell[data-order-route="true"] .od-page .od-hero__body,
+.app-shell[data-order-route="true"] .od-page .od-hero__body :is(h1, span, small, strong, p) {
+  color: #fff !important;
+}

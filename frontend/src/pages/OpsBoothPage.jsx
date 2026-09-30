@@ -317,10 +317,10 @@ export default function OpsBoothPage() {
         reservationEnabled: next.booth.reservationEnabled ?? true,
       };
       const savedMenu = parseMenuBoardJson(next.booth.menuBoardJson);
-      // 총학 주점에 메뉴판이 아직 없으면 손님 화면과 같은 기본 메뉴 5개를 미리 채워 둔다. 저장을 눌러야 서버에 들어간다.
+      // 총학 주점에 메뉴판이 아직 없으면 손님 화면과 같은 기본 메뉴를 미리 채워 둔다. 저장을 눌러야 서버에 들어간다.
       const prefillMenu = !savedMenu.length && isMainBooth(next.booth);
       const nextMenu = prefillMenu
-        ? MAIN_BOOTH_FALLBACK.menu.map((item) => ({ name: item.name, price: item.price || "", description: item.description || "", soldOut: false, imageUrl: "" }))
+        ? MAIN_BOOTH_FALLBACK.menu.map((item) => ({ name: item.name, price: item.price || "", description: item.description || "", soldOut: false, imageUrl: item.imageUrl || "" }))
         : savedMenu;
       const nextReservation = {
         maxReservationMinutes: next.reservations?.maxReservationMinutes ?? 10,

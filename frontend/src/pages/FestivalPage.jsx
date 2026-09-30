@@ -349,7 +349,9 @@ export default function FestivalPage() {
       <section className="v2-section">
         <div className="v2-section__head">
           <h2>총학 주점</h2>
-          <span>{FESTIVAL.place} 옆</span>
+          <span>
+            {`${mainBooth?.openTime || MAIN_BOOTH_FALLBACK.openTime}`.slice(0, 5)} ~ {`${mainBooth?.closeTime || MAIN_BOOTH_FALLBACK.closeTime}`.slice(0, 5)}
+          </span>
         </div>
         <Link to={mainBooth ? `/booths/${mainBooth.id}` : "/booths"} className="v2-main-booth v2-rise" style={{ "--i": 6 }}>
           <img src={mainBooth ? resolveBoothImageUrl(mainBooth) : resolveBoothImageUrl(null)} alt="" />

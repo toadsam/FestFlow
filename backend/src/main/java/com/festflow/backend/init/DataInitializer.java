@@ -108,6 +108,8 @@ public class DataInitializer {
             seedMissingDemoBooths(boothRepository, seedScenarioBooths(now));
             seedMissingDemoBooths(boothRepository, seedMoreScenarioBooths(now));
             normalizeCorruptedDemoBooths(boothRepository, now);
+            // 총학 주점 확정 정보(운영시간·위치·계좌·메뉴·테이블 1~60번). 처음 한 번은 그대로 넣고, 그 뒤로는 빈 칸만 채운다.
+            syncCouncilBooth(boothRepository, reservationTableRepository, now);
 
             // 2026 가을축제 "바람" 타임테이블(총학 확정본). 시연용 공연은 지우고, 없는 일정만 채운다(제목+날짜 기준이라 다시 켜도 중복 없음).
             syncBaramSchedule(eventRepository);
@@ -323,6 +325,30 @@ public class DataInitializer {
         );
     }
 
+    private void syncCouncilBooth(BoothRepository boothRepository, BoothReservationTableRepository tableRepository, LocalDateTime now) {
+        Booth booth = boothRepository.findAll().stream()
+                .filter(CouncilBoothSync::isCouncilBooth)
+                .min(Comparator.comparing(Booth::getDisplayOrder, Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElse(null);
+        if (booth == null) {
+            int nextOrder = boothRepository.findTopByOrderByDisplayOrderDesc()
+                    .map(Booth::getDisplayOrder)
+                    .orElse(0) + 1;
+            booth = boothRepository.save(CouncilBoothSync.newBooth(nextOrder, now));
+        }
+        List<BoothReservationTable> existingTables = tableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(booth.getId());
+        if (!CouncilBoothSync.isNumbered(existingTables)) {
+            CouncilBoothSync.applyAll(booth);
+            boothRepository.save(booth);
+        } else if (CouncilBoothSync.fillBooth(booth)) {
+            boothRepository.save(booth);
+        }
+        List<BoothReservationTable> tables = CouncilBoothSync.numberedTables(booth, existingTables);
+        if (!tables.isEmpty()) {
+            tableRepository.saveAll(tables);
+        }
+    }
+
     private void seedMissingDemoBooths(BoothRepository boothRepository, List<Booth> demoBooths) {
         Set<String> existingNames = boothRepository.findAll().stream()
                 .map(Booth::getName)
@@ -450,7 +476,7 @@ public class DataInitializer {
                 schedule("뛰아주", day1, "10:30", "12:00", "장소: 아주대학교 전체"),
                 schedule("주간부스", day1, "10:30", "16:30", "장소: 아주대학교 성호관 잔디 / 가온마당"),
                 schedule("SUCL", day1, "15:00", "19:00", "장소: 아주대학교 대운동장"),
-                schedule("총학 주점", day1, "15:00", "23:00", "장소: 아로새길"),
+                schedule("총학 주점", day1, "16:00", "23:00", "장소: 아로새길"),
                 schedule("어썸 시네마", day1, "18:00", "22:00", "장소: 노천극장(The Art)"),
                 schedule("야시장", day1, "10:30", "25:00", "장소: 도서관 주차장 / 성호관 잔디밭"),
                 schedule("주간부스 세팅", day2, "09:00", "10:00", "장소: 총학생회실"),
@@ -477,6 +503,18 @@ public class DataInitializer {
                 .toList();
         if (!demo.isEmpty()) {
             eventRepository.deleteAll(demo);
+        }
+        // 총학 주점 시작이 15:00 → 16:00 으로 확정됐다(총학생회, 2026-09-30). 예전 값 그대로인 일정만 고친다.
+        LocalDateTime oldPubStart = LocalDateTime.of(2026, 10, 7, 15, 0);
+        List<FestivalEvent> stalePub = existing.stream()
+                .filter(item -> "총학 주점".equals(item.getTitle()) && oldPubStart.equals(item.getStartTime()))
+                .toList();
+        for (FestivalEvent item : stalePub) {
+            item.update(item.getTitle(), oldPubStart.withHour(16), item.getEndTime(), item.getImageUrl(), item.getImageCredit(),
+                    item.getImageFocus(), item.getStatusOverride(), item.getLiveMessage(), item.getDelayMinutes());
+        }
+        if (!stalePub.isEmpty()) {
+            eventRepository.saveAll(stalePub);
         }
         Set<String> keys = existing.stream()
                 .filter(item -> !demo.contains(item))
@@ -543,7 +581,8 @@ public class DataInitializer {
         }
         List<BoothReservation> reservations = new ArrayList<>();
         int userNo = 1;
-        for (Booth booth : booths.stream().filter(booth -> Boolean.TRUE.equals(booth.getReservationEnabled())).limit(8).toList()) {
+        // 총학 주점은 실제 운영 부스라 시연용 예약을 넣지 않는다.
+        for (Booth booth : booths.stream().filter(booth -> Boolean.TRUE.equals(booth.getReservationEnabled()) && !CouncilBoothSync.isCouncilBooth(booth)).limit(8).toList()) {
             List<BoothReservationTable> tables = tableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(booth.getId());
             for (int i = 0; i < Math.min(2, tables.size()); i++) {
                 BoothReservation reservation = new BoothReservation(
@@ -673,7 +712,7 @@ public class DataInitializer {
         }
         List<BoothReservation> reservations = new ArrayList<>();
         int userNo = 100;
-        for (Booth booth : booths.stream().filter(booth -> Boolean.TRUE.equals(booth.getReservationEnabled())).toList()) {
+        for (Booth booth : booths.stream().filter(booth -> Boolean.TRUE.equals(booth.getReservationEnabled()) && !CouncilBoothSync.isCouncilBooth(booth)).toList()) {
             List<BoothReservationTable> tables = tableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(booth.getId());
             if (tables.isEmpty()) {
                 continue;

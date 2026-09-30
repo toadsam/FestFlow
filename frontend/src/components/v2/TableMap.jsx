@@ -106,12 +106,17 @@ export function TableMap({ tables = [], compact = false, collapsible = false, de
 
 /** 첫 화면 카드처럼 좁은 곳에 쓰는 점 띠. 앞에서부터 빈 자리 수만큼 초록. */
 export function TableDots({ free = 0, total = 0 }) {
-  const count = Math.max(0, Math.min(24, Number(total) || 0));
-  if (!count) return null;
+  const all = Math.max(0, Number(total) || 0);
+  if (!all) return null;
+  // 테이블이 많으면(총학 주점 60개) 점 하나가 테이블 하나일 수 없다. 열 칸짜리 비율 표시로 바꾼다.
+  const scaled = all > 12;
+  const count = scaled ? 10 : all;
+  const freeCount = Math.max(0, Math.min(all, Number(free) || 0));
+  const lit = scaled ? (freeCount === 0 ? 0 : Math.max(1, Math.round((freeCount / all) * count))) : freeCount;
   return (
     <span className="v2-tdots" aria-hidden="true">
       {Array.from({ length: count }, (_, i) => (
-        <i key={i} className={i < free ? "is-free" : ""} />
+        <i key={i} className={i < lit ? "is-free" : ""} />
       ))}
     </span>
   );

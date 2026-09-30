@@ -31,9 +31,11 @@ import {
 const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
 
 function createKakaoDirectionsUrl(booth) {
-  const name = booth?.name || booth?.locationName || "바람 부스";
-  const lat = Number(booth?.latitude);
-  const lng = Number(booth?.longitude);
+  // 총학 주점은 주점 본부(카페 안녕)로 안내한다.
+  const place = isMainBooth(booth) ? MAIN_BOOTH_FALLBACK.place : null;
+  const name = place?.name || booth?.name || booth?.locationName || "바람 부스";
+  const lat = Number(place?.lat ?? booth?.latitude);
+  const lng = Number(place?.lng ?? booth?.longitude);
   if (Number.isFinite(lat) && Number.isFinite(lng)) {
     return `https://map.kakao.com/link/to/${encodeURIComponent(name)},${lat},${lng}`;
   }
@@ -59,6 +61,7 @@ function formatTimeRange(booth) {
     const cut = (value) => `${value || "--:--"}`.slice(0, 5);
     return `${cut(booth.openTime)} ~ ${cut(booth.closeTime)}`;
   }
+  if (isMainBooth(booth)) return `${MAIN_BOOTH_FALLBACK.openTime} ~ ${MAIN_BOOTH_FALLBACK.closeTime}`;
   return "시간 확인 중";
 }
 
@@ -459,7 +462,7 @@ export default function BoothDetailPage() {
         <button type="button" className="v2-info" onClick={handleDirections}>
           <IconMapPin />
           <small>길찾기</small>
-          <strong>{booth?.locationName || "아주대 캠퍼스"}</strong>
+          <strong>{isMainBooth(booth) ? MAIN_BOOTH_FALLBACK.place.name : booth?.locationName || "아주대 캠퍼스"}</strong>
         </button>
         <div className="v2-info">
           <IconUsers />

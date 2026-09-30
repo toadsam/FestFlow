@@ -18,19 +18,23 @@ export const FESTIVAL = {
 };
 
 /**
- * 총학 주점 메뉴. 서버에 메뉴판이 아직 없을 때 보여 주는 기본값.
- * 알려 준 숫자는 재료 원가(예: 삼겹살 400g 4,800원)라 판매가는 비워 두었다. 판매가가 정해지면 price 를 채우거나
- * 운영 콘솔에서 메뉴판을 등록하면 이 값 대신 서버 메뉴판이 나온다.
+ * 총학 주점 정보(총학생회 확정본, 2026-09-30). 서버 부스에 값이 아직 없을 때 화면이 이 값을 쓴다.
+ * 서버에서도 같은 값을 넣는다(backend DataInitializer.syncCouncilBooth) — 바꿀 땐 양쪽을 같이 고친다.
+ * 입금 계좌는 주문 화면이 서버 값만 쓰므로 여기엔 두지 않는다.
  */
 export const MAIN_BOOTH_FALLBACK = {
   name: "총학생회 주점",
-  description: "노천극장 옆, 총학생회가 직접 여는 주점",
+  description: "총학생회가 직접 여는 주점 · 주점 본부는 카페 안녕",
+  openTime: "16:00",
+  closeTime: "23:00",
+  tableCount: 60,
+  // 길찾기 목적지: 주점 본부(카페 안녕, 수원시 영통구 월드컵로193번길 36)
+  place: { name: "카페 안녕", label: "카페 안녕 (주점 본부)", lat: 37.27760004, lng: 127.04439431 },
   menu: [
-    { name: "삼겹살 볶음김치 쌈장", description: "삼겹살 400g · 볶음김치 100g · 쌈장 50g", price: "" },
-    { name: "두부김치", description: "두부 300g · 김치 400g", price: "" },
-    { name: "묵 김치 육수 김", description: "묵 300g · 김치 50g · 육수 340g · 김 10g", price: "" },
-    { name: "짜파게티 2개 볶음김치", description: "짜파게티 2개 · 볶음김치 100g", price: "" },
-    { name: "오뎅탕", description: "오뎅 336g · 물 500ml", price: "" },
+    { name: "삼겹살/볶음김치 SET", description: "삼겹살 400g · 볶음김치 100g", price: "9,000원", imageUrl: "/images/booths/menu/samgyeopsal-kimchi.webp" },
+    { name: "두부김치", description: "두부 300g · 김치 400g", price: "7,000원", imageUrl: "/images/booths/menu/dubu-kimchi.webp" },
+    { name: "짜파게티/볶음김치 SET", description: "짜파게티 2개 · 볶음김치 100g", price: "7,000원", imageUrl: "/images/booths/menu/jjapaghetti-kimchi.webp" },
+    { name: "어묵탕", description: "어묵 336g · 물 500ml", price: "5,000원", imageUrl: "/images/booths/menu/eomuk-tang.webp" },
   ],
 };
 

@@ -99,6 +99,8 @@
   font-size: 0.8rem;
   font-weight: 700;
   width: fit-content;
+  max-width: 100%;
+  white-space: nowrap;
 }
 
 .app-shell[data-v2="true"] .v2-main-booth__seats::before {
@@ -693,6 +695,7 @@
 /* 첫 화면 카드의 점 띠 */
 .app-shell .v2-tdots {
   display: inline-flex;
+  flex: 0 0 auto;
   gap: 3px;
   margin-left: 2px;
 }
