@@ -1212,7 +1212,8 @@
   color: var(--nt-ivory-2) !important;
 }
 
-/* '소개팅은 이렇게 이어져요': 앱에서 하는 일 / 축제 당일 부스에서 하는 일 두 묶음 */
+/* '소개팅은 이렇게 이어져요': 앱에서 하는 일 / 축제 당일 부스에서 하는 일 두 묶음.
+   단계는 제목만 한 줄씩 보이고, 누르면 설명이 펼쳐진다. */
 .app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__group {
   display: grid;
   gap: 8px;
@@ -1240,9 +1241,130 @@
   background: var(--nt-line-soft);
 }
 
-.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow .ai-match-step-row {
-  align-items: start;
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night p.am-flow__hint {
+  margin: -6px 0 0;
+  color: var(--nt-ivory-3) !important;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__item {
+  overflow: hidden;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: inset 0 0 0 1px var(--nt-line-soft);
   word-break: keep-all;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__item.is-open {
+  background: rgba(255, 255, 255, 0.13);
+  box-shadow: inset 0 0 0 1px rgba(217, 180, 90, 0.55);
+}
+
+/* 전역 버튼 규칙(:not 이 여러 개 붙은 것)보다 앞서도록 id 무게를 하나 얹는다. */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow button.am-flow__row:not(#_) {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  margin: 0;
+  padding: 6px 12px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: var(--nt-ivory) !important;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transform: none !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow button.am-flow__row:not(#_):focus-visible {
+  outline: 2px solid var(--nt-gold);
+  outline-offset: -2px;
+  border-radius: 14px !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #6f52d6, #4a2f93);
+  box-shadow: 0 0 0 1.5px var(--nt-gold);
+  color: #fff;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__title {
+  color: var(--nt-ivory);
+  font-family: var(--saju-serif, inherit);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__tag {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(217, 180, 90, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(217, 180, 90, 0.35);
+  color: var(--nt-gold);
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__chev {
+  flex: none;
+  color: var(--nt-ivory-3);
+  transition: transform 0.2s ease;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__item.is-open .am-flow__chev {
+  transform: rotate(90deg);
+  color: var(--nt-gold);
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night p.am-flow__copy {
+  margin: 0;
+  padding: 0 14px 12px 50px;
+  color: var(--nt-ivory-2) !important;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.55;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-flow__chev {
+    transition: none;
+  }
 }
 
 .app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night p.ai-match-note {

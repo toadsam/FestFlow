@@ -90,13 +90,14 @@ const MBTI_OPTIONS = [
   "ENTJ",
 ];
 // 로그인 전 첫 화면 '소개팅은 이렇게 이어져요'. 가입부터 부스에서 얼굴 보기 선택까지 한눈에.
+// 평소엔 제목만 한 줄씩 보이고, 누르면 설명(copy)이 펼쳐진다. tag 는 접힌 상태에서도 꼭 보여야 하는 약속.
 const FLOW_GROUPS = [
   {
     label: "지금 · 앱에서",
     items: [
       { number: "01", title: "가입하고 웹툰 얼굴 만들기", copy: "전화번호 확인 → 사진 AI 변환 → 생년월일로 사주. 실명·번호·원본 사진은 공개되지 않아요" },
       { number: "02", title: "궁합 보고 신청하기", copy: "상대와의 사주 궁합 점수를 보고 마음에 드는 사람에게 신청해요" },
-      { number: "03", title: "수락되면 시간 정하기", copy: "둘이 부스 시간(20분)을 골라 확정해요. 확정한 뒤에는 바꿀 수 없어요" },
+      { number: "03", title: "수락되면 시간 정하기", tag: "확정 후 변경 불가", copy: "둘이 부스 시간(20분)을 골라 확정해요. 확정한 뒤에는 바꿀 수 없어요" },
     ],
   },
   {
@@ -104,7 +105,7 @@ const FLOW_GROUPS = [
     items: [
       { number: "04", title: "대기 장소로 가기", copy: "30분 전에 문자가 가요. 티켓에 나온 곳(성호관 앞 · 중앙도서관 앞)에서 스태프가 부스로 데려가요" },
       { number: "05", title: "블라인드 채팅 10분", copy: "얼굴은 가린 채 앱 채팅으로만 이야기해요. 어색하지 않게 대화 주제도 추천해 줘요" },
-      { number: "06", title: "얼굴 보기 선택", copy: "둘 다 ‘얼굴 보기’를 골랐을 때만 가림막을 걷어요. 누가 무엇을 골랐는지는 알려지지 않아요" },
+      { number: "06", title: "얼굴 보기 선택", tag: "둘 다 골라야 공개", copy: "둘 다 ‘얼굴 보기’를 골랐을 때만 가림막을 걷어요. 누가 무엇을 골랐는지는 알려지지 않아요" },
     ],
   },
 ];
@@ -770,6 +771,8 @@ export default function AiMatchPage() {
   const [touched, setTouched] = useState({});
   const nicknameCheckSeq = useRef(0);
   const phoneAutoCheckedKeyRef = useRef("");
+  // 첫 화면 '소개팅은 이렇게 이어져요'에서 펼쳐 둔 단계 번호("" = 모두 접힘)
+  const [openFlowStep, setOpenFlowStep] = useState("");
   const [accessAttempted, setAccessAttempted] = useState(false);
   // 로그인 시트 안에 보여 줄 오류(틀린 닉네임·비밀번호 등). 시트가 화면을 덮어 위쪽 배너는 안 보인다.
   const [accessError, setAccessError] = useState("");
@@ -2065,26 +2068,6 @@ export default function AiMatchPage() {
           <SajuFortune ctaLabel="가입하고 내 궁합 보러 가기" onCta={startNewRegistration} />
         </div>
 
-        <section className="ai-match-step-card am-flow">
-          <h3>소개팅은 이렇게 이어져요</h3>
-          {FLOW_GROUPS.map((group) => (
-            <div key={group.label} className="am-flow__group">
-              <p className="am-flow__label">{group.label}</p>
-              <div className="ai-match-step-list">
-                {group.items.map((item) => (
-                  <article key={item.number} className="ai-match-step-row">
-                    <span>{item.number}</span>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <p>{item.copy}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            </div>
-          ))}
-        </section>
-
         <button
           type="button"
           className="ai-match-primary-button ai-match-primary-button--hero"
@@ -2103,6 +2086,44 @@ export default function AiMatchPage() {
         >
           로그인
         </button>
+
+        <section className="ai-match-step-card am-flow">
+          <h3>소개팅은 이렇게 이어져요</h3>
+          <p className="am-flow__hint">단계를 누르면 설명이 펼쳐져요.</p>
+          {FLOW_GROUPS.map((group) => (
+            <div key={group.label} className="am-flow__group">
+              <p className="am-flow__label">{group.label}</p>
+              <ul className="am-flow__list">
+                {group.items.map((item) => {
+                  const open = openFlowStep === item.number;
+                  return (
+                    <li key={item.number} className={`am-flow__item${open ? " is-open" : ""}`}>
+                      <button
+                        type="button"
+                        className="am-flow__row"
+                        aria-expanded={open}
+                        aria-controls={`am-flow-${item.number}`}
+                        onClick={() => setOpenFlowStep(open ? "" : item.number)}
+                      >
+                        <i className="am-flow__num">{item.number}</i>
+                        <span className="am-flow__text">
+                          <b className="am-flow__title">{item.title}</b>
+                          {item.tag ? <em className="am-flow__tag">{item.tag}</em> : null}
+                        </span>
+                        <IconChevronRight className="am-flow__chev h-4 w-4" aria-hidden="true" />
+                      </button>
+                      {open ? (
+                        <p id={`am-flow-${item.number}`} className="am-flow__copy">
+                          {item.copy}
+                        </p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          ))}
+        </section>
 
         <p className="ai-match-note">
           <IconShield className="h-4 w-4" />
