@@ -30,6 +30,7 @@ import static org.springframework.http.HttpStatus.CONFLICT;
  * 소개팅 부스 시간표. 축제 날짜마다 09:00~22:00 을 20분 슬롯으로 자르고, 슬롯 하나에는 한 쌍만 들어간다.
  * 한 명이 시간을 고르면 30분 동안 임시로 잠기고(상대 확정 대기), 상대가 확정하면 굳는다.
  * 지금부터 leadMinutes 분 안에 시작하는 칸은 고를 수 없다(대기 장소까지 갈 시간·스태프 준비 시간).
+ * 축제 전에 실제 서버에서 끝까지 돌려 볼 수 있게 리허설 날짜도 같은 시간표로 연다. 지난 날짜는 참가자 화면에서 빠진다.
  * 부스를 늘려 슬롯당 여러 쌍을 받으려면 slot_at 유니크 제약을 (slot_at, lane) 으로 바꿔야 한다.
  */
 @Service
@@ -51,7 +52,10 @@ public class AiMatchMeetupSlotService {
     public static final String WAITING_PLACE_MALE = "중앙도서관 앞";
 
     private final AiMatchMeetupSlotRepository slotRepository;
+    /** 약속을 잡을 수 있는 모든 날짜(축제 + 리허설), 날짜순. */
     private final List<LocalDate> festivalDates;
+    /** 실제 축제 날짜. 지난 뒤에도 운영진 시간표에 남는다. */
+    private final List<LocalDate> coreDates;
     /** 시간을 고른 뒤 상대가 확정할 때까지 잠가 두는 시간(분). */
     private final int holdMinutes;
     /** 지금부터 이 분 안에 시작하는 칸은 새로 잡을 수 없다. */
@@ -61,12 +65,22 @@ public class AiMatchMeetupSlotService {
             AiMatchMeetupSlotRepository slotRepository,
             @Value("${app.ai-match.meetup-dates:2026-10-07,2026-10-08}") String meetupDates,
             @Value("${app.ai-match.meetup-hold-minutes:30}") int holdMinutes,
-            @Value("${app.ai-match.meetup-lead-minutes:30}") int leadMinutes
+            @Value("${app.ai-match.meetup-lead-minutes:30}") int leadMinutes,
+            // 축제 전 리허설용 날짜. 끄려면 APP_AI_MATCH_REHEARSAL_DATES 를 빈 값으로 둔다.
+            @Value("${app.ai-match.rehearsal-dates:2026-09-30,2026-10-01,2026-10-02,2026-10-03,2026-10-04,2026-10-05,2026-10-06}") String rehearsalDates
     ) {
         this.slotRepository = slotRepository;
         this.holdMinutes = Math.max(1, holdMinutes);
         this.leadMinutes = Math.max(0, leadMinutes);
-        this.festivalDates = Arrays.stream(meetupDates.split(","))
+        this.coreDates = parseDates(meetupDates);
+        this.festivalDates = java.util.stream.Stream.concat(coreDates.stream(), parseDates(rehearsalDates).stream())
+                .distinct()
+                .sorted()
+                .toList();
+    }
+
+    private static List<LocalDate> parseDates(String text) {
+        return Arrays.stream((text == null ? "" : text).split(","))
                 .map(String::trim)
                 .filter(value -> !value.isEmpty())
                 .map(LocalDate::parse)
@@ -74,8 +88,24 @@ public class AiMatchMeetupSlotService {
                 .toList();
     }
 
+    /** 운영진 시간표의 날짜: 축제 날짜는 늘, 리허설 날짜는 지나기 전까지만. */
     public List<String> getDates() {
-        return festivalDates.stream().map(LocalDate::toString).toList();
+        LocalDate today = LocalDate.now();
+        return festivalDates.stream()
+                .filter(date -> coreDates.contains(date) || !date.isBefore(today))
+                .map(LocalDate::toString)
+                .toList();
+    }
+
+    /** 참가자가 고를 수 있는 날짜: 오늘부터. 다 지났으면 운영진과 같은 목록. */
+    public List<String> getUpcomingDates() {
+        List<String> upcoming = upcomingDates().stream().map(LocalDate::toString).toList();
+        return upcoming.isEmpty() ? getDates() : upcoming;
+    }
+
+    private List<LocalDate> upcomingDates() {
+        LocalDate today = LocalDate.now();
+        return festivalDates.stream().filter(date -> !date.isBefore(today)).toList();
     }
 
     /** 기한이 지난 임시 잠금과, 신청이 닫혀 주인이 없어진 슬롯을 치운다. 읽기·쓰기 전에 매번 부른다. */
@@ -148,12 +178,12 @@ public class AiMatchMeetupSlotService {
         return cells;
     }
 
-    /** 날짜별 남은 칸. busyTimes 를 주면 그 두 사람이 실제로 고를 수 있는 칸만 센다. */
+    /** 오늘부터 남은 날짜별 남은 칸. busyTimes 를 주면 그 두 사람이 실제로 고를 수 있는 칸만 센다. */
     @Transactional
     public List<AiMatchMeetupDayDto> dayCounts(Collection<LocalDateTime> busyTimes) {
         LocalDateTime now = LocalDateTime.now();
         List<AiMatchMeetupDayDto> days = new ArrayList<>();
-        for (LocalDate date : festivalDates) {
+        for (LocalDate date : upcomingDates()) {
             List<Cell> cells = cells(date, now, busyTimes);
             days.add(new AiMatchMeetupDayDto(
                     date.toString(),
@@ -183,7 +213,7 @@ public class AiMatchMeetupSlotService {
                         cell.slot() != null && myRequestId != null && myRequestId.equals(cell.slot().getRequestId())))
                 .toList();
         return new AiMatchMeetupSlotsDto(
-                date.toString(), getDates(), SLOT_MINUTES, holdMinutes, BOOTH_NAME, slots, leadMinutes, dayCounts(busyTimes));
+                date.toString(), getUpcomingDates(), SLOT_MINUTES, holdMinutes, BOOTH_NAME, slots, leadMinutes, dayCounts(busyTimes));
     }
 
     /** 이 신청 이름으로 슬롯을 임시로 잡는다. 이미 잡아 둔 슬롯이 있으면 놓고 새로 잡는다. */
@@ -288,7 +318,7 @@ public class AiMatchMeetupSlotService {
             throw new ResponseStatusException(BAD_REQUEST, "만날 시간을 선택해 주세요.");
         }
         if (!festivalDates.contains(slotAt.toLocalDate())) {
-            throw new ResponseStatusException(BAD_REQUEST, "축제 기간의 시간만 고를 수 있어요.");
+            throw new ResponseStatusException(BAD_REQUEST, "시간표에 있는 날짜의 시간만 고를 수 있어요.");
         }
         LocalTime time = slotAt.toLocalTime();
         boolean aligned = time.getSecond() == 0 && time.getNano() == 0 && time.getMinute() % SLOT_MINUTES == 0;

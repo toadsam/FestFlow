@@ -40,7 +40,7 @@ class AiMatchMeetupSlotServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AiMatchMeetupSlotService(slotRepository, DAY + "," + DAY.plusDays(1), 30, 30);
+        service = new AiMatchMeetupSlotService(slotRepository, DAY + "," + DAY.plusDays(1), 30, 30, "");
     }
 
     @Test
@@ -77,6 +77,37 @@ class AiMatchMeetupSlotServiceTest {
     }
 
     @Test
+    void 리허설_날짜는_지나면_빠지고_축제_날짜는_운영진_시간표에_남는다() {
+        LocalDate today = LocalDate.now();
+        LocalDate pastFestival = today.minusDays(3);
+        LocalDate pastRehearsal = today.minusDays(5);
+        LocalDate nextRehearsal = today.plusDays(2);
+        AiMatchMeetupSlotService mixed = new AiMatchMeetupSlotService(
+                slotRepository, pastFestival + "," + DAY, 30, 30, pastRehearsal + "," + nextRehearsal);
+        when(slotRepository.findAllBySlotAtGreaterThanEqualAndSlotAtLessThanOrderBySlotAtAsc(any(), any())).thenReturn(List.of());
+
+        // 운영진: 지난 축제 날짜는 남고, 지난 리허설 날짜는 빠진다.
+        assertEquals(List.of(pastFestival.toString(), nextRehearsal.toString(), DAY.toString()), mixed.getDates());
+        // 참가자: 오늘부터만. 남은 칸도 그 날짜만 센다.
+        AiMatchMeetupSlotsDto slots = mixed.getSlots("", null);
+        assertEquals(List.of(nextRehearsal.toString(), DAY.toString()), slots.dates());
+        assertEquals(nextRehearsal.toString(), slots.date());
+        assertEquals(2, slots.days().size());
+        // 리허설 날짜도 같은 규칙으로 잡힌다.
+        when(slotRepository.findBySlotAt(any())).thenReturn(Optional.empty());
+        when(slotRepository.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        assertEquals(nextRehearsal.atTime(10, 0), mixed.hold(7L, nextRehearsal.atTime(10, 0)).getSlotAt());
+    }
+
+    @Test
+    void 날짜가_모두_지났으면_참가자에게도_축제_날짜를_보여_준다() {
+        LocalDate past = LocalDate.now().minusDays(3);
+        AiMatchMeetupSlotService over = new AiMatchMeetupSlotService(slotRepository, past.toString(), 30, 30, past.minusDays(2).toString());
+
+        assertEquals(List.of(past.toString()), over.getUpcomingDates());
+    }
+
+    @Test
     void 곧_시작하는_칸은_못_고른다() {
         LocalDateTime now = DAY.atTime(14, 5);
 
@@ -95,7 +126,7 @@ class AiMatchMeetupSlotServiceTest {
                 nextCell.toLocalDate().equals(now.toLocalDate())
                         && !nextCell.toLocalTime().isBefore(AiMatchMeetupSlotService.OPEN_TIME)
                         && nextCell.toLocalTime().isBefore(AiMatchMeetupSlotService.CLOSE_TIME));
-        AiMatchMeetupSlotService today = new AiMatchMeetupSlotService(slotRepository, now.toLocalDate().toString(), 30, 30);
+        AiMatchMeetupSlotService today = new AiMatchMeetupSlotService(slotRepository, now.toLocalDate().toString(), 30, 30, "");
 
         ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> today.hold(7L, nextCell));
 

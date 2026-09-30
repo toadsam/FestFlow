@@ -175,14 +175,22 @@
   color: #2a1f4d !important;
 }
 
+/* 날짜가 둘이면 반씩 채우고, 많으면(리허설 날짜 포함) 옆으로 넘긴다. */
 .app-shell .mu-dates {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  grid-auto-columns: minmax(96px, 1fr);
   gap: 4px;
   padding: 4px;
   border-radius: 14px;
   background: rgba(109, 79, 210, 0.08);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.app-shell .mu-dates::-webkit-scrollbar {
+  display: none;
 }
 
 .app-shell.app-shell.app-shell .mu-date {
@@ -428,6 +436,9 @@
 /* ---- 운영진 시간표(AiMatchAdminPage) ---- */
 .mu-admin {
   display: grid;
+  /* 날짜 탭이 많아도 탭 줄의 본래 폭이 시간표 전체를 밀어 넓히지 않게 칸 최소 폭을 0 으로 둔다. */
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 12px;
   margin: 16px 0;
   padding: 18px;
@@ -463,6 +474,20 @@
   padding: 4px;
   border-radius: 12px;
   background: #f2f4f6;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.mu-admin__tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.mu-admin__tabs > button {
+  flex: none;
+  white-space: nowrap;
 }
 
 .app-shell.app-shell.app-shell .mu-admin__tab {

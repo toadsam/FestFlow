@@ -6,7 +6,7 @@
 // 줄에 채팅 상태(채팅 중 · 선택 중 · 둘 다 얼굴 보기)가 뜬다.
 // '대기 장소' 명단: 성호관·중앙도서관 담당 스태프가 자기 장소 사람만 보고 도착 확인 → 출발하기 → 만났어요 → 부스 도착을 넘긴다.
 // 넘긴 단계는 참가자 티켓의 단계 바(배달 앱처럼)에 그대로 보인다.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   fetchAdminAiMatchChatLog,
   fetchAdminAiMatchMeetupSchedule,
@@ -305,6 +305,15 @@ export default function AdminMeetupSchedule({ onChanged }) {
   const [chatLogId, setChatLogId] = useState(null);
   const [clockOffset, setClockOffset] = useState(0);
   const [now, setNow] = useState(() => Date.now());
+  const tabsRef = useRef(null);
+
+  // 날짜가 많아 탭이 옆으로 넘어갈 때, 보고 있는 날짜가 보이게 탭 줄만 움직인다.
+  useEffect(() => {
+    const row = tabsRef.current;
+    const tab = row?.querySelector(".mu-admin__tab.is-on");
+    if (!row || !tab || row.scrollWidth <= row.clientWidth) return;
+    row.scrollTo({ left: tab.offsetLeft - (row.clientWidth - tab.offsetWidth) / 2, behavior: "smooth" });
+  }, [date]);
 
   const load = useCallback((nextDate) => {
     return fetchAdminAiMatchMeetupSchedule(nextDate)
@@ -365,7 +374,7 @@ export default function AdminMeetupSchedule({ onChanged }) {
             {data ? `${data.boothName} · 확정 ${confirmedCount}쌍 · 임시 ${items.length - confirmedCount}쌍 · 전체 ${data.totalSlots}칸` : "불러오는 중…"}
           </small>
         </div>
-        <div className="mu-admin__tabs" role="tablist" aria-label="날짜">
+        <div className="mu-admin__tabs" role="tablist" aria-label="날짜" ref={tabsRef}>
           {(data?.dates || []).map((item) => (
             <button
               key={item}

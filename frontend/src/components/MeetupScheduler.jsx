@@ -2,7 +2,7 @@
 // 20분 슬롯(09:00~21:40), 슬롯 하나에 한 쌍. 한 명이 고르면 30분 임시 잠금 → 상대가 확정하면 굳는다.
 // 지금부터 30분 안에 시작하는 칸은 못 고른다(SOON). 날짜 탭에 남은 칸 수가 보이고, 얼마 안 남으면 안내가 뜬다.
 // 블라인드 만남이라 두 사람은 서로 다른 대기 장소로 가고, 스태프가 부스로 데려온다.
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchAiMatchMeetupSlots } from "../api";
 import MeetupEscort from "./MeetupEscort";
 import "../styles/saju-meetup.css";
@@ -70,6 +70,24 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
   const [selected, setSelected] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const datesRef = useRef(null);
+  const hoursRef = useRef(null);
+
+  // 날짜를 열면 고를 수 있는 첫 시간대가 맨 위에 오게 시간 목록만 내린다(오후에 열면 지난 칸이 길게 앞에 있다).
+  const shownDate = data?.date || "";
+  useEffect(() => {
+    const box = hoursRef.current;
+    const row = box?.querySelector(".mu-slot:not([disabled])")?.closest(".mu-hour");
+    if (box && row) box.scrollTop += row.getBoundingClientRect().top - box.getBoundingClientRect().top;
+  }, [shownDate]);
+
+  // 날짜가 많아 탭이 옆으로 넘어갈 때, 고른 날짜가 보이게 탭 줄만 움직인다(페이지는 안 움직임).
+  useEffect(() => {
+    const row = datesRef.current;
+    const tab = row?.querySelector(".mu-date.is-on");
+    if (!row || !tab || row.scrollWidth <= row.clientWidth) return;
+    row.scrollTo({ left: tab.offsetLeft - (row.clientWidth - tab.offsetWidth) / 2, behavior: "smooth" });
+  }, [date]);
 
   const load = useCallback(
     (nextDate) => {
@@ -142,7 +160,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
         </button>
       </div>
 
-      <div className="mu-dates" role="tablist" aria-label="날짜">
+      <div className="mu-dates" role="tablist" aria-label="날짜" ref={datesRef}>
         {(data?.dates || []).map((item) => (
           <button
             key={item}
@@ -180,7 +198,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
       </div>
       {hasSoon ? <p className="mu-soon-note">지금부터 {leadMinutes}분 안에 시작하는 칸은 고를 수 없어요.</p> : null}
 
-      <div className="mu-hours">
+      <div className="mu-hours" ref={hoursRef}>
         {hours.map(([hour, slots]) => (
           <div key={hour} className="mu-hour">
             <span className="mu-hour__label">{pad(hour)}시</span>
