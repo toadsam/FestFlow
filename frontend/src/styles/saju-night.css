@@ -1680,3 +1680,52 @@
   margin-top: 8px;
   padding: 0 4px;
 }
+
+/* ---- 시간 고르기: 남은 칸 안내 · 곧 시작하는 칸 안내 · 노쇼로 취소된 약속 안내 ---- */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu p.mu-notice {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(240, 180, 60, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(240, 180, 60, 0.3);
+  color: #f4d58d !important;
+  font-size: 13px !important;
+  font-weight: 700;
+  line-height: 1.5;
+  word-break: keep-all;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu p.mu-notice--full,
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu p.mu-notice--noshow {
+  background: rgba(255, 120, 110, 0.14);
+  box-shadow: inset 0 0 0 1px rgba(255, 157, 148, 0.4);
+  color: #ffc2bc !important;
+}
+
+/* 날짜 탭: 날짜 아래에 남은 칸 수를 한 줄 더 */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu .mu-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  height: 46px;
+  line-height: 1.15;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu .mu-date :is(span, small) {
+  color: inherit !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu .mu-date small.mu-date__left {
+  font-size: 11px !important;
+  font-weight: 700;
+  opacity: 0.8;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .mu p.mu-soon-note {
+  margin: -2px 0 0;
+  color: rgba(255, 244, 220, 0.6) !important;
+  font-size: 11.5px !important;
+  font-weight: 600;
+}

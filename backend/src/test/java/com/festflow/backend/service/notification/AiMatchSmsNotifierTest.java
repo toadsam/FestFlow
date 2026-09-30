@@ -42,6 +42,26 @@ class AiMatchSmsNotifierTest {
     }
 
     @Test
+    void noShowMessageDiffersForAbsentAndWaitingSide() {
+        notifier.notifyMeetupNoShow("010-1111-2222", LocalDateTime.of(2026, 10, 7, 18, 40), true);
+        notifier.notifyMeetupNoShow("010-3333-4444", LocalDateTime.of(2026, 10, 7, 18, 40), false);
+
+        ArgumentCaptor<String> absent = ArgumentCaptor.forClass(String.class);
+        ArgumentCaptor<String> waiting = ArgumentCaptor.forClass(String.class);
+        verify(client).sendText(eq("010-1111-2222"), absent.capture());
+        verify(client).sendText(eq("010-3333-4444"), waiting.capture());
+        assertThat(absent.getValue())
+                .contains("10/7(수) 18:40")
+                .contains("참석하지 못해 취소")
+                .contains("다시 잡을 수 있어요")
+                .endsWith("https://www.ajoufesta.com/ai-match");
+        assertThat(waiting.getValue())
+                .contains("상대가 오지 못해 취소")
+                .contains("기다려 주셔서 고마워요")
+                .doesNotContain("참석하지 못해");
+    }
+
+    @Test
     void negotiationMessagesToSameNumberAreThrottled() {
         notifier.notifyMeetupProposed("010-1111-2222", LocalDateTime.of(2026, 10, 7, 18, 30), 30, false);
         notifier.notifyMeetupWithdrawn("01011112222");

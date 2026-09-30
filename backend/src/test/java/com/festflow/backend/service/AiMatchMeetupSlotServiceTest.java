@@ -40,7 +40,7 @@ class AiMatchMeetupSlotServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new AiMatchMeetupSlotService(slotRepository, DAY + "," + DAY.plusDays(1), 30);
+        service = new AiMatchMeetupSlotService(slotRepository, DAY + "," + DAY.plusDays(1), 30, 30);
     }
 
     @Test
@@ -53,6 +53,65 @@ class AiMatchMeetupSlotServiceTest {
         assertEquals(DAY.atTime(9, 0), slots.slots().get(0).startAt());
         assertEquals(DAY.atTime(21, 40), slots.slots().get(38).startAt());
         assertTrue(slots.slots().stream().allMatch(slot -> "FREE".equals(slot.status())));
+    }
+
+    @Test
+    void 날짜별_남은_칸을_같이_준다() {
+        AiMatchMeetupSlot held = new AiMatchMeetupSlot(DAY.atTime(14, 20), 7L, LocalDateTime.now().plusMinutes(20));
+        AiMatchMeetupSlot taken = new AiMatchMeetupSlot(DAY.atTime(14, 40), 8L, null);
+        when(slotRepository.findAllBySlotAtGreaterThanEqualAndSlotAtLessThanOrderBySlotAtAsc(DAY.atTime(9, 0), DAY.atTime(22, 0)))
+                .thenReturn(List.of(held, taken));
+        when(slotRepository.findAllBySlotAtGreaterThanEqualAndSlotAtLessThanOrderBySlotAtAsc(DAY.plusDays(1).atTime(9, 0), DAY.plusDays(1).atTime(22, 0)))
+                .thenReturn(List.of());
+
+        AiMatchMeetupSlotsDto slots = service.getSlots(DAY.toString(), null);
+
+        assertEquals(30, slots.leadMinutes());
+        assertEquals(2, slots.days().size());
+        assertEquals(DAY.toString(), slots.days().get(0).date());
+        assertEquals(39, slots.days().get(0).totalSlots());
+        assertEquals(37, slots.days().get(0).freeSlots());
+        assertEquals(1, slots.days().get(0).confirmedSlots());
+        assertEquals(1, slots.days().get(0).heldSlots());
+        assertEquals(39, slots.days().get(1).freeSlots());
+    }
+
+    @Test
+    void 곧_시작하는_칸은_못_고른다() {
+        LocalDateTime now = DAY.atTime(14, 5);
+
+        assertTrue(AiMatchMeetupSlotService.isTooSoon(DAY.atTime(14, 0), now, 30));   // 지난 칸
+        assertTrue(AiMatchMeetupSlotService.isTooSoon(DAY.atTime(14, 20), now, 30));  // 15분 뒤
+        assertFalse(AiMatchMeetupSlotService.isTooSoon(DAY.atTime(14, 40), now, 30)); // 35분 뒤
+        assertFalse(AiMatchMeetupSlotService.isTooSoon(DAY.atTime(14, 20), now, 0));  // 여유 시간을 끄면 바로 뒤 칸도 가능
+    }
+
+    @Test
+    void 오늘_곧_시작하는_시간을_잡으면_400() {
+        // 오늘을 축제 날짜로 두고, 지금 시각이 든 칸의 다음 칸(20분 안에 시작)을 잡아 본다.
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime nextCell = now.withSecond(0).withNano(0).withMinute(now.getMinute() / 20 * 20).plusMinutes(20);
+        org.junit.jupiter.api.Assumptions.assumeTrue(
+                nextCell.toLocalDate().equals(now.toLocalDate())
+                        && !nextCell.toLocalTime().isBefore(AiMatchMeetupSlotService.OPEN_TIME)
+                        && nextCell.toLocalTime().isBefore(AiMatchMeetupSlotService.CLOSE_TIME));
+        AiMatchMeetupSlotService today = new AiMatchMeetupSlotService(slotRepository, now.toLocalDate().toString(), 30, 30);
+
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> today.hold(7L, nextCell));
+
+        assertEquals(HttpStatus.BAD_REQUEST, exception.getStatusCode());
+        assertTrue(exception.getReason().contains("30분 뒤"));
+        verify(slotRepository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    void 약속이_가까우면_임시_잠금이_약속_15분_전에_풀린다() {
+        LocalDateTime now = DAY.atTime(14, 0);
+
+        // 넉넉히 먼 약속: 30분 잠금
+        assertEquals(DAY.atTime(14, 30), AiMatchMeetupSlotService.holdDeadline(now, DAY.atTime(18, 0), 30, 30));
+        // 40분 뒤 약속: 30분을 다 기다리면 시작 10분 전이라, 15분 전(14:25)에 풀린다
+        assertEquals(DAY.atTime(14, 25), AiMatchMeetupSlotService.holdDeadline(now, DAY.atTime(14, 40), 30, 30));
     }
 
     @Test

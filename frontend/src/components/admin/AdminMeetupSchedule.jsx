@@ -1,6 +1,7 @@
 // 운영진용 소개팅 부스 시간표. 그날 잡힌 20분 슬롯과 두 사람이 어디서 기다리는지.
 // 맨 위 '지금' 카드는 이 순간 부스에 있어야 할 쌍·다음 쌍·5분 뒤 대기 장소로 가야 할 사람을 보여 준다.
 // 줄마다 도착 체크 · 만남 완료 · 노쇼(슬롯 반납)를 누를 수 있다. 10초마다 새로 받는다.
+// 제목 아래 '남은 칸' 줄: 날짜별로 지금 새로 잡을 수 있는 칸. 얼마 안 남으면 색이 바뀐다.
 // 두 사람이 모두 '부스 도착'이 되면 '채팅 시작' 버튼이 뜬다. 눌러 확인하면 10분 타이머가 돌고,
 // 줄에 채팅 상태(채팅 중 · 선택 중 · 둘 다 얼굴 보기)가 뜬다.
 // '대기 장소' 명단: 성호관·중앙도서관 담당 스태프가 자기 장소 사람만 보고 도착 확인 → 출발하기 → 만났어요 → 부스 도착을 넘긴다.
@@ -20,6 +21,8 @@ const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
 const SLOT_MINUTES = 20;
 const SLOT_MS = SLOT_MINUTES * 60_000;
 const SOON_MS = 5 * 60_000;
+// 새로 잡을 수 있는 칸이 이만큼 이하로 남으면 경고색으로 바꾼다.
+const SCARCE_SLOTS = 10;
 
 function pad(value) {
   return `${value}`.padStart(2, "0");
@@ -349,6 +352,9 @@ export default function AdminMeetupSchedule({ onChanged }) {
   const nextIndex = items.findIndex((item) => (parseLocal(item.slotAt)?.getTime() || 0) + SLOT_MS > now);
   const confirmedCount = items.filter((item) => item.confirmed).length;
   const isToday = date && parseLocal(`${date}T00:00:00`)?.toDateString() === new Date(now).toDateString();
+  const days = data?.days || [];
+  const totalFree = days.reduce((sum, day) => sum + (day.freeSlots || 0), 0);
+  const totalAll = days.reduce((sum, day) => sum + (day.totalSlots || 0), 0);
 
   return (
     <section className="mu-admin" aria-label="소개팅 부스 시간표">
@@ -374,6 +380,30 @@ export default function AdminMeetupSchedule({ onChanged }) {
           ))}
         </div>
       </div>
+
+      {days.length ? (
+        <div
+          className={`mu-cap${totalFree === 0 ? " is-full" : totalFree <= SCARCE_SLOTS ? " is-low" : ""}`}
+          aria-label="남은 부스 칸"
+          title="지난 칸과 30분 안에 시작하는 칸은 빼고, 지금 새로 잡을 수 있는 칸만 센 숫자예요."
+        >
+          <strong>
+            남은 칸 {totalFree}
+            <small> / {totalAll}</small>
+          </strong>
+          {days.map((day) => (
+            <span key={day.date} className={day.freeSlots === 0 ? "is-full" : ""}>
+              <b>{dateLabel(day.date)}</b> {day.freeSlots > 0 ? `${day.freeSlots}칸 남음` : "마감"}
+              <small> · 확정 {day.confirmedSlots} · 임시 {day.heldSlots}</small>
+            </span>
+          ))}
+          {totalFree === 0 ? (
+            <em>칸이 모두 찼어요. 새로 성사된 커플은 시간을 잡을 수 없어요.</em>
+          ) : totalFree <= SCARCE_SLOTS ? (
+            <em>칸이 얼마 안 남았어요.</em>
+          ) : null}
+        </div>
+      ) : null}
 
       {isToday || !data ? <NowCard items={items} now={now} /> : null}
 
@@ -460,7 +490,7 @@ export default function AdminMeetupSchedule({ onChanged }) {
                       </button>
                       {noShowId === item.requestId ? (
                         <span className="mu-admin__noshow">
-                          <small>누가 안 왔나요?</small>
+                          <small>누가 안 왔나요? 확정된 약속이면 두 사람에게 취소 문자가 가요.</small>
                           {[
                             ["REQUESTER", item.requesterNickname],
                             ["PROFILE", item.profileNickname],

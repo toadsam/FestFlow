@@ -854,8 +854,21 @@ public class AiMatchService {
             case "BOTH" -> "NO_SHOW_BOTH";
             default -> throw new ResponseStatusException(BAD_REQUEST, "누가 안 왔는지 골라 주세요.");
         };
+        // 확정된 약속이었으면 두 사람에게 취소 문자를 보낸다. 기다린 사람이 영문도 모르고 서 있지 않게.
+        boolean wasConfirmed = "CONFIRMED".equals(request.getStatus());
+        LocalDateTime meetupAt = request.getMeetupAt();
+        String requesterPhone = request.getRequesterProfile() == null ? "" : request.getRequesterProfile().getPhoneNumber();
+        String profilePhone = request.getProfile() == null ? "" : request.getProfile().getPhoneNumber();
+        boolean requesterAbsent = !"PROFILE".equals(side);
+        boolean profileAbsent = !"REQUESTER".equals(side);
         meetupSlotService.release(request.getId());
         request.markNoShow(outcome);
+        if (wasConfirmed && meetupAt != null) {
+            afterCommit(() -> {
+                aiMatchSmsNotifier.notifyMeetupNoShow(requesterPhone, meetupAt, requesterAbsent);
+                aiMatchSmsNotifier.notifyMeetupNoShow(profilePhone, meetupAt, profileAbsent);
+            });
+        }
         return toAdminRequestDto(request);
     }
 
@@ -1131,12 +1144,15 @@ public class AiMatchService {
         LocalDateTime meetupAt = requestDto.meetupAt();
         meetupSlotService.purge();
         ensureNoNearbyMeetup(request, meetupAt);
-        meetupSlotService.hold(request.getId(), meetupAt);
+        AiMatchMeetupSlot heldSlot = meetupSlotService.hold(request.getId(), meetupAt);
         String meetupPlace = AiMatchMeetupSlotService.BOOTH_NAME;
 
         request.proposeMeetup(meetupPlace, meetupAt, profile.getId(), profile.getNickname());
         String partnerPhone = partnerPhoneNumber(request, profile);
-        int holdMinutes = meetupSlotService.getHoldMinutes();
+        // 약속이 가까우면 잠금이 30분보다 일찍 풀린다. 문자에는 실제로 남은 시간을 적는다.
+        int holdMinutes = heldSlot == null || heldSlot.getHeldUntil() == null
+                ? meetupSlotService.getHoldMinutes()
+                : (int) Math.max(1, java.time.Duration.between(LocalDateTime.now(), heldSlot.getHeldUntil()).plusSeconds(59).toMinutes());
         afterCommit(() -> aiMatchSmsNotifier.notifyMeetupProposed(partnerPhone, meetupAt, holdMinutes, counter));
         return toRequestDto(request);
     }
@@ -1323,7 +1339,8 @@ public class AiMatchService {
                 meetupSlotService.slotsPerDay(),
                 AiMatchMeetupSlotService.SLOT_MINUTES,
                 LocalDateTime.now(),
-                items
+                items,
+                meetupSlotService.dayCounts(List.of())
         );
     }
 

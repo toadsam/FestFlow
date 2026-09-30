@@ -1,5 +1,6 @@
 // 매칭된 두 사람이 소개팅 부스 시간을 잡는 곳.
 // 20분 슬롯(09:00~21:40), 슬롯 하나에 한 쌍. 한 명이 고르면 30분 임시 잠금 → 상대가 확정하면 굳는다.
+// 지금부터 30분 안에 시작하는 칸은 못 고른다(SOON). 날짜 탭에 남은 칸 수가 보이고, 얼마 안 남으면 안내가 뜬다.
 // 블라인드 만남이라 두 사람은 서로 다른 대기 장소로 가고, 스태프가 부스로 데려온다.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchAiMatchMeetupSlots } from "../api";
@@ -11,6 +12,15 @@ export const ORGANIZER_DISCLAIMER =
   "약속을 지키지 않거나 만남 중·이후 참가자 사이에 생긴 일은 주최 측(총학생회)이 책임지지 않아요. 불편한 일이 생기면 바로 부스 스태프나 '신고하기'로 알려 주세요.";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
+// 고를 수 있는 칸이 이만큼 이하로 남으면 '얼마 안 남았어요' 안내를 띄운다.
+const SCARCE_SLOTS = 10;
+
+function slotStatusLabel(status, leadMinutes) {
+  if (status === "PAST") return "지난 시간";
+  if (status === "SOON") return `${leadMinutes}분 안에 시작해서 못 고름`;
+  if (status === "BUSY") return "다른 약속과 40분 안이라 못 고름";
+  return "다른 커플이 잡음";
+}
 
 function pad(value) {
   return `${value}`.padStart(2, "0");
@@ -99,6 +109,17 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
 
   const freeCount = (data?.slots || []).filter((slot) => slot.status === "FREE").length;
   const hasBusy = (data?.slots || []).some((slot) => slot.status === "BUSY");
+  const hasSoon = (data?.slots || []).some((slot) => slot.status === "SOON");
+  const leadMinutes = data?.leadMinutes ?? 30;
+  const holdMinutes = data?.holdMinutes || 30;
+  const days = data?.days || [];
+  const freeByDate = new Map(days.map((day) => [day.date, day.freeSlots]));
+  const totalFree = days.reduce((sum, day) => sum + (day.freeSlots || 0), 0);
+  // 약속이 가까우면 잠금이 30분보다 일찍(약속 15분 전) 풀린다.
+  const selectedMs = selected ? parseLocal(selected)?.getTime() : 0;
+  const holdFor = selectedMs
+    ? Math.max(1, Math.min(holdMinutes, Math.floor((selectedMs - Date.now()) / 60_000) - Math.floor(leadMinutes / 2)))
+    : holdMinutes;
 
   async function submit() {
     if (!selected) return;
@@ -134,10 +155,21 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
               load(item);
             }}
           >
-            {dateLabel(item)}
+            <span className="mu-date__day">{dateLabel(item)}</span>
+            {freeByDate.has(item) ? (
+              <small className="mu-date__left">{freeByDate.get(item) > 0 ? `${freeByDate.get(item)}칸 남음` : "마감"}</small>
+            ) : null}
           </button>
         ))}
       </div>
+
+      {days.length && totalFree === 0 ? (
+        <p className="mu-notice mu-notice--full">
+          지금은 고를 수 있는 칸이 없어요. 다른 커플이 확정하지 않거나 취소하면 다시 열리니, 조금 뒤에 다시 확인해 주세요.
+        </p>
+      ) : days.length && totalFree <= SCARCE_SLOTS ? (
+        <p className="mu-notice">남은 칸이 {totalFree}개뿐이에요. 늦기 전에 잡아 주세요.</p>
+      ) : null}
 
       <div className="mu-legend">
         <span className="mu-legend__free">고를 수 있어요</span>
@@ -146,6 +178,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
         {hasBusy ? <span className="mu-legend__busy">약속 겹침</span> : null}
         <b className="mu-legend__count">{loading ? "불러오는 중…" : `${freeCount}칸 남음`}</b>
       </div>
+      {hasSoon ? <p className="mu-soon-note">지금부터 {leadMinutes}분 안에 시작하는 칸은 고를 수 없어요.</p> : null}
 
       <div className="mu-hours">
         {hours.map(([hour, slots]) => (
@@ -162,7 +195,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
                     className={`mu-slot mu-slot--${slot.status.toLowerCase()}${slot.mine ? " mu-slot--mine" : ""}${selected === slot.startAt ? " is-on" : ""}`}
                     disabled={!free || busy}
                     aria-pressed={selected === slot.startAt}
-                    aria-label={`${pad(hour)}시 ${label.slice(1)}분 ${free ? "선택 가능" : slot.status === "PAST" ? "지난 시간" : slot.status === "BUSY" ? "다른 약속과 40분 안이라 못 고름" : "다른 커플이 잡음"}`}
+                    aria-label={`${pad(hour)}시 ${label.slice(1)}분 ${free ? "선택 가능" : slotStatusLabel(slot.status, leadMinutes)}`}
                     onClick={() => setSelected(slot.startAt)}
                   >
                     {selected === slot.startAt ? <span className="mu-slot__check" aria-hidden="true">✓</span> : null}
@@ -179,7 +212,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
 
       <div className="mu-picker__foot">
         <p>
-          고르면 <b>{data?.holdMinutes || 30}분 동안</b> 이 시간이 우리 몫으로 잠겨요. 그 안에 상대가 확정하면 끝!
+          고르면 <b>{holdFor}분 동안</b> 이 시간이 우리 몫으로 잠겨요. 그 안에 상대가 확정하면 끝!
         </p>
         <p className="mu-picker__warn">상대가 확정하면 두 사람 모두 시간을 바꾸거나 취소할 수 없어요.</p>
         <button type="button" className="mu-primary" disabled={!selected || busy} onClick={submit}>
@@ -198,6 +231,10 @@ export default function MeetupScheduler({ request, myProfileId, busy, onPropose,
   const myPlace = iAmRequester ? request.requesterWaitingPlace : request.profileWaitingPlace;
   const partner = iAmRequester ? request.profileNickname : request.requesterNickname;
   const iProposed = request.meetupProposerProfileId === myProfileId;
+  // 스태프가 노쇼로 처리하면 약속만 지워지고 매칭은 남는다. 누가 안 왔는지에 따라 안내가 다르다.
+  const outcome = request.meetupOutcome || "";
+  const noShow = outcome.startsWith("NO_SHOW");
+  const iWasAbsent = outcome === "NO_SHOW_BOTH" || outcome === (iAmRequester ? "NO_SHOW_REQUESTER" : "NO_SHOW_PROFILE");
 
   if (!["ACCEPTED", "PROPOSED", "CONFIRMED"].includes(request.status)) return null;
 
@@ -238,6 +275,7 @@ export default function MeetupScheduler({ request, myProfileId, busy, onPropose,
           <ul className="mu-ticket__rules">
             <li>약속 5분 전까지 <b>{myPlace}</b>(으)로 와 주세요. {partner} 님은 다른 곳에서 기다려요.</li>
             <li>스태프가 닉네임을 확인하고 부스로 안내해요.</li>
+            <li>약속 시각에서 <b>10분</b>이 지나도 오지 않으면 노쇼로 처리되고 약속이 취소돼요.</li>
             <li>부스에서는 얼굴을 가린 채 앱 채팅으로 10분 이야기해요. 끝나고 둘 다 원하면 얼굴을 봐요.</li>
           </ul>
           <div className="mu-ticket__actions">
@@ -309,7 +347,14 @@ export default function MeetupScheduler({ request, myProfileId, busy, onPropose,
       <div className="mu-head">
         <span className="mu-head__badge mu-head__badge--gold">매치 성사</span>
       </div>
-      <strong className="mu-title">이제 만날 시간을 정해요</strong>
+      {noShow ? (
+        <p className="mu-notice mu-notice--noshow">
+          {iWasAbsent
+            ? "지난 약속은 참석하지 못해 취소됐어요."
+            : `지난 약속은 ${partner} 님이 오지 못해 취소됐어요. 기다려 주셔서 고마워요.`}
+        </p>
+      ) : null}
+      <strong className="mu-title">{noShow ? "시간을 다시 잡을 수 있어요" : "이제 만날 시간을 정해요"}</strong>
       <p className="mu-copy">
         소개팅 부스는 20분에 한 쌍만 받아요. 빈 시간을 골라 제안하면 {partner} 님이 확정해요.
       </p>

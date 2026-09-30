@@ -10,6 +10,8 @@ public record AiMatchMeetupScheduleDto(
         int slotMinutes,
         /** 시간표를 만든 서버 시각. 화면 시계와 어긋나도 남은 시간을 맞게 보여 주려고 준다. */
         java.time.LocalDateTime serverNow,
-        List<AiMatchMeetupScheduleItemDto> items
+        List<AiMatchMeetupScheduleItemDto> items,
+        /** 날짜별 남은 칸. 칸이 모자라기 전에 운영진이 알 수 있게. */
+        List<AiMatchMeetupDayDto> days
 ) {
 }

@@ -2139,3 +2139,90 @@
   background: var(--n-glass-3) !important;
   color: var(--n-ivory-2) !important;
 }
+
+/* ---- 시간표 '남은 칸' 줄: 날짜별로 지금 새로 잡을 수 있는 칸 ---- */
+.mu-cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 10px 0 0;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: #f2f4f6;
+  color: #4e5968;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mu-cap strong {
+  color: #191f28;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.mu-cap small {
+  color: #8b95a1;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mu-cap b {
+  font-weight: 800;
+}
+
+.mu-cap em {
+  flex-basis: 100%;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.mu-cap.is-low {
+  background: #fff6e0;
+}
+
+.mu-cap.is-low em {
+  color: #a66a00;
+}
+
+.mu-cap.is-full {
+  background: #fdecee;
+}
+
+.mu-cap.is-full em,
+.mu-cap .is-full {
+  color: #c93d30;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-cap:not(#_) {
+  background: var(--n-glass-3) !important;
+  box-shadow: inset 0 0 0 1px var(--n-line-soft);
+  color: var(--n-ivory-2) !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-cap strong:not(#_) {
+  color: var(--n-ivory) !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-cap small:not(#_) {
+  color: var(--n-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-cap.is-low:not(#_) {
+  background: var(--n-wait-bg) !important;
+  box-shadow: inset 0 0 0 1px rgba(230, 200, 120, 0.45);
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-cap.is-low em:not(#_) {
+  color: var(--n-wait) !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-cap.is-full:not(#_) {
+  background: var(--n-bad-bg) !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 140, 130, 0.45);
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-cap.is-full em:not(#_),
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-cap span.is-full:not(#_) {
+  color: var(--n-bad) !important;
+}

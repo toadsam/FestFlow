@@ -79,6 +79,19 @@ public class AiMatchSmsNotifier {
                 + "까지 " + waitingPlace + "(으)로 와 주세요. 도착하면 앱에서 '도착했어요'를 눌러 주세요. " + aiMatchUrl);
     }
 
+    /**
+     * 스태프가 노쇼(슬롯 반납)로 처리했을 때. absent 면 안 온 쪽, 아니면 기다린 쪽에게 가는 문자다.
+     * 미리 알리고 못 오는 경우에도 같은 처리를 하므로 안 온 쪽 문구는 탓하지 않는 말로 쓴다.
+     * 매칭은 남아 있어 신청함에서 시간을 다시 잡을 수 있다.
+     */
+    public void notifyMeetupNoShow(String phoneNumber, LocalDateTime meetupAt, boolean absent) {
+        String reason = absent
+                ? " 약속은 참석하지 못해 취소됐어요."
+                : " 약속은 상대가 오지 못해 취소됐어요. 기다려 주셔서 고마워요.";
+        send(phoneNumber, PREFIX + timeLabel(meetupAt) + reason
+                + " 신청함에서 시간을 다시 잡을 수 있어요. " + aiMatchUrl);
+    }
+
     static String timeLabel(LocalDateTime at) {
         if (at == null) return "";
         DayOfWeek day = at.getDayOfWeek();
