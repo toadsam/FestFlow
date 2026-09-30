@@ -68,6 +68,13 @@ const ESCORT_NEXT = {
 };
 const PLACE_TAB_KEY = "festflow.meetupPlaceTab";
 
+// "10304분 뒤" 대신 "7일 뒤" · "2시간 10분 뒤" 처럼 읽기 쉽게
+function untilLabel(mins) {
+  if (mins >= 1440) return `${Math.floor(mins / 1440)}일 뒤`;
+  if (mins >= 60) return mins % 60 ? `${Math.floor(mins / 60)}시간 ${mins % 60}분 뒤` : `${Math.floor(mins / 60)}시간 뒤`;
+  return `${mins}분 뒤`;
+}
+
 function EscortControl({ stage = "NONE", stageAt, busy, onStage }) {
   const index = Math.max(0, ESCORT_STEPS.indexOf(stage));
   const next = ESCORT_STEPS[index + 1];
@@ -153,7 +160,7 @@ function PlaceBoard({ items, now, busyId, onStage }) {
               <li key={`${person.item.requestId}-${person.side}`} className={`mu-board__row mu-board__row--${(person.stage || "NONE").toLowerCase()}`}>
                 <span className="mu-board__time">
                   <b>{timeLabel(person.item.slotAt)}</b>
-                  <small>{mins > 0 ? `${mins}분 뒤` : mins > -15 ? "진행 중" : "지남"}</small>
+                  <small>{mins > 0 ? untilLabel(mins) : mins > -15 ? "진행 중" : "지남"}</small>
                 </span>
                 <span className="mu-board__who">
                   <b>{person.nickname}</b>
@@ -213,7 +220,7 @@ function NowCard({ items, now }) {
               {next.requesterNickname} · {next.profileNickname}
             </strong>
             <span>
-              {timeLabel(next.slotAt)} · {minutesUntil(next.slotAt, now)}분 뒤
+              {timeLabel(next.slotAt)} · {untilLabel(minutesUntil(next.slotAt, now))}
               {soon ? ` · ${next.requesterWaitingPlace} / ${next.profileWaitingPlace} 확인` : ""}
             </span>
           </>

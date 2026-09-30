@@ -47,7 +47,9 @@ export default function App() {
   const isV2Shell = !isOpsPanelRoute && !isOrderRoute;
   // 관리자 페이지(/admin)는 자체 사이드바가 있어 손님 하단 탭을 붙이지 않는다.
   const isAdminRoute = location.pathname.startsWith("/admin");
-  const showCustomerNav = isV2Shell && !isTableBoardRoute && !isAdminRoute;
+  // 소개팅 전용 관리자(/ai-match/admin)도 자체 사이드바가 있고, 데스크톱에서 화면 폭을 다 쓴다.
+  const isAiMatchAdminRoute = location.pathname.startsWith("/ai-match/admin");
+  const showCustomerNav = isV2Shell && !isTableBoardRoute && !isAdminRoute && !isAiMatchAdminRoute;
   // 스플래시는 손님 화면에서 세션당 한 번. 운영 콘솔·QR 주문·현황판으로 바로 들어오면 안 띄운다.
   const [splash, setSplash] = useState(
     // 소개팅 탭으로 바로 열면 그쪽 사주 스플래시가 대신 뜬다.
@@ -62,6 +64,7 @@ export default function App() {
       data-order-route={isOrderRoute ? "true" : undefined}
       data-v2={isV2Shell ? "true" : undefined}
       data-ops-v2={isBoothOpsRoute ? "true" : undefined}
+      data-aa-admin={isAiMatchAdminRoute ? "true" : undefined}
     >
       <main className="festival-main">
         <Outlet />

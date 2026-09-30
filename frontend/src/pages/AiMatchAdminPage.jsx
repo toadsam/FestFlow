@@ -15,13 +15,11 @@ import {
   updateAdminAiMatchRequestNote,
 } from "../api";
 import {
-  IconArrowLeft,
   IconClipboard,
   IconEye,
   IconEyeOff,
   IconHeart,
   IconMapPin,
-  IconRefresh,
   IconSearch,
   IconShield,
   IconUsers,
@@ -29,7 +27,10 @@ import {
 } from "../components/UxIcons";
 import { clearLogin, getAdminName, isLoggedIn, saveLogin } from "../utils/auth";
 import AdminMeetupSchedule, { OUTCOME_LABELS } from "../components/admin/AdminMeetupSchedule";
+import { AdminNightSky, AdminSajuCelebrate, AdminSajuHero, AdminSajuSide, pickBriefing } from "../components/admin/AdminSajuShell";
 import "../styles/admin-aimatch.css";
+import "../styles/admin-aimatch-saju.css";
+import "../styles/admin-aimatch-night.css";
 
 const STATUS_LABELS = {
   PENDING: "대기중",
@@ -62,6 +63,7 @@ function getStatusLabel(status) {
 }
 
 const RESET_PHRASE = "소개팅 전체 삭제";
+const ADMIN_TAB_KEYS = ["matches", "requests", "profiles", "reports", "tools"];
 
 const REPORT_REASON_LABELS = {
   INAPPROPRIATE_PHOTO: "부적절한 사진",
@@ -223,6 +225,8 @@ export default function AiMatchAdminPage() {
   const [copiedKey, setCopiedKey] = useState("");
   const overviewRefreshInFlightRef = useRef(false);
   const completePulseTimerRef = useRef(null);
+  const matchedCountRef = useRef(null);
+  const [celebrate, setCelebrate] = useState(0);
 
   const profiles = Array.isArray(overview?.profiles) ? overview.profiles : [];
   const requests = Array.isArray(overview?.requests) ? overview.requests : [];
@@ -393,6 +397,34 @@ export default function AiMatchAdminPage() {
       window.clearTimeout(completePulseTimerRef.current);
     }
   }, []);
+
+  // 화면을 켜 둔 사이 성사된 매치가 늘면 낙관 도장 알림을 띄운다(처음 불러올 때는 띄우지 않는다).
+  useEffect(() => {
+    if (!overview) {
+      matchedCountRef.current = null;
+      return;
+    }
+    const previous = matchedCountRef.current;
+    matchedCountRef.current = matchedRequests.length;
+    if (previous !== null && matchedRequests.length > previous) {
+      setCelebrate(matchedRequests.length - previous);
+    }
+  }, [overview, matchedRequests.length]);
+
+  // 숫자 1~5 로 탭 이동, R 로 새로고침. 입력 칸에 글을 쓰는 중에는 건드리지 않는다.
+  useEffect(() => {
+    if (!loggedIn) return undefined;
+    const onKey = (event) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const tag = event.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || event.target?.isContentEditable) return;
+      const index = Number(event.key) - 1;
+      if (index >= 0 && index < ADMIN_TAB_KEYS.length) setAdminTab(ADMIN_TAB_KEYS[index]);
+      if (event.key === "r" || event.key === "R") loadOverview();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [loggedIn]);
 
   useEffect(() => {
     if (!loggedIn) return undefined;
@@ -669,10 +701,32 @@ export default function AiMatchAdminPage() {
     setProfileStatusFilter("ALL");
   }
 
+  const adminTabs = [
+    ["matches", "성사·연락", matchedRequests.length],
+    ["requests", "신청 기록", requests.length],
+    ["profiles", "사람들", profiles.length],
+    ["reports", "신고·검수", openReports.length + photoQueue.length],
+    ["tools", "통계·도구", null],
+  ];
+  const briefing = pickBriefing({
+    waiting: waitingConnectionCount,
+    photos: photoQueue.length,
+    reports: openReports.length,
+    pending: pendingRequests.length,
+    matched: matchedRequests.length,
+  });
+  const kpis = [
+    { key: "profile", tab: "profiles", icon: IconUsers, label: "활성 프로필", value: overview?.activeProfileCount ?? 0, note: `전체 ${overview?.totalProfileCount ?? 0}명`, hanja: "人" },
+    { key: "request", tab: "requests", icon: IconClipboard, label: "전체 신청", value: overview?.totalRequestCount ?? 0, note: "누적 신청", hanja: "請" },
+    { key: "pending", tab: "requests", icon: IconShield, label: "대기중", value: pendingRequests.length, note: "상대 응답 대기", hanja: "待" },
+    { key: "matched", tab: "matches", icon: IconHeart, label: "성사된 매치", value: matchedRequests.length, note: waitingConnectionCount ? `${waitingConnectionCount}쌍 연결 대기` : "모두 연결됨", hanja: "緣" },
+  ];
+
   if (!loggedIn) {
     return (
       <section className="auth-entry-screen ai-match-admin-auth" data-i18n-skip>
         <form className="auth-entry-card" onSubmit={handleLogin}>
+          <img className="aas-login__chito" src="/images/saju/chito-dosa.png" alt="" onError={(event) => { event.currentTarget.src = "/images/chito-wave.png"; }} />
           <p className="auth-entry-brand">AI Match Admin</p>
           <div className="auth-entry-copy">
             <h1>소개팅 전용 관리자</h1>
@@ -715,92 +769,23 @@ export default function AiMatchAdminPage() {
   }
 
   return (
-    <section className="cyber-page admin-console-page ai-match-admin-page" data-i18n-skip>
-      <header className="admin-console-hero ai-match-admin-hero">
-        <div className="admin-console-hero__top">
-          <div className="admin-console-hero__copy">
-            <span className="admin-console-hero__eyebrow">AI Match Control</span>
-            <h1>소개팅 전용 관리자</h1>
-            <p>{adminName} 계정으로 로그인됨 · 매치 성사 후 양쪽 연락처를 확인해 조율합니다.</p>
-          </div>
-          <div className="admin-console-hero__actions">
-            <Link to="/ai-match">
-              <IconArrowLeft className="h-4 w-4" />
-              <span>사용자 화면</span>
-            </Link>
-            <button type="button" onClick={loadOverview} disabled={loading}>
-              <IconRefresh className="h-4 w-4" />
-              <span>새로고침</span>
-            </button>
-            <button type="button" onClick={handleLogout}>로그아웃</button>
-          </div>
-        </div>
+    <section className="cyber-page admin-console-page ai-match-admin-page aas" data-tab={adminTab} data-i18n-skip>
+      <AdminNightSky />
+      <AdminSajuSide
+        tabs={adminTabs}
+        activeTab={adminTab}
+        onTab={setAdminTab}
+        adminName={adminName}
+        loading={loading}
+        onRefresh={() => loadOverview()}
+        onLogout={handleLogout}
+        briefing={briefing}
+      />
 
-        {message ? <p className="admin-console-status">{message}</p> : null}
+      <div className="aas-main">
+      <AdminSajuHero adminName={adminName} message={message} loading={loading} kpis={kpis} onTab={setAdminTab} />
 
-        <div className="admin-ai-command-card">
-          <div className="admin-ai-command-card__mark">
-            <IconHeart className="h-5 w-5" />
-          </div>
-          <div>
-            <strong>{matchedRequests.length ? "성사된 매치를 먼저 확인하세요" : "아직 조율할 매치가 없습니다"}</strong>
-            <p>
-              {matchedRequests.length
-                ? "아래 연락 대상 카드에서 양쪽 전화번호와 선호 장소를 확인할 수 있습니다."
-                : "참가자가 데이트 신청을 수락하면 이 화면에 연락 대상이 자동으로 표시됩니다."}
-            </p>
-          </div>
-        </div>
-
-        <div className="admin-ai-match-kpi-grid">
-          <article className="admin-ai-kpi-card admin-ai-kpi-card--profile">
-            <div className="admin-ai-kpi-card__icon"><IconUsers className="h-5 w-5" /></div>
-            <span>활성 프로필</span>
-            <strong>{overview?.activeProfileCount ?? 0}</strong>
-            <small>전체 {overview?.totalProfileCount ?? 0}명</small>
-          </article>
-          <article className="admin-ai-kpi-card admin-ai-kpi-card--request">
-            <div className="admin-ai-kpi-card__icon"><IconClipboard className="h-5 w-5" /></div>
-            <span>전체 신청</span>
-            <strong>{overview?.totalRequestCount ?? 0}</strong>
-            <small>누적 신청</small>
-          </article>
-          <article className="admin-ai-kpi-card admin-ai-kpi-card--pending">
-            <div className="admin-ai-kpi-card__icon"><IconShield className="h-5 w-5" /></div>
-            <span>대기중</span>
-            <strong>{pendingRequests.length}</strong>
-            <small>응답 필요</small>
-          </article>
-          <article className="admin-ai-kpi-card admin-ai-kpi-card--matched">
-            <div className="admin-ai-kpi-card__icon"><IconHeart className="h-5 w-5" /></div>
-            <span>성사된 매치</span>
-            <strong>{matchedRequests.length}</strong>
-            <small>연락 조율</small>
-          </article>
-        </div>
-      </header>
-
-      <nav className="aa-tabs" aria-label="관리 화면">
-        {[
-          ["matches", "성사·연락", matchedRequests.length],
-          ["requests", "신청 기록", requests.length],
-          ["profiles", "사람들", profiles.length],
-          ["reports", "신고·검수", openReports.length + photoQueue.length],
-          ["tools", "통계·도구", null],
-        ].map(([key, label, count]) => (
-          <button
-            key={key}
-            type="button"
-            className={adminTab === key ? "is-active" : ""}
-            aria-current={adminTab === key ? "page" : undefined}
-            onClick={() => setAdminTab(key)}
-          >
-            {label}
-            {count !== null ? <em>{count}</em> : null}
-          </button>
-        ))}
-      </nav>
-
+      <div className="aas-content" key={adminTab}>
       {adminTab === "matches" ? (
       <>
       <AdminMeetupSchedule onChanged={() => loadOverview({ silent: true, force: true })} />
@@ -1450,6 +1435,10 @@ export default function AiMatchAdminPage() {
       </main>
       ) : null}
       </div>
+      </div>
+      </div>
+
+      {celebrate ? <AdminSajuCelebrate count={celebrate} onDone={() => setCelebrate(0)} /> : null}
     </section>
   );
 }
