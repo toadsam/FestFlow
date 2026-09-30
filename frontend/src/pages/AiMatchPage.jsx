@@ -89,11 +89,24 @@ const MBTI_OPTIONS = [
   "ENFJ",
   "ENTJ",
 ];
-const STEP_ITEMS = [
-  { number: "01", title: "전화번호 확인", copy: "중복 가입 방지용, 공개 안 돼요" },
-  { number: "02", title: "사진 AI 변환", copy: "웹툰 얼굴로 바꿔 줘요 · 최대 2회" },
-  { number: "03", title: "생년월일로 사주", copy: "이름·생년월일은 사주에만 쓰고 비공개" },
-  { number: "04", title: "궁합 보고 신청", copy: "상대와 사주 궁합 점수를 보고 골라요" },
+// 로그인 전 첫 화면 '소개팅은 이렇게 이어져요'. 가입부터 부스에서 얼굴 보기 선택까지 한눈에.
+const FLOW_GROUPS = [
+  {
+    label: "지금 · 앱에서",
+    items: [
+      { number: "01", title: "가입하고 웹툰 얼굴 만들기", copy: "전화번호 확인 → 사진 AI 변환 → 생년월일로 사주. 실명·번호·원본 사진은 공개되지 않아요" },
+      { number: "02", title: "궁합 보고 신청하기", copy: "상대와의 사주 궁합 점수를 보고 마음에 드는 사람에게 신청해요" },
+      { number: "03", title: "수락되면 시간 정하기", copy: "둘이 부스 시간(20분)을 골라 확정해요. 확정한 뒤에는 바꿀 수 없어요" },
+    ],
+  },
+  {
+    label: "축제 당일 · 소개팅 부스에서",
+    items: [
+      { number: "04", title: "대기 장소로 가기", copy: "30분 전에 문자가 가요. 티켓에 나온 곳(성호관 앞 · 중앙도서관 앞)에서 스태프가 부스로 데려가요" },
+      { number: "05", title: "블라인드 채팅 10분", copy: "얼굴은 가린 채 앱 채팅으로만 이야기해요. 어색하지 않게 대화 주제도 추천해 줘요" },
+      { number: "06", title: "얼굴 보기 선택", copy: "둘 다 ‘얼굴 보기’를 골랐을 때만 가림막을 걷어요. 누가 무엇을 골랐는지는 알려지지 않아요" },
+    ],
+  },
 ];
 
 // 가입 화면 단계 표시용
@@ -758,6 +771,8 @@ export default function AiMatchPage() {
   const nicknameCheckSeq = useRef(0);
   const phoneAutoCheckedKeyRef = useRef("");
   const [accessAttempted, setAccessAttempted] = useState(false);
+  // 로그인 시트 안에 보여 줄 오류(틀린 닉네임·비밀번호 등). 시트가 화면을 덮어 위쪽 배너는 안 보인다.
+  const [accessError, setAccessError] = useState("");
   const accessSessionSeqRef = useRef(0);
   const accessSessionRestoredRef = useRef(false);
   const accessRefreshInFlightRef = useRef(false);
@@ -1129,6 +1144,7 @@ export default function AiMatchPage() {
     setAccessTargetScreen(targetScreen);
     setAccessModalOpen(true);
     setAccessAttempted(false);
+    setAccessError("");
     setErrorMessage("");
     setSuccessMessage("");
   }
@@ -1137,6 +1153,7 @@ export default function AiMatchPage() {
     setAccessModalOpen(false);
     setAccessSubmitting(false);
     setAccessAttempted(false);
+    setAccessError("");
   }
 
   function clearAccessSession({ resetForm = false } = {}) {
@@ -1343,16 +1360,9 @@ export default function AiMatchPage() {
   async function handleAccessSubmit(event) {
     event.preventDefault();
     setAccessAttempted(true);
-    if (!accessNickname.trim()) {
-      setErrorMessage("닉네임을 입력해 주세요.");
-      return;
-    }
-    if (!accessPin.trim()) {
-      setErrorMessage("비밀번호를 입력해 주세요.");
-      return;
-    }
-    if (accessPinInvalid) {
-      setErrorMessage("비밀번호는 4~10자여야 합니다.");
+    setAccessError("");
+    // 빈 칸·글자 수는 칸 바로 아래에 뜬다.
+    if (!accessNickname.trim() || !accessPin.trim() || accessPinInvalid) {
       return;
     }
 
@@ -1365,7 +1375,11 @@ export default function AiMatchPage() {
       });
       setSuccessMessage("신청함 잠금이 해제되었습니다.");
     } catch (error) {
-      setErrorMessage(error.message || "프로필 인증에 실패했습니다.");
+      setAccessError(
+        error.status === 401
+          ? "닉네임 또는 비밀번호가 맞지 않아요. 다시 확인해 주세요."
+          : error.message || "로그인하지 못했어요. 잠시 뒤 다시 시도해 주세요.",
+      );
     } finally {
       setAccessSubmitting(false);
     }
@@ -2051,19 +2065,24 @@ export default function AiMatchPage() {
           <SajuFortune ctaLabel="가입하고 내 궁합 보러 가기" onCta={startNewRegistration} />
         </div>
 
-        <section className="ai-match-step-card">
-          <h3>4단계면 끝나요</h3>
-          <div className="ai-match-step-list">
-            {STEP_ITEMS.map((item) => (
-              <article key={item.number} className="ai-match-step-row">
-                <span>{item.number}</span>
-                <div>
-                  <strong>{item.title}</strong>
-                  <p>{item.copy}</p>
-                </div>
-              </article>
-            ))}
-          </div>
+        <section className="ai-match-step-card am-flow">
+          <h3>소개팅은 이렇게 이어져요</h3>
+          {FLOW_GROUPS.map((group) => (
+            <div key={group.label} className="am-flow__group">
+              <p className="am-flow__label">{group.label}</p>
+              <div className="ai-match-step-list">
+                {group.items.map((item) => (
+                  <article key={item.number} className="ai-match-step-row">
+                    <span>{item.number}</span>
+                    <div>
+                      <strong>{item.title}</strong>
+                      <p>{item.copy}</p>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+          ))}
         </section>
 
         <button
@@ -3479,7 +3498,7 @@ export default function AiMatchPage() {
 
       {accessModalOpen ? (
         <div className="ai-match-modal" role="dialog" aria-modal="true" aria-labelledby="ai-match-access-title">
-          <form ref={accessDialogRef} className="ai-match-dialog am-login" onSubmit={handleAccessSubmit}>
+          <form ref={accessDialogRef} className={`ai-match-dialog am-login${accessError ? " is-wrong" : ""}`} onSubmit={handleAccessSubmit}>
             <span className="am-login__handle" aria-hidden="true" />
             <button type="button" className="ai-match-close am-login__close" aria-label="닫기" onClick={closeAccessModal}>
               <IconX className="h-4 w-4" />
@@ -3497,7 +3516,10 @@ export default function AiMatchPage() {
                 ref={accessNicknameInputRef}
                 value={accessNickname}
                 maxLength={12}
-                onChange={(event) => setAccessNickname(event.target.value)}
+                onChange={(event) => {
+                  setAccessNickname(event.target.value);
+                  setAccessError("");
+                }}
                 placeholder="등록한 닉네임"
               />
               {accessAttempted && accessNicknameMissing ? <small className="ai-match-field-error">닉네임을 입력해 주세요.</small> : null}
@@ -3515,6 +3537,7 @@ export default function AiMatchPage() {
                   const nextValue = event.target.value;
                   if (PASSWORD_INPUT_PATTERN.test(nextValue)) {
                     setAccessPin(nextValue);
+                    setAccessError("");
                   }
                 }}
                 placeholder="예) 364657434"
@@ -3522,6 +3545,12 @@ export default function AiMatchPage() {
               {accessAttempted && accessPinMissing ? <small className="ai-match-field-error">비밀번호를 입력해 주세요.</small> : null}
               {accessAttempted && accessPinInvalid ? <small className="ai-match-field-error">비밀번호는 4~10자여야 합니다.</small> : null}
             </label>
+            {accessError ? (
+              <p className="am-login__error" role="alert">
+                <b aria-hidden="true">!</b>
+                {accessError}
+              </p>
+            ) : null}
             <button type="submit" className="ai-match-primary-button ai-match-primary-button--sheet" disabled={accessSubmitting}>
               <span className="ai-match-primary-button__label">
                 {getAccessSubmitLabel()}
