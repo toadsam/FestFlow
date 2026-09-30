@@ -1388,6 +1388,14 @@ export async function chooseAiMatchChatReveal(token, reveal) {
   return parseJson(response, "선택을 보내지 못했습니다.");
 }
 
+export async function startAdminAiMatchChat(requestId) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/chat/start`, {
+    method: "POST",
+    headers: withAuth(),
+  });
+  return parseJson(response, "채팅을 시작하지 못했습니다.");
+}
+
 export async function fetchAdminAiMatchChatLog(requestId) {
   const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/chat`, { headers: withAuth() });
   return parseJson(response, "채팅 기록을 불러오지 못했습니다.");

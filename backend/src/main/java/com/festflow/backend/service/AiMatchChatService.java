@@ -39,7 +39,7 @@ import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 /**
  * 소개팅 부스 블라인드 채팅.
- * 두 사람이 모두 '부스 도착'이 되면 채팅이 열리고(AiMatchService.setEscortStage), chatMinutes 동안 글자로 이야기한다.
+ * 두 사람이 모두 '부스 도착'인 상태에서 스태프가 '채팅 시작'을 누르면 열리고(AiMatchService.startBlindChat), chatMinutes 동안 글자로 이야기한다.
  * 끝나면 각자 얼굴 보기를 고르고, 둘 다 원할 때만 MATCH 가 된다. 누가 거절했는지는 알려 주지 않는다.
  * 화면은 1초마다 상태를 받아 간다. 매번 비밀번호(BCrypt)를 확인하면 무거워서, 입장할 때 한 번 확인하고 토큰을 준다.
  * 토큰은 메모리에만 두므로 서버가 다시 뜨면 화면이 다시 입장한다.

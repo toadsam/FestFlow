@@ -2118,3 +2118,24 @@
     padding-bottom: 4px;
   }
 }
+
+/* 스태프 '채팅 시작' 버튼 · 한 명만 도착했을 때 안내 */
+.mu-admin__pairs > .mu-chat-start {
+  justify-self: start;
+}
+
+.app-shell .mu-chat-start.mu-esc__next:not(#_esc) {
+  height: 40px;
+  padding: 0 16px !important;
+  font-size: 14px !important;
+}
+
+.mu-chat--wait {
+  background: #f2f4f6;
+  color: #6b7684;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chat--wait:not(#_) {
+  background: var(--n-glass-3) !important;
+  color: var(--n-ivory-2) !important;
+}

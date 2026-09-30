@@ -1,7 +1,8 @@
 // 운영진용 소개팅 부스 시간표. 그날 잡힌 20분 슬롯과 두 사람이 어디서 기다리는지.
 // 맨 위 '지금' 카드는 이 순간 부스에 있어야 할 쌍·다음 쌍·5분 뒤 대기 장소로 가야 할 사람을 보여 준다.
 // 줄마다 도착 체크 · 만남 완료 · 노쇼(슬롯 반납)를 누를 수 있다. 10초마다 새로 받는다.
-// 두 사람이 모두 '부스 도착'이 되면 블라인드 채팅이 열리고, 줄에 채팅 상태(채팅 중 · 선택 중 · 둘 다 얼굴 보기)가 뜬다.
+// 두 사람이 모두 '부스 도착'이 되면 '채팅 시작' 버튼이 뜬다. 눌러 확인하면 10분 타이머가 돌고,
+// 줄에 채팅 상태(채팅 중 · 선택 중 · 둘 다 얼굴 보기)가 뜬다.
 // '대기 장소' 명단: 성호관·중앙도서관 담당 스태프가 자기 장소 사람만 보고 도착 확인 → 출발하기 → 만났어요 → 부스 도착을 넘긴다.
 // 넘긴 단계는 참가자 티켓의 단계 바(배달 앱처럼)에 그대로 보인다.
 import { useCallback, useEffect, useState } from "react";
@@ -11,6 +12,7 @@ import {
   markAdminAiMatchMet,
   markAdminAiMatchNoShow,
   setAdminAiMatchEscortStage,
+  startAdminAiMatchChat,
 } from "../../api";
 import "../../styles/saju-meetup.css";
 
@@ -107,7 +109,8 @@ function ChatChip({ phase, endsAt, now, clockOffset }) {
   let label = "";
   if (phase === "OPEN") {
     const left = Math.max(0, (parseLocalSeconds(endsAt) || 0) - (now + clockOffset));
-    label = `💬 채팅 중 · ${Math.max(1, Math.ceil(left / 60_000))}분 남음`;
+    // 화면 시계가 5초마다 움직여서 올림하면 시작 직후 '11분'이 된다. 반올림으로 보여 준다.
+    label = `💬 채팅 중 · ${Math.max(1, Math.round(left / 60_000))}분 남음`;
   } else if (phase === "CHOOSING") {
     label = "🤔 얼굴 보기 고르는 중";
   } else if (phase === "MATCH") {
@@ -400,6 +403,31 @@ export default function AdminMeetupSchedule({ onChanged }) {
                     {done ? "만남 완료" : item.confirmed ? "확정" : `임시 · ${timeLabel(item.heldUntil)}까지 확정 대기`}
                   </span>
                   {!done ? <ChatChip phase={item.chatPhase} endsAt={item.chatEndsAt} now={now} clockOffset={clockOffset} /> : null}
+                  {!done && item.confirmed && (!item.chatPhase || item.chatPhase === "NONE") ? (
+                    item.requesterEscortStage === "AT_BOOTH" && item.profileEscortStage === "AT_BOOTH" ? (
+                      <button
+                        type="button"
+                        className="mu-esc__next mu-chat-start"
+                        disabled={busy}
+                        onClick={() => {
+                          const ok = window.confirm(
+                            [
+                              `${item.requesterNickname} · ${item.profileNickname}`,
+                              "",
+                              "블라인드 채팅을 시작할까요?",
+                              "누르는 순간 두 사람 화면에 채팅방이 열리고 10분 타이머가 시작돼요.",
+                              "두 사람이 자리에 앉아 앱을 켠 걸 확인한 뒤 눌러 주세요.",
+                            ].join("\n"),
+                          );
+                          if (ok) run(item.requestId, () => startAdminAiMatchChat(item.requestId));
+                        }}
+                      >
+                        💬 채팅 시작 (10분 타이머)
+                      </button>
+                    ) : item.requesterEscortStage === "AT_BOOTH" || item.profileEscortStage === "AT_BOOTH" ? (
+                      <span className="mu-chat mu-chat--wait">한 분 더 부스에 도착하면 채팅을 시작할 수 있어요</span>
+                    ) : null
+                  ) : null}
                   <Person
                     nickname={item.requesterNickname}
                     gender={item.requesterGender}

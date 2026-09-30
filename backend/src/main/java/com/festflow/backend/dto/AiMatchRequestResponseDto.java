@@ -33,6 +33,8 @@ public record AiMatchRequestResponseDto(
         String profileEscortStage,
         LocalDateTime profileEscortStageAt,
         /** 만남 결과. MET / NO_SHOW_* / null. */
-        String meetupOutcome
+        String meetupOutcome,
+        /** 블라인드 채팅 단계(NONE·OPEN·CHOOSING·MATCH·NO_MATCH·CLOSED). 끝난 채팅방을 다시 자동으로 열지 않으려고 준다. */
+        String chatPhase
 ) {
 }

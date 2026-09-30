@@ -744,12 +744,28 @@ public class AiMatchService {
     }
 
     /**
-     * 두 사람이 모두 부스에 도착하면 블라인드 채팅을 연다.
-     * 스태프가 '부스 도착'을 잘못 눌러 되돌린 경우, 아직 아무 말도 선택도 없으면 채팅을 다시 닫아 시간을 돌려준다.
+     * 스태프가 '채팅 시작'을 누른다. 두 사람이 모두 부스에 도착해 있어야 하고, 누르는 순간 채팅 시간이 흐르기 시작한다.
+     * 이미 시작한 채팅이면 그대로 둔다(두 번 눌러도 시간이 다시 시작되지 않는다).
+     */
+    @Transactional
+    public AiMatchAdminRequestDto startBlindChat(Long requestId) {
+        AiMatchRequest request = findMeetupRequest(requestId);
+        if (!"CONFIRMED".equals(request.getStatus()) || request.getMeetupAt() == null) {
+            throw new ResponseStatusException(CONFLICT, "확정된 약속이 없습니다.");
+        }
+        if (!request.bothAtBooth()) {
+            throw new ResponseStatusException(CONFLICT, "두 사람이 모두 부스에 도착한 뒤에 시작할 수 있어요.");
+        }
+        request.startChat();
+        return toAdminRequestDto(request);
+    }
+
+    /**
+     * 채팅을 시작해 놓고 '부스 도착'을 되돌린 경우(잘못 누름), 아직 아무 말도 선택도 없으면 채팅을 다시 닫아 시간을 돌려준다.
+     * 채팅을 여는 것은 스태프의 '채팅 시작'(startBlindChat)뿐이다.
      */
     private void syncChatWithEscort(AiMatchRequest request) {
         if (request.bothAtBooth()) {
-            request.startChat();
             return;
         }
         if (request.getChatStartedAt() != null
@@ -1663,7 +1679,8 @@ public class AiMatchService {
                 escortStageAt(request, true),
                 request.escortStage(false),
                 escortStageAt(request, false),
-                request.getMeetupOutcome()
+                request.getMeetupOutcome(),
+                request.chatPhase(LocalDateTime.now(), chatMinutes, chatChooseMinutes)
         );
     }
 

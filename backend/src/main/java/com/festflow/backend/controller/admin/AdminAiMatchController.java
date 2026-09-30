@@ -89,6 +89,12 @@ public class AdminAiMatchController {
         return aiMatchService.setEscortStage(requestId, requestDto);
     }
 
+    /** 두 사람이 자리에 앉은 뒤 스태프가 블라인드 채팅(타이머)을 시작한다. */
+    @PostMapping("/requests/{requestId}/chat/start")
+    public AiMatchAdminRequestDto startBlindChat(@PathVariable Long requestId) {
+        return aiMatchService.startBlindChat(requestId);
+    }
+
     /** 신고 확인용 채팅 기록. */
     @GetMapping("/requests/{requestId}/chat")
     public java.util.List<com.festflow.backend.dto.AiMatchAdminChatLineDto> getChatLog(@PathVariable Long requestId) {

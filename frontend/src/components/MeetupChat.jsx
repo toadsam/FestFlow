@@ -1,4 +1,4 @@
-// 소개팅 부스 블라인드 채팅방. 두 사람이 부스에 앉으면 열리고, 10분 뒤 닫히면 각자 얼굴 보기를 고른다.
+// 소개팅 부스 블라인드 채팅방. 두 사람이 부스에 앉고 스태프가 '채팅 시작'을 누르면 열리고, 10분 뒤 닫히면 각자 얼굴 보기를 고른다.
 // 서버 상태를 1초마다 받아 온다(채팅 중). 시계는 서버 시각 기준으로 맞춘다.
 // 전역 버튼 스타일(.app-shell button)에 안 눌리도록 body 에 포털로 띄우고 mchat-* 클래스만 쓴다.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -261,8 +261,8 @@ export default function MeetupChat({ requestId, nickname, pin, onClose }) {
         {phase === "WAITING" ? (
           <div className="mchat__center">
             <span className="mchat__moon" aria-hidden="true">🌙</span>
-            <strong>상대가 자리에 앉으면 채팅이 열려요</strong>
-            <p>두 사람이 모두 부스에 도착하면 자동으로 시작돼요. 이 화면을 켜 둔 채 잠시만 기다려 주세요.</p>
+            <strong>곧 채팅이 시작돼요</strong>
+            <p>두 사람이 자리에 앉으면 스태프가 채팅을 시작해요. 이 화면을 켜 둔 채 잠시만 기다려 주세요.</p>
             <ul>
               <li>얼굴을 보기 전에 <b>10분</b> 동안 글로 이야기해요.</li>
               <li>끝나면 각자 <b>얼굴 보기</b>를 골라요. 둘 다 원할 때만 얼굴을 봐요.</li>

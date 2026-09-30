@@ -106,7 +106,7 @@ public class AiMatchRequest {
     @Column(name = "meetup_reminder_sent_at")
     private LocalDateTime meetupReminderSentAt;
 
-    /** 블라인드 채팅이 열린 시각. 두 사람이 모두 부스에 도착하면 채운다. */
+    /** 블라인드 채팅이 열린 시각. 두 사람이 부스에 앉은 뒤 스태프가 '채팅 시작'을 누르면 채운다. */
     @Column(name = "chat_started_at")
     private LocalDateTime chatStartedAt;
 

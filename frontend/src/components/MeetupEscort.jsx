@@ -78,10 +78,12 @@ export default function MeetupEscort({ request, iAmRequester, myPlace, busy, onA
   const current = steps[Math.min(index, steps.length - 1)];
   const barSteps = steps.slice(0, 5);
   const atBooth = stage === "AT_BOOTH" && !met;
+  // 이미 끝난 채팅(결과가 났거나 닫힘)은 자동으로 열지 않고, 다시 보기 버튼만 둔다.
+  const chatOver = ["MATCH", "NO_MATCH", "CLOSED"].includes(request.chatPhase);
 
   // 부스에 도착하면 채팅방을 한 번 자동으로 연다(닫은 뒤에는 버튼으로 다시 들어간다).
   useEffect(() => {
-    if (!atBooth || !onOpenChat) return;
+    if (!atBooth || chatOver || !onOpenChat) return;
     const key = `festflow.chatOpened.${request.id}`;
     try {
       if (window.sessionStorage.getItem(key)) return;
@@ -91,7 +93,7 @@ export default function MeetupEscort({ request, iAmRequester, myPlace, busy, onA
     }
     onOpenChat();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [atBooth, request.id]);
+  }, [atBooth, chatOver, request.id]);
 
   return (
     <section className={`esc esc--${met ? "done" : stage.toLowerCase()}`} aria-label="오늘의 동선">
@@ -124,7 +126,7 @@ export default function MeetupEscort({ request, iAmRequester, myPlace, busy, onA
       {index === 1 ? <PlacePhoto place={myPlace} /> : null}
       {atBooth ? (
         <button type="button" className="esc-arrived" onClick={onOpenChat}>
-          블라인드 채팅방 들어가기
+          {chatOver ? "채팅방 다시 보기" : "블라인드 채팅방 들어가기"}
         </button>
       ) : null}
     </section>
