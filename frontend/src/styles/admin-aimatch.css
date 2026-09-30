@@ -2006,3 +2006,115 @@
 .mu-board__row .mu-esc {
   margin-top: 0;
 }
+
+/* ---- 블라인드 채팅 상태(mu-chat) · 채팅 기록(mu-chatlog) ---- */
+.mu-chat {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #efe9ff;
+  color: #55389f;
+  font-size: 12.5px;
+  font-weight: 800;
+}
+
+.mu-chat--choosing { background: #fff5d6; color: #9a6700; }
+.mu-chat--match { background: #ffe9b0; color: #6b4a00; box-shadow: 0 0 0 2px #f2c94c; }
+.mu-chat--no_match { background: #f2f4f6; color: #4e5968; }
+
+.mu-admin__chatlog {
+  display: grid;
+  gap: 6px;
+  flex-basis: 100%;
+  justify-items: start;
+}
+
+.mu-chatlog {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  max-height: 260px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #faf9fc;
+  box-shadow: inset 0 0 0 1px #ece8f4;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.mu-chatlog li {
+  display: grid;
+  grid-template-columns: 40px 84px minmax(0, 1fr);
+  gap: 8px;
+  color: #191f28;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.mu-chatlog time { color: #8b95a1; font-variant-numeric: tabular-nums; }
+.mu-chatlog b { overflow: hidden; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+.mu-chatlog span { overflow-wrap: anywhere; }
+.mu-chatlog li.is-topic span { color: #55389f; font-weight: 700; }
+
+.mu-admin__pairs > .mu-chat {
+  justify-self: start;
+}
+
+/* 소개팅 전용 관리자의 밤 테마(admin-aimatch-night.css)에서는 글자색을 통째로 상아색으로 덮으므로, 같은 무게로 다시 잡는다. */
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chat:not(#_) {
+  background: var(--n-violet-bg) !important;
+  color: var(--n-violet) !important;
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chat--choosing:not(#_) {
+  background: var(--n-wait-bg) !important;
+  color: var(--n-wait) !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chat--match:not(#_) {
+  background: var(--n-goldfill) !important;
+  color: #2a1f4d !important;
+  box-shadow: 0 0 0 2px rgba(236, 208, 136, 0.35);
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chat--no_match:not(#_) {
+  background: var(--n-glass-3) !important;
+  color: var(--n-ivory-2) !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chatlog:not(#_) {
+  background: rgba(12, 9, 32, 0.45) !important;
+  box-shadow: inset 0 0 0 1px var(--n-line-soft) !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chatlog li:not(#_),
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chatlog li span:not(#_) {
+  color: var(--n-ivory) !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chatlog li time:not(#_) {
+  color: var(--n-ivory-3) !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chatlog li b:not(#_) {
+  color: var(--n-gold) !important;
+}
+
+.app-shell.festival-shell[data-aa-admin="true"] .cyber-page.ai-match-admin-page.aas .aas-content .mu-chatlog li.is-topic span:not(#_) {
+  color: var(--n-violet) !important;
+}
+
+@media (max-width: 640px) {
+  .mu-chatlog li {
+    grid-template-columns: 40px minmax(0, 1fr);
+  }
+
+  .mu-chatlog li span {
+    grid-column: 1 / -1;
+    padding-bottom: 4px;
+  }
+}

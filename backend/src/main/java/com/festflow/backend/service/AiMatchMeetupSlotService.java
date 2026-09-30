@@ -33,7 +33,8 @@ import static org.springframework.http.HttpStatus.CONFLICT;
 @Service
 public class AiMatchMeetupSlotService {
 
-    public static final int SLOT_MINUTES = 15;
+    /** 한 칸 20분: 도착·착석 3분 + 블라인드 채팅 10분 + 얼굴 보기 선택·퇴장. */
+    public static final int SLOT_MINUTES = 20;
 
     public int getHoldMinutes() {
         return holdMinutes;
@@ -42,7 +43,7 @@ public class AiMatchMeetupSlotService {
     public static final LocalTime CLOSE_TIME = LocalTime.of(22, 0);
     public static final String BOOTH_NAME = "총학생회 소개팅 부스";
     /** 한 사람의 약속끼리 이 분 안으로는 붙여 잡지 못한다(대기 장소 이동·부스 대화 시간). */
-    public static final int PERSONAL_GAP_MINUTES = 30;
+    public static final int PERSONAL_GAP_MINUTES = 40;
     /** 블라인드 만남이라 두 사람은 서로 다른 곳에서 기다리고, 스태프가 부스로 데려온다. */
     public static final String WAITING_PLACE_FEMALE = "성호관 앞";
     public static final String WAITING_PLACE_MALE = "중앙도서관 앞";
@@ -78,6 +79,11 @@ public class AiMatchMeetupSlotService {
         slotRepository.deleteOrphans();
     }
 
+    /** 두 칸(각각 SLOT_MINUTES 길이)이 시간상 겹치는지. */
+    private static boolean overlaps(LocalDateTime a, LocalDateTime b) {
+        return Math.abs(java.time.Duration.between(a, b).toMinutes()) < SLOT_MINUTES;
+    }
+
     public static boolean isTooClose(LocalDateTime a, LocalDateTime b) {
         return Math.abs(java.time.Duration.between(a, b).toMinutes()) <= PERSONAL_GAP_MINUTES;
     }
@@ -101,6 +107,11 @@ public class AiMatchMeetupSlotService {
         List<AiMatchMeetupSlotDto> slots = new ArrayList<>();
         for (LocalDateTime at = date.atTime(OPEN_TIME); at.isBefore(date.atTime(CLOSE_TIME)); at = at.plusMinutes(SLOT_MINUTES)) {
             AiMatchMeetupSlot slot = taken.get(at);
+            if (slot == null) {
+                // 칸 길이를 바꾸기 전에 잡힌(격자에 안 맞는) 약속이 이 칸과 겹치면 그 약속이 이 칸을 쓰는 것으로 본다.
+                final LocalDateTime cell = at;
+                slot = taken.values().stream().filter(other -> overlaps(other.getSlotAt(), cell)).findFirst().orElse(null);
+            }
             boolean mine = slot != null && myRequestId != null && myRequestId.equals(slot.getRequestId());
             String status;
             if (slot != null) {
@@ -125,6 +136,14 @@ public class AiMatchMeetupSlotService {
         slotRepository.deleteByRequestIdNow(requestId);
         if (slotRepository.findBySlotAt(slotAt).isPresent()) {
             throw new ResponseStatusException(CONFLICT, "방금 다른 커플이 먼저 잡은 시간이에요. 다른 시간을 골라 주세요.");
+        }
+        boolean overlapsOther = slotRepository
+                .findAllBySlotAtGreaterThanEqualAndSlotAtLessThanOrderBySlotAtAsc(
+                        slotAt.minusMinutes(SLOT_MINUTES - 1L), slotAt.plusMinutes(SLOT_MINUTES))
+                .stream()
+                .anyMatch(other -> !requestId.equals(other.getRequestId()));
+        if (overlapsOther) {
+            throw new ResponseStatusException(CONFLICT, "다른 커플의 약속과 겹치는 시간이에요. 다른 시간을 골라 주세요.");
         }
         try {
             return slotRepository.saveAndFlush(
@@ -216,7 +235,7 @@ public class AiMatchMeetupSlotService {
         LocalTime time = slotAt.toLocalTime();
         boolean aligned = time.getSecond() == 0 && time.getNano() == 0 && time.getMinute() % SLOT_MINUTES == 0;
         if (!aligned || time.isBefore(OPEN_TIME) || !time.isBefore(CLOSE_TIME)) {
-            throw new ResponseStatusException(BAD_REQUEST, "09:00부터 21:45까지 15분 단위 시간만 고를 수 있어요.");
+            throw new ResponseStatusException(BAD_REQUEST, "09:00부터 21:40까지 20분 단위 시간만 고를 수 있어요.");
         }
         if (slotAt.isBefore(LocalDateTime.now())) {
             throw new ResponseStatusException(BAD_REQUEST, "지나간 시간은 고를 수 없어요.");

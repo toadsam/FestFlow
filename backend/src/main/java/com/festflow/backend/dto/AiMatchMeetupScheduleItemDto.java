@@ -24,6 +24,9 @@ public record AiMatchMeetupScheduleItemDto(
         LocalDateTime requesterEscortStageAt,
         String profileEscortStage,
         LocalDateTime profileEscortStageAt,
-        LocalDateTime reminderSentAt
+        LocalDateTime reminderSentAt,
+        /** 블라인드 채팅 단계(NONE·OPEN·CHOOSING·MATCH·NO_MATCH·CLOSED)와 채팅이 끝나는 시각. */
+        String chatPhase,
+        LocalDateTime chatEndsAt
 ) {
 }

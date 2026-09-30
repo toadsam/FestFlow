@@ -1,10 +1,12 @@
-// 운영진용 소개팅 부스 시간표. 그날 잡힌 15분 슬롯과 두 사람이 어디서 기다리는지.
+// 운영진용 소개팅 부스 시간표. 그날 잡힌 20분 슬롯과 두 사람이 어디서 기다리는지.
 // 맨 위 '지금' 카드는 이 순간 부스에 있어야 할 쌍·다음 쌍·5분 뒤 대기 장소로 가야 할 사람을 보여 준다.
-// 줄마다 도착 체크 · 만남 완료 · 노쇼(슬롯 반납)를 누를 수 있다. 30초마다 새로 받는다.
+// 줄마다 도착 체크 · 만남 완료 · 노쇼(슬롯 반납)를 누를 수 있다. 10초마다 새로 받는다.
+// 두 사람이 모두 '부스 도착'이 되면 블라인드 채팅이 열리고, 줄에 채팅 상태(채팅 중 · 선택 중 · 둘 다 얼굴 보기)가 뜬다.
 // '대기 장소' 명단: 성호관·중앙도서관 담당 스태프가 자기 장소 사람만 보고 도착 확인 → 출발하기 → 만났어요 → 부스 도착을 넘긴다.
 // 넘긴 단계는 참가자 티켓의 단계 바(배달 앱처럼)에 그대로 보인다.
 import { useCallback, useEffect, useState } from "react";
 import {
+  fetchAdminAiMatchChatLog,
   fetchAdminAiMatchMeetupSchedule,
   markAdminAiMatchMet,
   markAdminAiMatchNoShow,
@@ -13,7 +15,8 @@ import {
 import "../../styles/saju-meetup.css";
 
 const WEEKDAYS = ["일", "월", "화", "수", "목", "금", "토"];
-const SLOT_MS = 15 * 60_000;
+const SLOT_MINUTES = 20;
+const SLOT_MS = SLOT_MINUTES * 60_000;
 const SOON_MS = 5 * 60_000;
 
 function pad(value) {
@@ -98,6 +101,58 @@ function EscortControl({ stage = "NONE", stageAt, busy, onStage }) {
   );
 }
 
+// 블라인드 채팅 상태. 서버 시각과 이 기기 시각이 달라도 남은 시간이 맞게 clockOffset(서버 - 기기)을 더한다.
+function ChatChip({ phase, endsAt, now, clockOffset }) {
+  if (!phase || phase === "NONE" || phase === "CLOSED") return null;
+  let label = "";
+  if (phase === "OPEN") {
+    const left = Math.max(0, (parseLocalSeconds(endsAt) || 0) - (now + clockOffset));
+    label = `💬 채팅 중 · ${Math.max(1, Math.ceil(left / 60_000))}분 남음`;
+  } else if (phase === "CHOOSING") {
+    label = "🤔 얼굴 보기 고르는 중";
+  } else if (phase === "MATCH") {
+    label = "💛 둘 다 얼굴 보기 — 가림막을 걷어 주세요";
+  } else if (phase === "NO_MATCH") {
+    label = "여기까지 — 한 분씩 따로 안내해 주세요";
+  }
+  return <span className={`mu-chat mu-chat--${phase.toLowerCase()}`}>{label}</span>;
+}
+
+function parseLocalSeconds(value) {
+  if (!value) return null;
+  const time = new Date(`${value}`.slice(0, 23)).getTime();
+  return Number.isFinite(time) ? time : null;
+}
+
+// 신고 확인용 채팅 기록. 눌렀을 때만 불러온다.
+function ChatLog({ requestId }) {
+  const [lines, setLines] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    fetchAdminAiMatchChatLog(requestId)
+      .then((data) => alive && setLines(Array.isArray(data) ? data : []))
+      .catch((loadError) => alive && setError(loadError.message || "채팅 기록을 불러오지 못했습니다."));
+    return () => {
+      alive = false;
+    };
+  }, [requestId]);
+  if (error) return <p className="mu-admin__empty">{error}</p>;
+  if (!lines) return <p className="mu-admin__empty">불러오는 중…</p>;
+  if (!lines.length) return <p className="mu-admin__empty">나눈 대화가 없어요.</p>;
+  return (
+    <ol className="mu-chatlog">
+      {lines.map((line) => (
+        <li key={line.id} className={line.type === "TOPIC" ? "is-topic" : ""}>
+          <time>{`${line.createdAt}`.slice(11, 16)}</time>
+          <b>{line.senderNickname}</b>
+          <span>{line.type === "TOPIC" ? `[주제] ${line.content}` : line.content}</span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
 function Person({ nickname, gender, place, phone, stage, stageAt, onStage, busy }) {
   const arrived = stage && stage !== "NONE";
   return (
@@ -160,7 +215,7 @@ function PlaceBoard({ items, now, busyId, onStage }) {
               <li key={`${person.item.requestId}-${person.side}`} className={`mu-board__row mu-board__row--${(person.stage || "NONE").toLowerCase()}`}>
                 <span className="mu-board__time">
                   <b>{timeLabel(person.item.slotAt)}</b>
-                  <small>{mins > 0 ? untilLabel(mins) : mins > -15 ? "진행 중" : "지남"}</small>
+                  <small>{mins > 0 ? untilLabel(mins) : mins > -SLOT_MINUTES ? "진행 중" : "지남"}</small>
                 </span>
                 <span className="mu-board__who">
                   <b>{person.nickname}</b>
@@ -201,7 +256,7 @@ function NowCard({ items, now }) {
               {current.requesterNickname} · {current.profileNickname}
             </strong>
             <span>
-              {timeLabel(current.slotAt)} 시작 · {Math.max(0, 15 - Math.floor((now - (parseLocal(current.slotAt)?.getTime() || now)) / 60_000))}분 남음
+              {timeLabel(current.slotAt)} 시작 · {Math.max(0, SLOT_MINUTES - Math.floor((now - (parseLocal(current.slotAt)?.getTime() || now)) / 60_000))}분 남음
               {current.requesterArrivedAt && current.profileArrivedAt ? " · 둘 다 도착" : current.requesterArrivedAt || current.profileArrivedAt ? " · 한 명 도착" : " · 아직 아무도 안 옴"}
             </span>
           </>
@@ -241,6 +296,8 @@ export default function AdminMeetupSchedule({ onChanged }) {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [noShowId, setNoShowId] = useState(null);
+  const [chatLogId, setChatLogId] = useState(null);
+  const [clockOffset, setClockOffset] = useState(0);
   const [now, setNow] = useState(() => Date.now());
 
   const load = useCallback((nextDate) => {
@@ -248,6 +305,8 @@ export default function AdminMeetupSchedule({ onChanged }) {
       .then((response) => {
         setData(response);
         setDate(response.date);
+        const serverMs = parseLocalSeconds(response.serverNow);
+        if (serverMs) setClockOffset(serverMs - Date.now());
         setError("");
       })
       .catch((loadError) => setError(loadError.message || "시간표를 불러오지 못했습니다."));
@@ -259,12 +318,12 @@ export default function AdminMeetupSchedule({ onChanged }) {
 
   useEffect(() => {
     if (!date) return undefined;
-    const id = window.setInterval(() => load(date), 30_000);
+    const id = window.setInterval(() => load(date), 10_000);
     return () => window.clearInterval(id);
   }, [date, load]);
 
   useEffect(() => {
-    const id = window.setInterval(() => setNow(Date.now()), 20_000);
+    const id = window.setInterval(() => setNow(Date.now()), 5_000);
     return () => window.clearInterval(id);
   }, []);
 
@@ -283,7 +342,7 @@ export default function AdminMeetupSchedule({ onChanged }) {
   }
 
   const items = data?.items || [];
-  // 아직 안 지난 첫 약속을 강조한다(15분 슬롯이 끝나기 전까지).
+  // 아직 안 지난 첫 약속을 강조한다(20분 슬롯이 끝나기 전까지).
   const nextIndex = items.findIndex((item) => (parseLocal(item.slotAt)?.getTime() || 0) + SLOT_MS > now);
   const confirmedCount = items.filter((item) => item.confirmed).length;
   const isToday = date && parseLocal(`${date}T00:00:00`)?.toDateString() === new Date(now).toDateString();
@@ -340,6 +399,7 @@ export default function AdminMeetupSchedule({ onChanged }) {
                   <span className={`mu-admin__state mu-admin__state--${done ? "done" : item.confirmed ? "ok" : "hold"}`}>
                     {done ? "만남 완료" : item.confirmed ? "확정" : `임시 · ${timeLabel(item.heldUntil)}까지 확정 대기`}
                   </span>
+                  {!done ? <ChatChip phase={item.chatPhase} endsAt={item.chatEndsAt} now={now} clockOffset={clockOffset} /> : null}
                   <Person
                     nickname={item.requesterNickname}
                     gender={item.requesterGender}
@@ -402,6 +462,19 @@ export default function AdminMeetupSchedule({ onChanged }) {
                           노쇼 · 슬롯 반납
                         </button>
                       )}
+                    </div>
+                  ) : null}
+                  {item.chatPhase && item.chatPhase !== "NONE" ? (
+                    <div className="mu-admin__chatlog">
+                      <button
+                        type="button"
+                        className="mu-esc__undo"
+                        onClick={() => setChatLogId(chatLogId === item.requestId ? null : item.requestId)}
+                        aria-expanded={chatLogId === item.requestId}
+                      >
+                        {chatLogId === item.requestId ? "채팅 기록 닫기" : "채팅 기록 보기 (신고 확인용)"}
+                      </button>
+                      {chatLogId === item.requestId ? <ChatLog requestId={item.requestId} /> : null}
                     </div>
                   ) : null}
                 </div>

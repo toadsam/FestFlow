@@ -44,27 +44,27 @@ class AiMatchMeetupSlotServiceTest {
     }
 
     @Test
-    void 하루는_09시부터_21시45분까지_15분_슬롯_52개() {
+    void 하루는_09시부터_21시40분까지_20분_슬롯_39개() {
         when(slotRepository.findAllBySlotAtGreaterThanEqualAndSlotAtLessThanOrderBySlotAtAsc(any(), any())).thenReturn(List.of());
 
         AiMatchMeetupSlotsDto slots = service.getSlots(DAY.toString(), null);
 
-        assertEquals(52, slots.slots().size());
+        assertEquals(39, slots.slots().size());
         assertEquals(DAY.atTime(9, 0), slots.slots().get(0).startAt());
-        assertEquals(DAY.atTime(21, 45), slots.slots().get(51).startAt());
+        assertEquals(DAY.atTime(21, 40), slots.slots().get(38).startAt());
         assertTrue(slots.slots().stream().allMatch(slot -> "FREE".equals(slot.status())));
     }
 
     @Test
     void 임시_잠금은_HELD_확정은_TAKEN_내_슬롯은_mine() {
-        AiMatchMeetupSlot held = new AiMatchMeetupSlot(DAY.atTime(14, 15), 7L, LocalDateTime.now().plusMinutes(20));
-        AiMatchMeetupSlot taken = new AiMatchMeetupSlot(DAY.atTime(14, 30), 8L, null);
+        AiMatchMeetupSlot held = new AiMatchMeetupSlot(DAY.atTime(14, 20), 7L, LocalDateTime.now().plusMinutes(20));
+        AiMatchMeetupSlot taken = new AiMatchMeetupSlot(DAY.atTime(14, 40), 8L, null);
         when(slotRepository.findAllBySlotAtGreaterThanEqualAndSlotAtLessThanOrderBySlotAtAsc(any(), any())).thenReturn(List.of(held, taken));
 
         List<AiMatchMeetupSlotDto> slots = service.getSlots(DAY.toString(), 7L).slots();
 
-        AiMatchMeetupSlotDto first = slots.stream().filter(slot -> slot.startAt().equals(DAY.atTime(14, 15))).findFirst().orElseThrow();
-        AiMatchMeetupSlotDto second = slots.stream().filter(slot -> slot.startAt().equals(DAY.atTime(14, 30))).findFirst().orElseThrow();
+        AiMatchMeetupSlotDto first = slots.stream().filter(slot -> slot.startAt().equals(DAY.atTime(14, 20))).findFirst().orElseThrow();
+        AiMatchMeetupSlotDto second = slots.stream().filter(slot -> slot.startAt().equals(DAY.atTime(14, 40))).findFirst().orElseThrow();
         assertEquals("HELD", first.status());
         assertTrue(first.mine());
         assertEquals("TAKEN", second.status());
@@ -73,9 +73,9 @@ class AiMatchMeetupSlotServiceTest {
 
     @Test
     void 이미_잡힌_시간이면_409() {
-        when(slotRepository.findBySlotAt(DAY.atTime(14, 15))).thenReturn(Optional.of(new AiMatchMeetupSlot(DAY.atTime(14, 15), 9L, null)));
+        when(slotRepository.findBySlotAt(DAY.atTime(14, 20))).thenReturn(Optional.of(new AiMatchMeetupSlot(DAY.atTime(14, 20), 9L, null)));
 
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.hold(7L, DAY.atTime(14, 15)));
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.hold(7L, DAY.atTime(14, 20)));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
         verify(slotRepository, never()).saveAndFlush(any());
@@ -86,7 +86,7 @@ class AiMatchMeetupSlotServiceTest {
         when(slotRepository.findBySlotAt(any())).thenReturn(Optional.empty());
         when(slotRepository.saveAndFlush(any())).thenThrow(new DataIntegrityViolationException("uk_ai_match_meetup_slot_at"));
 
-        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.hold(7L, DAY.atTime(14, 15)));
+        ResponseStatusException exception = assertThrows(ResponseStatusException.class, () -> service.hold(7L, DAY.atTime(14, 20)));
 
         assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
     }
@@ -107,8 +107,8 @@ class AiMatchMeetupSlotServiceTest {
 
     @Test
     void 슬롯이_아닌_시간은_400() {
-        assertBadRequest(DAY.atTime(14, 10));          // 15분 단위 아님
-        assertBadRequest(DAY.atTime(8, 45));           // 열기 전
+        assertBadRequest(DAY.atTime(14, 15));          // 20분 단위 아님
+        assertBadRequest(DAY.atTime(8, 40));           // 열기 전
         assertBadRequest(DAY.atTime(22, 0));           // 닫은 뒤
         assertBadRequest(DAY.plusDays(5).atTime(10, 0)); // 축제 날짜 아님
         assertBadRequest(null);
@@ -123,7 +123,7 @@ class AiMatchMeetupSlotServiceTest {
 
     @Test
     void 확정하면_잠금_시각이_사라진다() {
-        AiMatchMeetupSlot held = new AiMatchMeetupSlot(DAY.atTime(14, 15), 7L, LocalDateTime.now().plusMinutes(10));
+        AiMatchMeetupSlot held = new AiMatchMeetupSlot(DAY.atTime(14, 20), 7L, LocalDateTime.now().plusMinutes(10));
         when(slotRepository.findByRequestId(7L)).thenReturn(Optional.of(held));
 
         assertTrue(service.confirm(7L).orElseThrow().isConfirmed());

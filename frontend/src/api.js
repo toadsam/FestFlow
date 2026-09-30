@@ -1323,7 +1323,7 @@ export async function proposeAiMatchMeetup(requestId, payload) {
   return parseJson(response, "약속 제안에 실패했습니다.");
 }
 
-/** 소개팅 부스 15분 슬롯 현황. date 가 비면 서버가 알맞은 축제 날짜를 고른다. */
+/** 소개팅 부스 20분 슬롯 현황. date 가 비면 서버가 알맞은 축제 날짜를 고른다. */
 export async function fetchAiMatchMeetupSlots(date, requestId) {
   const params = new URLSearchParams();
   if (date) params.set("date", date);
@@ -1349,6 +1349,48 @@ export async function markAiMatchMeetupArrived(requestId, nickname, pin) {
     body: JSON.stringify({ nickname, pin }),
   });
   return parseJson(response, "도착을 알리지 못했습니다.");
+}
+
+// ---- 소개팅 부스 블라인드 채팅 ----
+// 입장은 닉네임·비밀번호로 한 번, 그 뒤는 받은 토큰을 X-Chat-Token 헤더에 넣는다.
+export async function enterAiMatchChat(requestId, nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/requests/${requestId}/chat/enter`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "채팅방에 들어가지 못했습니다.");
+}
+
+export async function fetchAiMatchChatState(token, afterId = 0) {
+  const response = await fetch(`${API_BASE}/ai-match/chat/state?afterId=${afterId}`, {
+    headers: { "X-Chat-Token": token },
+    cache: "no-store",
+  });
+  return parseJson(response, "채팅을 불러오지 못했습니다.");
+}
+
+export async function sendAiMatchChatMessage(token, { content, topicId }) {
+  const response = await fetch(`${API_BASE}/ai-match/chat/messages`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Chat-Token": token },
+    body: JSON.stringify({ content, topicId }),
+  });
+  return parseJson(response, "메시지를 보내지 못했습니다.");
+}
+
+export async function chooseAiMatchChatReveal(token, reveal) {
+  const response = await fetch(`${API_BASE}/ai-match/chat/choice`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-Chat-Token": token },
+    body: JSON.stringify({ reveal }),
+  });
+  return parseJson(response, "선택을 보내지 못했습니다.");
+}
+
+export async function fetchAdminAiMatchChatLog(requestId) {
+  const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/chat`, { headers: withAuth() });
+  return parseJson(response, "채팅 기록을 불러오지 못했습니다.");
 }
 
 export async function setAdminAiMatchEscortStage(requestId, side, stage) {

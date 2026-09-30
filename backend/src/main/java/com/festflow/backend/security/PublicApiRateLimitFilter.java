@@ -36,6 +36,10 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
             new Rule("POST", Pattern.compile("^/api/ai-match/profiles/\\d+/(requests|favorite|report)$"), "ai-match-profile-action", 300, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/ai-match/requests/\\d+/(accept|reject|cancel|meetup/propose|meetup/confirm|meetup/cancel|meetup/arrived)$"), "ai-match-request-action", 300, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/reservations/auth/send-code$"), "reservation-auth", 5, Duration.ofMinutes(10)),
+            // 블라인드 채팅: 두 사람이 같은 와이파이(IP)에서 1초마다 상태를 받으니 넉넉히. 입장은 비밀번호 확인이라 빡빡하게.
+            new Rule("POST", Pattern.compile("^/api/ai-match/requests/\\d+/chat/enter$"), "ai-match-chat-enter", 120, Duration.ofMinutes(10)),
+            new Rule("GET", Pattern.compile("^/api/ai-match/chat/state$"), "ai-match-chat-state", 6000, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/chat/(messages|choice)$"), "ai-match-chat-send", 600, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/booths/\\d+/orders$"), "order-create", 60, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/notices/\\d+/view$"), "notice-view", 120, Duration.ofMinutes(10)),
             new Rule("GET", Pattern.compile("^/api/ai-match/meetup-slots$"), "ai-match-meetup-slots", 600, Duration.ofMinutes(10)),

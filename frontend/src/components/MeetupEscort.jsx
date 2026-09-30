@@ -54,7 +54,7 @@ function PlacePhoto({ place }) {
   );
 }
 
-export default function MeetupEscort({ request, iAmRequester, myPlace, busy, onArrived }) {
+export default function MeetupEscort({ request, iAmRequester, myPlace, busy, onArrived, onOpenChat }) {
   const now = useNow(15_000);
   const stage = (iAmRequester ? request.requesterEscortStage : request.profileEscortStage) || "NONE";
   const stageAt = parseLocal(iAmRequester ? request.requesterEscortStageAt : request.profileEscortStageAt);
@@ -72,11 +72,26 @@ export default function MeetupEscort({ request, iAmRequester, myPlace, busy, onA
     { label: "도착", title: "도착했어요", sub: "스태프가 곧 데리러 가요" },
     { label: "스태프 출발", title: "스태프가 가고 있어요", sub: `출발한 지 ${minutesSince}분 · 보통 5분 안에 도착해요` },
     { label: "만남", title: "스태프와 만났어요", sub: "함께 부스로 이동 중이에요" },
-    { label: "부스", title: "부스에 도착했어요", sub: "얼굴을 가린 채 먼저 이야기를 나눠요" },
+    { label: "부스", title: "부스에 도착했어요", sub: "얼굴을 보기 전에 채팅방에서 10분 이야기해요" },
     { label: "완료", title: "만남 완료", sub: "즐거운 시간 보내셨길 바라요" },
   ];
   const current = steps[Math.min(index, steps.length - 1)];
   const barSteps = steps.slice(0, 5);
+  const atBooth = stage === "AT_BOOTH" && !met;
+
+  // 부스에 도착하면 채팅방을 한 번 자동으로 연다(닫은 뒤에는 버튼으로 다시 들어간다).
+  useEffect(() => {
+    if (!atBooth || !onOpenChat) return;
+    const key = `festflow.chatOpened.${request.id}`;
+    try {
+      if (window.sessionStorage.getItem(key)) return;
+      window.sessionStorage.setItem(key, "1");
+    } catch {
+      // 저장이 안 되면 매번 열릴 수 있지만 막지는 않는다.
+    }
+    onOpenChat();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [atBooth, request.id]);
 
   return (
     <section className={`esc esc--${met ? "done" : stage.toLowerCase()}`} aria-label="오늘의 동선">
@@ -107,6 +122,11 @@ export default function MeetupEscort({ request, iAmRequester, myPlace, busy, onA
         </>
       ) : null}
       {index === 1 ? <PlacePhoto place={myPlace} /> : null}
+      {atBooth ? (
+        <button type="button" className="esc-arrived" onClick={onOpenChat}>
+          블라인드 채팅방 들어가기
+        </button>
+      ) : null}
     </section>
   );
 }

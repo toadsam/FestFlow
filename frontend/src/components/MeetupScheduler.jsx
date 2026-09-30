@@ -1,5 +1,5 @@
 // 매칭된 두 사람이 소개팅 부스 시간을 잡는 곳.
-// 15분 슬롯(09:00~21:45), 슬롯 하나에 한 쌍. 한 명이 고르면 30분 임시 잠금 → 상대가 확정하면 굳는다.
+// 20분 슬롯(09:00~21:40), 슬롯 하나에 한 쌍. 한 명이 고르면 30분 임시 잠금 → 상대가 확정하면 굳는다.
 // 블라인드 만남이라 두 사람은 서로 다른 대기 장소로 가고, 스태프가 부스로 데려온다.
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { fetchAiMatchMeetupSlots } from "../api";
@@ -162,7 +162,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
                     className={`mu-slot mu-slot--${slot.status.toLowerCase()}${slot.mine ? " mu-slot--mine" : ""}${selected === slot.startAt ? " is-on" : ""}`}
                     disabled={!free || busy}
                     aria-pressed={selected === slot.startAt}
-                    aria-label={`${pad(hour)}시 ${label.slice(1)}분 ${free ? "선택 가능" : slot.status === "PAST" ? "지난 시간" : slot.status === "BUSY" ? "다른 약속과 30분 안이라 못 고름" : "다른 커플이 잡음"}`}
+                    aria-label={`${pad(hour)}시 ${label.slice(1)}분 ${free ? "선택 가능" : slot.status === "PAST" ? "지난 시간" : slot.status === "BUSY" ? "다른 약속과 40분 안이라 못 고름" : "다른 커플이 잡음"}`}
                     onClick={() => setSelected(slot.startAt)}
                   >
                     {selected === slot.startAt ? <span className="mu-slot__check" aria-hidden="true">✓</span> : null}
@@ -190,7 +190,7 @@ function SlotPicker({ requestId, currentSlot, busy, onPick, onClose }) {
   );
 }
 
-export default function MeetupScheduler({ request, myProfileId, busy, onPropose, onConfirm, onCancel, onOpenMap, onArrived }) {
+export default function MeetupScheduler({ request, myProfileId, busy, onPropose, onConfirm, onCancel, onOpenMap, onArrived, onOpenChat }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const countdown = useCountdown(request.status === "PROPOSED" ? request.meetupHeldUntil : "");
 
@@ -233,11 +233,12 @@ export default function MeetupScheduler({ request, myProfileId, busy, onPropose,
             myPlace={myPlace}
             busy={busy}
             onArrived={() => onArrived?.(request.id)}
+            onOpenChat={() => onOpenChat?.(request.id)}
           />
           <ul className="mu-ticket__rules">
             <li>약속 5분 전까지 <b>{myPlace}</b>(으)로 와 주세요. {partner} 님은 다른 곳에서 기다려요.</li>
             <li>스태프가 닉네임을 확인하고 부스로 안내해요.</li>
-            <li>부스에서는 얼굴을 가린 채로 먼저 이야기를 나눠요.</li>
+            <li>부스에서는 얼굴을 가린 채 앱 채팅으로 10분 이야기해요. 끝나고 둘 다 원하면 얼굴을 봐요.</li>
           </ul>
           <div className="mu-ticket__actions">
             <button type="button" className="mu-ghost" onClick={onOpenMap}>
@@ -310,7 +311,7 @@ export default function MeetupScheduler({ request, myProfileId, busy, onPropose,
       </div>
       <strong className="mu-title">이제 만날 시간을 정해요</strong>
       <p className="mu-copy">
-        소개팅 부스는 15분에 한 쌍만 받아요. 빈 시간을 골라 제안하면 {partner} 님이 확정해요.
+        소개팅 부스는 20분에 한 쌍만 받아요. 빈 시간을 골라 제안하면 {partner} 님이 확정해요.
       </p>
       {!pickerOpen ? (
         <button type="button" className="mu-primary" disabled={busy} onClick={() => setPickerOpen(true)}>

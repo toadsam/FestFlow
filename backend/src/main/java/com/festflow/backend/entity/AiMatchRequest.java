@@ -106,6 +106,17 @@ public class AiMatchRequest {
     @Column(name = "meetup_reminder_sent_at")
     private LocalDateTime meetupReminderSentAt;
 
+    /** 블라인드 채팅이 열린 시각. 두 사람이 모두 부스에 도착하면 채운다. */
+    @Column(name = "chat_started_at")
+    private LocalDateTime chatStartedAt;
+
+    /** 채팅 뒤 얼굴 보기 선택. YES / NO / null(아직). */
+    @Column(name = "requester_reveal", length = 5)
+    private String requesterReveal;
+
+    @Column(name = "profile_reveal", length = 5)
+    private String profileReveal;
+
     /** 만남 결과. MET / NO_SHOW_REQUESTER / NO_SHOW_PROFILE / NO_SHOW_BOTH. null 이면 아직. */
     @Column(name = "meetup_outcome", length = 30)
     private String meetupOutcome;
@@ -354,7 +365,72 @@ public class AiMatchRequest {
         return ESCORT_STAGES.get(stage);
     }
 
+    public LocalDateTime getChatStartedAt() {
+        return chatStartedAt;
+    }
+
+    public boolean bothAtBooth() {
+        return requesterAtBoothAt != null && profileAtBoothAt != null;
+    }
+
+    public void startChat() {
+        if (this.chatStartedAt == null) {
+            this.chatStartedAt = LocalDateTime.now();
+            this.updatedAt = this.chatStartedAt;
+        }
+    }
+
+    public void resetChat() {
+        this.chatStartedAt = null;
+        this.requesterReveal = null;
+        this.profileReveal = null;
+    }
+
+    public String getReveal(boolean requesterSide) {
+        return requesterSide ? requesterReveal : profileReveal;
+    }
+
+    public void chooseReveal(boolean requesterSide, boolean reveal) {
+        String value = reveal ? "YES" : "NO";
+        if (requesterSide) {
+            this.requesterReveal = value;
+        } else {
+            this.profileReveal = value;
+        }
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    /**
+     * 얼굴 보기 결과. 둘 다 골랐으면 둘 다 YES 일 때만 MATCH, 선택 시간이 지났는데 안 고른 사람이 있으면 NO_MATCH.
+     * 아직 정해지지 않았으면 null — 한 명이 먼저 거절해도 상대가 고르기 전에는 알려 주지 않는다.
+     */
+    public String revealResult(LocalDateTime now, int chatMinutes, int chooseMinutes) {
+        if (chatStartedAt == null) {
+            return null;
+        }
+        if (requesterReveal != null && profileReveal != null) {
+            return "YES".equals(requesterReveal) && "YES".equals(profileReveal) ? "MATCH" : "NO_MATCH";
+        }
+        return now.isAfter(chatStartedAt.plusMinutes((long) chatMinutes + chooseMinutes)) ? "NO_MATCH" : null;
+    }
+
+    /** 채팅 단계: NONE(아직 안 열림) · OPEN · CHOOSING · MATCH · NO_MATCH · CLOSED(선택 전에 만남이 끝남). */
+    public String chatPhase(LocalDateTime now, int chatMinutes, int chooseMinutes) {
+        if (chatStartedAt == null) {
+            return "NONE";
+        }
+        String result = revealResult(now, chatMinutes, chooseMinutes);
+        if (result != null && !now.isBefore(chatStartedAt.plusMinutes(chatMinutes))) {
+            return result;
+        }
+        if ("MET".equals(meetupOutcome)) {
+            return "CLOSED";
+        }
+        return now.isBefore(chatStartedAt.plusMinutes(chatMinutes)) ? "OPEN" : "CHOOSING";
+    }
+
     private void clearEscort() {
+        resetChat();
         this.requesterArrivedAt = null;
         this.profileArrivedAt = null;
         this.requesterStaffDepartedAt = null;

@@ -32,9 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminAiMatchController {
 
     private final AiMatchService aiMatchService;
+    private final com.festflow.backend.service.AiMatchChatService aiMatchChatService;
 
-    public AdminAiMatchController(AiMatchService aiMatchService) {
+    public AdminAiMatchController(AiMatchService aiMatchService, com.festflow.backend.service.AiMatchChatService aiMatchChatService) {
         this.aiMatchService = aiMatchService;
+        this.aiMatchChatService = aiMatchChatService;
     }
 
     @GetMapping("/overview")
@@ -85,6 +87,12 @@ public class AdminAiMatchController {
     @PutMapping("/requests/{requestId}/escort")
     public AiMatchAdminRequestDto setEscortStage(@PathVariable Long requestId, @RequestBody AiMatchAdminEscortDto requestDto) {
         return aiMatchService.setEscortStage(requestId, requestDto);
+    }
+
+    /** 신고 확인용 채팅 기록. */
+    @GetMapping("/requests/{requestId}/chat")
+    public java.util.List<com.festflow.backend.dto.AiMatchAdminChatLineDto> getChatLog(@PathVariable Long requestId) {
+        return aiMatchChatService.adminLog(requestId);
     }
 
     @PostMapping("/requests/{requestId}/met")

@@ -44,6 +44,7 @@ import { ElementSeal } from "../components/SajuChart";
 import NightSky from "../components/NightSky";
 import SajuSplash, { shouldShowSajuSplash } from "../components/SajuSplash";
 import MeetupScheduler, { ORGANIZER_DISCLAIMER } from "../components/MeetupScheduler";
+import MeetupChat from "../components/MeetupChat";
 import SajuHero from "../components/SajuHero";
 import SajuFortune from "../components/SajuFortune";
 import { MatchCardBlock, MatchMissingBanner, MatchReport, MatchTop3 } from "../components/SajuMatch";
@@ -692,6 +693,8 @@ export default function AiMatchPage() {
   const fortuneRef = useRef(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("OFFENSIVE_MESSAGE");
+  // 열려 있는 블라인드 채팅방(신청 id). 신청함이 15초마다 새로 그려져도 닫히지 않게 페이지에서 들고 있는다.
+  const [chatRequestId, setChatRequestId] = useState(null);
   const [reportDetail, setReportDetail] = useState("");
   const [reportBusy, setReportBusy] = useState(false);
   const [accessNickname, setAccessNickname] = useState("");
@@ -1959,6 +1962,22 @@ export default function AiMatchPage() {
     }
   }
 
+  function renderMeetupChat() {
+    if (!chatRequestId || !accessNickname || !accessPin) return null;
+    return (
+      <MeetupChat
+        key={chatRequestId}
+        requestId={chatRequestId}
+        nickname={accessNickname}
+        pin={accessPin}
+        onClose={() => {
+          setChatRequestId(null);
+          loadAccessProfile(accessNickname, accessPin, "requests").catch(() => {});
+        }}
+      />
+    );
+  }
+
   async function handleMeetupArrived(requestId) {
     if (!accessNickname || !accessPin) return;
     setSubmitting(true);
@@ -2789,6 +2808,7 @@ export default function AiMatchPage() {
         onCancel={handleCancelMeetup}
         onOpenMap={openMeetPlaceMap}
         onArrived={handleMeetupArrived}
+        onOpenChat={setChatRequestId}
       />
     );
   }
@@ -3406,6 +3426,7 @@ export default function AiMatchPage() {
         ) : null}
 
         {renderLiveNotice()}
+      {renderMeetupChat()}
 
         {renderDetailScreen()}
       </section>
@@ -3448,6 +3469,7 @@ export default function AiMatchPage() {
       ) : null}
 
       {renderLiveNotice()}
+      {renderMeetupChat()}
 
       {activeScreen === "intro" ? renderIntroScreen() : null}
       {activeScreen === "register" ? renderRegisterScreen() : null}

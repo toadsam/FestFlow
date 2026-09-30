@@ -11,6 +11,7 @@ import com.festflow.backend.dto.AiMatchReportCreateDto;
 import com.festflow.backend.dto.AiMatchReportDto;
 import com.festflow.backend.dto.AiMatchReportResolveDto;
 import com.festflow.backend.entity.AiMatchReport;
+import com.festflow.backend.repository.AiMatchChatMessageRepository;
 import com.festflow.backend.repository.AiMatchReportRepository;
 import com.festflow.backend.dto.AiMatchAdminNoteUpdateDto;
 import com.festflow.backend.dto.AiMatchAdminPhonePurgeRequestDto;
@@ -102,6 +103,15 @@ public class AiMatchService {
     private final AiMatchMeetupSlotService meetupSlotService;
     private final AiMatchReportRepository reportRepository;
 
+    private final AiMatchChatMessageRepository chatMessageRepository;
+
+    /** 블라인드 채팅 시간과 그 뒤 얼굴 보기 선택 시간(분). AiMatchChatService 와 같은 설정을 읽는다. */
+    @org.springframework.beans.factory.annotation.Value("${app.ai-match.chat-minutes:10}")
+    private int chatMinutes = 10;
+
+    @org.springframework.beans.factory.annotation.Value("${app.ai-match.chat-choose-minutes:3}")
+    private int chatChooseMinutes = 3;
+
     /** 약속 몇 분 전에 알림 문자를 보낼지. */
     @org.springframework.beans.factory.annotation.Value("${app.ai-match.meetup-reminder-minutes:30}")
     private int meetupReminderMinutes = 30;
@@ -117,8 +127,10 @@ public class AiMatchService {
             PasswordEncoder passwordEncoder,
             SajuService sajuService,
             AiMatchMeetupSlotService meetupSlotService,
-            AiMatchReportRepository reportRepository
+            AiMatchReportRepository reportRepository,
+            AiMatchChatMessageRepository chatMessageRepository
     ) {
+        this.chatMessageRepository = chatMessageRepository;
         this.reportRepository = reportRepository;
         this.sajuService = sajuService;
         this.meetupSlotService = meetupSlotService;
@@ -571,6 +583,9 @@ public class AiMatchService {
         long deletedFavorites = targetProfileIds.isEmpty()
                 ? 0
                 : favoriteRepository.deleteAllReferencingProfileIds(targetProfileIds);
+        if (!targetProfileIds.isEmpty()) {
+            chatMessageRepository.deleteAllForProfileIds(targetProfileIds);
+        }
         long deletedRequests = targetProfileIds.isEmpty()
                 ? 0
                 : requestRepository.deleteAllReferencingProfileIds(targetProfileIds);
@@ -724,7 +739,37 @@ public class AiMatchService {
             throw new ResponseStatusException(BAD_REQUEST, "알 수 없는 단계입니다.");
         }
         request.setEscortStage("REQUESTER".equals(side), stage);
+        syncChatWithEscort(request);
         return toAdminRequestDto(request);
+    }
+
+    /**
+     * 두 사람이 모두 부스에 도착하면 블라인드 채팅을 연다.
+     * 스태프가 '부스 도착'을 잘못 눌러 되돌린 경우, 아직 아무 말도 선택도 없으면 채팅을 다시 닫아 시간을 돌려준다.
+     */
+    private void syncChatWithEscort(AiMatchRequest request) {
+        if (request.bothAtBooth()) {
+            request.startChat();
+            return;
+        }
+        if (request.getChatStartedAt() != null
+                && request.getReveal(true) == null
+                && request.getReveal(false) == null
+                && chatMessageRepository.countByRequestIdAndTypeAndCreatedAtGreaterThanEqual(
+                        request.getId(), "TEXT", request.getChatStartedAt()) == 0) {
+            request.resetChat();
+        }
+    }
+
+    /** 채팅방 입장 확인: 닉네임·비밀번호가 맞고 이 신청의 당사자인지. */
+    @Transactional(readOnly = true)
+    public com.festflow.backend.dto.AiMatchChatParticipantDto authenticateChatParticipant(
+            Long requestId, AiMatchProfileAccessRequestDto requestDto) {
+        AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
+        AiMatchRequest request = getParticipatingRequest(requestId, profile);
+        boolean requesterSide = request.getRequesterProfile() != null
+                && request.getRequesterProfile().getId().equals(profile.getId());
+        return new com.festflow.backend.dto.AiMatchChatParticipantDto(request.getId(), profile.getId(), requesterSide);
     }
 
     /** 참가자가 대기 장소에 도착해 '도착했어요'를 누른다. 확정된 약속, 약속 1시간 전부터 30분 뒤까지. */
@@ -818,7 +863,7 @@ public class AiMatchService {
                 .filter(request -> request.getMeetupAt() != null && isMatchedStatus(request.getStatus()))
                 .toList();
         AiMatchRequest next = withMeetup.stream()
-                .filter(request -> !request.getMeetupAt().plusMinutes(15).isBefore(now))
+                .filter(request -> !request.getMeetupAt().plusMinutes(AiMatchMeetupSlotService.SLOT_MINUTES).isBefore(now))
                 .min(Comparator.comparing(AiMatchRequest::getMeetupAt))
                 .orElse(null);
         return new AiMatchMasterSummaryDto(
@@ -1066,7 +1111,7 @@ public class AiMatchService {
                 && request.getMeetupProposerProfileId() != null
                 && !request.getMeetupProposerProfileId().equals(profile.getId());
 
-        // 장소는 늘 소개팅 부스. 시간은 15분 슬롯이고, 고르는 순간 30분 동안 임시로 잠긴다.
+        // 장소는 늘 소개팅 부스. 시간은 20분 슬롯이고, 고르는 순간 30분 동안 임시로 잠긴다.
         LocalDateTime meetupAt = requestDto.meetupAt();
         meetupSlotService.purge();
         ensureNoNearbyMeetup(request, meetupAt);
@@ -1224,6 +1269,7 @@ public class AiMatchService {
         favoriteRepository.deleteAllInBatch();
         reportRepository.deleteAllInBatch();
         long slots = meetupSlotService.deleteAllSlots();
+        chatMessageRepository.deleteAllInBatch();
         requestRepository.deleteAllInBatch();
         profileRepository.deleteAllInBatch();
         phoneUsageRepository.deleteAllInBatch();
@@ -1259,6 +1305,8 @@ public class AiMatchService {
                 meetupSlotService.getDates(),
                 AiMatchMeetupSlotService.BOOTH_NAME,
                 meetupSlotService.slotsPerDay(),
+                AiMatchMeetupSlotService.SLOT_MINUTES,
+                LocalDateTime.now(),
                 items
         );
     }
@@ -1288,7 +1336,9 @@ public class AiMatchService {
                 escortStageAt(request, true),
                 request.escortStage(false),
                 escortStageAt(request, false),
-                request.getMeetupReminderSentAt()
+                request.getMeetupReminderSentAt(),
+                request.chatPhase(LocalDateTime.now(), chatMinutes, chatChooseMinutes),
+                request.getChatStartedAt() == null ? null : request.getChatStartedAt().plusMinutes(chatMinutes)
         );
     }
 
