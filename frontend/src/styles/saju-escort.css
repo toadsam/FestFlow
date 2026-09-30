@@ -186,3 +186,33 @@
     animation: none;
   }
 }
+
+/* 사진: 누르면 원본을 연다 */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .mu.mu--confirmed .esc-photo a {
+  position: relative;
+  display: block;
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .mu.mu--confirmed .esc-photo a img {
+  display: block;
+  border-radius: 0;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .mu.mu--confirmed .esc-photo a span {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(20, 16, 48, 0.72);
+  color: #fff4dc !important;
+  font-size: 11.5px !important;
+  font-weight: 700;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page .mu.mu--confirmed .esc-photo figcaption b {
+  color: #fff4dc !important;
+  font-weight: 800;
+}

@@ -5,10 +5,11 @@
 import { useEffect, useState } from "react";
 import "../styles/saju-escort.css";
 
-// 대기 장소 사진. frontend/public/images/meetup/ 에 파일을 넣으면 티켓에 뜬다(없으면 사진 칸을 숨긴다).
+// 대기 장소 사진(frontend/public/images/meetup/). 세로 사진이라 티켓에는 4:3 으로 잘라 보여 주고(focus = 세로 위치),
+// 누르면 원본을 크게 연다. spot 은 사진 속에서 서 있을 자리. 파일이 없으면 사진 칸을 숨긴다.
 const WAITING_PLACE_PHOTOS = {
-  "성호관 앞": "/images/meetup/seongho.jpg",
-  "중앙도서관 앞": "/images/meetup/library.jpg",
+  "성호관 앞": { src: "/images/meetup/seongho.jpg", focus: "50% 72%", spot: "아주대 로고가 있는 입구 앞" },
+  "중앙도서관 앞": { src: "/images/meetup/library.jpg", focus: "50% 80%", spot: "1층 카페 027 라운지 앞 데크" },
 };
 
 const STAGE_INDEX = { NONE: 0, ARRIVED: 1, DEPARTED: 2, PICKED_UP: 3, AT_BOOTH: 4 };
@@ -37,13 +38,18 @@ function useNow(intervalMs) {
 }
 
 function PlacePhoto({ place }) {
-  const src = WAITING_PLACE_PHOTOS[place];
-  const [ok, setOk] = useState(Boolean(src));
-  if (!src || !ok) return null;
+  const photo = WAITING_PLACE_PHOTOS[place];
+  const [ok, setOk] = useState(Boolean(photo));
+  if (!photo || !ok) return null;
   return (
     <figure className="esc-photo">
-      <img src={src} alt={`${place} 대기 위치`} onError={() => setOk(false)} />
-      <figcaption>{place} · 이 자리에서 기다려 주세요</figcaption>
+      <a href={photo.src} target="_blank" rel="noreferrer" aria-label={`${place} 사진 크게 보기`}>
+        <img src={photo.src} alt={`${place} 대기 위치`} style={{ objectPosition: photo.focus }} onError={() => setOk(false)} />
+        <span aria-hidden="true">크게 보기</span>
+      </a>
+      <figcaption>
+        <b>{place}</b> · {photo.spot}에서 기다려 주세요
+      </figcaption>
     </figure>
   );
 }
