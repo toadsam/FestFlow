@@ -368,6 +368,28 @@
   color: var(--v2-red) !important;
 }
 
+/* 카드 바탕색: `.v2-page button { background: transparent !important }` 보다 무게가 커야 색이 보인다. */
+.app-shell[data-v2="true"] .tb-page .tb-table {
+  background: var(--v2-green-soft) !important;
+}
+
+.app-shell[data-v2="true"] .tb-page .tb-table--in_use,
+.app-shell[data-v2="true"] .tb-page .tb-table--full {
+  background: var(--v2-red-soft) !important;
+}
+
+.app-shell[data-v2="true"] .tb-page .tb-table--reserved {
+  background: var(--v2-yellow-soft) !important;
+}
+
+/* 앉은 지 몇 분 */
+.app-shell[data-v2="true"] .tb-table .tb-table__since {
+  font-style: normal;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--v2-text-2) !important;
+}
+
 .app-shell[data-v2="true"] .tb-table--reserved {
   background: var(--v2-yellow-soft) !important;
 }

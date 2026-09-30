@@ -1,5 +1,7 @@
 // 자리 현황판. 입구 스태프가 한 손으로 테이블을 누르면 "이용 중" ↔ "빈 자리"가 바뀐다.
 // 손님 화면과 첫 화면 카드는 이 조작을 실시간으로 받는다.
+// 테이블 QR 로 주문이 들어오면 그 테이블은 저절로 "이용 중"이 된다. 비우는 것은 늘 스태프가 직접 누른다.
+// 이용 중인 테이블에는 앉은 지 얼마나 됐는지가 같이 보인다.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
@@ -21,6 +23,23 @@ function tableSeats(table) {
 function statusOf(table) {
   if (table?.occupancyStatus) return table.occupancyStatus;
   return Number(table?.reservableSeats) > 0 ? "AVAILABLE" : "FULL";
+}
+
+// 서버가 주는 "2026-10-07T18:40:12" (한국 시간, 시간대 없음)을 읽는다.
+function parseLocal(value) {
+  if (!value) return 0;
+  const time = new Date(`${value}`.slice(0, 19)).getTime();
+  return Number.isFinite(time) ? time : 0;
+}
+
+// 앉은 지 얼마나 됐는지: "방금" · "25분째" · "1시간 5분째"
+function seatedLabel(since, now) {
+  const at = parseLocal(since);
+  if (!at) return "";
+  const minutes = Math.max(0, Math.floor((now - at) / 60_000));
+  if (minutes < 1) return "방금 앉음";
+  if (minutes < 60) return `${minutes}분째`;
+  return minutes % 60 ? `${Math.floor(minutes / 60)}시간 ${minutes % 60}분째` : `${Math.floor(minutes / 60)}시간째`;
 }
 
 function relativeTime(at) {
@@ -184,7 +203,8 @@ export default function OpsTableBoardPage() {
         </div>
       </div>
       <p className="tb-hint">
-        손님이 앉으면 한 번, 나가면 한 번 누르세요. 손님 화면의 &quot;남은 자리&quot;가 바로 바뀌어요.
+        손님이 앉으면 한 번, 나가면 한 번 누르세요. 손님 화면의 &quot;남은 자리&quot;가 바로 바뀌어요. 테이블 QR로 주문이
+        들어오면 저절로 이용 중이 되고, 비우는 건 직접 눌러야 해요.
       </p>
 
       {error && <p className="v2-note v2-note--danger">{error}</p>}
@@ -204,6 +224,7 @@ export default function OpsTableBoardPage() {
             const free = status === "AVAILABLE";
             const reserved = status === "RESERVED";
             const confirming = pendingRelease === table.id;
+            const seated = status === "IN_USE" ? seatedLabel(table.occupiedSince, Date.now()) : "";
             return (
               <button
                 key={table.id}
@@ -225,6 +246,7 @@ export default function OpsTableBoardPage() {
                           ? "예약 손님"
                           : "이용 중"}
                 </em>
+                {seated && busyId !== table.id ? <i className="tb-table__since">{seated}</i> : null}
               </button>
             );
           })}

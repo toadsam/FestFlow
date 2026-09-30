@@ -447,8 +447,20 @@ public class ReservationService {
                 reservableSeats,
                 occupancyStatus,
                 occupancyLabel,
-                blockingReservation == null ? null : blockingReservation.getId()
+                blockingReservation == null ? null : blockingReservation.getId(),
+                occupiedSince(table, blockingReservation)
         );
+    }
+
+    /** 손님이 앉은 시각. 워크인·주문으로 앉았으면 그때, 예약 손님이면 체크인한 때. 비어 있으면 null. */
+    private static LocalDateTime occupiedSince(BoothReservationTable table, BoothReservation blockingReservation) {
+        if (table.isWalkInOccupied()) {
+            return table.getWalkInSince();
+        }
+        if (blockingReservation != null && blockingReservation.getStatus() == ReservationStatus.CHECKED_IN) {
+            return blockingReservation.getCheckedInAt();
+        }
+        return null;
     }
 
     private Map<Long, BoothReservation> toBlockingReservationMap(List<BoothReservation> reservations) {

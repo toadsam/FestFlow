@@ -94,6 +94,22 @@ public class OrderService {
         );
     }
 
+    /**
+     * 주문이 들어온 테이블은 손님이 앉아 있는 것이다. 자리 현황에서 '이용 중'으로 바꾼다.
+     * 이미 이용 중이면 앉은 시각을 그대로 둔다. 빈 자리로 돌리는 것은 스태프가 직접 한다(주문이 끝나도 자동으로 비우지 않는다).
+     */
+    private void markTableInUse(Long boothId, String tableLabel, LocalDateTime now) {
+        boothReservationTableRepository.findByBoothIdOrderByDisplayOrderAscIdAsc(boothId).stream()
+                .filter(table -> tableLabel.equals(table.getTableName()))
+                .findFirst()
+                .filter(table -> !table.isWalkInOccupied())
+                .ifPresent(table -> {
+                    table.occupyWalkIn(now);
+                    boothReservationTableRepository.save(table);
+                    streamService.publishReservations(Map.of("boothId", boothId, "tableId", table.getId(), "status", "WALK_IN"));
+                });
+    }
+
     @Transactional
     public BoothOrderDto createOrder(Long boothId, OrderCreateRequestDto requestDto) {
         Booth booth = findBooth(boothId);
@@ -175,6 +191,7 @@ public class OrderService {
 
         BoothOrder saved = boothOrderRepository.save(order);
         saved.assignOrderNo(buildOrderNo(booth.getId(), now, saved.getId()));
+        markTableInUse(boothId, tableLabel, now);
 
         BoothOrderDto dto = toDto(saved);
         streamService.publishOrders(dto.forPublicStream());

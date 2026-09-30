@@ -90,6 +90,17 @@ function tableOccupancyStatus(table) {
   return Number(table?.availableSeats) > 0 ? "AVAILABLE" : "FULL";
 }
 
+// 앉은 지 얼마나 됐는지. 서버 시각은 시간대 없는 한국 시간이다.
+function tableSeatedLabel(table) {
+  if (!table?.occupiedSince) return "";
+  const at = new Date(`${table.occupiedSince}`.slice(0, 19)).getTime();
+  if (!Number.isFinite(at)) return "";
+  const minutes = Math.max(0, Math.floor((Date.now() - at) / 60_000));
+  if (minutes < 1) return "방금 앉음";
+  if (minutes < 60) return `${minutes}분째`;
+  return minutes % 60 ? `${Math.floor(minutes / 60)}시간 ${minutes % 60}분째` : `${Math.floor(minutes / 60)}시간째`;
+}
+
 function tableOccupancyLabel(table) {
   if (table?.occupancyLabel) return table.occupancyLabel;
   switch (tableOccupancyStatus(table)) {
@@ -333,6 +344,7 @@ export default function OpsBoothPage() {
           occupancyStatus: table.occupancyStatus,
           occupancyLabel: table.occupancyLabel,
           activeReservationId: table.activeReservationId,
+          occupiedSince: table.occupiedSince,
         })),
       };
       setDraft(nextDraft);
@@ -1054,7 +1066,10 @@ export default function OpsBoothPage() {
                         >
                           <div className="ops-table__head">
                             <input value={table.tableName} onChange={(e) => updateTableDraft(index, { tableName: e.target.value })} placeholder="테이블 이름" />
-                            <span className={`ops-chip ops-chip--dot ops-chip--${statusTone(status)}`}>{tableOccupancyLabel(table)}</span>
+                            <span className={`ops-chip ops-chip--dot ops-chip--${statusTone(status)}`}>
+                              {tableOccupancyLabel(table)}
+                              {status === "IN_USE" && tableSeatedLabel(table) ? ` · ${tableSeatedLabel(table)}` : ""}
+                            </span>
                           </div>
                           <div className="ops-table__seats" style={RESERVATIONS_ON ? undefined : { gridTemplateColumns: "minmax(0, 1fr)" }}>
                             <Stepper label="좌석 수" value={table.totalSeats} onStep={(d) => stepTable(index, "totalSeats", d)} />
