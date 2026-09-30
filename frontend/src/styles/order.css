@@ -632,6 +632,24 @@
   color: var(--od-faint);
 }
 
+/* 전역 input·글자색 규칙(!important)에 눌리지 않게 무게를 올린다. */
+.od-page .od-input.od-input--error,
+.od-page .od-input.od-input--error:focus {
+  border-color: #d92d20 !important;
+  box-shadow: 0 0 0 3px rgba(217, 45, 32, 0.12) !important;
+}
+
+.od-page .od-field__hint {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--od-muted) !important;
+}
+
+.od-page .od-field__hint.od-field__hint--error {
+  color: #b42318 !important;
+  font-weight: 600;
+}
+
 textarea.od-input {
   resize: none;
   min-height: 72px;

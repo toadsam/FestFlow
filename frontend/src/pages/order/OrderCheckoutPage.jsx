@@ -37,11 +37,14 @@ async function copyText(text) {
   }
 }
 
-const PAYMENT_OPTIONS = [
-  { key: "BANK_TRANSFER", label: "계좌이체", enabled: true },
-  { key: "CARD", label: "카드 결제", enabled: false },
-  { key: "EASY_PAY", label: "간편 결제 (카카오페이)", enabled: false },
-];
+// 이번 축제는 계좌이체만 받는다.
+const PAYMENT_OPTIONS = [{ key: "BANK_TRANSFER", label: "계좌이체", enabled: true }];
+
+// 휴대폰 번호는 필수. 숫자 10~11자리(0으로 시작)면 된다. 하이픈·띄어쓰기는 있어도 없어도 된다.
+const PHONE_INPUT_PATTERN = /^[0-9+()\-\s]{0,30}$/;
+function isValidPhone(value) {
+  return /^0\d{9,10}$/.test(`${value}`.replace(/\D/g, ""));
+}
 
 export default function OrderCheckoutPage() {
   const { boothId, table } = useParams();
@@ -51,6 +54,7 @@ export default function OrderCheckoutPage() {
   const [cart, setCart] = useState(() => getCart(boothId, table));
   const [depositorName, setDepositorName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
   const [request, setRequest] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -75,7 +79,14 @@ export default function OrderCheckoutPage() {
 
   const total = lines.filter((line) => !line.soldOut).reduce((sum, line) => sum + line.lineTotal, 0);
   const hasSoldOut = lines.some((line) => line.soldOut);
-  const canSubmit = Boolean(menu) && lines.length > 0 && !hasSoldOut && depositorName.trim().length > 0 && !submitting;
+  const phoneValid = isValidPhone(phoneNumber);
+  const phoneError = phoneTouched && !phoneValid
+    ? phoneNumber.trim()
+      ? "휴대폰 번호를 다시 확인해 주세요. 숫자 10~11자리예요."
+      : "휴대폰 번호를 입력해 주세요."
+    : "";
+  const canSubmit =
+    Boolean(menu) && lines.length > 0 && !hasSoldOut && depositorName.trim().length > 0 && phoneValid && !submitting;
 
   function removeLine(name) {
     setCart(updateCartQuantity(boothId, table, name, 0));
@@ -97,7 +108,7 @@ export default function OrderCheckoutPage() {
         tableLabel: table,
         items: lines.map((line) => ({ name: line.name, quantity: line.quantity })),
         depositorName: depositorName.trim(),
-        phoneNumber: phoneNumber.trim() || null,
+        phoneNumber: phoneNumber.trim(),
         request: request.trim() || null,
         paymentMethod: "BANK_TRANSFER",
       });
@@ -168,7 +179,6 @@ export default function OrderCheckoutPage() {
                 <button type="button" className={`od-pay__option ${option.enabled ? "od-pay__option--on" : ""}`} disabled={!option.enabled}>
                   <span className={`od-radio ${option.enabled ? "od-radio--on" : ""}`} />
                   {option.label}
-                  {!option.enabled && <small>준비 중</small>}
                 </button>
                 {option.enabled && (
                   <div className="od-pay__detail">
@@ -200,17 +210,26 @@ export default function OrderCheckoutPage() {
                       />
                     </div>
                     <div className="od-field">
-                      <label htmlFor="od-phone">휴대폰 번호 (선택)</label>
+                      <label htmlFor="od-phone">휴대폰 번호</label>
                       <input
                         id="od-phone"
-                        className="od-input"
+                        className={`od-input${phoneError ? " od-input--error" : ""}`}
                         value={phoneNumber}
-                        onChange={(e) => setPhoneNumber(e.target.value)}
-                        placeholder="확인이 필요할 때만 연락드려요"
+                        onChange={(e) => {
+                          if (PHONE_INPUT_PATTERN.test(e.target.value)) setPhoneNumber(e.target.value);
+                        }}
+                        onBlur={() => setPhoneTouched(true)}
+                        placeholder="010-1234-5678"
                         inputMode="tel"
                         maxLength={30}
                         autoComplete="tel"
+                        aria-invalid={phoneError ? "true" : undefined}
+                        aria-describedby="od-phone-hint"
+                        required
                       />
+                      <span id="od-phone-hint" className={`od-field__hint${phoneError ? " od-field__hint--error" : ""}`}>
+                        {phoneError || "입금·주문 확인이 필요할 때만 연락드려요."}
+                      </span>
                     </div>
                   </div>
                 )}
