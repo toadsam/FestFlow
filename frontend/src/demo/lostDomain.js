@@ -1,8 +1,11 @@
 // 연습용 서버 · 분실물.
 // 실제 서버의 LostItemService · LostItemController 규칙을 그대로 옮겼다. 서버 규칙을 바꾸면 여기도 같이 바꾼다.
+// (이번 축제는 화면에서 '내 물건이에요' 요청을 꺼 두었지만, 서버 규칙은 그대로라 여기에도 남겨 둔다.)
 import { NOT_HANDLED, httpError, parseStamp } from "./demoCore";
 import { DEMO_ADMIN_TOKEN } from "./aimatchDomain";
 import { DEMO_ADMIN_NAME } from "./festDomain";
+
+export const LOST_BUNDLE_CATEGORY = "잡화 모음";
 
 const trimOrNull = (value) => {
   const text = value == null ? "" : `${value}`.trim();
@@ -24,6 +27,13 @@ const normalizeStatus = (status) => {
   const value = `${status || ""}`.trim().toUpperCase();
   return value === "OWNER_CLAIMED" || value === "RETURNED" ? value : "REGISTERED";
 };
+
+/** 총괄 화면의 등록 방식: 학생증 · 카드(사진 없이 가린 이름) / 잡화 모음(상자 사진 한 장) / 물건 하나. */
+export function lostKind(item) {
+  if (item.category === LOST_BUNDLE_CATEGORY) return "bundle";
+  if (/^(학생증|카드)( · |$)/.test(item.title || "")) return "name";
+  return "item";
+}
 
 export function createLostDomain({ nowMs, stamp, publish, emit }) {
   let state;
@@ -55,11 +65,12 @@ export function createLostDomain({ nowMs, stamp, publish, emit }) {
       nextId: 4,
       items: [
         seed(3, "파란색 텀블러", "생활용품", "성호관 잔디 벤치", "뚜껑에 스티커가 붙어 있어요", 42, { finderContact: "010-1234-5678" }),
-        seed(2, "학생증 (연습용)", "학생증", "노천극장 입구 계단", "사진 면이 위로 놓여 있었어요", 95),
+        seed(2, "학생증 · 이*람", "학생증", "노천극장 입구 계단", "", 95),
         seed(1, "검정 접이식 우산", "기타", "총학 주점 3번 테이블", "", 180, { status: "RETURNED", resolveNote: "학생증으로 본인 확인", updatedAt: ago(120) }),
       ],
       // 흐름이 어디까지 왔는지(매뉴얼 화면이 읽는다).
-      flow: { itemId: null, title: "", claimed: false, returned: false, deleted: false },
+      flow: { itemId: null, nameId: null, bundleId: null, pickedUp: false },
+      lastCreated: null,
     };
   }
 
@@ -87,12 +98,6 @@ export function createLostDomain({ nowMs, stamp, publish, emit }) {
   const broadcast = () => publish("lost-items", list(true));
   const storedCount = () => state.items.filter((item) => item.status !== "RETURNED").length;
 
-  function sync(item) {
-    if (item.id !== state.flow.itemId) return;
-    if (item.status !== "REGISTERED") state.flow.claimed = true;
-    if (item.status === "RETURNED") state.flow.returned = true;
-  }
-
   function create(body, role) {
     const title = trimOrNull(body?.title);
     const foundLocation = trimOrNull(body?.foundLocation);
@@ -118,12 +123,12 @@ export function createLostDomain({ nowMs, stamp, publish, emit }) {
       updatedAt: stamp(),
     };
     state.items.push(item);
-    if (state.flow.itemId == null) {
-      state.flow.itemId = item.id;
-      state.flow.title = item.title;
-    }
+    const kind = lostKind(item);
+    const key = kind === "bundle" ? "bundleId" : kind === "name" ? "nameId" : "itemId";
+    if (state.flow[key] == null) state.flow[key] = item.id;
+    state.lastCreated = { id: item.id, title: item.title, at: nowMs() };
     broadcast();
-    emit({ type: "lost.created", role, item: dto(item, false) });
+    emit({ type: "lost.created", role, item: dto(item, false), kind, stored: storedCount() });
     return dto(item, false);
   }
 
@@ -133,7 +138,7 @@ export function createLostDomain({ nowMs, stamp, publish, emit }) {
     item.status = normalizeStatus(body?.status);
     item.resolveNote = trimOrNull(body?.resolveNote);
     item.updatedAt = stamp();
-    sync(item);
+    if (item.status === "RETURNED") state.flow.pickedUp = true;
     broadcast();
     emit({ type: "lost.status", role, item: dto(item, false), before, stored: storedCount() });
     return dto(item, false);
@@ -149,7 +154,6 @@ export function createLostDomain({ nowMs, stamp, publish, emit }) {
     if (!claimantName) throw httpError(400, "claimantName is required.");
     if (!claimantContact) throw httpError(400, "claimantContact is required.");
     Object.assign(item, { claimantName, claimantContact, claimantNote: trimOrNull(body?.claimantNote), claimedAt: stamp(), status: "OWNER_CLAIMED", updatedAt: stamp() });
-    sync(item);
     broadcast();
     emit({ type: "lost.claimed", role, item: dto(item, false) });
     return dto(item, true);
@@ -158,9 +162,14 @@ export function createLostDomain({ nowMs, stamp, publish, emit }) {
   function remove(id, role) {
     const item = find(id);
     state.items = state.items.filter((entry) => entry !== item);
-    if (item.id === state.flow.itemId) state.flow.deleted = true;
+    // '사진 다시 찍기'는 같은 이름으로 새로 올린 뒤 예전 것을 지운다. 그 경우는 '지웠다'가 아니라 '사진을 바꿨다'로 알린다.
+    const last = state.lastCreated;
+    const replaced = Boolean(last && last.id !== item.id && last.title === item.title && nowMs() - last.at < 8000);
+    ["itemId", "nameId", "bundleId"].forEach((key) => {
+      if (state.flow[key] === item.id && replaced) state.flow[key] = last.id;
+    });
     broadcast();
-    emit({ type: "lost.deleted", role, item: dto(item, false), stored: storedCount() });
+    emit({ type: "lost.deleted", role, item: dto(item, false), replaced, stored: storedCount() });
     return undefined;
   }
 

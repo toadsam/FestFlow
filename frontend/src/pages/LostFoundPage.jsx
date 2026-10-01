@@ -1,13 +1,23 @@
-// 분실물. 목록을 보고, 눌러서 자세히 보고, 내 물건이면 바텀시트에서 바로 요청한다.
+// 분실물. 본부에서 보관 중인 물건을 보여 주는 안내판이다. 목록을 보고, 눌러서 사진을 크게 보고, 내 물건이면 직접 찾아온다.
+// ('내 물건이에요' 요청은 config 의 lostFoundClaim 으로 켜고 끈다. 이번 축제는 끈다.)
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocation } from "react-router-dom";
-import { claimLostItem, createLostItem, createLostItemStream, fetchLostItems } from "../api";
+import { claimLostItem, createLostItem, createLostItemStream, fetchLostItems, resolveApiAssetUrl } from "../api";
 import { FESTIVAL } from "../config/festival";
 import { IconCamera, IconSearch, IconX } from "../components/UxIcons";
 import { BottomSheet, IconPhone, IconPlus, Mascot, useToast } from "../components/v2/V2Kit";
 import { fallbackLostItems } from "../data/festivalUiData";
 
-const CATEGORY_TABS = ["전체", "전자기기", "지갑/카드", "학생증", "기타"];
+const CLAIM_ON = FESTIVAL.lostFoundClaim !== false;
+const PICKUP = FESTIVAL.lostFound || {};
+const PICKUP_PLACE = PICKUP.place || "축제 본부";
+const CATEGORY_TABS = ["전체", "전자기기", "지갑/카드", "학생증", "잡화", "기타"];
+// 사진이 없는 물건(학생증 · 카드는 일부러 사진을 안 올린다)은 종류 그림으로 보여 준다.
+const CATEGORY_EMOJI = [["학생증", "🪪"], ["카드", "💳"], ["지갑", "👛"], ["전자", "🎧"], ["잡화", "🧺"], ["의류", "🧥"], ["가방", "🎒"], ["열쇠", "🔑"]];
+const emojiOf = (item) => CATEGORY_EMOJI.find(([key]) => `${item?.category || ""}${item?.title || ""}`.includes(key))?.[1] || "📦";
+// 서버에 올린 사진은 "/uploads/..." 로 올 수 있어 API 주소를 붙인다.
+const photoOf = (item) => resolveApiAssetUrl(item?.imageUrl || item?.image || "");
 const EMPTY_FORM = {
   title: "",
   category: "기타",
@@ -22,7 +32,7 @@ const STATUS_LABELS = {
   STORED: "보관 중",
   CLAIM_REQUESTED: "확인 요청",
   OWNER_CLAIMED: "주인 확인",
-  RETURNED: "반환 완료",
+  RETURNED: "찾아감",
   EXPIRED: "보관 종료",
 };
 const STATUS_TEXT_LABELS = {
@@ -32,11 +42,11 @@ const STATUS_TEXT_LABELS = {
   "owner claimed": "주인 확인",
   "owner-claimed": "주인 확인",
   owner_claimed: "주인 확인",
-  returned: "반환 완료",
+  returned: "찾아감",
   claimed: "주인 확인",
 };
 
-function statusLabel(item) {
+function rawStatusLabel(item) {
   const rawLabel = `${item.statusLabel || ""}`.trim();
   const normalizedLabel = rawLabel.toLowerCase();
   if (STATUS_TEXT_LABELS[normalizedLabel]) return STATUS_TEXT_LABELS[normalizedLabel];
@@ -46,15 +56,22 @@ function statusLabel(item) {
   return "보관 중";
 }
 
+// 요청 기능을 끈 축제에서는 '주인 확인' 단계가 없다. 그런 값이 남아 있어도 보관 중으로 보여 준다.
+function statusLabel(item) {
+  const label = rawStatusLabel(item);
+  if (!CLAIM_ON && (label === "주인 확인" || label === "확인 요청")) return "보관 중";
+  return label;
+}
+
 function statusTone(item) {
   const label = statusLabel(item);
-  if (label === "반환 완료" || label === "보관 종료") return "";
+  if (label === "찾아감" || label === "보관 종료") return "";
   if (label === "확인 요청" || label === "주인 확인") return "v2-badge--yellow";
   return "v2-badge--green";
 }
 
 function isReturned(item) {
-  return `${item.status || ""}`.toUpperCase() === "RETURNED" || statusLabel(item) === "반환 완료";
+  return `${item.status || ""}`.toUpperCase() === "RETURNED" || statusLabel(item) === "찾아감";
 }
 
 function telHref(value) {
@@ -95,6 +112,9 @@ export default function LostFoundPage() {
   const [claimForm, setClaimForm] = useState(EMPTY_CLAIM);
   const [claimError, setClaimError] = useState("");
   const [claiming, setClaiming] = useState(false);
+  // 사진 크게 보기. 잡화 모음처럼 한 장에 여러 물건이 찍힌 사진은 확대해야 보인다.
+  const [viewer, setViewer] = useState(null);
+  const [zoomed, setZoomed] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -218,6 +238,16 @@ export default function LostFoundPage() {
         <p>{loading && !source.length ? "보관 목록을 불러오는 중이에요" : `지금 ${storedCount}개를 보관하고 있어요`}</p>
       </div>
 
+      <div className="v2-card v2-lost-pickup">
+        <Mascot style={{ width: "3.2rem", height: "auto", flex: "0 0 auto" }} />
+        <div>
+          <strong>{PICKUP_PLACE}에서 보관하고 있어요</strong>
+          <p>내 물건이 보이면 직접 와서 찾아가세요. 본인 물건인지 확인한 뒤 드려요.</p>
+          {PICKUP.hours ? <small>운영 시간 · {PICKUP.hours}</small> : null}
+          {PICKUP.after ? <small>축제가 끝난 뒤 · {PICKUP.after}</small> : null}
+        </div>
+      </div>
+
       <label className="v2-search">
         <IconSearch />
         <input
@@ -259,9 +289,13 @@ export default function LostFoundPage() {
                 style={{ "--i": Math.min(index, 8) }}
                 onClick={() => openItem(item)}
               >
-                <span className="v2-lost__thumb">
-                  <img src={item.imageUrl || item.image || "/images/lost-empty.png"} alt="" loading="lazy" />
-                </span>
+                {photoOf(item) ? (
+                  <span className="v2-lost__thumb">
+                    <img src={photoOf(item)} alt="" loading="lazy" />
+                  </span>
+                ) : (
+                  <span className="v2-lost__thumb v2-lost__thumb--text" aria-hidden="true">{emojiOf(item)}</span>
+                )}
                 <span className="v2-lost__body">
                   <span className="v2-lost__head">
                     <strong>{item.title}</strong>
@@ -276,16 +310,9 @@ export default function LostFoundPage() {
           <div className="v2-empty">
             <Mascot kind="flame" className="v2-empty__mascot" />
             <strong>{query || tab !== "전체" ? "조건에 맞는 물건이 없어요" : "보관 중인 분실물이 없어요"}</strong>
-            <p>{query || tab !== "전체" ? "검색어나 분류를 바꿔 보세요." : "주운 물건은 축제 본부(총학생회 부스)에 맡겨 주세요."}</p>
+            <p>{query || tab !== "전체" ? "검색어나 분류를 바꿔 보세요." : `주운 물건은 ${PICKUP_PLACE}에 맡겨 주세요.`}</p>
           </div>
         )}
-      </div>
-
-      <div className="v2-card" style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem", alignItems: "center" }}>
-        <Mascot style={{ width: "3.2rem", height: "auto", flex: "0 0 auto" }} />
-        <p style={{ margin: 0, fontSize: "0.88rem", color: "var(--v2-text-2)", lineHeight: 1.45 }}>
-          축제 본부 분실물 센터에서 사진을 확인한 뒤 받아 갈 수 있어요.
-        </p>
       </div>
 
       {FESTIVAL.lostFoundPublicRegister !== false && (
@@ -303,7 +330,14 @@ export default function LostFoundPage() {
       >
         {selected ? (
           <>
-            <img className="v2-lost-detail__img" src={selected.imageUrl || selected.image || "/images/lost-empty.png"} alt="" />
+            {photoOf(selected) ? (
+              <div className="v2-lost-detail__photo" role="button" tabIndex={0} aria-label="사진 크게 보기" onClick={() => { setViewer(photoOf(selected)); setZoomed(false); }} onKeyDown={(event) => { if (event.key === "Enter") { setViewer(photoOf(selected)); setZoomed(false); } }}>
+                <img className="v2-lost-detail__img" src={photoOf(selected)} alt="" />
+                <span>눌러서 크게 보기</span>
+              </div>
+            ) : (
+              <p className="v2-note" style={{ marginBottom: "1rem" }}>사진 없이 보관 중인 물건이에요. 이름과 특징을 보고 확인해 주세요.</p>
+            )}
             <div className="v2-kv">
               <span>상태</span>
               <strong>
@@ -322,7 +356,13 @@ export default function LostFoundPage() {
               </p>
             ) : null}
 
-            {claimMode ? (
+            {!CLAIM_ON ? (
+              <p className="v2-note v2-note--blue" style={{ marginTop: "0.75rem" }}>
+                {isReturned(selected)
+                  ? "주인이 찾아간 물건이에요."
+                  : `${PICKUP_PLACE}에서 보관 중이에요. 직접 와서 찾아가세요.${PICKUP.hours ? ` (운영 시간 ${PICKUP.hours})` : ""}`}
+              </p>
+            ) : claimMode ? (
               <div className="v2-pop">
                 <label className="v2-field">
                   <span>이름</span>
@@ -370,7 +410,7 @@ export default function LostFoundPage() {
                   </a>
                 ) : null}
                 <button type="button" className="v2-btn" onClick={() => setClaimMode(true)} disabled={isReturned(selected)}>
-                  {isReturned(selected) ? "반환이 끝난 물건이에요" : "내 물건이에요"}
+                  {isReturned(selected) ? "주인이 찾아간 물건이에요" : "내 물건이에요"}
                 </button>
               </div>
             )}
@@ -447,6 +487,29 @@ export default function LostFoundPage() {
           </button>
         </form>
       </BottomSheet>
+
+      {viewer
+        ? createPortal(
+            <div className="v2-lost-viewer" role="dialog" aria-modal="true" aria-label="사진 크게 보기">
+              <div className="v2-lost-viewer__scroll" onClick={() => setViewer(null)}>
+                <img
+                  src={viewer}
+                  alt=""
+                  className={zoomed ? "is-zoomed" : ""}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setZoomed((value) => !value);
+                  }}
+                />
+              </div>
+              <p className="v2-lost-viewer__hint">{zoomed ? "밀어서 둘러보고, 한 번 더 누르면 작아져요" : "사진을 누르면 커져요"}</p>
+              <div className="v2-lost-viewer__close" role="button" tabIndex={0} aria-label="닫기" onClick={() => setViewer(null)} onKeyDown={(event) => { if (event.key === "Enter") setViewer(null); }}>
+                <IconX />
+              </div>
+            </div>,
+            document.querySelector(".app-shell") || document.body,
+          )
+        : null}
 
       {toastNode}
     </section>

@@ -593,3 +593,59 @@
     align-items: center;
   }
 }
+
+/* ---------- 등록 방식(물건 하나 · 학생증 · 카드 · 잡화 모음) ---------- */
+.app-shell.app-shell.app-shell .alost-kinds button {
+  min-height: 38px !important;
+  font-size: 13.5px !important;
+}
+
+.app-shell.app-shell.app-shell .alost-hint {
+  margin: 2px 0 0;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: var(--al-blue-soft);
+  color: #33507a;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.app-shell.app-shell.app-shell .alost-preview {
+  color: var(--al-sub);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.app-shell.app-shell.app-shell .alost-preview b {
+  color: var(--al-text);
+  font-weight: 800;
+}
+
+/* 잡화 모음의 '사진 다시 찍기': 버튼처럼 보이는 파일 고르기. */
+.app-shell.app-shell.app-shell .alost-btn--file {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: #f2f4f6;
+  color: #4e5968;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.app-shell.app-shell.app-shell .alost-btn--file.is-busy {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.app-shell.app-shell.app-shell .alost-btn--file input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}

@@ -15,6 +15,10 @@ export const FESTIVAL = {
   reservations: false,
   // 분실물 등록은 본부 스태프 화면(/staff)에서만. 손님은 목록을 보고 '내 물건이에요' 만 보낸다.
   lostFoundPublicRegister: false,
+  // 분실물은 본부에서 보관만 하고, 잃어버린 사람이 직접 찾아온다. 손님 화면의 '내 물건이에요' 요청과 총괄 화면의 '주인 확인' 단계를 숨긴다.
+  lostFoundClaim: false,
+  // 손님 분실물 화면 맨 위의 보관 안내. hours(운영 시간) · after(축제가 끝난 뒤 보관처)는 비워 두면 화면에 나오지 않는다.
+  lostFound: { place: "축제 본부(총학생회 부스)", hours: "", after: "" },
 };
 
 /**

@@ -1937,3 +1937,133 @@
   font-size: 12.5px;
   color: rgba(255, 255, 255, 0.9);
 }
+
+/* ---------- 분실물: 보관 안내 · 사진 없는 물건 · 사진 크게 보기 ---------- */
+.app-shell[data-v2="true"] .v2-lost-pickup {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  margin-top: 0.9rem;
+  background: var(--v2-blue-soft);
+}
+
+.app-shell[data-v2="true"] .v2-lost-pickup strong {
+  display: block;
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--v2-text);
+}
+
+.app-shell[data-v2="true"] .v2-lost-pickup p {
+  margin: 0.2rem 0 0;
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--v2-text-2);
+}
+
+.app-shell[data-v2="true"] .v2-lost-pickup small {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--v2-blue);
+}
+
+.app-shell[data-v2="true"] .v2-lost-pickup + .v2-search {
+  margin-top: 0.85rem;
+}
+
+.app-shell[data-v2="true"] .v2-lost__thumb--text {
+  display: grid;
+  place-items: center;
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.app-shell[data-v2="true"] .v2-lost-detail__photo {
+  position: relative;
+  margin-bottom: 1rem;
+  cursor: zoom-in;
+}
+
+.app-shell[data-v2="true"] .v2-lost-detail__photo .v2-lost-detail__img {
+  display: block;
+  margin-bottom: 0;
+}
+
+.app-shell[data-v2="true"] .v2-lost-detail__photo span {
+  position: absolute;
+  right: 0.6rem;
+  bottom: 0.6rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.72);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.app-shell[data-v2="true"] .v2-lost-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  background: rgba(10, 12, 18, 0.96);
+}
+
+.app-shell[data-v2="true"] .v2-lost-viewer__scroll {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.app-shell[data-v2="true"] .v2-lost-viewer__scroll img {
+  display: block;
+  flex: none;
+  width: 100%;
+  max-width: none;
+  height: auto;
+  margin: auto;
+  cursor: zoom-in;
+}
+
+.app-shell[data-v2="true"] .v2-lost-viewer__scroll img.is-zoomed {
+  width: 260%;
+  cursor: zoom-out;
+}
+
+.app-shell[data-v2="true"] .v2-lost-viewer__hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(1rem + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.app-shell[data-v2="true"] .v2-lost-viewer__close {
+  position: absolute;
+  top: calc(0.8rem + env(safe-area-inset-top));
+  right: 0.8rem;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  cursor: pointer;
+}
+
+.app-shell[data-v2="true"] .v2-lost-viewer__close svg {
+  width: 1.25rem;
+  height: 1.25rem;
+}

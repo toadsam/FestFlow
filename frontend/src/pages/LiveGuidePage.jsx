@@ -357,7 +357,8 @@ export default function LiveGuidePage() {
   useEffect(() => {
     const step = scenario.steps.find((item) => item.key === currentKey) || null;
     const targets = {};
-    const seen = new WeakSet();
+    // 누를 곳마다 처음 본 때와 마지막으로 화면을 맞춘 때.
+    const seen = new WeakMap();
     const docOf = (frame) => {
       try {
         const doc = frameRefs.current[frame.id]?.contentDocument;
@@ -378,8 +379,21 @@ export default function LiveGuidePage() {
           }
         }
         targets[frame.id] = target;
-        if (target && !seen.has(target)) {
-          seen.add(target);
+        if (!target) return;
+        const now = performance.now();
+        const mark = seen.get(target);
+        if (!mark) {
+          seen.set(target, { first: now, last: now });
+          scrollToTarget(doc, target, scenario.scrollAnchor);
+          return;
+        }
+        // 맞춘 직후에 목록이 다시 그려져(새 줄이 끼어들어) 누를 곳이 화면 밖으로 밀리면 한 번 더 맞춘다.
+        // 처음 2.5초 동안만 한다. 그 뒤에는 사용자가 다른 곳을 둘러봐도 끌고 오지 않는다.
+        if (now - mark.first > 2500 || now - mark.last < 700) return;
+        const rect = target.getBoundingClientRect();
+        const height = doc.defaultView?.innerHeight || 0;
+        if (rect.bottom < 8 || rect.top > height - 8) {
+          mark.last = now;
           scrollToTarget(doc, target, scenario.scrollAnchor);
         }
       });
