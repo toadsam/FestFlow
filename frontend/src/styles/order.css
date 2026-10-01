@@ -1196,8 +1196,9 @@ textarea.od-input {
 /* =====================================================================
  * index.css 가 .app-shell button 에 !important 로 남색 그라데이션·테두리를 강제한다.
  * 주문 흐름(data-order-route) 안에서만 되돌리고 각 버튼 색을 다시 입힌다.
+ * 전역 규칙에는 button:hover 도 있어서(마우스를 올리거나 누른 직후 흰 바탕), :not(#_) 로 우선순위를 올려 그때도 색이 유지되게 한다.
  * ===================================================================== */
-.app-shell[data-order-route="true"] .od-page button {
+.app-shell[data-order-route="true"] .od-page:not(#_) button {
   border: 0 !important;
   background: transparent !important;
   color: inherit !important;
@@ -1207,27 +1208,27 @@ textarea.od-input {
   transition: transform 0.15s, background 0.15s, color 0.15s, border-color 0.15s !important;
 }
 
-.app-shell[data-order-route="true"] .od-page button:active { transform: scale(0.97) !important; filter: none !important; }
-.app-shell[data-order-route="true"] .od-page button:focus-visible { outline: 2px solid var(--od-blue) !important; outline-offset: 2px; }
+.app-shell[data-order-route="true"] .od-page:not(#_) button:active { transform: scale(0.97) !important; filter: none !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) button:focus-visible { outline: 2px solid var(--od-blue) !important; outline-offset: 2px; }
 
-.app-shell[data-order-route="true"] .od-page .od-iconbtn { color: var(--od-ink) !important; }
-.app-shell[data-order-route="true"] .od-page .od-iconbtn--dark { background: rgba(30, 42, 68, 0.38) !important; color: #fff !important; }
-.app-shell[data-order-route="true"] .od-page .od-menu-item { background: var(--od-surface) !important; box-shadow: var(--od-shadow-soft) !important; color: var(--od-ink) !important; }
-.app-shell[data-order-route="true"] .od-page .od-plus { background: var(--od-blue-soft) !important; color: var(--od-blue) !important; }
-.app-shell[data-order-route="true"] .od-page .od-plus--muted { background: var(--od-line) !important; color: var(--od-faint) !important; }
-.app-shell[data-order-route="true"] .od-page .od-cartbar { background: var(--od-blue) !important; color: #fff !important; box-shadow: 0 16px 36px rgba(43, 109, 224, 0.3) !important; }
-.app-shell[data-order-route="true"] .od-page .od-cartbar * { color: #fff !important; }
-.app-shell[data-order-route="true"] .od-page .od-ghost { background: var(--od-surface) !important; color: var(--od-ink) !important; box-shadow: var(--od-shadow-soft) !important; }
-.app-shell[data-order-route="true"] .od-page .od-pay__option { border-top: 1px solid var(--od-line) !important; color: var(--od-muted) !important; }
-.app-shell[data-order-route="true"] .od-page .od-pay__option--on { color: var(--od-ink) !important; }
-.app-shell[data-order-route="true"] .od-page .od-pay__option:disabled { opacity: 0.5; }
-.app-shell[data-order-route="true"] .od-page .od-copy { background: var(--od-surface) !important; color: var(--od-blue) !important; box-shadow: var(--od-shadow-soft) !important; }
-.app-shell[data-order-route="true"] .od-page .od-stepper button { color: var(--od-ink) !important; }
-.app-shell[data-order-route="true"] .od-page .od-cta { background: var(--od-cta) !important; color: #fff !important; box-shadow: 0 10px 22px rgba(43, 109, 224, 0.28) !important; }
-.app-shell[data-order-route="true"] .od-page .od-cta:disabled { opacity: 0.55; box-shadow: none !important; transform: none !important; }
-.app-shell[data-order-route="true"] .od-page .od-pick { border: 2px solid transparent !important; background: var(--od-surface) !important; box-shadow: var(--od-shadow-soft) !important; color: var(--od-ink) !important; }
-.app-shell[data-order-route="true"] .od-page .od-pick--on { border-color: var(--od-blue) !important; background: var(--od-blue-soft) !important; color: var(--od-blue-dark) !important; }
-.app-shell[data-order-route="true"] .od-page .od-table-confirm button { background: #fff !important; color: var(--od-blue-dark) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-iconbtn { color: var(--od-ink) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-iconbtn--dark { background: rgba(30, 42, 68, 0.38) !important; color: #fff !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-menu-item { background: var(--od-surface) !important; box-shadow: var(--od-shadow-soft) !important; color: var(--od-ink) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-plus { background: var(--od-blue-soft) !important; color: var(--od-blue) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-plus--muted { background: var(--od-line) !important; color: var(--od-faint) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-cartbar { background: var(--od-blue) !important; color: #fff !important; box-shadow: 0 16px 36px rgba(43, 109, 224, 0.3) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-cartbar * { color: #fff !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-ghost { background: var(--od-surface) !important; color: var(--od-ink) !important; box-shadow: var(--od-shadow-soft) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-pay__option { border-top: 1px solid var(--od-line) !important; color: var(--od-muted) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-pay__option--on { color: var(--od-ink) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-pay__option:disabled { opacity: 0.5; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-copy { background: var(--od-surface) !important; color: var(--od-blue) !important; box-shadow: var(--od-shadow-soft) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-stepper button { color: var(--od-ink) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-cta { background: var(--od-cta) !important; color: #fff !important; box-shadow: 0 10px 22px rgba(43, 109, 224, 0.28) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-cta:disabled { opacity: 0.55; box-shadow: none !important; transform: none !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-pick { border: 2px solid transparent !important; background: var(--od-surface) !important; box-shadow: var(--od-shadow-soft) !important; color: var(--od-ink) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-pick--on { border-color: var(--od-blue) !important; background: var(--od-blue-soft) !important; color: var(--od-blue-dark) !important; }
+.app-shell[data-order-route="true"] .od-page:not(#_) .od-table-confirm button { background: #fff !important; color: var(--od-blue-dark) !important; }
 
 /* 사진 위 머리글: 전역 글자색 규칙에 눌려 어둡게 나오던 것을 흰색으로 되돌리고, 밝은 사진에서도 읽히게 그늘을 짙게 한다. */
 .app-shell[data-order-route="true"] .od-page .od-hero__shade {

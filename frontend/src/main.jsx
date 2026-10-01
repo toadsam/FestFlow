@@ -1,4 +1,6 @@
-import React from "react";
+// 눌러 보는 매뉴얼 안의 연습 화면이면 서버 요청 · 저장소를 연습용으로 바꿔 끼운다. 다른 모듈보다 먼저 실행돼야 한다.
+import { isDemoFrame } from "./demo/demoFrame";
+import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import App from "./App";
@@ -43,6 +45,9 @@ import StaffPage from "./pages/StaffPage";
 import StageCrowdPage from "./pages/StageCrowdPage";
 import StageMapPage from "./pages/StageMapPage";
 
+// 눌러 보는 운영 매뉴얼. 스태프만 여는 화면이라 따로 내려받는다.
+const LiveGuidePage = lazy(() => import("./pages/LiveGuidePage"));
+
 function routeElement(Page) {
   return <Page />;
 }
@@ -65,7 +70,7 @@ if ((!import.meta.env.PROD || isLocalRuntime) && "serviceWorker" in navigator) {
   }
 }
 
-if (import.meta.env.PROD && !isLocalRuntime && "serviceWorker" in navigator) {
+if (import.meta.env.PROD && !isLocalRuntime && !isDemoFrame && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("/service-worker.js").catch(() => {
       // Service worker registration failure should not block the app.
@@ -78,6 +83,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <LanguageProvider>
       <BrowserRouter>
         <Routes>
+          {/* 탭 · 스플래시 없이 화면 전체를 쓴다. /guide/ (정적 매뉴얼)와 주소가 이어진다. */}
+          <Route path="/guide/live" element={<Suspense fallback={null}><LiveGuidePage /></Suspense>} />
           <Route path="/" element={<App />}>
             {/* ver2: 첫 화면은 축제 살펴보기. 이전 홈은 지우지 않고 /home-v1 로 옮겨 두었다. */}
             <Route index element={routeElement(FestivalPage)} />

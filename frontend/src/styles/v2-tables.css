@@ -368,17 +368,18 @@
   color: var(--v2-red) !important;
 }
 
-/* 카드 바탕색: `.v2-page button { background: transparent !important }` 보다 무게가 커야 색이 보인다. */
-.app-shell[data-v2="true"] .tb-page .tb-table {
+/* 카드 바탕색: `.v2-page button { background: transparent !important }` 보다 무게가 커야 색이 보인다.
+   전역 `button:hover` 규칙(누른 직후 폰에서도 걸린다)에도 흰색으로 덮이지 않게 :not(#_) 로 우선순위를 올린다. */
+.app-shell[data-v2="true"] .tb-page .tb-table:not(#_) {
   background: var(--v2-green-soft) !important;
 }
 
-.app-shell[data-v2="true"] .tb-page .tb-table--in_use,
-.app-shell[data-v2="true"] .tb-page .tb-table--full {
+.app-shell[data-v2="true"] .tb-page .tb-table--in_use:not(#_),
+.app-shell[data-v2="true"] .tb-page .tb-table--full:not(#_) {
   background: var(--v2-red-soft) !important;
 }
 
-.app-shell[data-v2="true"] .tb-page .tb-table--reserved {
+.app-shell[data-v2="true"] .tb-page .tb-table--reserved:not(#_) {
   background: var(--v2-yellow-soft) !important;
 }
 
