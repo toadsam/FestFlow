@@ -1,16 +1,17 @@
 // 눌러 보는 운영 매뉴얼 (/guide/live).
 // 손님 · 참가자 화면과 스태프 화면을 진짜 그대로 나란히 띄우고, 한쪽에서 누르면 다른 쪽이 어떻게 바뀌는지 바로 보여 준다.
 // 화면은 iframe 속의 실제 페이지이고, 서버만 연습용(demo/demoServer.js)으로 바꿔 끼웠다. 실제 주문 · 실제 서버와는 이어져 있지 않다.
-// 흐름(주점 주문 · 자리와 대기 안내 · 사주 소개팅 · 총괄 공지와 공연 시간)마다 화면 구성과 순서는 demo/*Scenario.js 에 있다.
+// 흐름(주점 주문 · 자리와 대기 안내 · 사주 소개팅 · 총괄 공지와 공연 시간 · 분실물)마다 화면 구성과 순서는 demo/*Scenario.js 에 있다.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createDemoServer } from "../demo/demoServer";
 import { aimatchScenario } from "../demo/aimatchScenario";
 import { festScenario } from "../demo/festScenario";
+import { lostScenario } from "../demo/lostScenario";
 import { pubScenario } from "../demo/pubScenario";
 import { seatScenario } from "../demo/seatScenario";
 import "../styles/live-guide.css";
 
-const SCENARIOS = [pubScenario, seatScenario, aimatchScenario, festScenario];
+const SCENARIOS = [pubScenario, seatScenario, aimatchScenario, festScenario, lostScenario];
 const ALL_FRAMES = SCENARIOS.flatMap((scenario) => scenario.frames);
 const FRAME_BY_ID = Object.fromEntries(ALL_FRAMES.map((frame) => [frame.id, frame]));
 
@@ -272,6 +273,15 @@ export default function LiveGuidePage() {
   const scenarioRef = useRef(scenario);
   scenarioRef.current = scenario;
 
+  // 흐름 버튼 줄이 화면보다 길면(폰) 고른 버튼이 보이게 그 줄만 옆으로 민다.
+  const flowsRef = useRef(null);
+  useEffect(() => {
+    const rail = flowsRef.current;
+    const on = rail?.querySelector(".lg-flow.is-on");
+    if (!rail || !on || rail.scrollWidth <= rail.clientWidth) return;
+    rail.scrollTo({ left: on.offsetLeft - (rail.clientWidth - on.offsetWidth) / 2, behavior: "smooth" });
+  }, [scenario, wide]);
+
   useEffect(() => {
     document.title = "눌러 보는 운영 매뉴얼 · Fest-A";
     document.documentElement.classList.add("lg-root");
@@ -474,7 +484,7 @@ export default function LiveGuidePage() {
             <small>{scenario.subtitle}</small>
           </div>
         </div>
-        <nav className="lg-flows" aria-label="흐름 고르기">
+        <nav className="lg-flows" aria-label="흐름 고르기" ref={flowsRef}>
           {SCENARIOS.map((item) => (
             <button
               key={item.id}

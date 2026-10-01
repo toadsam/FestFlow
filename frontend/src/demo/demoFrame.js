@@ -74,6 +74,12 @@ function install(host) {
       } catch {
         body = init.body;
       }
+    } else if (init.body instanceof FormData) {
+      // 사진과 함께 보내는 등록(분실물). 글자 칸은 그대로, 사진은 이 브라우저 안에서만 보이는 주소로 바꿔 넘긴다(어디에도 올라가지 않는다).
+      body = {};
+      init.body.forEach((value, key) => {
+        body[key] = typeof value === "string" ? value : { name: value.name, type: value.type, size: value.size, url: URL.createObjectURL(value) };
+      });
     }
     const headers = {};
     new Headers(init.headers || {}).forEach((value, key) => {

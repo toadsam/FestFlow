@@ -575,6 +575,13 @@
     padding: 16px 20px 20px !important;
   }
 
+  .app-shell.app-shell.app-shell .alost-btn--danger {
+    margin-left: 0;
+  }
+}
+
+/* 목록 칸이 충분히 넓을 때만 한 줄로 놓는다. 그보다 좁은 노트북(1024 ~ 1279)에서는 상태 탭이 잘리고 처리 메모 칸이 몇 글자만 남아서, 폰처럼 두 줄로 쌓는다. */
+@media (min-width: 1280px) {
   .app-shell.app-shell.app-shell .alost-list__top {
     grid-template-columns: auto minmax(180px, 280px);
     justify-content: space-between;
@@ -584,9 +591,5 @@
   .app-shell.app-shell.app-shell .alost-item__foot {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
-  }
-
-  .app-shell.app-shell.app-shell .alost-btn--danger {
-    margin-left: 0;
   }
 }

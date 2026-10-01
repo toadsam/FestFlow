@@ -1,11 +1,12 @@
 // 눌러 보는 매뉴얼(/guide/live)의 연습용 서버.
 // 진짜 화면을 iframe 으로 띄우고, 그 화면이 보내는 요청을 여기서 받아 실제 서버와 같은 규칙으로 답한다.
 // 전부 이 페이지의 메모리 안에서만 돈다. 실제 서버로는 아무것도 나가지 않는다.
-// 규칙은 영역별 파일에 있다: 주점 주문 pubDomain.js · 사주 소개팅 aimatchDomain.js · 총괄 공지와 공연 festDomain.js.
+// 규칙은 영역별 파일에 있다: 주점 주문 pubDomain.js · 사주 소개팅 aimatchDomain.js · 총괄 공지와 공연 festDomain.js · 분실물 lostDomain.js.
 import { NOT_HANDLED, formatStamp, httpError, parseStamp } from "./demoCore";
 import { createPubDomain } from "./pubDomain";
 import { createAimatchDomain } from "./aimatchDomain";
 import { createFestDomain } from "./festDomain";
+import { createLostDomain } from "./lostDomain";
 
 export { DEMO_BOOTH_ID, DEMO_OPS_KEY } from "./pubDomain";
 export { DEMO_ADMIN_TOKEN, DEMO_PIN } from "./aimatchDomain";
@@ -41,7 +42,7 @@ export function createDemoServer() {
   }
 
   const context = { nowMs, stamp, publish, emit, clock };
-  const domains = { pub: createPubDomain(context), aimatch: createAimatchDomain(context), fest: createFestDomain(context) };
+  const domains = { pub: createPubDomain(context), aimatch: createAimatchDomain(context), fest: createFestDomain(context), lost: createLostDomain(context) };
 
   return {
     clock,
@@ -77,7 +78,7 @@ export function createDemoServer() {
       return domains[domain]?.act?.(name, payload);
     },
     snapshot() {
-      return { pub: domains.pub.snapshot(), aimatch: domains.aimatch.snapshot(), fest: domains.fest.snapshot() };
+      return Object.fromEntries(Object.entries(domains).map(([name, domain]) => [name, domain.snapshot()]));
     },
     /** clockStart("2026-10-07T12:57:00")를 주면 연습용 시계를 그 시각에서 시작한다. 안 주면 지금 시각. */
     reset({ clockStart } = {}) {

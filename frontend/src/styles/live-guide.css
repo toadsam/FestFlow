@@ -127,11 +127,20 @@ html.lg-root #root {
 }
 
 .lg-flows {
+  position: relative;
   display: flex;
   gap: 4px;
   padding: 4px;
   border-radius: 14px;
   background: #e6eaf1;
+  /* 흐름이 많아 넘치면 이 줄만 옆으로 민다. */
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.lg-flows::-webkit-scrollbar {
+  display: none;
 }
 
 .lg-page .lg-flow {
@@ -159,13 +168,20 @@ html.lg-root #root {
 
 /* 폰: 흐름 이름을 짧게 쓰고, 그래도 넘치면 옆으로 민다. */
 .lg-page:not(.lg-page--wide) .lg-flows {
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
+  gap: 2px;
 }
 
 .lg-page:not(.lg-page--wide) .lg-flow {
-  padding: 7px 9px;
+  padding: 7px 7px;
+  font-size: 12.5px;
+}
+
+.lg-page:not(.lg-page--wide) .lg-top {
+  gap: 6px;
+}
+
+.lg-page:not(.lg-page--wide) .lg-top__side .lg-btn {
+  padding: 9px 9px;
   font-size: 13px;
 }
 

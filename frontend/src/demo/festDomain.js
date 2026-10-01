@@ -400,7 +400,6 @@ export function createFestDomain({ nowMs, stamp, publish, emit }) {
     if (method === "GET" && path === "/notices/active") return activeNotices();
     let match = path.match(/^\/notices\/(\d+)\/view$/);
     if (method === "POST" && match) return recordView(match[1], role);
-    if (method === "GET" && path === "/lost-items") return [];
 
     if (!path.startsWith("/admin/")) return NOT_HANDLED;
     const rest = path.slice("/admin".length);
