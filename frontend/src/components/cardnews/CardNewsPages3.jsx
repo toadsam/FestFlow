@@ -1,0 +1,687 @@
+// 카드뉴스 세 번째 묶음: 아로새길 거리축제, 뛰아주, SUCL 결승, 응원대제전.
+// 원본 카드의 글을 그대로 옮기고, 구역 고르기 · 코스 달려 보기 · 팀 응원 · 함성 키우기처럼 손으로 해 볼 거리를 붙였다.
+import { useEffect, useRef, useState } from "react";
+import { ARO, CARD_NEWS_IMG, CHEER, RUN, SUCL } from "../../data/cardNews";
+import { CnIcon, PinMap } from "./CardNewsArt";
+import { GlassCard, vibrate } from "./CardNewsPages";
+import { Rich, useWhen } from "./CardNewsPages2";
+
+const img = (name) => `${CARD_NEWS_IMG}/${name}.webp`;
+const MAP_RATIO = 1687 / 1463;
+
+function readSaved(key) {
+  try {
+    return window.localStorage.getItem(key) || "";
+  } catch {
+    return "";
+  }
+}
+
+function writeSaved(key, value) {
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    // 저장이 막혀도 이번 화면에서는 켜진다.
+  }
+}
+
+/* 지도 그림 위에 얹는 구역 표시 */
+function ZoneBox({ box, tone, on }) {
+  return (
+    <span
+      className={`cn-zonebox cn-zonebox--${tone}${on ? " is-on" : ""}`}
+      style={{ left: `${box[0]}%`, top: `${box[1]}%`, width: `${box[2]}%`, height: `${box[3]}%` }}
+      aria-hidden="true"
+    />
+  );
+}
+
+/* ================= 아로새길 거리축제 ================= */
+export function AroInfoPage() {
+  const [zone, setZone] = useState("A");
+  const current = ARO.zones.find((item) => item.key === zone) || ARO.zones[0];
+  return (
+    <GlassCard title="아로새길 거리축제 안내" seed={107} className="cn-card--wide-title">
+      <div className="cn-map--narrow cn-in" style={{ "--d": 1 }}>
+        <PinMap src={img("aro-map")} ratio={MAP_RATIO} alt="아로새길 거리축제 구역 지도" zoomable>
+          {ARO.zones.map((item) => (
+            <ZoneBox key={item.key} box={item.box} tone={item.tone} on={item.key === zone} />
+          ))}
+        </PinMap>
+      </div>
+      <div className="cn-zones cn-in" style={{ "--d": 2 }} role="tablist" aria-label="구역">
+        {ARO.zones.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            role="tab"
+            aria-selected={item.key === zone}
+            className={`cn-zone cn-zone--${item.tone}${item.key === zone ? " is-on" : ""}`}
+            onClick={() => {
+              setZone(item.key);
+              vibrate();
+            }}
+          >
+            {item.key}구역
+          </button>
+        ))}
+      </div>
+      <p key={zone} className="cn-zoneinfo" role="status">
+        <b>{current.name}</b>
+        {current.subs.map((line) => (
+          <small key={line}>{line}</small>
+        ))}
+      </p>
+      <dl className="cn-duo cn-in" style={{ "--d": 3 }}>
+        <div>
+          <dt>운영일시</dt>
+          <dd>{ARO.when}</dd>
+        </div>
+        <div>
+          <dt>운영장소</dt>
+          <dd>{ARO.place}</dd>
+        </div>
+        <div className="cn-duo__wide">
+          <dt>행사 내용</dt>
+          <dd>{ARO.about}</dd>
+        </div>
+      </dl>
+    </GlassCard>
+  );
+}
+
+export function AroPubPage({ onLeave }) {
+  const when = useWhen(ARO.pub.start, ARO.pub.end);
+  return (
+    <GlassCard title="총학생회 주점 운영 안내" seed={109} className="cn-card--wide-title">
+      <div className="cn-map--narrow cn-in" style={{ "--d": 1 }}>
+        <PinMap src={img("aro-pub-map")} ratio={MAP_RATIO} alt="아로새길 총학생회 구역과 주점부스 위치" zoomable>
+          <ZoneBox box={ARO.pub.box} tone="gold" on />
+        </PinMap>
+      </div>
+      <p className={`cn-status cn-status--${when.tone} cn-in`} style={{ "--d": 2 }}>
+        <i aria-hidden="true" />
+        {when.tone === "soon" ? `10월 7일 오후 4시에 열어요 · ${when.text}` : when.tone === "live" ? "지금 운영 중 · 밤 11시까지" : "주점 운영을 마쳤어요"}
+      </p>
+      <dl className="cn-duo cn-in" style={{ "--d": 3 }}>
+        <div>
+          <dt>운영일시</dt>
+          <dd>{ARO.pub.when}</dd>
+        </div>
+        <div>
+          <dt>운영장소</dt>
+          <dd>{ARO.pub.place}</dd>
+        </div>
+        <div>
+          <dt>행사 내용</dt>
+          <dd>{ARO.pub.about}</dd>
+        </div>
+        <div>
+          <dt>안내 사항</dt>
+          <dd>{ARO.pub.note}</dd>
+        </div>
+      </dl>
+      <button type="button" className="cn-cta cn-in" style={{ "--d": 4 }} onClick={() => onLeave?.("/booths")}>
+        앱에서 주점 자리 · 주문 보기 <CnIcon.arrow />
+      </button>
+    </GlassCard>
+  );
+}
+
+export function AroMenuPage({ onLeave }) {
+  const [picked, setPicked] = useState(null);
+  const [bump, setBump] = useState(0);
+  return (
+    <GlassCard title="메뉴 안내" seed={113}>
+      <div className="cn-dishes">
+        {ARO.menu.map((item, index) => {
+          const on = picked === index;
+          return (
+            <button
+              key={item.name}
+              type="button"
+              className={`cn-dish cn-in${on ? " is-on" : ""}`}
+              style={{ "--d": index + 1 }}
+              aria-pressed={on}
+              onClick={() => {
+                setPicked(on ? null : index);
+                setBump(Date.now());
+                vibrate();
+              }}
+            >
+              <span className="cn-dish__img">
+                <img key={on ? bump : "still"} src={img(item.img)} alt="" draggable="false" />
+              </span>
+              <b>{item.name}</b>
+              <em>{item.price}</em>
+              {on ? <small>{item.detail}</small> : null}
+            </button>
+          );
+        })}
+      </div>
+      <p className="cn-note cn-in" style={{ "--d": 5 }}>
+        {picked === null ? "메뉴를 누르면 구성을 볼 수 있어요" : "주문은 주점 테이블의 QR 로 해요"}
+      </p>
+      <button type="button" className="cn-cta cn-in" style={{ "--d": 6 }} onClick={() => onLeave?.("/booths")}>
+        앱에서 주점 보기 <CnIcon.arrow />
+      </button>
+    </GlassCard>
+  );
+}
+
+/* ================= 뛰아주 ================= */
+export function RunInfoPage({ onJump }) {
+  const when = useWhen(RUN.start, RUN.end);
+  const [step, setStep] = useState(0);
+  return (
+    <GlassCard title="뛰아주 안내" seed={127}>
+      <p className={`cn-status cn-status--${when.tone} cn-in`} style={{ "--d": 1 }}>
+        <i aria-hidden="true" />
+        {when.tone === "soon" ? `10월 7일 오전 10시 30분 · ${when.text}` : when.tone === "live" ? "지금 달리는 중" : "뛰아주가 끝났어요"}
+      </p>
+      <dl className="cn-blocks cn-blocks--tight">
+        <div className="cn-in" style={{ "--d": 2 }}>
+          <dt>행사 일시</dt>
+          <dd>{RUN.when}</dd>
+        </div>
+        <div className="cn-in" style={{ "--d": 3 }}>
+          <dt>행사 일정</dt>
+          <dd className="cn-timeline">
+            {RUN.schedule.map((item, index) => (
+              <button
+                key={item.time}
+                type="button"
+                className={`cn-tl${index === step ? " is-on" : ""}${index < step ? " is-done" : ""}`}
+                aria-pressed={index === step}
+                onClick={() => {
+                  setStep(index);
+                  vibrate();
+                }}
+              >
+                <b>{item.time}</b>
+                <span>{item.text}</span>
+              </button>
+            ))}
+          </dd>
+        </div>
+      </dl>
+      <button type="button" className="cn-cta cn-in" style={{ "--d": 4 }} onClick={() => onJump?.("run", "run-course")}>
+        런닝코스: 지도 보기 <CnIcon.arrow />
+      </button>
+      <ul className="cn-perks cn-perks--tight cn-in" style={{ "--d": 5 }}>
+        <li>* {RUN.perk}</li>
+      </ul>
+    </GlassCard>
+  );
+}
+
+// 코스 선이 지나는 점(지도 그림 기준 %, 원본 그림의 선 위에 맞춘 값).
+const COURSE = {
+  blue: [[26.37, 86.12], [40.99, 86.12], [41.57, 93.02], [49.72, 95.77], [60.41, 84.07], [60.56, 72.04], [87.1, 71.94], [87.14, 68.33], [84.56, 68.18], [84.57, 43.63], [88.87, 42.6], [92.94, 39.61], [96.84, 38.35], [96.33, 34.89], [93.67, 32.24], [86.99, 30.69], [78.85, 29.14], [71.63, 26.03], [68.86, 21.39], [65.8, 17.51], [62.01, 14.73], [47.98, 13.71], [40.2, 11.93], [34.17, 9.44], [29.26, 6.37]],
+  yellow: [[29.56, 6.09], [34.16, 9.73], [42.92, 13.63], [46.98, 14.54], [45.57, 16.58], [46.86, 17.0], [32.51, 33.45], [45.33, 36.33], [44.94, 38.77], [22.06, 65.14]],
+  green: [[21.62, 65.6], [20.08, 67.22], [20.6, 71.39], [68.93, 70.9], [67.98, 55.59], [59.13, 49.5], [61.52, 44.72], [61.19, 41.07], [62.76, 39.08], [58.46, 36.04], [51.5, 34.29], [23.73, 65.45]],
+};
+const COURSE_RATIO = 1000 / 1778;
+const VB_H = 177.8; // 가로를 100 으로 봤을 때 세로 길이
+const LEG_MS = 2600;
+const toPath = (points) => points.map(([x, y], index) => `${index ? "L" : "M"}${x} ${((y * VB_H) / 100).toFixed(2)}`).join(" ");
+
+export function RunCoursePage({ active }) {
+  const [leg, setLeg] = useState(null);
+  const [pos, setPos] = useState(null);
+  const [running, setRunning] = useState(false);
+  const pathRefs = useRef([]);
+  const frame = useRef(0);
+
+  useEffect(() => () => window.cancelAnimationFrame(frame.current), []);
+  useEffect(() => {
+    if (active) return;
+    window.cancelAnimationFrame(frame.current);
+    setRunning(false);
+    setPos(null);
+  }, [active]);
+
+  // from 구간부터 to 구간까지 이어서 달린다.
+  function run(from, to) {
+    window.cancelAnimationFrame(frame.current);
+    let index = from;
+    let started = 0;
+    setRunning(true);
+    vibrate();
+    const tick = (now) => {
+      const node = pathRefs.current[index];
+      if (!node) {
+        setRunning(false);
+        return;
+      }
+      if (!started) {
+        started = now;
+        setLeg(index);
+      }
+      const progress = Math.min(1, (now - started) / LEG_MS);
+      const point = node.getPointAtLength(node.getTotalLength() * progress);
+      setPos({ x: point.x, y: (point.y / VB_H) * 100 });
+      if (progress < 1) {
+        frame.current = window.requestAnimationFrame(tick);
+        return;
+      }
+      if (index < to) {
+        index += 1;
+        started = 0;
+        frame.current = window.requestAnimationFrame(tick);
+        return;
+      }
+      setRunning(false);
+      vibrate([8, 30, 8]);
+    };
+    frame.current = window.requestAnimationFrame(tick);
+  }
+
+  const current = leg === null ? null : RUN.legs[leg];
+  return (
+    <GlassCard title="런닝 코스" seed={131}>
+      <div className="cn-course">
+        <div className="cn-course__map cn-in" style={{ "--d": 1 }}>
+          <PinMap src={img("run-course")} ratio={COURSE_RATIO} alt="뛰아주 런닝 코스 지도" zoomable>
+            <svg className="cn-course__svg" viewBox={`0 0 100 ${VB_H}`} preserveAspectRatio="none" aria-hidden="true">
+              {RUN.legs.map((item, index) => (
+                <path
+                  key={item.key}
+                  ref={(node) => {
+                    if (node) pathRefs.current[index] = node;
+                  }}
+                  d={toPath(COURSE[item.key])}
+                  className={`cn-course__leg${leg === index ? " is-on" : ""}`}
+                />
+              ))}
+            </svg>
+            {pos ? <span className="cn-runner" style={{ left: `${pos.x}%`, top: `${pos.y}%` }} aria-hidden="true" /> : null}
+          </PinMap>
+        </div>
+        <div className="cn-course__side">
+          <ol className="cn-stops cn-in" style={{ "--d": 2 }}>
+            <li className="cn-stops--blue">출발: 축구장</li>
+            <li className="cn-stops--yellow">반환: 혜령공원</li>
+            <li className="cn-stops--green">도착: 선구자상</li>
+          </ol>
+          <div className="cn-legs cn-in" style={{ "--d": 3 }}>
+            {RUN.legs.map((item, index) => (
+              <button
+                key={item.key}
+                type="button"
+                className={`cn-leg cn-leg--${item.key}${leg === index ? " is-on" : ""}`}
+                aria-pressed={leg === index}
+                onClick={() => run(index, index)}
+              >
+                <i aria-hidden="true" />
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="cn-cta cn-cta--solid cn-course__go cn-in" style={{ "--d": 4 }} onClick={() => run(0, 2)}>
+            {running ? "달리는 중…" : "처음부터 달려 보기"}
+          </button>
+        </div>
+      </div>
+      <p className="cn-note cn-in" style={{ "--d": 5 }} role="status">
+        {current ? `${current.from} → ${current.to}` : "지도를 누르면 크게 볼 수 있어요"}
+      </p>
+    </GlassCard>
+  );
+}
+
+export function RunItemsPage() {
+  const [got, setGot] = useState([]);
+  const all = got.length === RUN.items.length;
+  function toggle(index) {
+    const next = got.includes(index) ? got.filter((i) => i !== index) : [...got, index];
+    setGot(next);
+    vibrate(next.length === RUN.items.length ? [10, 40, 10] : 8);
+  }
+  return (
+    <GlassCard title="뛰아주 안내" seed={137}>
+      <span className="cn-tag cn-tag--first cn-in" style={{ "--d": 1 }}>
+        지급 물품
+      </span>
+      <div className="cn-kit">
+        {RUN.items.map((item, index) => {
+          const on = got.includes(index);
+          return (
+            <button
+              key={item.name}
+              type="button"
+              className={`cn-kititem cn-kititem--${item.img} cn-in${on ? " is-on" : ""}`}
+              style={{ "--d": index + 2 }}
+              aria-pressed={on}
+              onClick={() => toggle(index)}
+            >
+              <span className="cn-kititem__img">
+                <img src={img(item.img)} alt="" draggable="false" />
+              </span>
+              <b>{item.name}</b>
+              {on ? <em>챙김</em> : null}
+            </button>
+          );
+        })}
+      </div>
+      {all ? (
+        <p className="cn-done" role="status">
+          다 챙겼어요! 10월 7일 오전 10시 30분에 만나요
+        </p>
+      ) : (
+        <p className="cn-note cn-in" style={{ "--d": 6 }}>
+          눌러서 챙겨 보세요 · {got.length} / {RUN.items.length}
+        </p>
+      )}
+    </GlassCard>
+  );
+}
+
+/* ================= SUCL 결승 ================= */
+const SUCL_KEY = "festflow.cardnews.sucl";
+
+export function SuclFinalPage() {
+  const when = useWhen(SUCL.start, SUCL.end);
+  const [pick, setPick] = useState(() => readSaved(SUCL_KEY));
+  const [bump, setBump] = useState(0);
+
+  function choose(key) {
+    const value = pick === key ? "" : key;
+    setPick(value);
+    setBump(Date.now());
+    writeSaved(SUCL_KEY, value);
+    vibrate(value ? [8, 30, 8] : 6);
+  }
+
+  const picked = SUCL.teams.find((team) => team.key === pick);
+  return (
+    <GlassCard
+      title={
+        <>
+          SUCL2026 with 아주대학교
+          <br />
+          결승 안내
+        </>
+      }
+      seed={139}
+      className="cn-card--wide-title"
+    >
+      <div className={`cn-match${pick ? " has-pick" : ""} cn-in`} style={{ "--d": 1 }}>
+        {SUCL.teams.map((team) => (
+          <button key={team.key} type="button" className={`cn-club${pick === team.key ? " is-on" : ""}`} onClick={() => choose(team.key)} aria-pressed={pick === team.key}>
+            <span className="cn-club__logo">
+              <img key={pick === team.key ? bump : "still"} src={img(team.img)} alt="" draggable="false" />
+            </span>
+            <b>{team.name}</b>
+            {pick === team.key ? <em className="cn-orb__badge">응원 중</em> : null}
+          </button>
+        ))}
+        <b className="cn-vs__mark" aria-hidden="true">
+          VS
+        </b>
+      </div>
+      <p className="cn-note cn-in" style={{ "--d": 2 }}>
+        {picked ? `${picked.name} 응원 중 · 다시 누르면 취소` : "응원할 팀을 골라 보세요"}
+      </p>
+      <p className={`cn-status cn-status--${when.tone} cn-in`} style={{ "--d": 3 }}>
+        <i aria-hidden="true" />
+        {when.tone === "soon" ? `10월 7일 오후 4시 30분 시작 · ${when.text}` : when.tone === "live" ? "지금 대운동장에서 결승 중" : "결승이 끝났어요"}
+      </p>
+      <dl className="cn-blocks cn-blocks--tight">
+        <div className="cn-in" style={{ "--d": 4 }}>
+          <dt>일시</dt>
+          <dd>{SUCL.when}</dd>
+        </div>
+        <div className="cn-in" style={{ "--d": 5 }}>
+          <dt>장소</dt>
+          <dd>{SUCL.place}</dd>
+        </div>
+      </dl>
+    </GlassCard>
+  );
+}
+
+export function SuclEventPage() {
+  const [checked, setChecked] = useState([]);
+  const [copied, setCopied] = useState(false);
+  const done = checked.length === SUCL.steps.length;
+
+  function toggle(index) {
+    const next = checked.includes(index) ? checked.filter((i) => i !== index) : [...checked, index];
+    setChecked(next);
+    vibrate(next.length === SUCL.steps.length ? [10, 40, 10] : 8);
+  }
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(SUCL.account);
+      setCopied(true);
+      vibrate();
+      window.setTimeout(() => setCopied(false), 2200);
+    } catch {
+      // 복사가 막힌 브라우저에서는 글자를 그대로 보고 적는다.
+    }
+  }
+
+  return (
+    <GlassCard title="결승전 관람 인증 EVENT" seed={149} className="cn-card--wide-title">
+      <div className="cn-panel cn-in" style={{ "--d": 1 }}>
+        {SUCL.event.map((line) => (
+          <p key={line}>
+            <Rich text={line} />
+          </p>
+        ))}
+      </div>
+      <div className="cn-checkhead cn-in" style={{ "--d": 2 }}>
+        <span>참여 순서를 눌러 확인해요</span>
+        <b>
+          {checked.length} / {SUCL.steps.length}
+        </b>
+      </div>
+      <ol className="cn-checks">
+        {SUCL.steps.map((text, index) => (
+          <li key={text} className="cn-in" style={{ "--d": index + 3 }}>
+            <button type="button" className={`cn-check${checked.includes(index) ? " is-on" : ""}`} onClick={() => toggle(index)} aria-pressed={checked.includes(index)}>
+              <span className="cn-check__box" aria-hidden="true">
+                {checked.includes(index) ? "✓" : index + 1}
+              </span>
+              <span className="cn-check__text">{text}</span>
+            </button>
+          </li>
+        ))}
+      </ol>
+      {done ? (
+        <p className="cn-done" role="status">
+          참여 준비 끝! 결승전에서 만나요
+        </p>
+      ) : null}
+      <button type="button" className="cn-cta cn-in" style={{ "--d": 6 }} onClick={copy}>
+        {copied ? "복사했어요 ✓" : `${SUCL.account} 복사하기`}
+      </button>
+    </GlassCard>
+  );
+}
+
+/* ================= 응원대제전 ================= */
+export function CheerPlaylistPage() {
+  const [playing, setPlaying] = useState(null);
+  return (
+    <GlassCard eyebrow="2026 아주대학교 응원단" title="CENTAUR" seed={151}>
+      <span className="cn-tag cn-tag--first cn-in" style={{ "--d": 1 }}>
+        CENTAUR PLAYLIST
+      </span>
+      <ol className="cn-playlist">
+        {CHEER.playlist.map((name, index) => {
+          const on = playing === index;
+          return (
+            <li key={name} className="cn-in" style={{ "--d": Math.min(index + 2, 8) }}>
+              <button
+                type="button"
+                className={`cn-song${on ? " is-on" : ""}`}
+                aria-pressed={on}
+                onClick={() => {
+                  setPlaying(on ? null : index);
+                  vibrate(on ? 6 : [6, 20, 6]);
+                }}
+              >
+                <span className="cn-song__no">{index + 1}.</span>
+                <span className="cn-song__name">{name}</span>
+                {on ? (
+                  <span className="cn-song__eq" aria-hidden="true">
+                    <i />
+                    <i />
+                    <i />
+                  </span>
+                ) : null}
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+      <p className="cn-note cn-in" style={{ "--d": 9 }}>
+        {playing === null ? "곡 이름을 눌러 미리 떠올려 보세요" : `${CHEER.playlist[playing]} · 함께 외쳐요`}
+      </p>
+      <span className="cn-tag cn-in" style={{ "--d": 10 }}>
+        상품 안내
+      </span>
+      {CHEER.intro.map((line, index) => (
+        <p key={line} className="cn-copy cn-in" style={{ "--d": 11 + index }}>
+          {line}
+        </p>
+      ))}
+    </GlassCard>
+  );
+}
+
+export function CheerOtPage() {
+  const [level, setLevel] = useState(0);
+  const max = CHEER.levels.length;
+  function shout() {
+    const next = level >= max ? 1 : level + 1;
+    setLevel(next);
+    vibrate(next === max ? [14, 40, 14, 40, 30] : 6 + next * 3);
+  }
+  return (
+    <GlassCard title="2026 응원 오리엔테이션" seed={157} className="cn-card--wide-title">
+      <span className="cn-tag cn-tag--first cn-in" style={{ "--d": 1 }}>
+        Crescentaur : 점점 더, 아주 크게
+      </span>
+      <button type="button" className={`cn-cresc cn-cresc--${level} cn-in`} style={{ "--d": 2 }} onClick={shout} aria-label="함성 보내기">
+        <span className="cn-cresc__bars" aria-hidden="true">
+          {CHEER.levels.map((name, index) => (
+            <i key={name} className={index < level ? "is-on" : ""} style={{ "--h": `${30 + index * 14}%` }} />
+          ))}
+        </span>
+        <span className="cn-cresc__text" key={level}>
+          {level ? CHEER.levels[level - 1] : "눌러서 함성 보내기"}
+        </span>
+      </button>
+      {CHEER.ot.map((line, index) => (
+        <p key={line} className="cn-copy cn-in" style={{ "--d": Math.min(index + 3, 9) }}>
+          {line}
+        </p>
+      ))}
+    </GlassCard>
+  );
+}
+
+function Torch({ level, max }) {
+  const lit = level > 0;
+  return (
+    <svg className={`cn-torch cn-torch--${level}${level === max ? " is-full" : ""}`} viewBox="0 0 48 72" aria-hidden="true">
+      <g className="cn-torch__flame" style={{ opacity: lit ? 1 : 0.25 }}>
+        <path d="M24 3c2 9 13 13 13 25a13 13 0 0 1-26 0c0-7 4-10 6-15 2 4 3 6 5 6 0-6 0-11 2-16z" fill="#bfe3ff" />
+        <path d="M24 20c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-5 3-7 1 2 2 2 3-4z" fill="#fff" />
+      </g>
+      <path d="M15 42h18l-3 8H18z" fill="#fff" opacity="0.92" />
+      <path d="M19 50h10l-2.5 19h-5z" fill="#fff" opacity="0.75" />
+    </svg>
+  );
+}
+
+export function CheerTorchPage() {
+  const [checked, setChecked] = useState([]);
+  const steps = CHEER.torch.steps;
+  const done = checked.length === steps.length;
+  function toggle(index) {
+    const next = checked.includes(index) ? checked.filter((i) => i !== index) : [...checked, index];
+    setChecked(next);
+    vibrate(next.length === steps.length ? [10, 40, 10] : 8);
+  }
+  return (
+    <GlassCard title="푸른 횃불 챌린지 EVENT" seed={163} className="cn-card--wide-title">
+      <p className="cn-copy cn-in" style={{ "--d": 1 }}>
+        {CHEER.torch.lead}
+      </p>
+      <div className="cn-panel cn-panel--box cn-in" style={{ "--d": 2 }}>
+        <div className="cn-torchrow">
+          <span className="cn-tag cn-tag--first">참여 방법</span>
+          <Torch level={checked.length} max={steps.length} />
+        </div>
+        <ol className="cn-checks cn-checks--tight">
+          {steps.map((text, index) => (
+            <li key={text}>
+              <button type="button" className={`cn-check${checked.includes(index) ? " is-on" : ""}`} onClick={() => toggle(index)} aria-pressed={checked.includes(index)}>
+                <span className="cn-check__box" aria-hidden="true">
+                  {checked.includes(index) ? "✓" : index + 1}
+                </span>
+                <span className="cn-check__text">{text}</span>
+              </button>
+            </li>
+          ))}
+        </ol>
+        <span className="cn-tag">경품 안내</span>
+        <ul className="cn-ranks">
+          {CHEER.torch.prizes.map((prize) => (
+            <li key={prize.rank}>
+              <b>{prize.rank}</b>
+              {prize.name} ({prize.count})
+            </li>
+          ))}
+        </ul>
+      </div>
+      <p className={done ? "cn-done" : "cn-copy cn-in"} style={{ "--d": 3 }} role={done ? "status" : undefined}>
+        {done ? "횃불이 켜졌어요! 무대에서 만나요" : CHEER.torch.close}
+      </p>
+    </GlassCard>
+  );
+}
+
+export function CheerSloganPage() {
+  const [wave, setWave] = useState(0);
+  return (
+    <GlassCard title="슬로건 증정 EVENT" seed={167}>
+      <span className="cn-tag cn-tag--first cn-in" style={{ "--d": 1 }}>
+        증정 안내
+      </span>
+      <p className="cn-copy cn-copy--lg cn-in" style={{ "--d": 2 }}>
+        {CHEER.slogan.when}
+        <br />
+        {CHEER.slogan.how}
+      </p>
+      <p className="cn-copy cn-in" style={{ "--d": 3 }}>
+        <Rich text={CHEER.slogan.body} />
+      </p>
+      <button
+        type="button"
+        className="cn-slogan cn-in"
+        style={{ "--d": 4 }}
+        aria-label="응원 슬로건 흔들어 보기"
+        onClick={() => {
+          setWave(Date.now());
+          vibrate([8, 30, 8, 30, 8]);
+        }}
+      >
+        <img key={wave || "still"} className={wave ? "is-wave" : ""} src={img("cheer-slogan")} alt="2026 CENTAUR 응원 슬로건 두 장" draggable="false" />
+      </button>
+      <p className="cn-note cn-in" style={{ "--d": 5 }}>
+        {wave ? "그대는 선구자가 되어 나아가라, 그 길은 푸른 횃불이 비추리" : "슬로건을 눌러 흔들어 보세요"}
+      </p>
+      <p className="cn-copy cn-in" style={{ "--d": 6 }}>
+        <b>{CHEER.slogan.close}</b>
+        <br />
+        <small>※ {CHEER.slogan.note}</small>
+      </p>
+    </GlassCard>
+  );
+}

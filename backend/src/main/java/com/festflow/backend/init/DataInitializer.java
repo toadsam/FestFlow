@@ -479,35 +479,10 @@ public class DataInitializer {
         };
     }
 
-    /** 가을축제 바람 타임테이블. "25:00" 처럼 자정을 넘는 종료는 다음 날 새벽으로 넘긴다. */
-    private List<FestivalEvent> seedBaramSchedule() {
-        LocalDate day1 = LocalDate.of(2026, 10, 7);
-        LocalDate day2 = LocalDate.of(2026, 10, 8);
-        return List.of(
-                schedule("주간부스 세팅", day1, "09:00", "10:00", "장소: 총학생회실"),
-                schedule("뛰아주", day1, "10:30", "12:00", "장소: 아주대학교 전체"),
-                schedule("주간부스", day1, "10:30", "16:30", "장소: 아주대학교 성호관 잔디 / 가온마당"),
-                schedule("SUCL", day1, "15:00", "19:00", "장소: 아주대학교 대운동장"),
-                schedule("총학 주점", day1, "16:00", "23:00", "장소: 아로새길"),
-                schedule("어썸 시네마", day1, "18:00", "22:00", "장소: 노천극장(The Art)"),
-                schedule("야시장", day1, "10:30", "25:00", "장소: 도서관 주차장 / 성호관 잔디밭"),
-                schedule("주간부스 세팅", day2, "09:00", "10:00", "장소: 총학생회실"),
-                schedule("주간부스", day2, "10:30", "16:30", "장소: 아주대학교 성호관 잔디 / 가온마당"),
-                schedule("공연무대", day2, "17:00", "25:00", "장소: 노천극장(The Art)"),
-                schedule("야간부스", day2, "10:30", "25:00", "장소: 가온마당")
-        );
-    }
-
-    private FestivalEvent schedule(String title, LocalDate day, String start, String end, String place) {
-        LocalDateTime startTime = day.atTime(LocalTime.parse(start));
-        String[] endParts = end.split(":");
-        int endHour = Integer.parseInt(endParts[0]);
-        LocalDateTime endTime = (endHour >= 24 ? day.plusDays(1) : day)
-                .atTime(LocalTime.of(endHour % 24, Integer.parseInt(endParts[1])));
-        return event(title, startTime, endTime, "예정", place, 0);
-    }
-
-    /** 시연용 공연은 지우고, 타임테이블에 있는데 DB에 없는 일정(제목+날짜)만 넣는다. 운영진이 고친 시간은 건드리지 않는다. */
+    /**
+     * 시연용 공연은 지우고, 타임테이블({@link BaramSchedule})에 맞춘다.
+     * 확정 내용이 바뀐 일정은 예전 기본값 그대로인 것만 고치고, DB 에 없는 일정(제목 + 날짜)만 새로 넣는다. 운영진이 고친 값은 건드리지 않는다.
+     */
     private void syncBaramSchedule(EventRepository eventRepository) {
         List<FestivalEvent> existing = eventRepository.findAll();
         List<FestivalEvent> demo = existing.stream()
@@ -516,32 +491,17 @@ public class DataInitializer {
         if (!demo.isEmpty()) {
             eventRepository.deleteAll(demo);
         }
-        // 총학 주점 시작이 15:00 → 16:00 으로 확정됐다(총학생회, 2026-09-30). 예전 값 그대로인 일정만 고친다.
-        LocalDateTime oldPubStart = LocalDateTime.of(2026, 10, 7, 15, 0);
-        List<FestivalEvent> stalePub = existing.stream()
-                .filter(item -> "총학 주점".equals(item.getTitle()) && oldPubStart.equals(item.getStartTime()))
-                .toList();
-        for (FestivalEvent item : stalePub) {
-            item.update(item.getTitle(), oldPubStart.withHour(16), item.getEndTime(), item.getImageUrl(), item.getImageCredit(),
-                    item.getImageFocus(), item.getStatusOverride(), item.getLiveMessage(), item.getDelayMinutes());
-        }
-        if (!stalePub.isEmpty()) {
-            eventRepository.saveAll(stalePub);
-        }
-        Set<String> keys = existing.stream()
+        List<FestivalEvent> current = existing.stream()
                 .filter(item -> !demo.contains(item))
-                .map(item -> scheduleKey(item.getTitle(), item.getStartTime()))
-                .collect(Collectors.toSet());
-        List<FestivalEvent> missing = seedBaramSchedule().stream()
-                .filter(item -> !keys.contains(scheduleKey(item.getTitle(), item.getStartTime())))
                 .toList();
+        List<FestivalEvent> changed = BaramSchedule.applyConfirmedChanges(current);
+        if (!changed.isEmpty()) {
+            eventRepository.saveAll(changed);
+        }
+        List<FestivalEvent> missing = BaramSchedule.missing(current);
         if (!missing.isEmpty()) {
             eventRepository.saveAll(missing);
         }
-    }
-
-    private String scheduleKey(String title, LocalDateTime startTime) {
-        return title + "@" + (startTime == null ? "" : startTime.toLocalDate());
     }
 
     private void seedDemoNotices(NoticeRepository noticeRepository) {

@@ -16,7 +16,7 @@ import { resolveBoothImageUrl } from "../config/boothImages";
 import { TableDots } from "../components/v2/TableMap";
 import { FESTIVAL, MAIN_BOOTH_FALLBACK, findMainBooth } from "../config/festival";
 import { normalizeEvents } from "../data/eventExperience";
-import { findCardNews } from "../data/cardNews";
+import { findCardNews, newsForEvent } from "../data/cardNews";
 import CardNewsViewer, { CardNewsShelf } from "../components/cardnews/CardNewsViewer";
 
 const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
@@ -201,6 +201,8 @@ export default function FestivalPage() {
   const activeNotices = notices.filter((notice) => notice.active !== false).slice(0, 3);
 
   function renderEvent(event, state, index) {
+    // 이 일정을 다룬 총학 카드뉴스가 있으면 바로 열 수 있게 한다.
+    const newsLinks = newsForEvent(event.title);
     return (
       <div
         key={event.id || `${event.title}-${index}`}
@@ -216,6 +218,16 @@ export default function FestivalPage() {
             {event.liveMessage && !`${event.liveMessage}`.startsWith("장소") ? ` · ${event.liveMessage}` : ""}
             {Number(event.delayMinutes) > 0 ? ` · ${event.delayMinutes}분 지연` : ""}
           </small>
+          {newsLinks.length ? (
+            <div className="cn-links">
+              {newsLinks.map((link) => (
+                <button key={`${link.set}-${link.index}`} type="button" className="cn-link" onClick={() => setCardNews({ id: link.set, page: link.index })}>
+                  {link.label}
+                  <IconChevronRight />
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
         {state === "live" ? <span className="v2-badge v2-badge--blue">LIVE</span> : null}
         {state === "done" ? <span className="v2-badge">종료</span> : null}

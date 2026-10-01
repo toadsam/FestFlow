@@ -140,7 +140,8 @@ export function CoverPage({ set, active, onMenu, onFilter }) {
   const dragRef = useRef(null);
   const recording = mode === "Video" || mode === "Short video";
   const cover = set.cover || { lines: [set.title], date: "" };
-  const longest = Math.max(...cover.lines.map((line) => line.length));
+  // 작게 쓰는 줄(with 같은 것)은 글자 크기를 정할 때 세지 않는다.
+  const longest = Math.max(...cover.lines.filter((line) => !cover.small?.includes(line)).map((line) => line.length));
 
   useEffect(() => {
     if (!recording || !active) return undefined;
@@ -245,15 +246,25 @@ export function CoverPage({ set, active, onMenu, onFilter }) {
           </span>
         </div>
 
-        <div className={`cn-vf__title${cover.lines.length > 1 ? " cn-vf__title--two" : ""}`}>
+        <div className={`cn-vf__title${cover.lines.length > 1 || Array.isArray(cover.sub) ? " cn-vf__title--two" : ""}${cover.lines.length > 3 ? " cn-vf__title--tall" : ""}`}>
           <h2 className="cn-vf__lines" style={{ "--len": longest }}>
             {cover.lines.map((line) => (
-              <OutlineText key={line} className="cn-vf__line">
+              <OutlineText key={line} className={`cn-vf__line${cover.small?.includes(line) ? " cn-vf__line--small" : ""}`}>
                 {line}
               </OutlineText>
             ))}
           </h2>
-          {cover.sub ? <OutlineText className="cn-vf__sub">{cover.sub}</OutlineText> : null}
+          {Array.isArray(cover.sub) ? (
+            <span className="cn-vf__subs">
+              {cover.sub.map((line) => (
+                <OutlineText key={line} className="cn-vf__sub cn-vf__sub--long">
+                  {line}
+                </OutlineText>
+              ))}
+            </span>
+          ) : cover.sub ? (
+            <OutlineText className="cn-vf__sub">{cover.sub}</OutlineText>
+          ) : null}
           <OutlineText as="p" className="cn-vf__date">
             {cover.date}
           </OutlineText>

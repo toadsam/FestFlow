@@ -2328,6 +2328,8 @@
   padding: 2px 20px 8px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  /* 첫 카드가 제목과 같은 선에서 시작하게(없으면 스냅이 왼쪽 여백을 먹는다) */
+  scroll-padding-left: 20px;
   scrollbar-width: none;
 }
 
@@ -2508,6 +2510,63 @@
 .app-shell[data-v2="true"] .v2-page .cn-shelf .cn-shelf__meta small {
   font-size: 12.5px;
   color: #8b95a1 !important;
+}
+
+/* 진열대 위 날짜 칩(.v2-chip 그대로, 개수만 작게) */
+.app-shell[data-v2="true"] .v2-page .cn-shelf-chips {
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-shelf-chips .v2-chip {
+  min-height: 0 !important;
+  height: 2.1rem;
+  padding: 0 0.72rem !important;
+  font-size: 0.85rem;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-shelf-chips .v2-chip small {
+  margin-left: 5px;
+  font-size: 0.78em;
+  font-weight: 600;
+  color: inherit !important;
+  opacity: 0.6;
+}
+
+/* 타임라인 일정 → 카드뉴스 바로가기 */
+.app-shell[data-v2="true"] .v2-page .cn-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 7px;
+}
+
+.app-shell.app-shell[data-v2="true"] .v2-page .cn-link,
+.app-shell.app-shell[data-v2="true"] .v2-page .cn-link:is(:hover, :focus, :active) {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  min-height: 0 !important;
+  height: 1.8rem;
+  padding: 0 0.4rem 0 0.7rem !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: var(--v2-blue-tint) !important;
+  color: var(--v2-blue) !important;
+  box-shadow: none !important;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.app-shell.app-shell[data-v2="true"] .v2-page .cn-link:active {
+  background: #e3efff !important;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-link svg {
+  width: 0.95rem;
+  height: 0.95rem;
+  opacity: 0.7;
 }
 
 /* =================== 두 번째 묶음: 공연무대 · 배리어 프리존 · 체육대회 · 포토부스 · 주류 =================== */
@@ -3642,4 +3701,869 @@
 
 .cn-nowrap {
   white-space: nowrap;
+}
+
+/* =================== 세 번째 묶음: 아로새길 거리축제 · 뛰아주 · SUCL 결승 · 응원대제전 =================== */
+
+/* 짙은 파랑 묶음(응원대제전). 필터를 바꾸면 그 필터의 하늘이 이긴다. */
+.cn-viewer.cn-tone--deep.cn-theme--sky,
+.cn-mini--deep {
+  --cn-out-top: #1b4ea6;
+  --cn-out-mid: #2460bd;
+  --cn-out-bot: #2a6bc8;
+  --cn-sky-top: #2a6fd2;
+  --cn-sky-mid: #3681e0;
+  --cn-sky-bot: #4a93e8;
+  --cn-gap: #2f78d8;
+}
+
+/* 표지: 작은 줄(with), 네 줄 제목, 여러 줄 부제 */
+.cn-vf__line--small {
+  font-size: 0.58em;
+}
+
+.cn-vf__title--tall {
+  top: 33%;
+  gap: 2.4vh;
+}
+
+.cn-vf__subs {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12em;
+  margin-bottom: -1.4vh;
+}
+
+.cn-vf__sub--long {
+  margin-bottom: 0;
+  font-size: min(5.1vw, 25px);
+}
+
+.cn-tag--first {
+  margin-top: 4px;
+}
+
+.cn-copy small {
+  font-size: 11.5px;
+  opacity: 0.95;
+}
+
+/* 지도를 조금 작게(아래 글이 한 화면에 들어오게) */
+.cn-map--narrow {
+  width: 78%;
+  margin: 0 auto;
+}
+
+/* 지도 위 구역 표시 */
+.cn-zonebox {
+  position: absolute;
+  z-index: 1;
+  border: 2px solid var(--zone, #2f9bf0);
+  border-radius: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.cn-zonebox.is-on {
+  opacity: 1;
+  box-shadow:
+    0 0 0 3px rgba(255, 255, 255, 0.85),
+    0 0 18px 4px var(--zone, #2f9bf0);
+  animation: cn-zonepulse 1.4s ease-in-out infinite;
+}
+
+.cn-zonebox--blue {
+  --zone: #2f9bf0;
+}
+
+.cn-zonebox--mint {
+  --zone: #2fd6b0;
+}
+
+.cn-zonebox--cyan {
+  --zone: #22c7e8;
+}
+
+.cn-zonebox--gold {
+  --zone: #e8b720;
+}
+
+@keyframes cn-zonepulse {
+  50% {
+    box-shadow:
+      0 0 0 5px rgba(255, 255, 255, 0.5),
+      0 0 26px 8px var(--zone, #2f9bf0);
+  }
+}
+
+.cn-zones {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cn-zone {
+  padding: 6px 15px !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.5) !important;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  font-size: 13.5px;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.cn-zone.is-on {
+  background: #fff !important;
+  color: #3a5c90 !important;
+}
+
+.cn-zoneinfo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-height: 50px;
+  margin: 6px 0 0;
+  font-size: 14px;
+  text-align: center;
+  animation: cn-bubble 0.3s ease;
+}
+
+.cn-zoneinfo b {
+  font-weight: 800;
+}
+
+.cn-zoneinfo small {
+  font-size: 12px;
+  opacity: 0.94;
+}
+
+/* 두 칸 표 */
+.cn-duo {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 10px 0 0;
+  text-align: center;
+}
+
+.cn-duo > div {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+
+.cn-duo__wide {
+  grid-column: 1 / -1;
+}
+
+.cn-duo dt {
+  width: 100%;
+  max-width: 150px;
+  padding: 3px 6px;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.cn-duo dd {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  word-break: keep-all;
+  text-wrap: balance;
+}
+
+/* 메뉴 */
+.cn-dishes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 10px;
+  margin-top: 6px;
+}
+
+.cn-dish {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 4px 8px !important;
+  border-radius: 16px;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.cn-dish:active {
+  transform: scale(0.97);
+}
+
+.cn-dish.is-on {
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+.cn-dish__img {
+  display: block;
+  width: 100%;
+}
+
+.cn-dish__img img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 8px 12px rgba(20, 40, 80, 0.28));
+}
+
+.cn-dish.is-on .cn-dish__img img {
+  animation: cn-hop 0.55s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.cn-dish b {
+  margin-top: 4px;
+  font-size: 14.5px;
+  font-weight: 700;
+}
+
+.cn-dish em {
+  color: #ffe08a;
+  font-size: 13.5px;
+  font-style: normal;
+  font-weight: 800;
+  text-shadow: 0 1px 0 rgba(90, 70, 10, 0.35);
+}
+
+.cn-dish small {
+  font-size: 11.5px;
+  opacity: 0.96;
+  animation: cn-bubble 0.3s ease;
+}
+
+/* 뛰아주: 일정 */
+.cn-timeline {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+}
+
+.cn-tl {
+  display: grid !important;
+  grid-template-columns: 50px 1fr;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  font-size: 13px;
+  line-height: 1.35;
+  text-align: left;
+  word-break: keep-all;
+  transition: all 0.2s ease;
+}
+
+.cn-tl b {
+  font-size: 15px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.cn-tl.is-on {
+  border-color: rgba(255, 255, 255, 0.85) !important;
+  background: rgba(255, 255, 255, 0.24) !important;
+}
+
+.cn-tl.is-done {
+  opacity: 0.7;
+}
+
+.cn-perks--tight {
+  margin-top: 10px;
+  font-size: 12.5px;
+}
+
+/* 뛰아주: 코스 */
+.cn-course {
+  display: grid;
+  grid-template-columns: 52% 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.cn-course__map .cn-pinmap {
+  margin-top: 2px;
+  border-radius: 8px;
+}
+
+.cn-course__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.cn-course__leg {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.cn-course__leg.is-on {
+  opacity: 0.95;
+}
+
+.cn-runner {
+  position: absolute;
+  z-index: 2;
+  width: 14px;
+  height: 14px;
+  border: 2.5px solid #fff;
+  border-radius: 50%;
+  background: #ff6b8b;
+  box-shadow:
+    0 0 0 5px rgba(255, 107, 139, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.4);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.cn-zoom .cn-runner {
+  width: 22px;
+  height: 22px;
+}
+
+.cn-course__side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cn-stops {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.cn-stops li {
+  position: relative;
+  padding-left: 16px;
+  line-height: 1.3;
+  word-break: keep-all;
+}
+
+.cn-stops li::before {
+  content: "";
+  position: absolute;
+  top: 0.22em;
+  left: 0;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--stop);
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.85);
+}
+
+.cn-stops li + li::after {
+  content: "";
+  position: absolute;
+  top: -13px;
+  left: 4px;
+  width: 1.5px;
+  height: 11px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.cn-stops--blue,
+.cn-leg--blue {
+  --stop: #45c8f5;
+}
+
+.cn-stops--yellow,
+.cn-leg--yellow {
+  --stop: #f9d24f;
+}
+
+.cn-stops--green,
+.cn-leg--green {
+  --stop: #6ff0c6;
+}
+
+.cn-legs {
+  display: grid;
+  gap: 5px;
+}
+
+.cn-leg {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.cn-leg i {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--stop);
+}
+
+.cn-leg.is-on {
+  border-color: #fff !important;
+  background: rgba(255, 255, 255, 0.26) !important;
+}
+
+.cn-course__go {
+  margin-top: 0;
+  padding: 10px 6px !important;
+  border-radius: 12px;
+  font-size: 12.5px;
+}
+
+/* 뛰아주: 지급 물품 */
+.cn-kit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.cn-kititem {
+  position: relative;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 4px !important;
+  border-radius: 16px;
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease;
+}
+
+.cn-kititem:active {
+  transform: scale(0.97);
+}
+
+.cn-kititem.is-on {
+  background: rgba(255, 255, 255, 0.18) !important;
+}
+
+.cn-kititem__img {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 96px;
+}
+
+.cn-kititem__img img {
+  max-width: 100%;
+  max-height: 96px;
+  filter: drop-shadow(0 8px 12px rgba(20, 40, 80, 0.28));
+  transition: transform 0.3s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+.cn-kititem.is-on .cn-kititem__img img {
+  transform: scale(1.06) rotate(-3deg);
+}
+
+.cn-kititem b {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.cn-kititem em {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fff;
+  color: #3a5c90;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  animation: cn-bubble 0.35s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+/* SUCL 결승 */
+.cn-match {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  margin: 6px 8px 0;
+}
+
+.cn-club {
+  position: relative;
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transition:
+    transform 0.3s ease,
+    opacity 0.3s ease;
+}
+
+.cn-club__logo {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 3px solid rgba(190, 225, 250, 0.95);
+  background: #fff;
+  transition: box-shadow 0.3s ease;
+}
+
+.cn-club__logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.cn-club b {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.cn-club.is-on .cn-club__logo {
+  box-shadow:
+    0 0 0 4px rgba(255, 255, 255, 0.85),
+    0 0 28px 6px rgba(255, 255, 255, 0.55);
+}
+
+.cn-club.is-on .cn-club__logo img {
+  animation: cn-orbpop 0.6s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+.cn-match.has-pick .cn-club:not(.is-on) {
+  opacity: 0.55;
+  transform: scale(0.92);
+}
+
+/* 글 상자 */
+.cn-panel {
+  margin-top: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.13);
+  text-align: center;
+}
+
+.cn-panel p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  word-break: keep-all;
+  text-wrap: balance;
+}
+
+.cn-panel p + p {
+  margin-top: 10px;
+}
+
+.cn-panel b {
+  font-weight: 800;
+}
+
+.cn-panel--box {
+  padding: 12px;
+  border: 1.5px solid rgba(255, 255, 255, 0.6);
+}
+
+.cn-checks--tight {
+  gap: 6px;
+}
+
+.cn-checks--tight .cn-check {
+  padding: 8px 10px !important;
+  font-size: 12.5px;
+}
+
+/* 응원대제전: 플레이리스트 */
+.cn-playlist {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cn-song {
+  display: flex !important;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 34px !important;
+  padding: 6px 10px !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.35) !important;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.08) !important;
+  text-align: left;
+  transition:
+    background 0.2s ease,
+    transform 0.12s ease;
+}
+
+.cn-song:active {
+  transform: scale(0.96);
+}
+
+.cn-song.is-on {
+  border-color: rgba(255, 255, 255, 0.8) !important;
+  background: rgba(255, 255, 255, 0.24) !important;
+}
+
+.cn-song__no {
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0.8;
+  font-variant-numeric: tabular-nums;
+}
+
+.cn-song__name {
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.25;
+  word-break: keep-all;
+}
+
+.cn-song__eq {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+
+.cn-song__eq i {
+  width: 3px;
+  height: 4px;
+  border-radius: 2px;
+  background: #fff;
+  animation: cn-eq 0.7s ease-in-out infinite;
+}
+
+.cn-song__eq i:nth-child(2) {
+  animation-delay: -0.25s;
+}
+
+.cn-song__eq i:nth-child(3) {
+  animation-delay: -0.45s;
+}
+
+@keyframes cn-eq {
+  50% {
+    height: 14px;
+  }
+}
+
+/* 응원대제전: 함성 키우기 */
+.cn-cresc {
+  display: flex !important;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 10px;
+  padding: 10px 12px 9px !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.55) !important;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.1) !important;
+  transition: transform 0.15s ease;
+}
+
+.cn-cresc:active {
+  transform: scale(0.98);
+}
+
+.cn-cresc__bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 5px;
+  height: 34px;
+}
+
+.cn-cresc__bars i {
+  width: 10px;
+  height: var(--h);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.28);
+  transform-origin: bottom;
+  transition:
+    background 0.2s ease,
+    transform 0.25s cubic-bezier(0.2, 1.5, 0.4, 1);
+}
+
+.cn-cresc__bars i.is-on {
+  background: #fff;
+  transform: scaleY(1.08);
+}
+
+.cn-cresc__text {
+  font-size: calc(13px + var(--lv, 0) * 1.5px);
+  font-weight: 800;
+  animation: cn-bubble 0.3s ease;
+}
+
+.cn-cresc--1 {
+  --lv: 1;
+}
+
+.cn-cresc--2 {
+  --lv: 2;
+}
+
+.cn-cresc--3 {
+  --lv: 3;
+}
+
+.cn-cresc--4 {
+  --lv: 4;
+}
+
+.cn-cresc--5 {
+  --lv: 5;
+}
+
+.cn-cresc--6 {
+  --lv: 6;
+  background: rgba(255, 255, 255, 0.26) !important;
+  animation: cn-shake 0.4s ease;
+}
+
+@keyframes cn-shake {
+  25% {
+    transform: translateX(-3px) rotate(-1deg);
+  }
+  75% {
+    transform: translateX(3px) rotate(1deg);
+  }
+}
+
+/* 응원대제전: 푸른 횃불 */
+.cn-torchrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.cn-torchrow .cn-tag {
+  margin: 0;
+}
+
+.cn-torch {
+  width: 26px;
+  height: 39px;
+}
+
+.cn-torch__flame {
+  transform-origin: 24px 40px;
+  transition:
+    transform 0.4s cubic-bezier(0.2, 1.4, 0.4, 1),
+    opacity 0.3s ease;
+}
+
+.cn-torch--0 .cn-torch__flame {
+  transform: scale(0.55);
+}
+
+.cn-torch--1 .cn-torch__flame {
+  transform: scale(0.75);
+}
+
+.cn-torch--2 .cn-torch__flame {
+  transform: scale(0.9);
+}
+
+.cn-torch.is-full .cn-torch__flame {
+  animation: cn-flame 0.9s ease-in-out infinite;
+}
+
+@keyframes cn-flame {
+  50% {
+    transform: scale(1.14) rotate(-3deg);
+  }
+}
+
+.cn-ranks {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+  text-align: center;
+}
+
+.cn-ranks b {
+  margin-right: 8px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* 응원대제전: 슬로건 */
+.cn-slogan {
+  display: block !important;
+  width: 100%;
+  margin-top: 10px;
+}
+
+.cn-slogan img {
+  display: block;
+  width: 100%;
+  height: auto;
+  filter: drop-shadow(0 10px 16px rgba(10, 30, 80, 0.35));
+  transform-origin: 50% 100%;
+}
+
+.cn-slogan img.is-wave {
+  animation: cn-wave 1.1s ease-in-out;
+}
+
+@keyframes cn-wave {
+  15% {
+    transform: rotate(-5deg) translateY(-4px);
+  }
+  40% {
+    transform: rotate(5deg);
+  }
+  65% {
+    transform: rotate(-3deg);
+  }
+  85% {
+    transform: rotate(2deg);
+  }
 }

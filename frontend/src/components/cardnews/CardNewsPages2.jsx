@@ -8,7 +8,7 @@ import { GlassCard, InfoRows, vibrate } from "./CardNewsPages";
 const img = (name) => `${CARD_NEWS_IMG}/${name}.webp`;
 
 /* "[굵게]" 표시가 든 문장을 굵은 글씨로 */
-function Rich({ text }) {
+export function Rich({ text }) {
   const parts = text.split(/(\[[^\]]+\])/g).filter(Boolean);
   return parts.map((part, index) =>
     part.startsWith("[") ? <b key={index}>{part.slice(1, -1)}</b> : <span key={index}>{part}</span>,
@@ -16,7 +16,7 @@ function Rich({ text }) {
 }
 
 /* 지금이 언제인지: 시작 전(D-n / n시간 n분) · 진행 중 · 끝 */
-function useWhen(startIso, endIso) {
+export function useWhen(startIso, endIso) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 30000);

@@ -158,8 +158,9 @@ export function BoothMap({ highlight = ["main", "saju"], focus, selected, onSele
 
 /* ---------- 핀이 꽂힌 지도 ----------
  * 원본 카드의 지도 그림 위에 깜빡이는 핀과 이름표를 얹는다. zoomable 이면 누를 때 크게 보기.
+ * children 은 그림 위에 같이 얹는 것(구역 표시 · 코스 선).  크게 볼 때도 함께 보인다.
  */
-export function PinMap({ src, ratio, alt, pins = [], zoomable = false }) {
+export function PinMap({ src, ratio, alt, pins = [], zoomable = false, children }) {
   const [zoomed, setZoomed] = useState(false);
   const body = (
     <span className="cn-pinmap__inner" style={{ aspectRatio: ratio }}>
@@ -170,6 +171,7 @@ export function PinMap({ src, ratio, alt, pins = [], zoomable = false }) {
           <b>{pin.label}</b>
         </span>
       ))}
+      {children}
     </span>
   );
   if (!zoomable) return <div className="cn-pinmap">{body}</div>;

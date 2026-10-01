@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { CARD_NEWS, CARD_NEWS_IMG, PAGE_INFO, PAGE_TITLES, findCardNews } from "../../data/cardNews";
+import { CARD_NEWS, CARD_NEWS_IMG, NEWS_DAY_FILTERS, PAGE_INFO, PAGE_TITLES, cardNewsDayKey, findCardNews } from "../../data/cardNews";
 import { CnIcon, OutlineText, StarDust } from "./CardNewsArt";
 import {
   BoothMapPage,
@@ -34,6 +34,20 @@ import {
   StageQueuePage,
   StageTeamsPage,
 } from "./CardNewsPages2";
+import {
+  AroInfoPage,
+  AroMenuPage,
+  AroPubPage,
+  CheerOtPage,
+  CheerPlaylistPage,
+  CheerSloganPage,
+  CheerTorchPage,
+  RunCoursePage,
+  RunInfoPage,
+  RunItemsPage,
+  SuclEventPage,
+  SuclFinalPage,
+} from "./CardNewsPages3";
 
 const PAGES = {
   "booth-map": BoothMapPage,
@@ -60,6 +74,18 @@ const PAGES = {
   "photo-place": PhotoPlacePage,
   "photo-frame": PhotoFramePage,
   "bar-rules": BarRulesPage,
+  "aro-info": AroInfoPage,
+  "aro-pub": AroPubPage,
+  "aro-menu": AroMenuPage,
+  "run-info": RunInfoPage,
+  "run-course": RunCoursePage,
+  "run-items": RunItemsPage,
+  "sucl-final": SuclFinalPage,
+  "sucl-event": SuclEventPage,
+  "cheer-playlist": CheerPlaylistPage,
+  "cheer-ot": CheerOtPage,
+  "cheer-torch": CheerTorchPage,
+  "cheer-slogan": CheerSloganPage,
 };
 
 // 사진 앱 '필터' 버튼: 하늘 색을 바꾼다.
@@ -274,7 +300,7 @@ export default function CardNewsViewer({ setId, startIndex = 0, onClose }) {
 
   const node = (
     <div
-      className={`cn-viewer cn-theme--${FILTERS[filter].key}${leaving ? " is-leaving" : ""}${onCover ? " is-cover" : ""}`}
+      className={`cn-viewer cn-theme--${FILTERS[filter].key}${set.tone ? ` cn-tone--${set.tone}` : ""}${leaving ? " is-leaving" : ""}${onCover ? " is-cover" : ""}`}
       role="dialog"
       aria-modal="true"
       aria-label={`${set.title} 카드뉴스`}
@@ -306,6 +332,7 @@ export default function CardNewsViewer({ setId, startIndex = 0, onClose }) {
                       active={active}
                       onJump={jump}
                       onGo={() => leaveTo("/ai-match")}
+                      onLeave={leaveTo}
                       onSchedule={() => {
                         requestClose();
                         window.setTimeout(() => document.getElementById("festival-schedule")?.scrollIntoView({ behavior: "smooth", block: "start" }), 380);
@@ -451,36 +478,72 @@ function shortDate(set) {
   return date.replace(/\s/g, "").replace(/\.?\(/, " (");
 }
 
+function todayKey() {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+}
+
 export function CardNewsShelf({ onOpen }) {
+  // 축제 당일에는 그날 소식부터 보여 준다. 그 밖의 날은 전체.
+  const [day, setDay] = useState(() => {
+    const today = todayKey();
+    return NEWS_DAY_FILTERS.some((item) => item.key === today) ? today : "all";
+  });
+  const [picked, setPicked] = useState(false);
+  const shelfRef = useRef(null);
+  const sets = day === "all" ? CARD_NEWS : CARD_NEWS.filter((set) => cardNewsDayKey(set) === day);
+
+  function pick(next) {
+    setDay(next);
+    setPicked(true);
+    shelfRef.current?.scrollTo({ left: 0 });
+  }
+
   return (
-    <div className="cn-shelf" role="list">
-      {CARD_NEWS.map((set, i) => (
-        <button key={set.id} type="button" role="listitem" className="cn-shelf__item v2-rise" style={{ "--i": 4 + i }} onClick={() => onOpen(set.id, 0)}>
-          <span className="cn-mini" aria-hidden="true">
-            <span className="cn-mini__paper" />
-            <StarDust seed={11 + i} dust={40} glow={4} className="cn-mini__stars" />
-            <span className="cn-mini__grid">
-              <i /><i /><i /><i />
+    <>
+      <div className="v2-chips cn-shelf-chips" role="group" aria-label="날짜로 골라 보기">
+        {NEWS_DAY_FILTERS.map((item) => (
+          <button
+            key={item.key}
+            type="button"
+            className={`v2-chip${day === item.key ? " v2-chip--active" : ""}`}
+            aria-pressed={day === item.key}
+            onClick={() => pick(item.key)}
+          >
+            {item.label}
+            <small>{item.key === "all" ? CARD_NEWS.length : CARD_NEWS.filter((set) => cardNewsDayKey(set) === item.key).length}</small>
+          </button>
+        ))}
+      </div>
+      <div className="cn-shelf" role="list" ref={shelfRef}>
+        {sets.map((set, i) => (
+          <button key={set.id} type="button" role="listitem" className="cn-shelf__item v2-rise" style={{ "--i": (picked ? 0 : 4) + i }} onClick={() => onOpen(set.id, 0)}>
+            <span className={`cn-mini${set.tone ? ` cn-mini--${set.tone}` : ""}`} aria-hidden="true">
+              <span className="cn-mini__paper" />
+              <StarDust seed={11 + CARD_NEWS.indexOf(set)} dust={40} glow={4} className="cn-mini__stars" />
+              <span className="cn-mini__grid">
+                <i /><i /><i /><i />
+              </span>
+              <span className="cn-mini__brand">
+                <small>2026 아주대학교 가을축제</small>
+                <b>바람</b>
+              </span>
+              <img className="cn-mini__bird" src={`${CARD_NEWS_IMG}/bird.webp`} alt="" />
+              <span className="cn-mini__focus" />
+              <span className="cn-mini__title" style={{ "--len": Math.max(...shelfLines(set).map((line) => line.length)) }}>
+                {shelfLines(set).map((line) => (
+                  <OutlineText key={line}>{line}</OutlineText>
+                ))}
+              </span>
+              <span className="cn-mini__date">{shortDate(set)}</span>
             </span>
-            <span className="cn-mini__brand">
-              <small>2026 아주대학교 가을축제</small>
-              <b>바람</b>
+            <span className="cn-shelf__meta">
+              <strong>{set.title}</strong>
+              <small>{set.pages.length}장 · 넘겨 보기</small>
             </span>
-            <img className="cn-mini__bird" src={`${CARD_NEWS_IMG}/bird.webp`} alt="" />
-            <span className="cn-mini__focus" />
-            <span className="cn-mini__title" style={{ "--len": Math.max(...shelfLines(set).map((line) => line.length)) }}>
-              {shelfLines(set).map((line) => (
-                <OutlineText key={line}>{line}</OutlineText>
-              ))}
-            </span>
-            <span className="cn-mini__date">{shortDate(set)}</span>
-          </span>
-          <span className="cn-shelf__meta">
-            <strong>{set.title}</strong>
-            <small>{set.pages.length}장 · 넘겨 보기</small>
-          </span>
-        </button>
-      ))}
-    </div>
+          </button>
+        ))}
+      </div>
+    </>
   );
 }
