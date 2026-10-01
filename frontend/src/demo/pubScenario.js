@@ -226,7 +226,7 @@ function findTarget(stepKey, doc, { order }) {
 export const pubScenario = {
   id: "pub",
   label: "주점 주문",
-  shortLabel: "주점",
+  shortLabel: "주문",
   subtitle: "주점 · 테이블 QR 주문",
   frames,
   steps,

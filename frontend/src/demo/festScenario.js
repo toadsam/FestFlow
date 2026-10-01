@@ -359,7 +359,7 @@ function findTarget(stepKey, doc, { noticeTitle, startEvent, editEvent }) {
 export const festScenario = {
   id: "notice",
   label: "공지 · 공연 시간",
-  shortLabel: "공지·공연",
+  shortLabel: "공지",
   subtitle: "총괄 · 공지와 공연 시간 (연습 시계: 축제 첫날 낮)",
   /** 이 흐름을 열면 연습용 시계를 이 시각에 맞춘다. */
   clockStart: FEST_CLOCK_START,

@@ -1,15 +1,16 @@
 // 눌러 보는 운영 매뉴얼 (/guide/live).
 // 손님 · 참가자 화면과 스태프 화면을 진짜 그대로 나란히 띄우고, 한쪽에서 누르면 다른 쪽이 어떻게 바뀌는지 바로 보여 준다.
 // 화면은 iframe 속의 실제 페이지이고, 서버만 연습용(demo/demoServer.js)으로 바꿔 끼웠다. 실제 주문 · 실제 서버와는 이어져 있지 않다.
-// 흐름(주점 주문 · 사주 소개팅 · 총괄 공지와 공연 시간)마다 화면 구성과 순서는 demo/*Scenario.js 에 있다.
+// 흐름(주점 주문 · 자리와 대기 안내 · 사주 소개팅 · 총괄 공지와 공연 시간)마다 화면 구성과 순서는 demo/*Scenario.js 에 있다.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createDemoServer } from "../demo/demoServer";
 import { aimatchScenario } from "../demo/aimatchScenario";
 import { festScenario } from "../demo/festScenario";
 import { pubScenario } from "../demo/pubScenario";
+import { seatScenario } from "../demo/seatScenario";
 import "../styles/live-guide.css";
 
-const SCENARIOS = [pubScenario, aimatchScenario, festScenario];
+const SCENARIOS = [pubScenario, seatScenario, aimatchScenario, festScenario];
 const ALL_FRAMES = SCENARIOS.flatMap((scenario) => scenario.frames);
 const FRAME_BY_ID = Object.fromEntries(ALL_FRAMES.map((frame) => [frame.id, frame]));
 
@@ -93,9 +94,10 @@ function ensureOverlay(doc, id) {
 const ensureRing = (doc) => ensureOverlay(doc, RING_ID);
 
 // 다른 화면에서 누른 결과로 바뀐 자리: 그 자리로 내려가서 잠깐 노랗게 표시한다(진짜 화면의 요소는 건드리지 않는다).
-function flashChange(doc, element) {
+// scroll=false: 그 화면에 지금 누를 곳이 있을 때. 화면을 끌고 가지 않고 보이는 자리에서만 표시한다.
+function flashChange(doc, element, scroll = true) {
   if (!doc.defaultView) return;
-  scrollToTarget(doc, element, null);
+  if (scroll) scrollToTarget(doc, element, null);
   const box = ensureOverlay(doc, FLASH_ID);
   const until = `${performance.now() + 3400}`;
   box.dataset.until = until; // 새 표시가 오면 앞의 것은 그만둔다.
@@ -254,13 +256,15 @@ export default function LiveGuidePage() {
   const logId = useRef(0);
   // 방금 일로 바뀐 자리를 찾는 함수(화면별). 폰에서는 그 화면을 열 때 한 번 더 표시한다.
   const pendingShow = useRef({});
+  // 다음에 누를 곳이 있는 화면. 그 화면은 누를 곳으로 내려가야 하니 '바뀐 자리'로 끌고 가지 않는다.
+  const nextFrameRef = useRef(null);
   const showChange = useCallback((frameId) => {
     const find = pendingShow.current[frameId];
     if (!find) return;
     try {
       const doc = frameRefs.current[frameId]?.contentDocument;
       const element = doc?.body ? find(doc) : null;
-      if (element) flashChange(doc, element);
+      if (element) flashChange(doc, element, nextFrameRef.current !== frameId);
     } catch {
       // 닫힌 화면
     }
@@ -337,6 +341,7 @@ export default function LiveGuidePage() {
   const currentFrame = current?.frame ? FRAME_BY_ID[current.frame] : null;
   const contextRef = useRef(context);
   contextRef.current = context;
+  nextFrameRef.current = current?.frame || null;
 
   // 지금 누를 곳: iframe 속 진짜 버튼을 찾아(0.35초마다) 그 위에 테두리를 맞춰 얹는다(매 프레임).
   useEffect(() => {

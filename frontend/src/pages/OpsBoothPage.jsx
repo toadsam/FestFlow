@@ -303,8 +303,13 @@ export default function OpsBoothPage() {
   }, [snapshot.info, menuItems.length, data]);
   const infoDirty = useMemo(() => JSON.stringify({ draft, menuItems }) !== snapshot.info, [draft, menuItems, snapshot.info]);
   const tablesDirty = useMemo(() => JSON.stringify(reservationDraft) !== snapshot.tables, [reservationDraft, snapshot.tables]);
+  // 저장 안 한 변경이 있는지. 실시간 통로 콜백처럼 예전 값을 쥐고 있는 곳에서도 지금 값을 보게 ref 로 둔다.
+  const dirtyRef = useRef({ info: false, tables: false });
+  dirtyRef.current = { info: Boolean(snapshot.info) && infoDirty, tables: Boolean(snapshot.tables) && tablesDirty };
 
-  async function load() {
+  // 서버 값을 다시 읽는다. 적다 만 칸(저장 안 한 변경)은 덮어쓰지 않는다 — 다른 스태프가 현황판을 누르거나 QR 주문으로 자리가 찰 때마다
+  // 다시 읽기 때문에, 덮어쓰면 적던 안내 문구 · 메뉴 수정이 그때마다 지워진다. saved: 방금 저장한 쪽("info" | "tables")은 서버 값으로 맞춘다.
+  async function load({ saved = "" } = {}) {
     if (!id || !key) {
       setData(null);
       setLoading(false);
@@ -347,14 +352,18 @@ export default function OpsBoothPage() {
           occupiedSince: table.occupiedSince,
         })),
       };
-      setDraft(nextDraft);
-      setMenuItems(nextMenu);
-      setReservationDraft(nextReservation);
-      setSnapshot({
+      const keepInfo = saved !== "info" && dirtyRef.current.info;
+      const keepTables = saved !== "tables" && dirtyRef.current.tables;
+      if (!keepInfo) {
+        setDraft(nextDraft);
+        setMenuItems(nextMenu);
+      }
+      if (!keepTables) setReservationDraft(nextReservation);
+      setSnapshot((prev) => ({
         // 미리 채운 메뉴는 아직 서버에 없으니 '저장 안 한 변경'으로 잡히게 빈 메뉴판을 기준으로 둔다.
-        info: JSON.stringify({ draft: nextDraft, menuItems: savedMenu }),
-        tables: JSON.stringify(nextReservation),
-      });
+        info: keepInfo ? prev.info : JSON.stringify({ draft: nextDraft, menuItems: savedMenu }),
+        tables: keepTables ? prev.tables : JSON.stringify(nextReservation),
+      }));
       setError("");
     } catch (e) {
       setData(null);
@@ -426,28 +435,43 @@ export default function OpsBoothPage() {
   /* ----- 품절 바로 바꾸기: 메뉴 한 개만 뒤집어서 바로 저장 ----- */
   async function handleQuickSoldOut(index) {
     const nextItems = menuItems.map((item, i) => (i === index ? { ...item, soldOut: !item.soldOut } : item));
+    // 저장해 둔 값에서 이 메뉴의 품절만 바꿔 보낸다. 적다 만 다른 칸(대기 시간 · 메모 · 메뉴 수정)은 같이 나가지 않고 '저장 안 한 변경'으로 남는다.
+    // 저장된 메뉴판에 아직 없는 메뉴(새로 적는 중 · 미리 채운 기본 메뉴)면 지금 화면 값 그대로 저장한다.
+    let savedInfo = null;
+    try {
+      savedInfo = snapshot.info ? JSON.parse(snapshot.info) : null;
+    } catch {
+      savedInfo = null;
+    }
+    const savedIndex = savedInfo?.menuItems?.findIndex((item) => item.name === menuItems[index]?.name) ?? -1;
+    const base = savedIndex >= 0 ? savedInfo.draft : draft;
+    const sendItems = savedIndex >= 0
+      ? savedInfo.menuItems.map((item, i) => (i === savedIndex ? { ...item, soldOut: nextItems[index].soldOut } : item))
+      : nextItems;
     setMenuItems(nextItems);
     setSaving("soldout");
     try {
       await updateOpsBoothLiveStatus(
         id,
         {
-          estimatedWaitMinutes: draft.estimatedWaitMinutes === "" ? null : Number(draft.estimatedWaitMinutes),
-          remainingStock: draft.remainingStock === "" ? null : Number(draft.remainingStock),
-          liveStatusMessage: draft.liveStatusMessage || null,
-          boothIntro: draft.boothIntro || null,
-          menuImageUrl: draft.menuImageUrl || null,
-          menuBoardJson: JSON.stringify(nextItems),
-          category: draft.category || null,
-          dayPart: draft.dayPart || null,
-          openTime: draft.openTime || null,
-          closeTime: draft.closeTime || null,
-          tags: draft.tags || null,
-          contentJson: draft.contentJson || null,
-          reservationEnabled: draft.reservationEnabled,
+          estimatedWaitMinutes: base.estimatedWaitMinutes === "" ? null : Number(base.estimatedWaitMinutes),
+          remainingStock: base.remainingStock === "" ? null : Number(base.remainingStock),
+          liveStatusMessage: base.liveStatusMessage || null,
+          boothIntro: base.boothIntro || null,
+          menuImageUrl: base.menuImageUrl || null,
+          menuBoardJson: JSON.stringify(sendItems),
+          category: base.category || null,
+          dayPart: base.dayPart || null,
+          openTime: base.openTime || null,
+          closeTime: base.closeTime || null,
+          tags: base.tags || null,
+          contentJson: base.contentJson || null,
+          reservationEnabled: base.reservationEnabled,
         },
         key,
       );
+      // 방금 보낸 값이 새 기준이다(이걸 안 하면 저장이 끝났는데도 '저장 안 한 변경이 있어요'가 뜬다).
+      setSnapshot((prev) => ({ ...prev, info: JSON.stringify({ draft: base, menuItems: sendItems }) }));
       notify(`${nextItems[index].name || "메뉴"} ${nextItems[index].soldOut ? "품절" : "판매 재개"} · 손님 화면에 바로 반영돼요.`, "success");
     } catch (e) {
       setMenuItems(menuItems);
@@ -504,7 +528,7 @@ export default function OpsBoothPage() {
         key,
       );
       notify("저장했어요. 손님 화면에 바로 반영돼요.", "success");
-      await load();
+      await load({ saved: "info" });
     } catch (e) {
       notify(friendlyError(e, "저장하지 못했어요. 다시 시도해 주세요."), "error");
     } finally {
@@ -528,7 +552,7 @@ export default function OpsBoothPage() {
         key,
       );
       notify("테이블 설정을 저장했어요.", "success");
-      await load();
+      await load({ saved: "tables" });
     } catch (e) {
       notify(friendlyError(e, "테이블 설정을 저장하지 못했어요."), "error");
     } finally {
@@ -550,9 +574,11 @@ export default function OpsBoothPage() {
     if (!file) return;
     try {
       const updatedBooth = await uploadOpsBoothMenuImage(id, file, key);
+      // 사진은 올리는 즉시 서버에 저장된다. 다른 칸을 적던 중이 아니면 서버 값으로 맞추고, 적던 중이면 그 값은 두고 사진 주소만 넣는다.
+      const editing = dirtyRef.current.info;
       setDraft((prev) => ({ ...prev, menuImageUrl: updatedBooth.menuImageUrl || "" }));
       notify("대표 사진을 올렸어요.", "success");
-      await load();
+      await load(editing ? {} : { saved: "info" });
     } catch (e) {
       notify(friendlyError(e, "사진을 올리지 못했어요."), "error");
     }

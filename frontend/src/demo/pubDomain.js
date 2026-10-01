@@ -125,6 +125,8 @@ export function createPubDomain({ nowMs, stamp, publish, emit }) {
       ],
       nextOrderId: 103,
       nextTableId: 13,
+      // '자리 · 대기 안내' 흐름이 어디까지 왔는지(매뉴얼 화면이 읽는다).
+      flow: { walkInTableId: null, walkInReleased: false, waitSet: false, waitCleared: false, soldOutSet: false },
     };
   }
 
@@ -330,26 +332,36 @@ export function createPubDomain({ nowMs, stamp, publish, emit }) {
     return dto;
   }
 
+  const seatCount = () => ({ free: state.tables.filter((table) => !table.walkInSince).length, total: state.tables.length });
+
   function setTable(tableId, occupied, role) {
     const table = findTable(tableId);
     if (occupied) {
       table.walkInSince = stamp();
+      if (state.flow.walkInTableId == null) state.flow.walkInTableId = table.id;
       publish("reservations", { boothId: state.booth.id, tableId: table.id, status: "WALK_IN" });
-      emit({ type: "table.occupied", role, table: tableDto(table) });
+      publish("booths", [boothDto()]);
+      emit({ type: "table.occupied", role, table: tableDto(table), ...seatCount() });
       return tableDto(table);
     }
     if (!table.walkInSince) throw httpError(404, "Active table reservation not found.");
     table.walkInSince = null;
+    if (state.flow.walkInTableId === table.id) state.flow.walkInReleased = true;
     publish("reservations", { boothId: state.booth.id, tableId: table.id, status: "RELEASED" });
-    emit({ type: "table.released", role, table: tableDto(table) });
+    publish("booths", [boothDto()]);
+    emit({ type: "table.released", role, table: tableDto(table), ...seatCount() });
     return undefined;
   }
 
   function updateLiveStatus(body, role) {
     const before = parseMenuBoard(state.booth.menuBoardJson);
-    const keys = ["estimatedWaitMinutes", "remainingStock", "liveStatusMessage", "boothIntro", "menuImageUrl", "menuBoardJson", "category", "dayPart", "tags", "contentJson"];
-    keys.forEach((key) => {
-      if (key in (body || {})) state.booth[key] = body[key];
+    const old = { wait: state.booth.estimatedWaitMinutes, message: state.booth.liveStatusMessage };
+    // 대기 시간 · 남은 재고 · 안내 한 줄은 온 값 그대로(비어 오면 지움), 나머지는 값이 올 때만 바꾼다.
+    ["estimatedWaitMinutes", "remainingStock", "liveStatusMessage"].forEach((key) => {
+      state.booth[key] = body?.[key] ?? null;
+    });
+    ["boothIntro", "menuImageUrl", "menuBoardJson", "category", "dayPart", "tags", "contentJson"].forEach((key) => {
+      if (body?.[key] != null) state.booth[key] = body[key];
     });
     ["openTime", "closeTime"].forEach((key) => {
       if (body?.[key]) state.booth[key] = `${body[key]}`.length === 5 ? `${body[key]}:00` : body[key];
@@ -361,9 +373,19 @@ export function createPubDomain({ nowMs, stamp, publish, emit }) {
       const old = before.find((row) => row.name === item.name);
       return old && old.soldOut !== item.soldOut;
     });
+    const wait = Number(state.booth.estimatedWaitMinutes) || 0;
+    if (wait > 0) state.flow.waitSet = true;
+    else if (state.flow.waitSet) state.flow.waitCleared = true;
+    if (flipped.some((item) => item.soldOut)) state.flow.soldOutSet = true;
     const dto = boothDto();
-    publish("booths", dto);
-    emit({ type: "booth.updated", role, soldOut: flipped.map((item) => ({ name: item.name, soldOut: item.soldOut })) });
+    publish("booths", [dto]);
+    emit({
+      type: "booth.updated",
+      role,
+      soldOut: flipped.map((item) => ({ name: item.name, soldOut: item.soldOut })),
+      wait: { before: Number(old.wait) || 0, after: wait },
+      message: { before: old.message || "", after: state.booth.liveStatusMessage || "" },
+    });
     return dto;
   }
 
@@ -391,7 +413,7 @@ export function createPubDomain({ nowMs, stamp, publish, emit }) {
         };
       });
     publish("reservations", { boothId: state.booth.id, status: "CONFIG" });
-    emit({ type: "tables.updated", role });
+    emit({ type: "tables.updated", role, ...seatCount() });
     return reservationState();
   }
 
@@ -475,6 +497,8 @@ export function createPubDomain({ nowMs, stamp, publish, emit }) {
         tables: state.tables.map(tableDto),
         menu: parseMenuBoard(state.booth.menuBoardJson),
         orderEnabled: state.booth.orderEnabled,
+        booth: boothDto(),
+        flow: { ...state.flow },
       };
     },
     reset() {
