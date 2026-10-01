@@ -407,7 +407,7 @@ public class ReservationService {
         boothReservationRepository.save(reservation);
         restoreReservationSeats(reservation);
         registerNoShow(reservation, now);
-        streamService.publishReservations(toReservationDto(reservation));
+        streamService.publishReservations(toReservationDto(reservation).masked());
     }
 
     private void restoreReservationSeats(BoothReservation reservation) {

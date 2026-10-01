@@ -58,12 +58,13 @@ class OrderServiceTest {
         booth.updateOrderConfig(true, "국민 000-00-0000", "홍길동");
 
         Mockito.when(boothRepository.findById(7L)).thenReturn(Optional.of(booth));
+        Mockito.when(boothRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(booth));
         Mockito.when(boothOrderRepository.save(any(BoothOrder.class))).thenAnswer(invocation -> {
             BoothOrder saved = invocation.getArgument(0);
             if (saved.getId() == null) setId(saved, 42L);
             return saved;
         });
-        Mockito.when(boothOrderRepository.findByBoothIdAndStatusInOrderByCreatedAtAsc(eq(7L), any())).thenReturn(List.of());
+        Mockito.when(boothOrderRepository.findByBoothIdAndTableLabelAndStatusInOrderByCreatedAtAsc(eq(7L), any(), any())).thenReturn(List.of());
         Mockito.when(boothOrderRepository.countByBoothIdAndCreatedAtBetween(eq(7L), any(), any())).thenReturn(3L);
     }
 
@@ -145,6 +146,43 @@ class OrderServiceTest {
         assertThat(orderService.getOrderForCustomer(42L, "secretkey").id()).isEqualTo(42L);
         assertThatThrownBy(() -> orderService.getOrderForCustomer(42L, "wrong"))
                 .isInstanceOf(ResponseStatusException.class);
+    }
+
+    @Test
+    void sameOrderSentAgainRightAwayReturnsTheFirstOneInsteadOfDuplicating() {
+        OrderCreateRequestDto request = new OrderCreateRequestDto(
+                "7",
+                List.of(new OrderCreateItemDto("논알콜 음료", 2)),
+                "재훈",
+                null,
+                null,
+                PaymentMethod.BANK_TRANSFER
+        );
+        org.mockito.ArgumentCaptor<BoothOrder> saved = org.mockito.ArgumentCaptor.forClass(BoothOrder.class);
+
+        BoothOrderDto first = orderService.createOrder(7L, request);
+        Mockito.verify(boothOrderRepository).save(saved.capture());
+        // 통신이 끊겨 응답을 못 받고 다시 누른 경우: 방금 만든 주문이 처리 중 목록에 있다.
+        Mockito.when(boothOrderRepository.findByBoothIdAndTableLabelAndStatusInOrderByCreatedAtAsc(eq(7L), eq("7"), any()))
+                .thenReturn(List.of(saved.getValue()));
+
+        BoothOrderDto again = orderService.createOrder(7L, request);
+
+        assertThat(again.id()).isEqualTo(first.id());
+        assertThat(again.clientKey()).isEqualTo(first.clientKey());
+        Mockito.verify(boothOrderRepository, Mockito.times(1)).save(any(BoothOrder.class));
+
+        // 메뉴가 다르면 새 주문이다.
+        OrderCreateRequestDto different = new OrderCreateRequestDto(
+                "7",
+                List.of(new OrderCreateItemDto("논알콜 음료", 1)),
+                "재훈",
+                null,
+                null,
+                PaymentMethod.BANK_TRANSFER
+        );
+        orderService.createOrder(7L, different);
+        Mockito.verify(boothOrderRepository, Mockito.times(2)).save(any(BoothOrder.class));
     }
 
     private static void setId(Object entity, Long id) throws Exception {

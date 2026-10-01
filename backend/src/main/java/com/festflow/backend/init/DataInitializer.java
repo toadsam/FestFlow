@@ -69,6 +69,13 @@ public class DataInitializer {
     @Value("${app.init.simple-demo-credentials:false}")
     private boolean simpleDemoCredentials;
 
+    /**
+     * true 면 시연용 데이터(가짜 부스 48개 · 공지 · 분실물 · 테이블 · 예약 · 위치 기록)를 없으면 다시 채운다.
+     * 운영(prod)에서는 끈다 — 지운 시연용 데이터가 다시 배포할 때 돌아오지 않게. 총학 주점 · 타임테이블 · 관리자 계정은 이 값과 상관없이 맞춘다.
+     */
+    @Value("${app.init.demo-data:true}")
+    private boolean demoData;
+
     /** true 면 시연용 공연(지금 시각 기준으로 생기는 가짜 일정)을 같이 넣는다. 실제 축제에서는 끈다. */
     @Value("${app.init.demo-events:false}")
     private boolean demoEvents;
@@ -99,15 +106,17 @@ public class DataInitializer {
         return args -> {
             LocalDateTime now = LocalDateTime.now();
 
-            List<Booth> demoBooths = seedBooths(now);
-            if (boothRepository.count() == 0) {
-                boothRepository.saveAll(demoBooths);
-            } else {
-                seedMissingDemoBooths(boothRepository, demoBooths);
+            if (demoData) {
+                List<Booth> demoBooths = seedBooths(now);
+                if (boothRepository.count() == 0) {
+                    boothRepository.saveAll(demoBooths);
+                } else {
+                    seedMissingDemoBooths(boothRepository, demoBooths);
+                }
+                seedMissingDemoBooths(boothRepository, seedScenarioBooths(now));
+                seedMissingDemoBooths(boothRepository, seedMoreScenarioBooths(now));
+                normalizeCorruptedDemoBooths(boothRepository, now);
             }
-            seedMissingDemoBooths(boothRepository, seedScenarioBooths(now));
-            seedMissingDemoBooths(boothRepository, seedMoreScenarioBooths(now));
-            normalizeCorruptedDemoBooths(boothRepository, now);
             // 총학 주점 확정 정보(운영시간·위치·계좌·메뉴·테이블 1~60번). 처음 한 번은 그대로 넣고, 그 뒤로는 빈 칸만 채운다.
             syncCouncilBooth(boothRepository, reservationTableRepository, now);
 
@@ -127,9 +136,10 @@ public class DataInitializer {
                         true
                 ));
             }
-            seedDemoNotices(noticeRepository);
-
-            seedDemoLostItems(lostItemRepository);
+            if (demoData) {
+                seedDemoNotices(noticeRepository);
+                seedDemoLostItems(lostItemRepository);
+            }
 
             seedInitialAdmin(adminUserRepository, passwordEncoder);
 
@@ -143,13 +153,15 @@ public class DataInitializer {
             } else {
                 hardenSimpleStaffCredentials(staffMemberRepository, passwordEncoder);
             }
-            seedDemoReservationTables(reservationTableRepository, booths);
-            seedDemoReservations(reservationRepository, reservationTableRepository, booths, now);
-            seedDemoGpsLogs(gpsLogRepository, booths);
-            seedMoreScenarioTables(reservationTableRepository, booths);
-            normalizeDemoReservationTableNames(reservationTableRepository);
-            seedMoreScenarioReservations(reservationRepository, reservationTableRepository, booths, now);
-            seedMoreScenarioGpsLogs(gpsLogRepository, booths);
+            if (demoData) {
+                seedDemoReservationTables(reservationTableRepository, booths);
+                seedDemoReservations(reservationRepository, reservationTableRepository, booths, now);
+                seedDemoGpsLogs(gpsLogRepository, booths);
+                seedMoreScenarioTables(reservationTableRepository, booths);
+                normalizeDemoReservationTableNames(reservationTableRepository);
+                seedMoreScenarioReservations(reservationRepository, reservationTableRepository, booths, now);
+                seedMoreScenarioGpsLogs(gpsLogRepository, booths);
+            }
         };
     }
 

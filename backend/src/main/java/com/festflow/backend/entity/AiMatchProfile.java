@@ -180,6 +180,10 @@ public class AiMatchProfile {
             this.originalImageUrl = originalImageUrl;
         }
         if (generatedImageUrl != null) {
+            if (!generatedImageUrl.equals(this.generatedImageUrl)) {
+                // 공개 사진이 바뀌면 다시 검수 대기로 돌린다.
+                this.photoReview = "PENDING";
+            }
             this.generatedImageUrl = generatedImageUrl;
         }
     }

@@ -50,7 +50,9 @@ import com.festflow.backend.repository.AiMatchRequestRepository;
 import com.festflow.backend.service.notification.AiMatchSmsNotifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
@@ -67,12 +69,15 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.CONFLICT;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.SERVICE_UNAVAILABLE;
 import static org.springframework.http.HttpStatus.TOO_MANY_REQUESTS;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
@@ -84,8 +89,10 @@ public class AiMatchService {
     private static final int MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE = 2;
     /** 한 사람이 축제 동안 보낼 수 있는 데이트 신청 수. 취소·거절도 센다(보내는 행동 자체를 제한). */
     public static final int MAX_SENT_REQUESTS_PER_PROFILE = 3;
-    /** 같은 닉네임으로 비밀번호를 이만큼 틀리면 잠시 잠근다(IP 와 무관하게). */
+    /** 같은 닉네임에 같은 IP 에서 비밀번호를 이만큼 틀리면 잠시 잠근다. */
     private static final int MAX_PIN_FAILURES = 10;
+    /** 닉네임 하나에 대해 IP 를 가리지 않고 허용하는 실패 수(여러 IP 로 나눠 대입하는 것 방지). */
+    private static final int MAX_PIN_FAILURES_PER_NICKNAME = 60;
     private static final int SELF_DELETE_COOLDOWN_HOURS = 24;
     private static final String COOLDOWN_MESSAGE = "삭제한 번호는 24시간 뒤에 다시 가입할 수 있습니다.";
     private static final Duration PIN_FAILURE_WINDOW = Duration.ofMinutes(10);
@@ -104,6 +111,13 @@ public class AiMatchService {
     private final AiMatchReportRepository reportRepository;
 
     private final AiMatchChatMessageRepository chatMessageRepository;
+
+    // OpenAI 호출(이미지 변환 최대 2분, 사주 풀이 최대 30초)은 DB 트랜잭션 밖에서 한다.
+    // 안에서 하면 그동안 DB 연결을 붙잡아서, 가입이 몇 건만 겹쳐도 주문을 포함한 모든 요청이 멈춘다.
+    private final TransactionTemplate transactionTemplate;
+    /** 동시에 돌리는 이미지 변환 수. 넘치면 잠깐 기다렸다가 "잠시 후 다시" 로 돌려보낸다. */
+    private final Semaphore imageConversionSlots;
+    private static final int IMAGE_CONVERSION_WAIT_SECONDS = 20;
 
     /** 블라인드 채팅 시간과 그 뒤 얼굴 보기 선택 시간(분). AiMatchChatService 와 같은 설정을 읽는다. */
     @org.springframework.beans.factory.annotation.Value("${app.ai-match.chat-minutes:10}")
@@ -128,8 +142,12 @@ public class AiMatchService {
             SajuService sajuService,
             AiMatchMeetupSlotService meetupSlotService,
             AiMatchReportRepository reportRepository,
-            AiMatchChatMessageRepository chatMessageRepository
+            AiMatchChatMessageRepository chatMessageRepository,
+            PlatformTransactionManager transactionManager,
+            @org.springframework.beans.factory.annotation.Value("${app.ai-match.image.max-concurrent:12}") int maxConcurrentImageConversions
     ) {
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
+        this.imageConversionSlots = new Semaphore(Math.max(1, maxConcurrentImageConversions));
         this.chatMessageRepository = chatMessageRepository;
         this.reportRepository = reportRepository;
         this.sajuService = sajuService;
@@ -232,7 +250,6 @@ public class AiMatchService {
         );
     }
 
-    @Transactional
     public AiMatchImagePreviewDto createImagePreview(MultipartFile file, String phoneNumber) throws IOException {
         if (!aiImageGenerationService.isConfigured()) {
             throw new ResponseStatusException(
@@ -241,29 +258,72 @@ public class AiMatchService {
             );
         }
         String safePhoneNumberKey = normalizePhoneNumberKey(phoneNumber, true);
-        AiMatchPhoneUsage phoneUsage = getOrCreatePhoneUsageForUpdate(safePhoneNumberKey);
-        ensurePhoneNumberNotDeleted(safePhoneNumberKey);
-        ensurePhoneCanGenerateImage(phoneUsage);
-
-        String originalImageUrl = uploadStorageService.saveImage(file, "ai-profile-original");
-        String generatedImageUrl = aiImageGenerationService.generateFestivalProfileImage(
-                originalImageUrl,
-                "",
-                ""
-        );
-        phoneUsage.recordSuccessfulImageConversion();
-        int usedCount = phoneUsage.getSuccessfulImageConversionCount();
-        int remainingCount = Math.max(0, MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE - usedCount);
+        ConvertedImage converted = convertProfileImage(file, safePhoneNumberKey, "", "");
+        int remainingCount = Math.max(0, MAX_SUCCESSFUL_IMAGE_CONVERSIONS_PER_PHONE - converted.usedCount());
         return new AiMatchImagePreviewDto(
-                originalImageUrl,
-                generatedImageUrl,
-                usedCount,
+                converted.originalImageUrl(),
+                converted.generatedImageUrl(),
+                converted.usedCount(),
                 remainingCount,
                 "AI 변환이 완료되었습니다. " + remainingCount + "회 남았습니다."
         );
     }
 
-    @Transactional
+    /**
+     * 사진을 AI 그림으로 바꾼다. DB 는 앞뒤로 잠깐씩만 쓴다.
+     * ① 짧은 트랜잭션에서 번호를 잠그고 변환 횟수를 미리 하나 잡는다(같은 번호의 동시 요청이 한도를 넘지 못하게).
+     * ② 트랜잭션 밖에서 OpenAI 를 부른다. ③ 실패하면 잡아 둔 횟수를 돌려준다.
+     */
+    private ConvertedImage convertProfileImage(MultipartFile file, String phoneNumberKey, String nickname, String intro)
+            throws IOException {
+        boolean acquired;
+        try {
+            acquired = imageConversionSlots.tryAcquire(IMAGE_CONVERSION_WAIT_SECONDS, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            acquired = false;
+        }
+        if (!acquired) {
+            throw new ResponseStatusException(SERVICE_UNAVAILABLE, "지금 AI 변환 요청이 많아요. 잠시 후 다시 시도해 주세요.");
+        }
+        try {
+            int usedCount = transactionTemplate.execute(status -> {
+                AiMatchPhoneUsage phoneUsage = getOrCreatePhoneUsageForUpdate(phoneNumberKey);
+                ensurePhoneNumberNotDeleted(phoneNumberKey);
+                ensurePhoneCanGenerateImage(phoneUsage);
+                phoneUsage.recordSuccessfulImageConversion();
+                return phoneUsage.getSuccessfulImageConversionCount();
+            });
+            try {
+                String originalImageUrl = uploadStorageService.saveImage(file, "ai-profile-original");
+                String generatedImageUrl = aiImageGenerationService.generateFestivalProfileImage(
+                        originalImageUrl,
+                        nickname,
+                        intro
+                );
+                return new ConvertedImage(originalImageUrl, generatedImageUrl, usedCount);
+            } catch (IOException | RuntimeException e) {
+                releaseImageConversion(phoneNumberKey);
+                throw e;
+            }
+        } finally {
+            imageConversionSlots.release();
+        }
+    }
+
+    private void releaseImageConversion(String phoneNumberKey) {
+        try {
+            transactionTemplate.executeWithoutResult(status ->
+                    phoneUsageRepository.findByPhoneNumberForUpdate(phoneNumberKey)
+                            .ifPresent(AiMatchPhoneUsage::releaseImageConversion));
+        } catch (RuntimeException e) {
+            log.warn("이미지 변환 횟수를 되돌리지 못했습니다: {}", e.toString());
+        }
+    }
+
+    private record ConvertedImage(String originalImageUrl, String generatedImageUrl, int usedCount) {
+    }
+
     public AiMatchProfileResponseDto createProfile(
             String nickname,
             String gender,
@@ -293,12 +353,10 @@ public class AiMatchService {
         String safePhoneNumber = normalizePhoneNumber(phoneNumber, true);
         String safePhoneNumberKey = normalizePhoneNumberKey(safePhoneNumber, true);
         String safeMeetPlace = trimRequired(meetPlace, "meetPlace", 120);
-        AiMatchPhoneUsage phoneUsage = getOrCreatePhoneUsageForUpdate(safePhoneNumberKey);
-        ensurePhoneNumberNotDeleted(safePhoneNumberKey);
-        ensurePhoneCanRegister(phoneUsage);
-        ensurePhoneNumberAvailable(safePhoneNumberKey, null);
         validatePin(safePin);
-        ensureNicknameAvailable(safeNickname, null);
+        // ① 가입할 수 있는지 먼저 확인한다(짧은 트랜잭션). OpenAI 를 부르기 전에 걸러서 헛돈을 쓰지 않는다.
+        transactionTemplate.executeWithoutResult(status ->
+                ensureCanRegister(safePhoneNumberKey, safeNickname));
         if (!aiImageGenerationService.isConfigured()) {
             throw new ResponseStatusException(
                     BAD_REQUEST,
@@ -311,45 +369,67 @@ public class AiMatchService {
             throw new ResponseStatusException(BAD_REQUEST, "프로필 사진을 먼저 업로드해 주세요.");
         }
         if (safeGeneratedImageUrl != null) {
-            uploadStorageService.ensureProfileImageUrl(safeGeneratedImageUrl);
+            safeGeneratedImageUrl = uploadStorageService.canonicalProfileImageUrl(
+                    safeGeneratedImageUrl, UploadStorageService.PROFILE_GENERATED_PREFIX);
             uploadStorageService.resolveUploadUrl(safeGeneratedImageUrl);
             if (safeOriginalImageUrl != null) {
-                uploadStorageService.ensureProfileImageUrl(safeOriginalImageUrl);
+                safeOriginalImageUrl = uploadStorageService.canonicalProfileImageUrl(
+                        safeOriginalImageUrl, UploadStorageService.PROFILE_ORIGINAL_PREFIX);
                 uploadStorageService.resolveUploadUrl(safeOriginalImageUrl);
             }
         } else {
-            ensurePhoneCanGenerateImage(phoneUsage);
-            safeOriginalImageUrl = uploadStorageService.saveImage(file, "ai-profile-original");
-            safeGeneratedImageUrl = aiImageGenerationService.generateFestivalProfileImage(
-                    safeOriginalImageUrl,
-                    safeNickname,
-                    safeIntro
-            );
-            phoneUsage.recordSuccessfulImageConversion();
+            ConvertedImage converted = convertProfileImage(file, safePhoneNumberKey, safeNickname, safeIntro);
+            safeOriginalImageUrl = converted.originalImageUrl();
+            safeGeneratedImageUrl = converted.generatedImageUrl();
         }
 
-        AiMatchProfile saved = profileRepository.save(new AiMatchProfile(
-                safeNickname,
-                safeGender,
-                safeIntro,
-                passwordEncoder.encode(safePin),
-                safePhoneNumber,
-                safeMeetPlace,
-                safeOriginalImageUrl,
-                safeGeneratedImageUrl,
-                true
-        ));
-
-        // 사주 풀이는 실패해도 가입을 막지 않는다. SajuService 가 규칙 기반 풀이로 대신 내려준다.
+        // ② 트랜잭션 밖: 사주 풀이(OpenAI)와 비밀번호 암호화. 사주 풀이는 실패해도 가입을 막지 않는다 — 규칙 기반 풀이로 대신한다.
         SajuPillars pillars = sajuService.calculate(safeBirthDate, safeBirthTime);
         String reading = sajuService.writeReading(pillars, safeNickname, safeGender);
-        saved.updateSaju(safeRealName, safeBirthDate, safeBirthTime, reading);
+        String pinHash = passwordEncoder.encode(safePin);
 
-        return toProfileDto(saved);
+        // ③ 번호를 잠그고 다시 확인한 뒤 저장한다. (그 사이 같은 번호 · 닉네임으로 가입했을 수 있다)
+        String originalUrl = safeOriginalImageUrl;
+        String generatedUrl = safeGeneratedImageUrl;
+        return transactionTemplate.execute(status -> {
+            ensureCanRegister(safePhoneNumberKey, safeNickname);
+            AiMatchProfile saved = profileRepository.save(new AiMatchProfile(
+                    safeNickname,
+                    safeGender,
+                    safeIntro,
+                    pinHash,
+                    safePhoneNumber,
+                    safeMeetPlace,
+                    originalUrl,
+                    generatedUrl,
+                    true
+            ));
+            saved.updateSaju(safeRealName, safeBirthDate, safeBirthTime, reading);
+            return toProfileDto(saved);
+        });
+    }
+
+    /** 이 번호 · 닉네임으로 가입할 수 있는지. 번호 행을 잠그므로 트랜잭션 안에서 부른다. */
+    private void ensureCanRegister(String phoneNumberKey, String nickname) {
+        AiMatchPhoneUsage phoneUsage = getOrCreatePhoneUsageForUpdate(phoneNumberKey);
+        ensurePhoneNumberNotDeleted(phoneNumberKey);
+        ensurePhoneCanRegister(phoneUsage);
+        ensurePhoneNumberAvailable(phoneNumberKey, null);
+        ensureNicknameAvailable(nickname, null);
     }
 
     @Transactional
     public AiMatchProfileAccessResponseDto accessProfile(AiMatchProfileAccessRequestDto requestDto) {
+        return access(requestDto, true);
+    }
+
+    /** 신청함 갱신용. 사람 목록(전원의 소개글 · 사주 · 궁합)은 무거워서 뺀다 — 응답의 profiles 는 null. */
+    @Transactional
+    public AiMatchProfileAccessResponseDto accessInbox(AiMatchProfileAccessRequestDto requestDto) {
+        return access(requestDto, false);
+    }
+
+    private AiMatchProfileAccessResponseDto access(AiMatchProfileAccessRequestDto requestDto, boolean includeProfiles) {
         AiMatchProfile profile = authenticateProfile(requestDto.nickname(), requestDto.pin());
         List<AiMatchRequest> receivedRequests = requestRepository.findAllByProfileIdOrderByCreatedAtDesc(profile.getId());
         List<AiMatchRequest> sentRequests = requestRepository.findAllByRequesterProfileIdOrderByCreatedAtDesc(profile.getId());
@@ -365,7 +445,7 @@ public class AiMatchService {
                 sentRequests.stream()
                         .map(this::toRequestDto)
                         .toList(),
-                getDiscoverableProfiles(profile.getId(), profile),
+                includeProfiles ? getDiscoverableProfiles(profile.getId(), profile) : null,
                 favoriteRepository.findActiveProfileIdsByRequesterProfileId(profile.getId()),
                 toRequestQuotaDto(sentRequests)
         );
@@ -471,12 +551,15 @@ public class AiMatchService {
             ensurePhoneCanRegister(getOrCreatePhoneUsageForUpdate(requestedPhoneNumberKey));
             ensurePhoneNumberAvailable(requestedPhoneNumberKey, profileId);
         }
-        if (safeGeneratedImageUrl != null) {
-            uploadStorageService.ensureProfileImageUrl(safeGeneratedImageUrl);
+        // 이미 저장된 주소를 그대로 돌려보낸 경우는 다시 확인하지 않는다(예전 방식으로 저장된 프로필이 수정에서 막히지 않게).
+        if (safeGeneratedImageUrl != null && !safeGeneratedImageUrl.equals(profile.getGeneratedImageUrl())) {
+            safeGeneratedImageUrl = uploadStorageService.canonicalProfileImageUrl(
+                    safeGeneratedImageUrl, UploadStorageService.PROFILE_GENERATED_PREFIX);
             uploadStorageService.resolveUploadUrl(safeGeneratedImageUrl);
         }
-        if (safeOriginalImageUrl != null) {
-            uploadStorageService.ensureProfileImageUrl(safeOriginalImageUrl);
+        if (safeOriginalImageUrl != null && !safeOriginalImageUrl.equals(profile.getOriginalImageUrl())) {
+            safeOriginalImageUrl = uploadStorageService.canonicalProfileImageUrl(
+                    safeOriginalImageUrl, UploadStorageService.PROFILE_ORIGINAL_PREFIX);
             uploadStorageService.resolveUploadUrl(safeOriginalImageUrl);
         }
         ensureNicknameAvailable(safeNickname, profileId);
@@ -1485,8 +1568,14 @@ public class AiMatchService {
         }
     }
 
+    /** 본인 프로필. 원본 사진 주소는 본인에게만 준다. */
     private AiMatchProfileResponseDto toProfileDto(AiMatchProfile profile) {
-        return toProfileDto(profile, null);
+        return toProfileDto(profile, null, true);
+    }
+
+    /** 다른 사람에게 보이는 프로필. 원본(실제 얼굴) 사진 주소는 담지 않는다. */
+    private AiMatchProfileResponseDto toProfileDto(AiMatchProfile profile, AiMatchProfile viewer) {
+        return toProfileDto(profile, viewer, false);
     }
 
     /**
@@ -1494,7 +1583,7 @@ public class AiMatchService {
      *
      * @param viewer 이 프로필을 보고 있는 사람. 주면 궁합 점수를 함께 계산한다.
      */
-    private AiMatchProfileResponseDto toProfileDto(AiMatchProfile profile, AiMatchProfile viewer) {
+    private AiMatchProfileResponseDto toProfileDto(AiMatchProfile profile, AiMatchProfile viewer, boolean includeOriginalImage) {
         SajuDto saju = null;
         SajuCompatibilityDto compatibility = null;
 
@@ -1515,7 +1604,7 @@ public class AiMatchService {
                 profile.getGender(),
                 profile.getIntro(),
                 profile.getMeetPlace(),
-                profile.getOriginalImageUrl(),
+                includeOriginalImage ? profile.getOriginalImageUrl() : "",
                 profile.getGeneratedImageUrl(),
                 profile.getCreatedAt(),
                 saju,
@@ -1577,16 +1666,74 @@ public class AiMatchService {
         String safeNickname = trimRequired(nickname, "nickname", 40);
         String safePin = trimRequired(pin, "pin", 20);
         validatePin(safePin);
-        String failureKey = safeNickname.toLowerCase();
-        ensureNotLocked(failureKey);
+        String nicknameKey = safeNickname.toLowerCase();
         AiMatchProfile profile = profileRepository.findByNicknameIgnoreCaseAndStatus(safeNickname, "ACTIVE")
                 .orElse(null);
+        // 방금 확인한 비밀번호면 BCrypt 를 다시 돌리지 않는다. (앱이 15초마다 같은 닉네임 · 비밀번호로 부른다 — 매번 돌리면 CPU 가 버티지 못한다)
+        // 이미 로그인해 있는 사람은 남이 비밀번호를 틀려서 생긴 잠금에도 걸리지 않는다.
+        if (profile != null && profile.getPinHash() != null && isRecentlyVerified(profile, safePin)) {
+            return profile;
+        }
+        // 잠금은 (닉네임 + 접속 IP) 로 센다. 남의 닉네임에 틀린 비밀번호를 넣어 그 사람을 잠그는 장난을 줄인다.
+        // 여러 IP 에서 나눠 대입하는 것은 닉네임 전체 한도로 막는다.
+        String ipKey = nicknameKey + "|" + currentClientIp();
+        ensureNotLocked(ipKey, MAX_PIN_FAILURES);
+        ensureNotLocked(nicknameKey, MAX_PIN_FAILURES_PER_NICKNAME);
         if (profile == null || profile.getPinHash() == null || !passwordEncoder.matches(safePin, profile.getPinHash())) {
-            recordPinFailure(failureKey);
+            recordPinFailure(ipKey);
+            recordPinFailure(nicknameKey);
             throw new ResponseStatusException(UNAUTHORIZED, "닉네임 또는 비밀번호가 올바르지 않습니다.");
         }
-        pinFailures.remove(failureKey);
+        pinFailures.remove(ipKey);
+        rememberVerified(profile, safePin);
         return profile;
+    }
+
+    private static String currentClientIp() {
+        if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes()
+                instanceof org.springframework.web.context.request.ServletRequestAttributes attributes) {
+            return com.festflow.backend.security.ClientIp.of(attributes.getRequest());
+        }
+        return "-";
+    }
+
+    /** 확인된 비밀번호의 지문(SHA-256). 비밀번호를 바꾸면 pinHash 가 달라져 저절로 무효가 된다. 메모리에만 둔다. */
+    private record VerifiedPin(byte[] digest, long expiresAtMillis) {
+    }
+
+    private static final long VERIFIED_PIN_TTL_MILLIS = Duration.ofMinutes(15).toMillis();
+    private final Map<Long, VerifiedPin> verifiedPins = new ConcurrentHashMap<>();
+
+    private boolean isRecentlyVerified(AiMatchProfile profile, String pin) {
+        VerifiedPin verified = verifiedPins.get(profile.getId());
+        if (verified == null) {
+            return false;
+        }
+        long now = System.currentTimeMillis();
+        if (verified.expiresAtMillis() < now) {
+            verifiedPins.remove(profile.getId(), verified);
+            return false;
+        }
+        return java.security.MessageDigest.isEqual(verified.digest(), pinDigest(profile, pin));
+    }
+
+    private void rememberVerified(AiMatchProfile profile, String pin) {
+        long now = System.currentTimeMillis();
+        if (verifiedPins.size() > 20_000) {
+            verifiedPins.entrySet().removeIf(entry -> entry.getValue().expiresAtMillis() < now);
+        }
+        verifiedPins.put(profile.getId(), new VerifiedPin(pinDigest(profile, pin), now + VERIFIED_PIN_TTL_MILLIS));
+    }
+
+    private static byte[] pinDigest(AiMatchProfile profile, String pin) {
+        try {
+            java.security.MessageDigest digest = java.security.MessageDigest.getInstance("SHA-256");
+            digest.update(profile.getPinHash().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            digest.update((byte) 0);
+            return digest.digest(pin.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     /** 닉네임별 비밀번호 실패 횟수. 10분 안에 10번 틀리면 남은 시간 동안 잠근다. */
@@ -1599,7 +1746,7 @@ public class AiMatchService {
         }
     }
 
-    private void ensureNotLocked(String failureKey) {
+    private void ensureNotLocked(String failureKey, int maxFailures) {
         PinFailure failure = pinFailures.get(failureKey);
         if (failure == null) {
             return;
@@ -1610,7 +1757,7 @@ public class AiMatchService {
                 pinFailures.remove(failureKey);
                 return;
             }
-            if (failure.count >= MAX_PIN_FAILURES) {
+            if (failure.count >= maxFailures) {
                 long minutesLeft = Math.max(
                         1,
                         PIN_FAILURE_WINDOW.minus(Duration.between(failure.windowStart, now)).toMinutes() + 1
@@ -1624,6 +1771,10 @@ public class AiMatchService {
     }
 
     private void recordPinFailure(String failureKey) {
+        if (pinFailures.size() > 20_000) {
+            Instant cutoff = Instant.now().minus(PIN_FAILURE_WINDOW);
+            pinFailures.entrySet().removeIf(entry -> entry.getValue().windowStart.isBefore(cutoff));
+        }
         PinFailure failure = pinFailures.computeIfAbsent(failureKey, ignored -> new PinFailure(Instant.now()));
         synchronized (failure) {
             Instant now = Instant.now();
@@ -1673,11 +1824,12 @@ public class AiMatchService {
                 request.getId(),
                 profile == null ? null : profile.getId(),
                 profile == null ? "" : profile.getNickname(),
-                profile == null ? "" : profile.getOriginalImageUrl(),
+                // 원본(실제 얼굴) 사진 주소는 참가자 응답에 담지 않는다. 관리자 응답에만 있다.
+                "",
                 profile == null ? "" : profile.getGeneratedImageUrl(),
                 requesterProfile == null ? null : requesterProfile.getId(),
                 request.getRequesterNickname(),
-                requesterProfile == null ? "" : requesterProfile.getOriginalImageUrl(),
+                "",
                 requesterProfile == null ? "" : requesterProfile.getGeneratedImageUrl(),
                 request.getMeetPlace(),
                 request.getMessage(),

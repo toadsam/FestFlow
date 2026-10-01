@@ -158,33 +158,37 @@ function parseProfileMeta(intro) {
 }
 
 function getProfileImageUrl(profile) {
-  return resolveApiAssetUrl(profile?.generatedImageUrl || profile?.originalImageUrl || "");
+  // AvatarThumb 이 작은 판 주소로 바꿔 쓰므로 서버가 준 주소 그대로 넘긴다.
+  return profile?.generatedImageUrl || profile?.originalImageUrl || "";
 }
 
 function AvatarThumb({ imageUrl, name }) {
-  const resolvedUrl = resolveApiAssetUrl(imageUrl || "");
+  const resolvedUrl = resolveApiAssetUrl(imageUrl || "", 240);
   const initial = `${name || "?"}`.slice(0, 1);
   return (
     <span className="admin-ai-avatar" aria-label={name || "프로필"}>
-      {resolvedUrl ? <img src={resolvedUrl} alt="" /> : <em>{initial}</em>}
+      {resolvedUrl ? <img src={resolvedUrl} alt="" loading="lazy" decoding="async" /> : <em>{initial}</em>}
     </span>
   );
 }
 
 function AdminImageCompare({ originalImageUrl, generatedImageUrl, name }) {
+  // 화면에는 줄인 사진을 보여 주고, 눌러서 새 창으로 열 때만 원본을 받는다.
   const originalUrl = resolveApiAssetUrl(originalImageUrl || "");
   const generatedUrl = resolveApiAssetUrl(generatedImageUrl || "");
+  const originalThumb = resolveApiAssetUrl(originalImageUrl || "", 480);
+  const generatedThumb = resolveApiAssetUrl(generatedImageUrl || "", 480);
   if (!originalUrl && !generatedUrl) return null;
   const label = name || "프로필";
 
   return (
     <div className="admin-ai-image-compare">
       <a href={originalUrl || generatedUrl} target="_blank" rel="noreferrer" title={`${label} 원본 사진`}>
-        {originalUrl ? <img src={originalUrl} alt={`${label} 원본 사진`} /> : <span>원본 없음</span>}
+        {originalUrl ? <img src={originalThumb} alt={`${label} 원본 사진`} loading="lazy" decoding="async" /> : <span>원본 없음</span>}
         <em>원본 사진</em>
       </a>
       <a href={generatedUrl || originalUrl} target="_blank" rel="noreferrer" title={`${label} AI 변환 사진`}>
-        {generatedUrl ? <img src={generatedUrl} alt={`${label} AI 변환 사진`} /> : <span>AI 없음</span>}
+        {generatedUrl ? <img src={generatedThumb} alt={`${label} AI 변환 사진`} loading="lazy" decoding="async" /> : <span>AI 없음</span>}
         <em>AI 사진</em>
       </a>
     </div>
@@ -433,7 +437,8 @@ export default function AiMatchAdminPage() {
       if (document.visibilityState === "hidden") return;
       loadOverview({ silent: true });
     };
-    const intervalId = window.setInterval(refreshSilently, 2000);
+    // 전체 프로필 · 신청을 통째로 읽는 요청이라 5초마다로 둔다(예전 2초). 탭을 다시 보면 바로 한 번 부른다.
+    const intervalId = window.setInterval(refreshSilently, 5000);
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         refreshSilently();

@@ -71,6 +71,8 @@ export default function OpsBoothOrders({ boothId, opsKey, notify, onSummary }) {
   const [savingConfig, setSavingConfig] = useState(false);
   const knownIds = useRef(new Set());
   const freshIds = useRef(new Set());
+  const loadedOnce = useRef(false);
+  const authFailed = useRef(false);
 
   const say = (text, tone) => (notify ? notify(text, tone) : undefined);
 
@@ -79,16 +81,40 @@ export default function OpsBoothOrders({ boothId, opsKey, notify, onSummary }) {
     if (!silent) setLoading(true);
     try {
       const next = await fetchOpsBoothOrders(boothId, opsKey);
+      // 조용히 다시 읽다가 처음 보는 입금 대기 주문이 있으면(실시간 연결이 끊긴 사이 들어온 주문) 알린다.
+      if (silent && loadedOnce.current) {
+        const fresh = (next.orders || []).filter(
+          (order) => order.status === "PENDING_PAYMENT" && !knownIds.current.has(order.id),
+        );
+        if (fresh.length) {
+          fresh.forEach((order) => {
+            knownIds.current.add(order.id);
+            freshIds.current.add(order.id);
+            window.setTimeout(() => freshIds.current.delete(order.id), 60000);
+          });
+          const latest = fresh[0];
+          setFlash(`새 주문 · ${latest.tableLabel} 테이블 · ${formatWon(latest.totalAmount)}`);
+          playChime();
+          window.setTimeout(() => setFlash(""), 8000);
+        }
+      }
+      loadedOnce.current = true;
       setData(next);
-      const nextConfig = {
-        orderEnabled: next.orderEnabled ?? true,
-        bankAccount: next.bankAccount ?? "",
-        bankHolder: next.bankHolder ?? "",
-      };
-      setConfig(nextConfig);
-      setSavedConfig(JSON.stringify(nextConfig));
+      // 조용히 다시 읽을 때는 주문 설정 입력칸을 건드리지 않는다(고치던 계좌가 지워지지 않게).
+      if (!silent) {
+        const nextConfig = {
+          orderEnabled: next.orderEnabled ?? true,
+          bankAccount: next.bankAccount ?? "",
+          bankHolder: next.bankHolder ?? "",
+        };
+        setConfig(nextConfig);
+        setSavedConfig(JSON.stringify(nextConfig));
+      }
       setError("");
+      authFailed.current = false;
     } catch (e) {
+      // 키가 틀렸거나 잠긴 상태면 자동으로 다시 읽지 않는다(틀린 키로 계속 두드리면 잠금이 길어진다).
+      authFailed.current = e?.status === 401 || e?.status === 403 || e?.status === 429;
       setError(e.message || "주문을 불러오지 못했어요.");
     } finally {
       setLoading(false);
@@ -109,6 +135,21 @@ export default function OpsBoothOrders({ boothId, opsKey, notify, onSummary }) {
     if (!boothId || !opsKey) return undefined;
     const stream = createOrderStream();
     let timer = null;
+    // 주문이 몰리면 이벤트마다 목록을 다시 읽지 않고 0.4초 모아서 한 번만 읽는다.
+    let reloadTimer = null;
+    const reloadSoon = () => {
+      if (reloadTimer) return;
+      reloadTimer = window.setTimeout(() => {
+        reloadTimer = null;
+        load(true);
+      }, 400);
+    };
+    // 실시간 연결이 조용히 끊겨도 놓치지 않게 15초마다, 화면으로 돌아올 때 다시 읽는다.
+    const poll = () => {
+      if (document.visibilityState !== "hidden" && !authFailed.current) load(true);
+    };
+    const pollTimer = window.setInterval(poll, 15000);
+    document.addEventListener("visibilitychange", poll);
     stream.addEventListener("orders", (event) => {
       try {
         const order = JSON.parse(event.data);
@@ -122,13 +163,16 @@ export default function OpsBoothOrders({ boothId, opsKey, notify, onSummary }) {
           if (timer) window.clearTimeout(timer);
           timer = window.setTimeout(() => setFlash(""), 8000);
         }
-        load(true);
+        reloadSoon();
       } catch {
         // ignore
       }
     });
     return () => {
       if (timer) window.clearTimeout(timer);
+      if (reloadTimer) window.clearTimeout(reloadTimer);
+      window.clearInterval(pollTimer);
+      document.removeEventListener("visibilitychange", poll);
       stream.close();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -21,6 +21,7 @@ import {
 import {
   acceptAiMatchRequest,
   accessAiMatchProfile,
+  fetchAiMatchInbox,
   cancelAiMatchRequest,
   checkAiMatchNickname,
   checkAiMatchPhoneNumber,
@@ -309,9 +310,9 @@ function RequestQuotaDots({ quota }) {
 }
 
 function RequestFaceThumb({ imageUrl, name, onClick }) {
-  const resolvedUrl = resolveApiAssetUrl(imageUrl || "");
+  const resolvedUrl = resolveApiAssetUrl(imageUrl || "", 240);
   const initial = `${name || "?"}`.slice(0, 1);
-  const content = resolvedUrl ? <img src={resolvedUrl} alt="" /> : <em>{initial}</em>;
+  const content = resolvedUrl ? <img src={resolvedUrl} alt="" loading="lazy" decoding="async" /> : <em>{initial}</em>;
   if (onClick) {
     return (
       <button
@@ -698,6 +699,8 @@ function formatImagePreviewError(error) {
 export default function AiMatchPage() {
   const [activeScreen, setActiveScreen] = useState("intro");
   const [profiles, setProfiles] = useState([]);
+  const profilesRef = useRef(profiles);
+  profilesRef.current = profiles;
   const [accessProfile, setAccessProfile] = useState(null);
   const [accessRequests, setAccessRequests] = useState([]);
   const [accessSentRequests, setAccessSentRequests] = useState([]);
@@ -780,6 +783,7 @@ export default function AiMatchPage() {
   const accessSessionRestoredRef = useRef(false);
   const accessRefreshInFlightRef = useRef(false);
   const accessRefreshPausedUntilRef = useRef(0);
+  const accessRefreshTickRef = useRef(0);
   const requestSnapshotRef = useRef(null);
   const liveNoticeTimeoutRef = useRef(null);
   const selectedProfileRef = useRef(null);
@@ -1038,7 +1042,10 @@ export default function AiMatchPage() {
         return;
       }
       accessRefreshInFlightRef.current = true;
-      loadAccessProfile(accessNickname, accessPin, activeScreen, { closeModal: false, notify: true })
+      // 신청함은 15초마다, 사람 목록까지는 2분마다 다시 읽는다.
+      accessRefreshTickRef.current += 1;
+      const light = accessRefreshTickRef.current % 8 !== 0;
+      loadAccessProfile(accessNickname, accessPin, activeScreen, { closeModal: false, notify: true, light })
         .catch((error) => {
           if (error?.status === 429) {
             accessRefreshPausedUntilRef.current = Date.now() + 60_000;
@@ -1312,15 +1319,36 @@ export default function AiMatchPage() {
     nextNickname,
     nextPin,
     nextScreen = "requests",
-    { closeModal = true, notify = false, announceSummary = false } = {},
+    { closeModal = true, notify = false, announceSummary = false, light = false } = {},
   ) {
     const resolvedNextScreen = nextScreen === "people" ? "intro" : nextScreen;
     const sessionSeq = accessSessionSeqRef.current;
-    const response = await accessAiMatchProfile(nextNickname, nextPin);
+    // light: 신청함만 다시 읽는다(사람 목록은 그대로 둔다). 목록에 없는 사람이 신청함에 보이면 전체를 다시 읽는다.
+    let response = null;
+    if (light) {
+      try {
+        response = await fetchAiMatchInbox(nextNickname, nextPin);
+      } catch (error) {
+        if (error?.status === 401 || error?.status === 429) throw error;
+        response = null;
+      }
+      if (response) {
+        const known = new Set(profilesRef.current.map((profile) => profile.id));
+        const stranger = [...(response.receivedRequests || []), ...(response.sentRequests || [])].some(
+          (request) =>
+            (request.requesterProfileId && request.requesterProfileId !== response.profile?.id && !known.has(request.requesterProfileId)) ||
+            (request.profileId && request.profileId !== response.profile?.id && !known.has(request.profileId)),
+        );
+        if (stranger) response = null;
+      }
+    }
+    if (!response) {
+      response = await accessAiMatchProfile(nextNickname, nextPin);
+    }
     if (sessionSeq !== accessSessionSeqRef.current) {
       return response;
     }
-    const nextProfiles = Array.isArray(response.profiles) ? response.profiles : [];
+    const nextProfiles = Array.isArray(response.profiles) ? response.profiles : profilesRef.current;
     const nextReceivedRequests = Array.isArray(response.receivedRequests)
       ? response.receivedRequests
       : Array.isArray(response.requests)
@@ -2735,7 +2763,7 @@ export default function AiMatchPage() {
                     <button type="button" className="ai-match-person-photo" onClick={() => openProfile(profile)}>
                       <ElementSeal saju={profile.saju} />
                       {profile.generatedImageUrl ? (
-                        <img src={resolveApiAssetUrl(profile.generatedImageUrl)} alt="" />
+                        <img src={resolveApiAssetUrl(profile.generatedImageUrl, 480)} alt="" loading="lazy" decoding="async" />
                       ) : (
                         <IconUsers className="h-8 w-8" />
                       )}
@@ -2886,7 +2914,7 @@ export default function AiMatchPage() {
           <div className="ai-match-my-profile">
             <div className="ai-match-my-photo">
               {accessProfile.generatedImageUrl ? (
-                <img src={resolveApiAssetUrl(accessProfile.generatedImageUrl)} alt="" />
+                <img src={resolveApiAssetUrl(accessProfile.generatedImageUrl, 480)} alt="" decoding="async" />
               ) : (
                 <IconUsers className="h-8 w-8" />
               )}
@@ -3173,7 +3201,7 @@ export default function AiMatchPage() {
             {selectedDetailProfile.genderLabel}
           </span>
           {selectedDetailProfile.generatedImageUrl ? (
-            <img src={resolveApiAssetUrl(selectedDetailProfile.generatedImageUrl)} alt="" />
+            <img src={resolveApiAssetUrl(selectedDetailProfile.generatedImageUrl, 960)} alt="" decoding="async" />
           ) : (
             <div className="ai-match-detail-placeholder">
               <IconUsers className="h-10 w-10" />

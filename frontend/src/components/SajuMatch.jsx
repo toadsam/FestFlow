@@ -181,7 +181,7 @@ function Talisman({ profile, rank, flipped, viewerSaju, resolveImage, onFlip, on
         ) : null}
         <span ref={ref} className="sl-fuda__photo">
           {profile.generatedImageUrl ? (
-            <img src={resolveImage(profile.generatedImageUrl)} alt="" />
+            <img src={resolveImage(profile.generatedImageUrl, 480)} alt="" loading="lazy" decoding="async" />
           ) : (
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <circle cx="12" cy="8" r="4" fill="currentColor" />

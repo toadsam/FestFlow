@@ -79,6 +79,11 @@ public class AiMatchPhoneUsage {
         this.successfulImageConversionCount += 1;
     }
 
+    /** 미리 잡아 둔 변환 횟수를 돌려준다(변환이 실패했을 때). */
+    public void releaseImageConversion() {
+        this.successfulImageConversionCount = Math.max(0, this.successfulImageConversionCount - 1);
+    }
+
     public boolean isInCooldown() {
         return cooldownUntil != null && cooldownUntil.isAfter(LocalDateTime.now());
     }

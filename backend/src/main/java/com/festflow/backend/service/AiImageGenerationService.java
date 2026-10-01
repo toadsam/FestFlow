@@ -76,7 +76,7 @@ public class AiImageGenerationService {
         try {
             String response = createImageEdit(originalPath, "image[]", nickname, intro);
             byte[] imageBytes = extractGeneratedImage(response);
-            return uploadStorageService.saveImageBytes(imageBytes, "ai-profile-webtoon", ".png");
+            return saveGeneratedImage(imageBytes);
         } catch (RestClientResponseException ex) {
             return retryWithSingleImageField(originalPath, nickname, intro);
         } catch (RestClientException ex) {
@@ -92,6 +92,15 @@ public class AiImageGenerationService {
         return apiKey != null && !apiKey.isBlank();
     }
 
+    /** OpenAI 가 주는 PNG 는 한 장이 2MB 를 넘는다. 같은 크기의 JPEG 로 바꿔 저장한다(바꿀 수 없으면 PNG 그대로). */
+    private String saveGeneratedImage(byte[] imageBytes) throws IOException {
+        byte[] jpeg = ImageResizer.toJpeg(imageBytes, 0, 0.88f);
+        if (jpeg != null && jpeg.length < imageBytes.length) {
+            return uploadStorageService.saveImageBytes(jpeg, "ai-profile-webtoon", ".jpg");
+        }
+        return uploadStorageService.saveImageBytes(imageBytes, "ai-profile-webtoon", ".png");
+    }
+
     private String retryWithSingleImageField(
             Path originalPath,
             String nickname,
@@ -100,7 +109,7 @@ public class AiImageGenerationService {
         try {
             String response = createImageEdit(originalPath, "image", nickname, intro);
             byte[] imageBytes = extractGeneratedImage(response);
-            return uploadStorageService.saveImageBytes(imageBytes, "ai-profile-webtoon", ".png");
+            return saveGeneratedImage(imageBytes);
         } catch (RestClientResponseException secondError) {
             throw toOpenAiException(secondError);
         } catch (RestClientException ex) {

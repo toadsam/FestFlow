@@ -183,6 +183,26 @@ public class UploadStorageService {
         }
     }
 
+    public static final String PROFILE_ORIGINAL_PREFIX = "ai-profile-original-";
+    public static final String PROFILE_GENERATED_PREFIX = "ai-profile-webtoon-";
+
+    /**
+     * 클라이언트가 보낸 프로필 사진 주소를 확인하고, 서버가 만든 모양의 주소로 바꿔 돌려준다.
+     * 키가 requiredPrefix 로 시작해야 한다(원본을 공개용 자리에 넣거나, 다른 호스트 주소를 넣는 것을 막는다).
+     */
+    public String canonicalProfileImageUrl(String imageUrl, String requiredPrefix) {
+        String key;
+        try {
+            key = extractObjectKey(imageUrl);
+        } catch (RuntimeException exception) {
+            key = "";
+        }
+        if (!key.startsWith(requiredPrefix)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "프로필 사진 주소가 올바르지 않습니다. 사진을 다시 올려 주세요.");
+        }
+        return toStoredUrl(key);
+    }
+
     public boolean isProfileImageUrl(String imageUrl) {
         try {
             return extractObjectKey(imageUrl).startsWith(PROFILE_IMAGE_PREFIX);

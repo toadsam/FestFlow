@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -68,10 +69,35 @@ public class BoothService {
         this.staffMemberRepository = staffMemberRepository;
     }
 
+    // 손님 화면이 부르는 목록은 아주 잠깐(1초) 같은 결과를 돌려 쓴다. 수천 명이 한꺼번에 열어도 DB 는 1초에 한 번만 읽는다.
+    private static final long PUBLIC_LIST_TTL_MILLIS = 1_000;
+    private volatile CachedBooths publicListCache;
+
+    /** 손님용 목록. 최대 1초 묵은 값일 수 있다. 바꾼 직후의 값이 필요하면 {@link #getAllBooths()}. */
+    public List<BoothResponseDto> getAllBoothsForVisitors() {
+        long now = System.currentTimeMillis();
+        CachedBooths cached = publicListCache;
+        if (cached != null && now - cached.loadedAtMillis() < PUBLIC_LIST_TTL_MILLIS) {
+            return cached.booths();
+        }
+        List<BoothResponseDto> booths = getAllBooths();
+        publicListCache = new CachedBooths(booths, now);
+        return booths;
+    }
+
+    /** 부스마다 테이블 · 예약을 따로 읽지 않고, 세 번의 조회로 전체를 만든다. */
     public List<BoothResponseDto> getAllBooths() {
+        Map<Long, List<BoothReservationTable>> tablesByBooth = boothReservationTableRepository.findAll().stream()
+                .collect(Collectors.groupingBy(table -> table.getBooth().getId()));
+        Map<Long, List<BoothReservation>> reservationsByBooth = boothReservationRepository
+                .findByStatusIn(BLOCKING_RESERVATION_STATUSES).stream()
+                .collect(Collectors.groupingBy(reservation -> reservation.getBooth().getId()));
         return boothRepository.findAll().stream()
                 .sorted(Comparator.comparing(Booth::getDisplayOrder).thenComparing(Booth::getId))
-                .map(this::toDto)
+                .map(booth -> toDto(booth, summarize(
+                        tablesByBooth.getOrDefault(booth.getId(), List.of()),
+                        reservationsByBooth.getOrDefault(booth.getId(), List.of())
+                )))
                 .toList();
     }
 
@@ -237,9 +263,24 @@ public class BoothService {
         return new CongestionResponseDto(booth.getId(), booth.getName(), convertLevel(weightedCount), weightedCount);
     }
 
+    /** 위치 기록과 부스를 한 번씩만 읽어 전체 혼잡도를 만든다. */
     public List<CongestionResponseDto> getAllCongestions() {
-        return getAllBooths().stream()
-                .map(booth -> getCongestionByBoothId(booth.id()))
+        LocalDateTime now = LocalDateTime.now();
+        List<GpsLog> recentLogs = gpsLogRepository.findByCreatedAtAfter(now.minusMinutes(15));
+        return boothRepository.findAll().stream()
+                .sorted(Comparator.comparing(Booth::getDisplayOrder).thenComparing(Booth::getId))
+                .map(booth -> {
+                    var simulated = simulationStateService.simulatedCongestion(booth.getId(), booth.getName());
+                    if (simulated.isPresent()) {
+                        return simulated.get();
+                    }
+                    double weightedScore = recentLogs.stream()
+                            .filter(log -> distanceInMeters(booth.getLatitude(), booth.getLongitude(), log.getLatitude(), log.getLongitude()) <= BOOTH_RADIUS_METERS)
+                            .mapToDouble(log -> timeWeight(log.getCreatedAt(), now))
+                            .sum();
+                    int weightedCount = (int) Math.round(weightedScore);
+                    return new CongestionResponseDto(booth.getId(), booth.getName(), convertLevel(weightedCount), weightedCount);
+                })
                 .toList();
     }
 
@@ -250,8 +291,10 @@ public class BoothService {
     }
 
     private BoothResponseDto toDto(Booth booth) {
-        ReservationSummary reservationSummary = getReservationSummary(booth);
+        return toDto(booth, getReservationSummary(booth));
+    }
 
+    private BoothResponseDto toDto(Booth booth, ReservationSummary reservationSummary) {
         return new BoothResponseDto(
                 booth.getId(),
                 booth.getName(),
@@ -287,9 +330,14 @@ public class BoothService {
         if (tables.isEmpty()) {
             return new ReservationSummary(0, 0, 0, 0);
         }
+        return summarize(tables, boothReservationRepository
+                .findByBoothIdAndStatusInOrderByExpiresAtAsc(booth.getId(), BLOCKING_RESERVATION_STATUSES));
+    }
 
-        List<BoothReservation> activeReservations = boothReservationRepository
-                .findByBoothIdAndStatusInOrderByExpiresAtAsc(booth.getId(), BLOCKING_RESERVATION_STATUSES);
+    private ReservationSummary summarize(List<BoothReservationTable> tables, List<BoothReservation> activeReservations) {
+        if (tables.isEmpty()) {
+            return new ReservationSummary(0, 0, 0, 0);
+        }
         Set<Long> blockedTableIds = activeReservations.stream()
                 .map(reservation -> reservation.getTable().getId())
                 .collect(Collectors.toSet());
@@ -319,6 +367,9 @@ public class BoothService {
                 (int) reservedTables,
                 (int) (inUseTables + walkInTables)
         );
+    }
+
+    private record CachedBooths(List<BoothResponseDto> booths, long loadedAtMillis) {
     }
 
     private record ReservationSummary(

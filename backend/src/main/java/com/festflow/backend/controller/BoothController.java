@@ -45,7 +45,7 @@ public class BoothController {
 
     @GetMapping
     public List<BoothResponseDto> getBooths() {
-        return boothService.getAllBooths();
+        return boothService.getAllBoothsForVisitors();
     }
 
     @GetMapping("/{id}")

@@ -111,6 +111,14 @@ public class AiMatchController {
         return aiMatchService.accessProfile(requestDto);
     }
 
+    /** 신청함만 다시 읽는다(앱이 15초마다 부른다). 사람 목록(profiles)은 담지 않는다. */
+    @PostMapping("/profiles/inbox")
+    public AiMatchProfileAccessResponseDto inbox(
+            @RequestBody AiMatchProfileAccessRequestDto requestDto
+    ) {
+        return aiMatchService.accessInbox(requestDto);
+    }
+
     @PutMapping("/profiles/{profileId}")
     public AiMatchProfileResponseDto updateProfile(
             @PathVariable Long profileId,

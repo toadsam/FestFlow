@@ -67,11 +67,14 @@ export function getApiBase() {
   return API_BASE;
 }
 
-export function resolveApiAssetUrl(url) {
+// width(240 · 480 · 960)를 주면 서버가 그 폭으로 줄인 JPEG 를 내려준다. 목록처럼 작게 보이는 곳에 쓴다.
+// (AI 프로필 그림은 원본이 2MB 를 넘는다.) 서버 업로드 주소(/uploads/)에만 붙는다.
+export function resolveApiAssetUrl(url, width) {
   if (!url) return "";
   if (/^https?:\/\//i.test(url) || url.startsWith("data:")) return url;
   if (url.startsWith("/uploads/")) {
-    return `${API_BASE.replace(/\/api$/i, "")}${url}`;
+    const resolved = `${API_BASE.replace(/\/api$/i, "")}${url}`;
+    return width ? `${resolved}?w=${width}` : resolved;
   }
   return url;
 }
@@ -489,8 +492,8 @@ export async function updateAdminStaff(id, payload) {
   return parseJson(response, "스태프 정보 수정에 실패했습니다.");
 }
 
-export function createStaffStream() {
-  return new EventSource(`${API_BASE}/stream/staff`);
+export function createStaffStream(staffToken) {
+  return new EventSource(`${API_BASE}/stream/staff?token=${encodeURIComponent(staffToken || "")}`);
 }
 
 export function createLostItemStream() {
@@ -558,8 +561,33 @@ export function downloadEventCsv() {
   window.open(`${API_BASE}/export/events.csv`, "_blank", "noopener,noreferrer");
 }
 
+// 이 기기의 번호(무작위). 서버는 맞는 키로 들어온 적이 있는 기기를 기억해 두고,
+// 같은 와이파이에서 누가 틀린 키를 여러 번 보내 그 IP 가 잠겨도 이 기기는 계속 쓰게 해 준다.
+const OPS_DEVICE_STORAGE_KEY = "festflow-ops-device";
+let opsDeviceId = "";
+
+function getOpsDeviceId() {
+  if (opsDeviceId) return opsDeviceId;
+  try {
+    opsDeviceId = window.localStorage.getItem(OPS_DEVICE_STORAGE_KEY) || "";
+  } catch {
+    // 저장소를 못 쓰면 이번 방문 동안만 쓰는 번호를 만든다.
+  }
+  if (!/^[A-Za-z0-9-]{16,64}$/.test(opsDeviceId)) {
+    const bytes = new Uint8Array(16);
+    globalThis.crypto.getRandomValues(bytes);
+    opsDeviceId = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    try {
+      window.localStorage.setItem(OPS_DEVICE_STORAGE_KEY, opsDeviceId);
+    } catch {
+      // 저장하지 못해도 이번 방문에는 쓸 수 있다.
+    }
+  }
+  return opsDeviceId;
+}
+
 function opsHeaders(key, headers = {}) {
-  return key ? { ...headers, "X-OPS-KEY": key } : headers;
+  return key ? { ...headers, "X-OPS-KEY": key, "X-OPS-DEVICE": getOpsDeviceId() } : headers;
 }
 
 function opsUrl(path) {
@@ -1234,6 +1262,16 @@ export async function accessAiMatchProfile(nickname, pin) {
     body: JSON.stringify({ nickname, pin }),
   });
   return parseJson(response, "프로필 인증에 실패했습니다.");
+}
+
+// 신청함만 가볍게 다시 읽는다(15초마다). 사람 목록(profiles)은 들어 있지 않다.
+export async function fetchAiMatchInbox(nickname, pin) {
+  const response = await fetch(`${API_BASE}/ai-match/profiles/inbox`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ nickname, pin }),
+  });
+  return parseJson(response, "신청함을 불러오지 못했습니다.");
 }
 
 export async function updateAiMatchProfile(profileId, payload) {

@@ -11,17 +11,20 @@ import com.festflow.backend.entity.StaffSession;
 import com.festflow.backend.entity.StaffStatus;
 import com.festflow.backend.repository.StaffMemberRepository;
 import com.festflow.backend.repository.StaffSessionRepository;
+import com.festflow.backend.security.JwtService;
 import com.festflow.backend.service.stream.StreamService;
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.UUID;
 
 import static org.springframework.http.HttpStatus.NOT_FOUND;
 import static org.springframework.http.HttpStatus.UNAUTHORIZED;
@@ -49,12 +52,18 @@ public class StaffService {
             "정재훈"
     );
 
+    // 스태프 토큰은 서버 비밀값으로 서명한다. 예전 "staff-{id}-{만료}-{uuid}" 는 누구나 지어낼 수 있었다.
+    private static final Duration TOKEN_TTL = Duration.ofHours(12);
+    private static final String STAFF_ROLE = "STAFF";
+    private static final String DEMO_STAFF_ROLE = "STAFF_DEMO";
+
     private final StaffMemberRepository staffMemberRepository;
     private final StaffSessionRepository staffSessionRepository;
     private final PasswordEncoder passwordEncoder;
     private final NoticeService noticeService;
     private final BoothService boothService;
     private final StreamService streamService;
+    private final JwtService jwtService;
     private final boolean demoLoginEnabled;
 
     public StaffService(
@@ -64,6 +73,7 @@ public class StaffService {
             NoticeService noticeService,
             BoothService boothService,
             StreamService streamService,
+            JwtService jwtService,
             @Value("${app.staff.demo-login.enabled:false}") boolean demoLoginEnabled
     ) {
         this.staffMemberRepository = staffMemberRepository;
@@ -72,6 +82,7 @@ public class StaffService {
         this.noticeService = noticeService;
         this.boothService = boothService;
         this.streamService = streamService;
+        this.jwtService = jwtService;
         this.demoLoginEnabled = demoLoginEnabled;
     }
 
@@ -81,8 +92,8 @@ public class StaffService {
         String pin = requestDto.pin().trim();
         DemoStaff demoStaff = resolveDemoStaffCredentials(normalizedNo, pin);
         if (demoStaff != null) {
-            LocalDateTime expiresAt = LocalDateTime.now().plusHours(12);
-            return new StaffLoginResponseDto(createDemoStaffToken(demoStaff.number(), expiresAt), expiresAt, toDemoDto(demoStaff));
+            LocalDateTime expiresAt = LocalDateTime.now().plus(TOKEN_TTL);
+            return new StaffLoginResponseDto(createDemoStaffToken(demoStaff.number()), expiresAt, toDemoDto(demoStaff));
         }
 
         StaffMember member = staffMemberRepository.findByStaffNoIgnoreCase(normalizedNo)
@@ -92,8 +103,8 @@ public class StaffService {
             throw new ResponseStatusException(UNAUTHORIZED, "Invalid staff credentials.");
         }
 
-        LocalDateTime expiresAt = LocalDateTime.now().plusHours(12);
-        String token = createStatelessStaffToken(member, expiresAt);
+        LocalDateTime expiresAt = LocalDateTime.now().plus(TOKEN_TTL);
+        String token = createStaffToken(member);
 
         return new StaffLoginResponseDto(token, expiresAt, toDto(member));
     }
@@ -204,9 +215,9 @@ public class StaffService {
             throw new ResponseStatusException(UNAUTHORIZED, "Staff token is required.");
         }
 
-        StaffMember statelessMember = resolveStatelessStaffToken(staffToken);
-        if (statelessMember != null) {
-            return statelessMember;
+        StaffMember signedMember = resolveSignedStaffToken(staffToken);
+        if (signedMember != null) {
+            return signedMember;
         }
 
         LocalDateTime now = LocalDateTime.now();
@@ -238,22 +249,11 @@ public class StaffService {
     }
 
     private DemoStaff resolveDemoStaffToken(String token) {
-        if (!demoLoginEnabled || token == null || token.isBlank()) {
+        if (!demoLoginEnabled) {
             return null;
         }
-        String[] parts = token.split("-", 5);
-        if (parts.length != 5 || !"demo".equals(parts[0]) || !"staff".equals(parts[1])) {
-            return null;
-        }
-        try {
-            long expiresAtMillis = Long.parseLong(parts[3]);
-            if (System.currentTimeMillis() > expiresAtMillis) {
-                throw new ResponseStatusException(UNAUTHORIZED, "Staff session expired.");
-            }
-            return parseDemoStaffNumber(parts[2]);
-        } catch (NumberFormatException e) {
-            throw new ResponseStatusException(UNAUTHORIZED, "Invalid staff token.");
-        }
+        String subject = signedSubject(token, DEMO_STAFF_ROLE);
+        return subject == null ? null : parseDemoStaffNumber(subject);
     }
 
     private DemoStaff parseDemoStaffNumber(String rawNumber) {
@@ -268,10 +268,8 @@ public class StaffService {
         }
     }
 
-    private String createDemoStaffToken(int staffNo, LocalDateTime expiresAt) {
-        long epochMillis = expiresAt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
-        return "demo-staff-" + staffNo + "-" + epochMillis + "-"
-                + UUID.randomUUID().toString().replace("-", "");
+    private String createDemoStaffToken(int staffNo) {
+        return jwtService.generateToken(String.valueOf(staffNo), DEMO_STAFF_ROLE, TOKEN_TTL.toMillis());
     }
 
     private List<StaffMemberResponseDto> getDemoStaffMembers() {
@@ -305,28 +303,33 @@ public class StaffService {
         );
     }
 
-    private String createStatelessStaffToken(StaffMember member, LocalDateTime expiresAt) {
-        long epochMillis = expiresAt.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
-        return "staff-" + member.getId() + "-" + epochMillis + "-"
-                + UUID.randomUUID().toString().replace("-", "");
+    private String createStaffToken(StaffMember member) {
+        return jwtService.generateToken(String.valueOf(member.getId()), STAFF_ROLE, TOKEN_TTL.toMillis());
     }
 
-    private StaffMember resolveStatelessStaffToken(String token) {
-        String[] parts = token.split("-", 4);
-        if (parts.length != 4 || !"staff".equals(parts[0])) {
+    private StaffMember resolveSignedStaffToken(String token) {
+        String subject = signedSubject(token, STAFF_ROLE);
+        if (subject == null) {
             return null;
         }
-
         try {
-            Long staffId = Long.parseLong(parts[1]);
-            long expiresAtMillis = Long.parseLong(parts[2]);
-            if (System.currentTimeMillis() > expiresAtMillis) {
-                throw new ResponseStatusException(UNAUTHORIZED, "Staff session expired.");
-            }
-            return staffMemberRepository.findById(staffId)
+            return staffMemberRepository.findById(Long.parseLong(subject))
                     .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED, "Invalid staff token."));
         } catch (NumberFormatException e) {
             throw new ResponseStatusException(UNAUTHORIZED, "Invalid staff token.");
+        }
+    }
+
+    /** 서명이 맞고 만료되지 않았으며 역할이 같은 토큰이면 subject, 아니면 null. */
+    private String signedSubject(String token, String role) {
+        if (token == null || token.isBlank()) {
+            return null;
+        }
+        try {
+            Claims claims = jwtService.parse(token.trim());
+            return role.equals(String.valueOf(claims.get("role"))) ? claims.getSubject() : null;
+        } catch (JwtException | IllegalArgumentException e) {
+            return null;
         }
     }
 

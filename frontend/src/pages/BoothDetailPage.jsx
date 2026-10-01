@@ -245,13 +245,20 @@ export default function BoothDetailPage() {
     }
 
     let reservationStream = null;
+    let reservationReloadTimer = null;
     try {
       reservationStream = createReservationStream();
       reservationStream.addEventListener("reservations", (event) => {
         try {
           const payload = JSON.parse(event.data);
           if (!payload?.boothId || String(payload.boothId) === String(id)) {
-            loadReservations(reservationToken).catch((streamError) => setReservationError(streamError.message));
+            // 보는 사람 전원이 같은 순간에 다시 읽지 않게 0~2.5초 흩어서, 그 사이 온 이벤트는 한 번으로 묶는다.
+            if (!reservationReloadTimer) {
+              reservationReloadTimer = window.setTimeout(() => {
+                reservationReloadTimer = null;
+                loadReservations(reservationToken).catch((streamError) => setReservationError(streamError.message));
+              }, Math.random() * 2500);
+            }
           }
         } catch {
           // 잘못된 페이로드는 무시한다.
@@ -262,6 +269,7 @@ export default function BoothDetailPage() {
     }
 
     return () => {
+      if (reservationReloadTimer) window.clearTimeout(reservationReloadTimer);
       boothStream?.close();
       reservationStream?.close();
     };

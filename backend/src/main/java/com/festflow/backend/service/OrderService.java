@@ -50,6 +50,7 @@ public class OrderService {
 
     private static final int MAX_ITEMS_PER_ORDER = 20;
     private static final int MAX_ACTIVE_ORDERS_PER_TABLE = 5;
+    private static final int DUPLICATE_WINDOW_SECONDS = 20;
     private static final String KEY_ALPHABET = "abcdefghijkmnpqrstuvwxyz23456789";
 
     private final BoothRepository boothRepository;
@@ -112,7 +113,9 @@ public class OrderService {
 
     @Transactional
     public BoothOrderDto createOrder(Long boothId, OrderCreateRequestDto requestDto) {
-        Booth booth = findBooth(boothId);
+        // 같은 부스의 주문은 한 번에 하나씩 처리한다(부스 행 잠금). 동시에 들어와도 주문번호가 겹치지 않고 테이블 한도가 새지 않는다.
+        Booth booth = boothRepository.findByIdForUpdate(boothId)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "부스를 찾을 수 없습니다."));
         if (!booth.isOrderEnabled()) {
             throw new ResponseStatusException(CONFLICT, "이 부스는 지금 주문을 받지 않습니다.");
         }
@@ -157,11 +160,22 @@ public class OrderService {
             throw new ResponseStatusException(BAD_REQUEST, "한 번에 " + MAX_ITEMS_PER_ORDER + "개까지 주문할 수 있습니다.");
         }
 
-        long activeOnTable = boothOrderRepository
-                .findByBoothIdAndStatusInOrderByCreatedAtAsc(boothId, activeStatuses())
-                .stream()
-                .filter(order -> tableLabel.equals(order.getTableLabel()))
-                .count();
+        List<BoothOrder> activeOnThisTable = boothOrderRepository
+                .findByBoothIdAndTableLabelAndStatusInOrderByCreatedAtAsc(boothId, tableLabel, activeStatuses());
+
+        // 방금(20초 안) 같은 테이블 · 같은 입금자 · 같은 메뉴로 들어온 주문이 있으면 새로 만들지 않고 그 주문을 돌려준다.
+        // 통신이 끊겨 응답을 못 받고 다시 누른 경우다.
+        String depositorName = requestDto.depositorName().trim();
+        LocalDateTime duplicateSince = LocalDateTime.now().minusSeconds(DUPLICATE_WINDOW_SECONDS);
+        for (BoothOrder existing : activeOnThisTable) {
+            if (existing.getCreatedAt() != null && existing.getCreatedAt().isAfter(duplicateSince)
+                    && depositorName.equals(existing.getDepositorName())
+                    && sameItems(existing, quantities)) {
+                return toDto(existing);
+            }
+        }
+
+        long activeOnTable = activeOnThisTable.size();
         if (activeOnTable >= MAX_ACTIVE_ORDERS_PER_TABLE) {
             throw new ResponseStatusException(CONFLICT, "이 테이블에 처리 중인 주문이 너무 많습니다. 스태프에게 말씀해 주세요.");
         }
@@ -171,7 +185,7 @@ public class OrderService {
                 booth,
                 tableLabel,
                 randomKey(24),
-                requestDto.depositorName().trim(),
+                depositorName,
                 normalizeBlank(requestDto.phoneNumber()),
                 normalizeBlank(requestDto.request()),
                 method,
@@ -315,6 +329,14 @@ public class OrderService {
         if (value == null) return null;
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static boolean sameItems(BoothOrder order, Map<String, Integer> quantities) {
+        if (order.getItems().size() != quantities.size()) {
+            return false;
+        }
+        return order.getItems().stream()
+                .allMatch(item -> Objects.equals(quantities.get(item.getName()), item.getQuantity()));
     }
 
     private static String normalizeTableLabel(String label) {

@@ -66,6 +66,27 @@ export default function OrderStatusPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId, Boolean(order)]);
 
+  // 실시간 연결은 서버 재시작 · 통신 끊김으로 조용히 멈출 수 있다. 끝나지 않은 주문은 20초마다, 화면으로 돌아올 때 다시 읽는다.
+  const finished = order?.status === "COMPLETED" || order?.status === "CANCELED";
+  useEffect(() => {
+    if (!order || finished) return undefined;
+    let alive = true;
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      fetchOrder(orderId, key)
+        .then((data) => alive && setOrder(data))
+        .catch(() => {});
+    };
+    const timer = window.setInterval(refresh, 20000);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      alive = false;
+      window.clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderId, key, Boolean(order), finished]);
+
   const statusIndex = order ? STATUS_INDEX[order.status] ?? 0 : 0;
   const canceled = order?.status === "CANCELED";
   const completed = order?.status === "COMPLETED";

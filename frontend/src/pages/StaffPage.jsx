@@ -393,7 +393,7 @@ export default function StaffPage() {
 
     let staffStream = null;
     try {
-      staffStream = createStaffStream();
+      staffStream = createStaffStream(staffToken);
       staffStream.addEventListener("staff", (event) => {
         try {
           const next = JSON.parse(event.data);

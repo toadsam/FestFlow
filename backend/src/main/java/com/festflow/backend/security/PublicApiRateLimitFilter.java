@@ -19,33 +19,38 @@ import java.util.regex.Pattern;
 @Component
 public class PublicApiRateLimitFilter extends OncePerRequestFilter {
 
-    // IP 기준 한도. 축제 캠퍼스 와이파이(NAT)는 수백 명이 공인 IP 하나를 같이 쓰므로 소개팅 쪽은 넉넉히 잡는다.
-    // 비밀번호 무차별 대입은 AiMatchService 의 닉네임별 실패 잠금(10회/10분)이 따로 막는다.
-    // 로그인(access)은 앱이 신청함 갱신용으로 15초마다 다시 부르므로 IP 한도는 폭주 방지 수준(3000/10분)만 둔다.
+    // IP 기준 한도. 축제 캠퍼스 와이파이(NAT)는 수백 명이 공인 IP 하나를 같이 쓰므로, 돈이 드는 요청(AI · 문자)만 빡빡하게 두고
+    // 주문 · 소개팅 · 운영 콘솔처럼 현장에서 몰리는 요청은 폭주 방지 수준으로 넉넉히 잡는다.
+    // 비밀번호 무차별 대입은 AiMatchService 의 닉네임별 실패 잠금이, 운영 키 대입은 OpsKeyAuthenticationFilter 의 실패 잠금이 따로 막는다.
     private static final List<Rule> RULES = List.of(
             new Rule("POST", Pattern.compile("^/api/auth/login$"), "admin-login", 10, Duration.ofMinutes(10)),
-            new Rule("POST", Pattern.compile("^/api/staff/auth/login$"), "staff-login", 10, Duration.ofMinutes(10)),
-            new Rule("*", Pattern.compile("^/api/ops/.*"), "ops-key", 60, Duration.ofMinutes(1)),
+            new Rule("POST", Pattern.compile("^/api/staff/auth/login$"), "staff-login", 30, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/staff/ai/.*"), "staff-ai", 60, Duration.ofMinutes(10)),
+            // 운영 콘솔은 주문이 들어올 때마다 목록을 다시 읽고, 스태프 기기 여러 대가 같은 IP 를 쓴다.
+            new Rule("*", Pattern.compile("^/api/ops/.*"), "ops-key", 1200, Duration.ofMinutes(1)),
             new Rule("POST", Pattern.compile("^/api/gps$"), "gps", 60, Duration.ofMinutes(1)),
-            new Rule("POST", Pattern.compile("^/api/chat$"), "chat", 20, Duration.ofMinutes(1)),
+            new Rule("POST", Pattern.compile("^/api/chat$"), "chat", 30, Duration.ofMinutes(1)),
             new Rule("GET", Pattern.compile("^/api/ai/visitor-guide/.*"), "ai-visitor-guide", 30, Duration.ofMinutes(1)),
-            new Rule("POST", Pattern.compile("^/api/ai-match/image-preview$"), "ai-match-image-preview", 40, Duration.ofMinutes(10)),
-            new Rule("POST", Pattern.compile("^/api/ai-match/profiles$"), "ai-match-profile-create", 60, Duration.ofMinutes(10)),
-            new Rule("POST", Pattern.compile("^/api/ai-match/profiles/access$"), "ai-match-profile-access", 3000, Duration.ofMinutes(10)),
-            new Rule("GET", Pattern.compile("^/api/ai-match/phone-check$"), "ai-match-phone-check", 300, Duration.ofMinutes(10)),
-            new Rule("POST", Pattern.compile("^/api/ai-match/profiles/\\d+/(requests|favorite|report)$"), "ai-match-profile-action", 300, Duration.ofMinutes(10)),
-            new Rule("POST", Pattern.compile("^/api/ai-match/requests/\\d+/(accept|reject|cancel|meetup/propose|meetup/confirm|meetup/cancel|meetup/arrived)$"), "ai-match-request-action", 300, Duration.ofMinutes(10)),
+            new Rule("GET", Pattern.compile("^/api/ai/(guide|congestion/predictions)$"), "ai-guide", 120, Duration.ofMinutes(1)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/image-preview$"), "ai-match-image-preview", 60, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/profiles$"), "ai-match-profile-create", 120, Duration.ofMinutes(10)),
+            // 로그인(access)과 신청함 갱신(inbox)은 앱이 15초마다 부른다. 같은 와이파이에 1000명이 있어도 막히지 않게.
+            new Rule("POST", Pattern.compile("^/api/ai-match/profiles/(access|inbox)$"), "ai-match-profile-access", 60_000, Duration.ofMinutes(10)),
+            new Rule("GET", Pattern.compile("^/api/ai-match/phone-check$"), "ai-match-phone-check", 600, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/profiles/\\d+/(requests|favorite|report)$"), "ai-match-profile-action", 3000, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/ai-match/requests/\\d+/(accept|reject|cancel|meetup/propose|meetup/confirm|meetup/cancel|meetup/arrived)$"), "ai-match-request-action", 3000, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/reservations/auth/send-code$"), "reservation-auth", 5, Duration.ofMinutes(10)),
             // 블라인드 채팅: 두 사람이 같은 와이파이(IP)에서 1초마다 상태를 받으니 넉넉히. 입장은 비밀번호 확인이라 빡빡하게.
             new Rule("POST", Pattern.compile("^/api/ai-match/requests/\\d+/chat/enter$"), "ai-match-chat-enter", 120, Duration.ofMinutes(10)),
             new Rule("GET", Pattern.compile("^/api/ai-match/chat/state$"), "ai-match-chat-state", 6000, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/ai-match/chat/(messages|choice)$"), "ai-match-chat-send", 600, Duration.ofMinutes(10)),
-            new Rule("POST", Pattern.compile("^/api/booths/\\d+/orders$"), "order-create", 60, Duration.ofMinutes(10)),
-            new Rule("POST", Pattern.compile("^/api/notices/\\d+/view$"), "notice-view", 120, Duration.ofMinutes(10)),
-            new Rule("GET", Pattern.compile("^/api/ai-match/meetup-slots$"), "ai-match-meetup-slots", 600, Duration.ofMinutes(10)),
-            new Rule("*", Pattern.compile("^/api/ai-match/profiles/\\d+(/delete)?$"), "ai-match-profile-edit", 60, Duration.ofMinutes(10)),
+            // 주점 테이블 60개가 같은 와이파이에서 한꺼번에 주문해도 막히지 않게.
+            new Rule("POST", Pattern.compile("^/api/booths/\\d+/orders$"), "order-create", 600, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/notices/\\d+/view$"), "notice-view", 1200, Duration.ofMinutes(10)),
+            new Rule("GET", Pattern.compile("^/api/ai-match/meetup-slots$"), "ai-match-meetup-slots", 3000, Duration.ofMinutes(10)),
+            new Rule("*", Pattern.compile("^/api/ai-match/profiles/\\d+(/delete)?$"), "ai-match-profile-edit", 300, Duration.ofMinutes(10)),
             new Rule("POST", Pattern.compile("^/api/translate.*"), "translate", 30, Duration.ofMinutes(10)),
-            new Rule("POST", Pattern.compile("^/api/lost-items$"), "lost-item-create", 5, Duration.ofMinutes(10)),
+            new Rule("POST", Pattern.compile("^/api/lost-items$"), "lost-item-create", 20, Duration.ofMinutes(10)),
             new Rule("PUT", Pattern.compile("^/api/lost-items/\\d+/claim$"), "lost-item-claim", 60, Duration.ofMinutes(1))
     );
 
@@ -60,7 +65,7 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
             return;
         }
 
-        String key = clientIp(request) + ":" + rule.key();
+        String key = ClientIp.of(request) + ":" + rule.key();
         Bucket bucket = buckets.computeIfAbsent(key, ignored -> new Bucket(Instant.now(), 0));
         Instant now = Instant.now();
 
@@ -101,7 +106,8 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
 
     private Rule findRule(HttpServletRequest request) {
         String method = request.getMethod();
-        String uri = request.getRequestURI();
+        // 컨트롤러는 디코딩한 경로로 찾아지므로 여기서도 같은 모양으로 맞춘다. (/api/auth/logi%6E 같은 우회 방지)
+        String uri = ClientIp.normalizedPath(request);
         return RULES.stream()
                 .filter(rule -> "*".equals(rule.method()) || rule.method().equalsIgnoreCase(method))
                 .filter(rule -> rule.pathPattern().matcher(uri).matches())
@@ -109,45 +115,8 @@ public class PublicApiRateLimitFilter extends OncePerRequestFilter {
                 .orElse(null);
     }
 
-    private String clientIp(HttpServletRequest request) {
-        // 프록시는 접속 IP를 목록 맨 뒤에 붙인다. 앞쪽은 클라이언트가 마음대로 넣을 수 있으니 오른쪽부터 보되,
-        // 프록시 내부 주소(사설·CGNAT·루프백)는 건너뛰고 처음 나오는 공인 IP를 쓴다. 모두 내부 주소면(로컬) 마지막 값.
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            String[] parts = forwardedFor.split(",");
-            for (int i = parts.length - 1; i >= 0; i--) {
-                String candidate = parts[i].trim();
-                if (!candidate.isEmpty() && !isInternalAddress(candidate)) {
-                    return candidate;
-                }
-            }
-            return parts[parts.length - 1].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isBlank()) {
-            return realIp.trim();
-        }
-        return request.getRemoteAddr();
-    }
-
     static boolean isInternalAddress(String ip) {
-        String v = ip.toLowerCase();
-        if (v.startsWith("[")) v = v.substring(1, v.indexOf(']') > 0 ? v.indexOf(']') : v.length());
-        if (v.equals("::1") || v.startsWith("fc") || v.startsWith("fd") || v.startsWith("fe80:")) return true;
-        if (v.startsWith("::ffff:")) v = v.substring(7);
-        String[] o = v.split("\\.");
-        if (o.length != 4) return false;
-        try {
-            int a = Integer.parseInt(o[0]);
-            int b = Integer.parseInt(o[1]);
-            return a == 10 || a == 127 || a == 0
-                    || (a == 172 && b >= 16 && b <= 31)
-                    || (a == 192 && b == 168)
-                    || (a == 169 && b == 254)
-                    || (a == 100 && b >= 64 && b <= 127);
-        } catch (NumberFormatException e) {
-            return false;
-        }
+        return ClientIp.isInternalAddress(ip);
     }
 
     private void pruneExpiredBuckets(Instant now) {
