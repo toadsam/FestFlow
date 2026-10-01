@@ -15,7 +15,7 @@ import { CountUp, HeroReeds, IconBeer, IconHeartSaju, Mascot, PaperPlane } from 
 import { resolveBoothImageUrl } from "../config/boothImages";
 import { TableDots } from "../components/v2/TableMap";
 import { FESTIVAL, MAIN_BOOTH_FALLBACK, findMainBooth } from "../config/festival";
-import { normalizeEvents } from "../data/eventExperience";
+import { EVENT_STATUS, normalizeEvents } from "../data/eventExperience";
 import { findCardNews, newsForEvent } from "../data/cardNews";
 import CardNewsViewer, { CardNewsShelf } from "../components/cardnews/CardNewsViewer";
 import HighlightBanner from "../components/cardnews/HighlightBanner";
@@ -178,7 +178,8 @@ export default function FestivalPage() {
     [pickedDay, scheduleDays],
   );
 
-  const liveCount = schedule.items.filter((event) => eventState(event, now) === "live").length;
+  // 운영진이 '취소'로 바꾼 일정은 시간이 됐어도 진행 중으로 세지 않는다.
+  const liveCount = schedule.items.filter((event) => event.status !== EVENT_STATUS.CANCELED && eventState(event, now) === "live").length;
 
   // 접혔을 때 보이는 공연: 진행 중 전부 + 다음 공연 3개. 다 끝났으면 마지막 3개.
   const scheduleParts = useMemo(() => {
@@ -222,10 +223,12 @@ export default function FestivalPage() {
   function renderEvent(event, state, index) {
     // 이 일정을 다룬 총학 카드뉴스가 있으면 바로 열 수 있게 한다.
     const newsLinks = newsForEvent(event.title);
+    // 운영진이 고른 상태. 취소는 배지로, 지연은 시간 줄에 붙여 보여 준다.
+    const canceled = event.status === EVENT_STATUS.CANCELED;
     return (
       <div
         key={event.id || `${event.title}-${index}`}
-        className={`v2-timeline__item v2-rise v2-timeline__item--${state}`}
+        className={`v2-timeline__item v2-rise v2-timeline__item--${canceled ? "upcoming" : state}`}
         style={{ "--i": Math.min(index, 6) }}
       >
         <span className="v2-timeline__time">{formatClock(event.start)}</span>
@@ -235,7 +238,7 @@ export default function FestivalPage() {
             {event.end ? `${formatClock(event.start)} ~ ${formatClock(event.end)}` : "시간 확인 중"}
             {event.stage || event.artist ? ` · ${event.stage || event.artist}` : ""}
             {event.liveMessage && !`${event.liveMessage}`.startsWith("장소") ? ` · ${event.liveMessage}` : ""}
-            {Number(event.delayMinutes) > 0 ? ` · ${event.delayMinutes}분 지연` : ""}
+            {Number(event.delayMinutes) > 0 ? ` · ${event.delayMinutes}분 지연` : event.status === EVENT_STATUS.DELAYED ? " · 지연" : ""}
           </small>
           {newsLinks.length ? (
             <div className="cn-links">
@@ -248,8 +251,9 @@ export default function FestivalPage() {
             </div>
           ) : null}
         </div>
-        {state === "live" ? <span className="v2-badge v2-badge--blue">LIVE</span> : null}
-        {state === "done" ? <span className="v2-badge">종료</span> : null}
+        {canceled ? <span className="v2-badge v2-badge--red">취소</span> : null}
+        {!canceled && state === "live" ? <span className="v2-badge v2-badge--blue">LIVE</span> : null}
+        {!canceled && state === "done" ? <span className="v2-badge">종료</span> : null}
       </div>
     );
   }

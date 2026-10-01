@@ -256,14 +256,28 @@ export default function AdminPage() {
     if (!window.confirm(`${bulkTargets.length}개 공연을 "${label}"(으)로 바꿀까요?`)) return;
     setBulkBusy(true);
     try {
-      await bulkUpdateAdminEventStatus({
-        eventIds: bulkTargets.map((event) => event.id),
-        statusOverride: clear ? "" : bulk.statusOverride,
-        delayMinutes: clear ? 0 : bulk.statusOverride === "지연" ? Number(bulk.delayMinutes) || 0 : null,
-        liveMessage: clear ? null : bulk.liveMessage || null,
-      });
+      if (clear) {
+        // 되돌릴 때는 일괄 변경으로 적어 둔 '손님에게 보일 한 줄'도 같이 지운다. "장소: ..." 메모는 그대로 둔다.
+        // (서버는 liveMessage 가 null 이면 그대로 두고, 빈 글자면 지운다.)
+        const keepsMemo = (event) => !`${event.liveMessage || ""}`.trim() || `${event.liveMessage}`.trim().startsWith("장소");
+        const groups = [
+          [bulkTargets.filter(keepsMemo), null],
+          [bulkTargets.filter((event) => !keepsMemo(event)), ""],
+        ];
+        for (const [targets, liveMessage] of groups) {
+          if (!targets.length) continue;
+          await bulkUpdateAdminEventStatus({ eventIds: targets.map((event) => event.id), statusOverride: "", delayMinutes: 0, liveMessage });
+        }
+      } else {
+        await bulkUpdateAdminEventStatus({
+          eventIds: bulkTargets.map((event) => event.id),
+          statusOverride: bulk.statusOverride,
+          delayMinutes: bulk.statusOverride === "지연" ? Number(bulk.delayMinutes) || 0 : null,
+          liveMessage: bulk.liveMessage || null,
+        });
+      }
       setMessage(`${bulkTargets.length}개 공연을 ${label}(으)로 바꿨습니다.`);
-      await loadAll();
+      await loadAll({ keepMessage: true });
     } catch (error) {
       setMessage(adminErrorMessage(error));
     } finally {
@@ -271,9 +285,10 @@ export default function AdminPage() {
     }
   }
 
-  async function loadAll() {
+  // keepMessage: 저장 · 삭제 뒤에 부를 때. 방금 띄운 확인 문구("공지를 등록했습니다" 등)를 지우지 않는다.
+  async function loadAll({ keepMessage = false } = {}) {
     setIsLoading(true);
-    setMessage("관리자 대시보드 동기화 중...");
+    if (!keepMessage) setMessage("관리자 대시보드 동기화 중...");
 
     try {
       // AI 브리핑은 수십 초 걸릴 수 있어 여기서 기다리지 않는다. 혼잡도 모니터링 화면을 열 때 따로 부른다.
@@ -380,7 +395,7 @@ export default function AdminPage() {
       const anyRejected = [boothResult, eventResult, noticeResult, kpiResult, logResult, staffResult].some(
         (result) => result.status === "rejected",
       );
-      if (!anyRejected) {
+      if (!anyRejected && !keepMessage) {
         setMessage("");
       }
     } catch (error) {
@@ -516,7 +531,7 @@ export default function AdminPage() {
     await runAdminAction("quick-congestion-notice", "혼잡 완화 공지를 발행 중입니다.", async () => {
       await triggerCongestionReliefNotice();
       setMessage("혼잡 완화 공지를 발행했습니다.");
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -525,7 +540,7 @@ export default function AdminPage() {
     await runAdminAction(`quick-event-notice-${eventId}`, "공연 시작 공지를 발행 중입니다.", async () => {
       await triggerEventStartNotice(eventId);
       setMessage("공연 시작 공지를 발행했습니다.");
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -557,7 +572,7 @@ export default function AdminPage() {
         liveStatusMessage: draft.liveStatusMessage || null,
       });
       setMessage("부스 실시간 운영 정보를 저장했습니다.");
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -572,7 +587,7 @@ export default function AdminPage() {
         assignedBoothId: draft.assignedBoothId === "" || draft.assignedBoothId == null ? null : Number(draft.assignedBoothId),
       });
       setMessage("스태프 정보를 저장했습니다.");
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -604,7 +619,7 @@ export default function AdminPage() {
       }
 
       resetBoothForm();
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -648,7 +663,7 @@ export default function AdminPage() {
         setMessage("공연을 등록했습니다.");
       }
       resetEventForm();
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -664,7 +679,7 @@ export default function AdminPage() {
         setMessage("공지를 등록했습니다.");
       }
       resetNoticeForm();
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -673,7 +688,7 @@ export default function AdminPage() {
     await runAdminAction(`notice-delete-${id}`, "공지 삭제 중입니다.", async () => {
       await deleteNotice(id);
       setMessage("공지 삭제가 완료되었습니다.");
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -682,7 +697,7 @@ export default function AdminPage() {
     await runAdminAction(`booth-delete-${id}`, "부스 삭제 중입니다.", async () => {
       await deleteBooth(id);
       setMessage("부스 삭제가 완료되었습니다.");
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -706,7 +721,7 @@ export default function AdminPage() {
           failed += 1;
         }
       }
-      await loadAll();
+      await loadAll({ keepMessage: true });
       setMessage(
         failed
           ? `부스 ${targets.length - failed}개를 지웠고 ${failed}개는 실패했습니다. 다시 눌러 주세요.`
@@ -720,7 +735,7 @@ export default function AdminPage() {
     await runAdminAction(`event-delete-${id}`, "공연 삭제 중입니다.", async () => {
       await deleteEvent(id);
       setMessage("공연 삭제가 완료되었습니다.");
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -742,7 +757,7 @@ export default function AdminPage() {
       const count = result?.imported ?? 0;
       setMessage(`${type === "booths" ? "부스" : "공연"} CSV ${count}건 반영 완료`);
       setImportFiles((prev) => ({ ...prev, [type]: null }));
-      await loadAll();
+      await loadAll({ keepMessage: true });
     });
   }
 
@@ -756,7 +771,7 @@ export default function AdminPage() {
     await runAdminAction(`booth-image-${boothId}`, "부스 이미지를 업로드 중입니다.", async () => {
       await uploadBoothImage(boothId, file);
       setMessage("부스 이미지를 업로드했습니다.");
-      await loadAll();
+      await loadAll({ keepMessage: true });
       setUploadFiles((prev) => ({ ...prev, [boothId]: null }));
     });
   }
@@ -773,7 +788,7 @@ export default function AdminPage() {
     await runAdminAction("booth-reorder", "부스 순서를 저장 중입니다.", async () => {
       await reorderBooths(reordered.map((item) => item.id));
       setMessage("부스 순서를 저장했습니다.");
-      await loadAll();
+      await loadAll({ keepMessage: true });
     }).finally(() => {
       setDraggingBoothId(null);
     });

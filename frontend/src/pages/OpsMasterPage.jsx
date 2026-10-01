@@ -377,15 +377,32 @@ export default function OpsMasterPage({ embedded = false }) {
     if (!window.confirm(`${bulkTargets.length}개 공연을 "${label}"(으)로 바꿀까요?`)) return;
     setBulkBusy(true);
     try {
-      await bulkUpdateOpsMasterEventStatus(
-        {
-          eventIds: bulkTargets.map((event) => event.id),
-          statusOverride: clear ? "" : bulk.statusOverride,
-          delayMinutes: clear ? 0 : bulk.statusOverride === "지연" ? Number(bulk.delayMinutes) || 0 : null,
-          liveMessage: clear ? null : bulk.liveMessage || null,
-        },
-        key,
-      );
+      if (clear) {
+        // 되돌릴 때는 일괄 변경으로 적어 둔 '손님에게 보일 한 줄'도 같이 지운다. "장소: ..." 메모는 그대로 둔다.
+        // (서버는 liveMessage 가 null 이면 그대로 두고, 빈 글자면 지운다.)
+        const keepsMemo = (event) => !`${event.liveMessage || ""}`.trim() || `${event.liveMessage}`.trim().startsWith("장소");
+        const groups = [
+          [bulkTargets.filter(keepsMemo), null],
+          [bulkTargets.filter((event) => !keepsMemo(event)), ""],
+        ];
+        for (const [targets, liveMessage] of groups) {
+          if (!targets.length) continue;
+          await bulkUpdateOpsMasterEventStatus(
+            { eventIds: targets.map((event) => event.id), statusOverride: "", delayMinutes: 0, liveMessage },
+            key,
+          );
+        }
+      } else {
+        await bulkUpdateOpsMasterEventStatus(
+          {
+            eventIds: bulkTargets.map((event) => event.id),
+            statusOverride: bulk.statusOverride,
+            delayMinutes: bulk.statusOverride === "지연" ? Number(bulk.delayMinutes) || 0 : null,
+            liveMessage: bulk.liveMessage || null,
+          },
+          key,
+        );
+      }
       setMessage(`${bulkTargets.length}개 공연을 ${label}(으)로 바꿨습니다.`);
       await load();
     } catch (error) {

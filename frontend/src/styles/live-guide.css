@@ -157,6 +157,18 @@ html.lg-root #root {
   margin-left: 12px;
 }
 
+/* 폰: 흐름 이름을 짧게 쓰고, 그래도 넘치면 옆으로 민다. */
+.lg-page:not(.lg-page--wide) .lg-flows {
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.lg-page:not(.lg-page--wide) .lg-flow {
+  padding: 7px 9px;
+  font-size: 13px;
+}
+
 .lg-badge {
   display: none;
   padding: 6px 10px;
@@ -400,7 +412,8 @@ html.lg-root #root {
 /* ---------- 화면 고르기(폰) ---------- */
 .lg-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 6px;
 }
 
@@ -658,6 +671,23 @@ html.lg-root #root {
     aspect-ratio: auto;
     height: min(716px, calc(100dvh - 150px));
     min-height: 480px;
+  }
+}
+
+/* 노트북으로 쓰는 화면(총괄 화면): 폰 틀 대신 넓은 틀. 칸 폭은 LiveGuidePage 가 2.6 : 1 로 나눈다. */
+.lg-page--wide .lg-phone--desk {
+  max-width: none;
+}
+
+.lg-page--wide .lg-phone--desk .lg-phone__screen {
+  aspect-ratio: 1014 / 700;
+  border-width: 6px;
+  border-radius: 18px;
+}
+
+@media (min-width: 1280px) {
+  .lg-page--wide .lg-phone--desk .lg-phone__screen {
+    aspect-ratio: auto;
   }
 }
 

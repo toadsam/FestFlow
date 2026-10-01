@@ -535,6 +535,7 @@ function findTarget(stepKey, doc, { request }) {
 export const aimatchScenario = {
   id: "aimatch",
   label: "사주 소개팅",
+  shortLabel: "소개팅",
   subtitle: "사주 소개팅 · 신청부터 부스 만남까지",
   frames,
   steps,

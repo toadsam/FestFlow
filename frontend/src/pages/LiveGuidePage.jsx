@@ -1,14 +1,15 @@
 // 눌러 보는 운영 매뉴얼 (/guide/live).
 // 손님 · 참가자 화면과 스태프 화면을 진짜 그대로 나란히 띄우고, 한쪽에서 누르면 다른 쪽이 어떻게 바뀌는지 바로 보여 준다.
 // 화면은 iframe 속의 실제 페이지이고, 서버만 연습용(demo/demoServer.js)으로 바꿔 끼웠다. 실제 주문 · 실제 서버와는 이어져 있지 않다.
-// 흐름(주점 주문 · 사주 소개팅)마다 화면 구성과 순서는 demo/*Scenario.js 에 있다.
+// 흐름(주점 주문 · 사주 소개팅 · 총괄 공지와 공연 시간)마다 화면 구성과 순서는 demo/*Scenario.js 에 있다.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createDemoServer } from "../demo/demoServer";
 import { aimatchScenario } from "../demo/aimatchScenario";
+import { festScenario } from "../demo/festScenario";
 import { pubScenario } from "../demo/pubScenario";
 import "../styles/live-guide.css";
 
-const SCENARIOS = [pubScenario, aimatchScenario];
+const SCENARIOS = [pubScenario, aimatchScenario, festScenario];
 const ALL_FRAMES = SCENARIOS.flatMap((scenario) => scenario.frames);
 const FRAME_BY_ID = Object.fromEntries(ALL_FRAMES.map((frame) => [frame.id, frame]));
 
@@ -34,9 +35,10 @@ function getHost() {
       return storages.get(role);
     },
     onBlocked: null,
-    reset() {
+    // 흐름을 (다시) 시작한다. 흐름이 정한 시각이 있으면 연습용 시계를 거기에 맞춘다.
+    reset(scenario) {
       storages.clear();
-      this.server.reset();
+      this.server.reset({ clockStart: scenario?.clockStart });
     },
   };
   // iframe 속 화면(demo/demoFrame.js)이 이 값을 보고 연습 화면으로 켜진다.
@@ -46,6 +48,7 @@ function getHost() {
 
 /* ---------- iframe 속에서 '지금 누를 곳' 표시 ---------- */
 const RING_ID = "ffdemo-ring";
+const FLASH_ID = "ffdemo-flash";
 // 진짜 화면의 버튼은 건드리지 않는다. 버튼 자리에 맞춰 테두리만 따로 얹는다.
 const RING_STYLE = `
 #${RING_ID} {
@@ -59,37 +62,114 @@ const RING_STYLE = `
 }
 @keyframes ffdemo-ring {
   50% { box-shadow: 0 0 0 11px rgba(255, 106, 61, 0); }
+}
+#${FLASH_ID} {
+  position: fixed;
+  z-index: 2147482999;
+  display: none;
+  pointer-events: none;
+  border-radius: 14px;
+  background: rgba(255, 196, 61, 0.2);
+  box-shadow: 0 0 0 3px rgba(255, 170, 30, 0.9);
+  transition: opacity 0.5s ease;
 }`;
 
-function ensureRing(doc) {
-  let ring = doc.getElementById(RING_ID);
-  if (ring) return ring;
-  const style = doc.createElement("style");
-  style.textContent = RING_STYLE;
-  doc.head.appendChild(style);
-  ring = doc.createElement("div");
-  ring.id = RING_ID;
-  ring.setAttribute("aria-hidden", "true");
-  doc.body.appendChild(ring);
-  return ring;
+function ensureOverlay(doc, id) {
+  let box = doc.getElementById(id);
+  if (box) return box;
+  if (!doc.getElementById(`${RING_ID}-style`)) {
+    const style = doc.createElement("style");
+    style.id = `${RING_ID}-style`;
+    style.textContent = RING_STYLE;
+    doc.head.appendChild(style);
+  }
+  box = doc.createElement("div");
+  box.id = id;
+  box.setAttribute("aria-hidden", "true");
+  doc.body.appendChild(box);
+  return box;
+}
+
+const ensureRing = (doc) => ensureOverlay(doc, RING_ID);
+
+// 다른 화면에서 누른 결과로 바뀐 자리: 그 자리로 내려가서 잠깐 노랗게 표시한다(진짜 화면의 요소는 건드리지 않는다).
+function flashChange(doc, element) {
+  if (!doc.defaultView) return;
+  scrollToTarget(doc, element, null);
+  const box = ensureOverlay(doc, FLASH_ID);
+  const until = `${performance.now() + 3400}`;
+  box.dataset.until = until; // 새 표시가 오면 앞의 것은 그만둔다.
+  const tick = () => {
+    if (box.dataset.until !== until) return;
+    const left = Number(until) - performance.now();
+    const rect = element.isConnected ? element.getBoundingClientRect() : null;
+    if (left <= 0 || !rect || !rect.height) {
+      box.style.display = "none";
+      return;
+    }
+    box.style.display = "block";
+    box.style.opacity = left < 600 ? "0" : "1";
+    box.style.left = `${rect.left - 4}px`;
+    box.style.top = `${rect.top - 4}px`;
+    box.style.width = `${rect.width + 8}px`;
+    box.style.height = `${rect.height + 8}px`;
+    window.requestAnimationFrame(tick);
+  };
+  tick();
 }
 
 function scrollToTarget(doc, element, anchorSelector) {
   const view = doc.defaultView;
   if (!view) return;
-  const bottomLimit = view.innerHeight - 72;
-  const own = element.getBoundingClientRect();
-  // 카드 안의 버튼이면 카드가 통째로 보이게 맞춘다(위쪽 붙박이 머리글에 가리지 않게). 카드가 화면보다 길면 버튼만 맞춘다.
-  const anchor = anchorSelector ? element.closest(anchorSelector) : null;
-  const box = anchor?.getBoundingClientRect();
-  if (box && box.height <= bottomLimit - 132) {
-    if (box.top >= 132 && box.bottom <= bottomLimit) return;
-    // iframe 안에서만 움직인다(scrollIntoView 는 바깥 페이지까지 끌고 간다).
-    view.scrollTo({ top: Math.max(0, view.scrollY + box.top - 144), behavior: "smooth" });
-    return;
+  // 옆으로 넘기는 줄(폰 폭 관리자 화면의 메뉴 줄) 안에 있으면 그 줄을 옆으로 민다.
+  for (let node = element.parentElement; node && node !== doc.body; node = node.parentElement) {
+    if (node.scrollWidth <= node.clientWidth + 4 || !["auto", "scroll"].includes(view.getComputedStyle(node).overflowX)) continue;
+    const rail = node.getBoundingClientRect();
+    const item = element.getBoundingClientRect();
+    if (item.left < rail.left + 8 || item.right > rail.right - 8) {
+      node.scrollTo({ left: node.scrollLeft + item.left - rail.left - (rail.width - item.width) / 2, behavior: "smooth" });
+    }
+    break;
   }
-  if (own.top >= 96 && own.bottom <= bottomLimit) return;
-  view.scrollTo({ top: Math.max(0, view.scrollY + own.top - view.innerHeight * 0.38), behavior: "smooth" });
+  // 세로로 구르는 칸들(안쪽 → 바깥). 보통은 페이지 전체가 구르지만, 안쪽 칸이 따로 구르는 화면(노트북 폭의 총괄 화면)도 있다.
+  // 옆으로만 넘기는 줄은 세로로 몇 px 남는 것뿐이라 뺀다.
+  const scrollers = [];
+  for (let node = element.parentElement; node && node !== doc.body && node !== doc.documentElement; node = node.parentElement) {
+    if (node.scrollHeight - node.clientHeight > 40 && ["auto", "scroll"].includes(view.getComputedStyle(node).overflowY)) scrollers.push(node);
+  }
+  const pageScrolls = doc.documentElement.scrollHeight - view.innerHeight > 4;
+  if (pageScrolls || !scrollers.length) scrollers.push(null); // null = 페이지 전체
+  const anchor = anchorSelector ? element.closest(anchorSelector) : null;
+  let shift = 0; // 안쪽 칸을 굴린 만큼 요소는 위로 올라간다.
+  scrollers.forEach((scroller, index) => {
+    const top = scroller ? scroller.getBoundingClientRect().top : 0;
+    const height = scroller ? scroller.clientHeight : view.innerHeight;
+    const position = scroller ? scroller.scrollTop : view.scrollY;
+    const limit = (scroller ? scroller.scrollHeight : doc.documentElement.scrollHeight) - height;
+    // iframe 안에서만 움직인다(scrollIntoView 는 바깥 페이지까지 끌고 간다).
+    const move = (delta) => {
+      const next = Math.min(Math.max(0, limit), Math.max(0, position + delta));
+      (scroller || view).scrollTo({ top: next, behavior: "smooth" });
+      shift += next - position;
+    };
+    const own = element.getBoundingClientRect();
+    const ownTop = own.top - shift;
+    const ownBottom = own.bottom - shift;
+    if (index < scrollers.length - 1) {
+      if (ownTop < top + 8 || ownBottom > top + height - 8) move(ownTop - top - height * 0.38);
+      return;
+    }
+    const bottomLimit = top + height - 72;
+    // 카드 안의 버튼이면 카드가 통째로 보이게 맞춘다(위쪽 붙박이 머리글에 가리지 않게). 카드가 화면보다 길면 버튼만 맞춘다.
+    const box = anchor?.getBoundingClientRect();
+    if (box && box.height <= bottomLimit - top - 132) {
+      if (box.top - shift >= top + 132 && box.bottom - shift <= bottomLimit) return;
+      move(box.top - shift - top - 144);
+      return;
+    }
+    if (ownTop >= top + 96 && ownBottom <= bottomLimit) return;
+    move(ownTop - top - height * 0.38);
+  });
 }
 
 function useWide() {
@@ -105,26 +185,30 @@ function useWide() {
 }
 
 const toneOf = (frame) => (frame?.staff ? "staff" : "guest");
+// "손님 첫 화면" 처럼 이름이 '화면'으로 끝나면 '화면 화면 보기'가 되지 않게 한다.
+const viewLabel = (frame) => `${frame.label.replace(/\s*화면$/, "")} 화면 보기 →`;
 
-/* ---------- 폰 화면 한 개 ---------- */
+/* ---------- 화면 한 개 ---------- */
 function Phone({ frame, generation, wide, hidden, changed, isNext, frameRef }) {
   const screenRef = useRef(null);
   const [fit, setFit] = useState({ scale: 1, height: 700 });
+  // 그리는 폭: 보통은 폰(390). 노트북으로 쓰는 화면은 흐름 파일이 폭을 정한다.
+  const drawWidth = frame.width || 390;
 
-  // 넓은 화면에서는 폰 폭(390)으로 그린 화면을 칸에 맞게 줄여 보여 준다.
+  // 넓은 화면에서는 그 폭으로 그린 화면을 칸에 맞게 줄여 보여 준다.
   useEffect(() => {
     if (!wide || !screenRef.current || typeof ResizeObserver === "undefined") return undefined;
     const observer = new ResizeObserver(([entry]) => {
-      const scale = Math.min(1, entry.contentRect.width / 390);
+      const scale = Math.min(1, entry.contentRect.width / drawWidth);
       setFit({ scale, height: Math.round(entry.contentRect.height / scale) });
     });
     observer.observe(screenRef.current);
     return () => observer.disconnect();
-  }, [wide]);
+  }, [wide, drawWidth]);
 
   return (
     <section
-      className={`lg-phone${hidden ? " lg-phone--hidden" : ""}${changed ? " lg-phone--changed" : ""}${isNext ? " lg-phone--next" : ""}`}
+      className={`lg-phone${frame.width ? " lg-phone--desk" : ""}${hidden ? " lg-phone--hidden" : ""}${changed ? " lg-phone--changed" : ""}${isNext ? " lg-phone--next" : ""}`}
       aria-hidden={hidden ? "true" : undefined}
     >
       <header className="lg-phone__head">
@@ -142,7 +226,7 @@ function Phone({ frame, generation, wide, hidden, changed, isNext, frameRef }) {
           name={`ffdemo:${frame.id}`}
           title={`${frame.who} · ${frame.label}`}
           src={frame.home}
-          style={wide ? { transform: `scale(${fit.scale})`, height: fit.height } : undefined}
+          style={wide ? { width: drawWidth, transform: `scale(${fit.scale})`, height: fit.height } : undefined}
         />
       </div>
     </section>
@@ -151,7 +235,12 @@ function Phone({ frame, generation, wide, hidden, changed, isNext, frameRef }) {
 
 /* ---------- 페이지 ---------- */
 export default function LiveGuidePage() {
-  const host = useMemo(getHost, []);
+  // 처음 여는 흐름에 맞춰 연습용 서버를 준비한다(화면들이 뜨기 전에 시계부터 맞춘다).
+  const host = useMemo(() => {
+    const next = getHost();
+    next.reset(scenarioFromUrl());
+    return next;
+  }, []);
   const wide = useWide();
   const [scenario, setScenario] = useState(scenarioFromUrl);
   const [generation, setGeneration] = useState(0);
@@ -163,6 +252,19 @@ export default function LiveGuidePage() {
   const [closedResult, setClosedResult] = useState(0);
   const frameRefs = useRef({});
   const logId = useRef(0);
+  // 방금 일로 바뀐 자리를 찾는 함수(화면별). 폰에서는 그 화면을 열 때 한 번 더 표시한다.
+  const pendingShow = useRef({});
+  const showChange = useCallback((frameId) => {
+    const find = pendingShow.current[frameId];
+    if (!find) return;
+    try {
+      const doc = frameRefs.current[frameId]?.contentDocument;
+      const element = doc?.body ? find(doc) : null;
+      if (element) flashChange(doc, element);
+    } catch {
+      // 닫힌 화면
+    }
+  }, []);
   const scenarioRef = useRef(scenario);
   scenarioRef.current = scenario;
 
@@ -196,6 +298,12 @@ export default function LiveGuidePage() {
       }, 250);
       const entry = scenarioRef.current.describe(event);
       if (!entry) return;
+      pendingShow.current = {};
+      entry.effects.forEach((effect) => {
+        if (!effect.show) return;
+        pendingShow.current[effect.frame] = effect.show;
+        later(() => showChange(effect.frame), effect.showDelay ?? 900);
+      });
       logId.current += 1;
       const stampId = logId.current;
       setLog((current) => [{ id: stampId, ...entry }, ...current].slice(0, 6));
@@ -213,7 +321,7 @@ export default function LiveGuidePage() {
       host.onBlocked = null;
       timers.forEach((timer) => window.clearTimeout(timer));
     };
-  }, [host]);
+  }, [host, showChange]);
 
   // 시간이 흘러야 끝나는 단계(임시 잠금이 풀림 · 채팅 시간 끝)가 있어서, 조용히 한 번씩 상태를 다시 읽는다.
   useEffect(() => {
@@ -294,7 +402,8 @@ export default function LiveGuidePage() {
 
   const start = useCallback(
     (nextScenario) => {
-      host.reset();
+      host.reset(nextScenario);
+      pendingShow.current = {};
       setScenario(nextScenario);
       setSnap(host.server.snapshot());
       setLog([]);
@@ -315,6 +424,12 @@ export default function LiveGuidePage() {
     if (!scenario.frames.some((frame) => frame.id === id)) return;
     setTab(id);
     setClosedResult(logId.current);
+    if (pendingShow.current[id]) {
+      window.setTimeout(() => {
+        showChange(id);
+        delete pendingShow.current[id];
+      }, 350);
+    }
     setChanged((currentChanged) => Object.fromEntries(Object.entries(currentChanged).filter(([key]) => key !== id)));
   };
 
@@ -363,7 +478,7 @@ export default function LiveGuidePage() {
               aria-pressed={item === scenario}
               onClick={() => (item === scenario ? undefined : start(item))}
             >
-              {item.label}
+              {wide ? item.label : item.shortLabel || item.label}
             </button>
           ))}
         </nav>
@@ -407,7 +522,7 @@ export default function LiveGuidePage() {
                 ) : null}
                 {!wide && currentFrame && tab !== current.frame && !sheetOpen && (
                   <button type="button" className="lg-btn lg-btn--primary" onClick={() => openTab(current.frame)}>
-                    {currentFrame.label} 화면 보기 →
+                    {viewLabel(currentFrame)}
                   </button>
                 )}
               </div>
@@ -469,7 +584,10 @@ export default function LiveGuidePage() {
         </nav>
       )}
 
-      <div className="lg-stage">
+      <div
+        className="lg-stage"
+        style={wide ? { gridTemplateColumns: scenario.frames.map((frame) => `minmax(0, ${frame.width ? 2.6 : 1}fr)`).join(" ") } : undefined}
+      >
         {scenario.frames.map((frame) => (
           <Phone
             key={frame.id}
@@ -490,7 +608,7 @@ export default function LiveGuidePage() {
             <div className="lg-sheet__actions">
               {peekFrame && (
                 <button type="button" className="lg-btn lg-btn--primary" onClick={() => openTab(peekFrame)}>
-                  {FRAME_BY_ID[peekFrame].label} 화면 보기 →
+                  {viewLabel(FRAME_BY_ID[peekFrame])}
                 </button>
               )}
               <button type="button" className="lg-btn lg-btn--ghost" onClick={() => setClosedResult(latest.id)}>
