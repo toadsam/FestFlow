@@ -173,6 +173,24 @@ function install(host) {
   };
   window.history.back = () => window.history.go(-1);
 
+  /* ----- 시계: 매뉴얼의 '건너뛰기'가 연습용 서버의 시각을 앞당기면 이 화면의 시계도 같이 간다 ----- */
+  const RealDate = window.Date;
+  const offset = () => host.server.clock?.offset || 0;
+  function DemoDate(...args) {
+    if (!new.target) return new RealDate(RealDate.now() + offset()).toString();
+    return args.length ? new RealDate(...args) : new RealDate(RealDate.now() + offset());
+  }
+  DemoDate.prototype = RealDate.prototype;
+  DemoDate.now = () => RealDate.now() + offset();
+  DemoDate.parse = RealDate.parse;
+  DemoDate.UTC = RealDate.UTC;
+  window.Date = DemoDate;
+
+  /* ----- 기다림 줄이기 ----- */
+  // 실제 화면은 신청함을 15초, 운영진 시간표를 10초마다 다시 읽는다. 연습에서는 그 기다림만 2초로 줄인다(화면이 하는 일은 같다).
+  const realSetInterval = window.setInterval.bind(window);
+  window.setInterval = (handler, delay, ...rest) => realSetInterval(handler, delay >= 5000 ? 2000 : delay, ...rest);
+
   document.documentElement.setAttribute("data-ffdemo", role);
   return true;
 }

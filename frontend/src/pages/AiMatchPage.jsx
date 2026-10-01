@@ -698,6 +698,9 @@ function formatImagePreviewError(error) {
 
 export default function AiMatchPage() {
   const [activeScreen, setActiveScreen] = useState("intro");
+  // 조용한 갱신(15초마다)이 응답을 받을 때 '지금 보고 있는 화면'을 알기 위한 값.
+  const activeScreenRef = useRef(activeScreen);
+  activeScreenRef.current = activeScreen;
   const [profiles, setProfiles] = useState([]);
   const profilesRef = useRef(profiles);
   profilesRef.current = profiles;
@@ -1045,7 +1048,7 @@ export default function AiMatchPage() {
       // 신청함은 15초마다, 사람 목록까지는 2분마다 다시 읽는다.
       accessRefreshTickRef.current += 1;
       const light = accessRefreshTickRef.current % 8 !== 0;
-      loadAccessProfile(accessNickname, accessPin, activeScreen, { closeModal: false, notify: true, light })
+      loadAccessProfile(accessNickname, accessPin, activeScreen, { closeModal: false, notify: true, light, keepScreen: true })
         .catch((error) => {
           if (error?.status === 429) {
             accessRefreshPausedUntilRef.current = Date.now() + 60_000;
@@ -1319,9 +1322,14 @@ export default function AiMatchPage() {
     nextNickname,
     nextPin,
     nextScreen = "requests",
-    { closeModal = true, notify = false, announceSummary = false, light = false } = {},
+    { closeModal = true, notify = false, announceSummary = false, light = false, keepScreen = false } = {},
   ) {
-    const resolvedNextScreen = nextScreen === "people" ? "intro" : nextScreen;
+    // keepScreen: 조용한 갱신. 요청을 보낸 뒤 응답이 오기 전에 사용자가 다른 화면으로 갔으면 그 화면에 그대로 둔다
+    // (예전엔 응답이 오면서 요청을 보낼 때의 화면으로 되돌아갔다).
+    const resolveScreen = () => {
+      const wanted = keepScreen ? activeScreenRef.current : nextScreen;
+      return wanted === "people" ? "intro" : wanted;
+    };
     const sessionSeq = accessSessionSeqRef.current;
     // light: 신청함만 다시 읽는다(사람 목록은 그대로 둔다). 목록에 없는 사람이 신청함에 보이면 전체를 다시 읽는다.
     let response = null;
@@ -1363,6 +1371,7 @@ export default function AiMatchPage() {
       : [];
     const loginNotices = announceSummary ? collectLoginNotifications(nextReceivedRequests, nextSentRequests) : [];
     requestSnapshotRef.current = createRequestSnapshot(nextReceivedRequests, nextSentRequests);
+    const resolvedNextScreen = resolveScreen();
     updateUnreadRequestCount(currentNotices, resolvedNextScreen);
     setAccessProfile(response.profile || null);
     setAccessRequests(nextReceivedRequests);
@@ -1380,7 +1389,9 @@ export default function AiMatchPage() {
     if (currentSelectedProfile) {
       setActiveSelectedProfile(nextProfiles.find((profile) => profile.id === currentSelectedProfile.id) || null);
     }
-    setActiveScreen(resolvedNextScreen);
+    if (!keepScreen) {
+      setActiveScreen(resolvedNextScreen);
+    }
     if (closeModal) {
       setAccessModalOpen(false);
     }

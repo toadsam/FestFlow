@@ -1,6 +1,6 @@
 // 사주 소개팅 탭에 처음 들어올 때 2초 동안 뜨는 스플래시. 밤하늘·달·오행 원 그림 위에 제목과 진행 바.
 // 페이지를 새로 열 때마다 한 번(앱 스플래시와 같은 규칙). 탭만 오가면 다시 안 뜬다. 그림은 public/images/saju/splash-top.webp.
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 const SHOW_MS = 2000;
@@ -19,16 +19,19 @@ export function shouldShowSajuSplash() {
 
 export default function SajuSplash({ onDone }) {
   const [phase, setPhase] = useState("in");
+  // 부모가 다시 그려질 때마다 onDone 이 새 함수로 온다. 그때마다 타이머를 다시 걸면 부모가 자주 그려지는 동안(신청함 갱신 등) 스플래시가 끝나지 않는다.
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   useEffect(() => {
     shownThisLoad = true;
     const fade = window.setTimeout(() => setPhase("out"), SHOW_MS);
-    const done = window.setTimeout(() => onDone?.(), SHOW_MS + FADE_MS);
+    const done = window.setTimeout(() => onDoneRef.current?.(), SHOW_MS + FADE_MS);
     return () => {
       window.clearTimeout(fade);
       window.clearTimeout(done);
     };
-  }, [onDone]);
+  }, []);
 
   return createPortal(
     <div className={`saju-splash saju-splash--${phase}`} role="presentation" aria-hidden="true" onClick={() => setPhase("out")}>

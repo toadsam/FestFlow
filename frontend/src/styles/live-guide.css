@@ -52,7 +52,7 @@ html.lg-root #root {
   gap: 8px;
 }
 
-.lg-page:not(.lg-page--wide) .lg-top__title small,
+.lg-page:not(.lg-page--wide) .lg-top__title > div,
 .lg-page:not(.lg-page--wide) .lg-log,
 .lg-page:not(.lg-page--wide) .lg-ideas {
   display: none;
@@ -62,12 +62,6 @@ html.lg-root #root {
   padding: 10px 12px;
   gap: 8px;
   border-radius: 16px;
-}
-
-.lg-page:not(.lg-page--wide) .lg-steps li {
-  width: 22px;
-  height: 22px;
-  font-size: 11.5px;
 }
 
 .lg-page:not(.lg-page--wide) .lg-now {
@@ -132,6 +126,37 @@ html.lg-root #root {
   flex: none;
 }
 
+.lg-flows {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #e6eaf1;
+}
+
+.lg-page .lg-flow {
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--lg-sub);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.lg-page .lg-flow.is-on {
+  background: #fff;
+  color: var(--lg-ink);
+  box-shadow: 0 1px 3px rgba(18, 24, 38, 0.14);
+}
+
+.lg-page--wide .lg-flows {
+  margin-right: auto;
+  margin-left: 12px;
+}
+
 .lg-badge {
   display: none;
   padding: 6px 10px;
@@ -168,6 +193,13 @@ html.lg-root #root {
   color: #fff;
 }
 
+.lg-page .lg-btn--point {
+  background: var(--lg-point);
+  color: #fff;
+  padding: 11px 16px;
+  font-size: 15px;
+}
+
 /* ---------- 지금 할 일 ---------- */
 .lg-coach {
   background: #fff;
@@ -184,46 +216,22 @@ html.lg-root #root {
   margin: 0;
   padding: 0;
   display: flex;
-  align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .lg-steps li {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: #eef1f6;
-  color: #8a94a6;
-  font-size: 12.5px;
-  font-weight: 800;
-  position: relative;
-}
-
-.lg-steps li + li {
-  margin-left: 14px;
-}
-
-.lg-steps li + li::before {
-  content: "";
-  position: absolute;
-  right: 100%;
-  top: 50%;
-  width: 14px;
-  height: 2px;
-  margin-right: 3px;
-  background: #e1e6ee;
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: #e6eaf1;
 }
 
 .lg-steps li.is-done {
-  background: #e3f6ee;
-  color: var(--lg-guest);
+  background: var(--lg-guest);
 }
 
 .lg-steps li.is-current {
   background: var(--lg-point);
-  color: #fff;
 }
 
 .lg-coach__body {
@@ -317,6 +325,11 @@ html.lg-root #root {
 .lg-who--staff {
   background: #e8efff;
   color: var(--lg-staff);
+}
+
+.lg-who--coach {
+  background: #ffe9e1;
+  color: #c2410c;
 }
 
 .lg-result {
