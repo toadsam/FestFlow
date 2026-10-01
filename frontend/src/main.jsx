@@ -3,6 +3,7 @@ import { isDemoFrame } from "./demo/demoFrame";
 import React, { Suspense, lazy } from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { Analytics } from "@vercel/analytics/react";
 import App from "./App";
 import { LanguageProvider } from "./i18n";
 import "./index.css";
@@ -121,6 +122,8 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           </Route>
         </Routes>
       </BrowserRouter>
+      {/* Vercel 방문 통계. 운영 사이트에서만 센다(로컬 · 매뉴얼 안의 연습 화면은 빼서 숫자가 부풀지 않게). */}
+      {import.meta.env.PROD && !isLocalRuntime && !isDemoFrame ? <Analytics /> : null}
     </LanguageProvider>
   </React.StrictMode>,
 );
