@@ -178,7 +178,7 @@ export function CoverPage({ set, active, onMenu, onFilter }) {
   const clock = `${String(Math.floor(recSeconds / 60)).padStart(2, "0")}:${String(recSeconds % 60).padStart(2, "0")}`;
 
   return (
-    <div className={`cn-cover cn-cover--${mode.replace(/[^a-z0-9]/gi, "").toLowerCase()}${hdr ? " is-hdr" : ""}`}>
+    <div className={`cn-cover cn-cover--${mode.replace(/[^a-z0-9]/gi, "").toLowerCase()}${hdr ? " is-hdr" : ""}${cover.photo ? " cn-cover--poster" : ""}`}>
       <div className="cn-cover__bar">
         <button type="button" aria-label={flash ? "플래시 끄기" : "플래시 켜기"} onClick={() => setFlash((v) => !v)} className={flash ? "is-on" : ""}>
           {flash ? <CnIcon.flashOn /> : <CnIcon.flash />}
@@ -199,8 +199,18 @@ export function CoverPage({ set, active, onMenu, onFilter }) {
           className="cn-vf__scene"
           style={{ transform: `scale(${zoom})`, filter: `brightness(${1 + exposure * 0.28}) saturate(${hdr ? 1.25 : 1}) contrast(${hdr ? 1.08 : 1})` }}
         >
-          <div className="cn-vf__paper" aria-hidden="true" />
-          <StarDust seed={11} dust={110} glow={9} className="cn-vf__stars" />
+          {cover.photo ? (
+            <>
+              {/* 포스터가 잘리지 않게 통째로 넣고, 남는 위아래는 흐린 포스터로 채운다 */}
+              <span className="cn-vf__photoblur" style={{ backgroundImage: `url(${img(cover.thumb || cover.photo)})` }} aria-hidden="true" />
+              <img className="cn-vf__photo" src={img(cover.photo)} alt={`${set.title} 포스터`} draggable="false" />
+            </>
+          ) : (
+            <>
+              <div className="cn-vf__paper" aria-hidden="true" />
+              <StarDust seed={11} dust={110} glow={9} className="cn-vf__stars" />
+            </>
+          )}
         </div>
         <div className="cn-vf__grid" aria-hidden="true">
           <i /><i /><i /><i />

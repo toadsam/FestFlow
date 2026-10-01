@@ -3,7 +3,8 @@
  */
 
 .cn-viewer,
-.cn-shelf {
+.cn-shelf,
+.cn-hl {
   --cn-out-top: #4f7199;
   --cn-out-mid: #6a88a9;
   --cn-out-bot: #7f9aae;
@@ -2512,6 +2513,238 @@
   color: #8b95a1 !important;
 }
 
+/* 진열대: 포스터를 표지로 쓰는 묶음 */
+.app-shell[data-v2="true"] .v2-page .cn-shelf .cn-mini__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 30%;
+}
+
+/* 첫 화면: 하이라이트 배너(고른 소식이 돌아가며 나온다) */
+.app-shell[data-v2="true"] .v2-page .cn-hl__track {
+  display: flex;
+  gap: 10px;
+  margin: 0 -20px -8px;
+  padding: 2px 20px 18px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 20px;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__track::-webkit-scrollbar {
+  display: none;
+}
+
+.app-shell.app-shell[data-v2="true"] .v2-page .cn-hl__slide,
+.app-shell.app-shell[data-v2="true"] .v2-page .cn-hl__slide:is(:hover, :focus, :active) {
+  position: relative;
+  display: block !important;
+  flex: 0 0 100%;
+  min-height: 0 !important;
+  aspect-ratio: 4 / 3;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 0 !important;
+  border-radius: 20px !important;
+  background: linear-gradient(180deg, var(--cn-sky-top), var(--cn-sky-mid) 55%, var(--cn-sky-bot)) !important;
+  box-shadow: 0 8px 18px rgba(40, 70, 120, 0.2) !important;
+  color: #fff !important;
+  text-align: left;
+  scroll-snap-align: start;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__slide * {
+  color: #fff !important;
+}
+
+/* 포스터 장: 구름 글씨 ~ 얼굴 구간이 보이게 자른다 */
+.app-shell[data-v2="true"] .v2-page .cn-hl__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 35%;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__paper {
+  position: absolute;
+  inset: 0;
+  background-image: var(--cn-paper);
+  background-size: 300px 300px;
+  mix-blend-mode: overlay;
+  opacity: 0.9;
+}
+
+/* 소품: 위쪽 오른편에 놓는다(글은 아래 왼편) */
+.app-shell[data-v2="true"] .v2-page .cn-hl__art {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  left: 30%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  height: 47%;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__art img {
+  display: block;
+  max-width: 62%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 14px rgba(20, 45, 90, 0.28));
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__art--wide img {
+  max-width: 100%;
+  transform: rotate(-5deg);
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__art--stack img {
+  max-width: 58%;
+  margin-left: calc(var(--n) * -14%);
+  transform: translateY(calc(var(--n) * 16px - 8px));
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__art--versus {
+  gap: 10px;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__art--versus img {
+  width: 84px;
+  max-width: none;
+  height: 84px;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  border-radius: 50%;
+  background: #fff;
+  object-fit: cover;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__art--versus img:first-child {
+  order: 0;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__art--versus i {
+  order: 1;
+  font-family: var(--cn-round) !important;
+  font-size: 18px;
+  font-style: normal;
+  text-shadow: 0 2px 8px rgba(20, 45, 90, 0.4);
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__art--versus img:nth-of-type(2) {
+  order: 2;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__bar {
+  position: absolute;
+  inset: auto 0 0 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 26px 16px 14px;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__slide--photo .cn-hl__bar {
+  background: linear-gradient(180deg, rgba(20, 40, 80, 0), rgba(20, 40, 80, 0.66));
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__text small {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  opacity: 0.92;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__text b {
+  display: flex;
+  flex-direction: column;
+  margin: 3px 0 5px;
+  font-size: 30px;
+  font-weight: 400;
+  line-height: 1.14;
+  text-shadow: 0 2px 10px rgba(20, 45, 90, 0.35);
+  white-space: nowrap;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__text b,
+.app-shell[data-v2="true"] .v2-page .cn-hl__text b span {
+  font-family: var(--cn-round) !important;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__slide--photo .cn-hl__text b {
+  margin: 1px 0 3px;
+  font-size: 24px;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__slide--photo .cn-hl__text b,
+.app-shell[data-v2="true"] .v2-page .cn-hl__slide--photo .cn-hl__text b span {
+  font-family: var(--cn-sans) !important;
+  font-weight: 800;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__text em {
+  font-size: 12.5px;
+  font-style: normal;
+  font-weight: 600;
+  opacity: 0.92;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__go {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  height: 30px;
+  padding: 0 6px 0 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(6px);
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__go svg {
+  width: 16px;
+  height: 16px;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__dots i {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+  background: var(--v2-gray-2);
+  transition:
+    width 0.25s ease,
+    background 0.25s ease;
+}
+
+.app-shell[data-v2="true"] .v2-page .cn-hl__dots i.is-on {
+  width: 16px;
+  background: var(--v2-blue);
+}
+
 /* 진열대 위 날짜 칩(.v2-chip 그대로, 개수만 작게) */
 .app-shell[data-v2="true"] .v2-page .cn-shelf-chips {
   gap: 6px;
@@ -3707,7 +3940,8 @@
 
 /* 짙은 파랑 묶음(응원대제전). 필터를 바꾸면 그 필터의 하늘이 이긴다. */
 .cn-viewer.cn-tone--deep.cn-theme--sky,
-.cn-mini--deep {
+.cn-mini--deep,
+.cn-hl__slide--deep {
   --cn-out-top: #1b4ea6;
   --cn-out-mid: #2460bd;
   --cn-out-bot: #2a6bc8;
@@ -4566,4 +4800,144 @@
   85% {
     transform: rotate(2deg);
   }
+}
+
+/* =================== 스페셜 아티스트 · 플레이리스트 영상 =================== */
+
+/* 표지에 포스터를 쓰는 묶음: 그린 표지의 글 · 새 · 로고는 뺀다(포스터에 이미 있다).
+ * 클래스 이름을 --photo 로 지으면 촬영 모드 Photo(cn-cover--photo)와 겹쳐 모든 표지에 걸린다. */
+.cn-vf__photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* 위로 붙여서, 아래쪽 확대 버튼 · 넘겨 보기가 포스터 글자를 덮지 않게 */
+  object-position: 50% 8%;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.cn-cover--poster .cn-vf__zoom {
+  bottom: 9%;
+}
+
+.cn-cover--poster .cn-vf__hint {
+  bottom: 3%;
+}
+
+.cn-vf__photoblur {
+  position: absolute;
+  inset: -12%;
+  background-position: center;
+  background-size: cover;
+  filter: blur(28px) saturate(1.1);
+}
+
+.cn-cover--poster .cn-vf__brand,
+.cn-cover--poster .cn-vf__bird,
+.cn-cover--poster .cn-vf__title,
+.cn-cover--poster .cn-vf__foot {
+  display: none !important;
+}
+
+/* 아티스트 장 */
+.cn-poster {
+  position: relative;
+  display: block !important;
+  width: 38%;
+  margin: 10px auto 0;
+  padding: 0 !important;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, 0.75) !important;
+  border-radius: 14px;
+  box-shadow: 0 12px 26px rgba(20, 40, 80, 0.32);
+  transition: transform 0.2s ease;
+}
+
+.cn-poster:active {
+  transform: scale(0.97) rotate(-1deg);
+}
+
+.cn-poster img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1428 / 2000;
+  object-fit: cover;
+}
+
+.cn-poster__shine {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.65) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: cn-poster-shine 0.8s ease-out forwards;
+  pointer-events: none;
+}
+
+@keyframes cn-poster-shine {
+  to {
+    transform: translateX(120%);
+  }
+}
+
+.cn-artistname {
+  margin: 10px 0 8px;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
+  text-align: center;
+  text-shadow: 0 2px 12px rgba(20, 45, 90, 0.35);
+}
+
+/* 플레이리스트: 곡을 누르면 열리는 영상 */
+.cn-player {
+  margin-top: 10px;
+}
+
+.cn-player__frame {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1.5px solid rgba(255, 255, 255, 0.55);
+  border-radius: 12px;
+  background: #0b1a33;
+}
+
+.cn-player__frame iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.cn-player__cap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 2px 8px;
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.cn-player__cap b {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.cn-player__cap span {
+  opacity: 0.85;
+}
+
+.cn-player__cap a {
+  flex: 0 0 100%;
+  color: #fff !important;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }

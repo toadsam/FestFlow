@@ -38,6 +38,7 @@ import {
   AroInfoPage,
   AroMenuPage,
   AroPubPage,
+  ArtistInfoPage,
   CheerOtPage,
   CheerPlaylistPage,
   CheerSloganPage,
@@ -74,6 +75,7 @@ const PAGES = {
   "photo-place": PhotoPlacePage,
   "photo-frame": PhotoFramePage,
   "bar-rules": BarRulesPage,
+  "artist-info": ArtistInfoPage,
   "aro-info": AroInfoPage,
   "aro-pub": AroPubPage,
   "aro-menu": AroMenuPage,
@@ -518,6 +520,11 @@ export function CardNewsShelf({ onOpen }) {
       <div className="cn-shelf" role="list" ref={shelfRef}>
         {sets.map((set, i) => (
           <button key={set.id} type="button" role="listitem" className="cn-shelf__item v2-rise" style={{ "--i": (picked ? 0 : 4) + i }} onClick={() => onOpen(set.id, 0)}>
+            {set.cover?.thumb ? (
+              <span className="cn-mini cn-mini--photo" aria-hidden="true">
+                <img className="cn-mini__photo" src={`${CARD_NEWS_IMG}/${set.cover.thumb}.webp`} alt="" loading="lazy" />
+              </span>
+            ) : (
             <span className={`cn-mini${set.tone ? ` cn-mini--${set.tone}` : ""}`} aria-hidden="true">
               <span className="cn-mini__paper" />
               <StarDust seed={11 + CARD_NEWS.indexOf(set)} dust={40} glow={4} className="cn-mini__stars" />
@@ -537,6 +544,7 @@ export function CardNewsShelf({ onOpen }) {
               </span>
               <span className="cn-mini__date">{shortDate(set)}</span>
             </span>
+            )}
             <span className="cn-shelf__meta">
               <strong>{set.title}</strong>
               <small>{set.pages.length}장 · 넘겨 보기</small>

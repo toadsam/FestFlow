@@ -207,6 +207,19 @@ export const SUCL = {
 /* ---------- 응원대제전(10.08) ---------- */
 export const CHEER = {
   playlist: ["Emperor", "투혼가", "전력질주", "승리의 푸른 횃불", "내가 바로 아주인", "우리는 하나", "부산 바캉스", "예술이야"],
+  // 곡을 누르면 카드 안에서 트는 영상. 전부 아주대학교 응원단 센토 유튜브 채널의 무대 영상이다(카드 안 재생 허용 확인, 2026-10-01).
+  // start / end 는 초 — 여러 곡이 이어진 영상은 그 곡이 나오는 구간만 튼다(영상 설명의 시간표 기준).
+  // "승리의 푸른 횃불"은 유튜브에 영상이 없다(안무는 센토 인스타그램 릴스로 공개 예정).
+  videos: {
+    Emperor: { id: "zLmGZt3RZ-M", start: 0, end: 120, from: "2026 수페리얼" },
+    투혼가: { id: "7k0jymTSEcM", start: 102, from: "2026 ACENTIA" },
+    전력질주: { id: "FQ3k9wLocGY", from: "2023 응원대제전" },
+    "내가 바로 아주인": { id: "zL1-3BrdW8M", from: "2024 응원대제전" },
+    "우리는 하나": { id: "3iUk16N14nE", from: "2025 ACENTIA" },
+    "부산 바캉스": { id: "8LuirFUBKcI", from: "2026 ACENTIA" },
+    예술이야: { id: "3YHyRl_ns64", from: "2026 ACENTIA" },
+  },
+  noVideo: "영상은 아직 없어요 · 안무는 센토 인스타그램 릴스에서",
   intro: [
     "응원은 함께할 때 더욱 커집니다.",
     "응원오리엔테이션에서 CENTAUR와 함께 응원의 기본 동작과 구호를 익히고, 아주대학교만의 응원 문화를 직접 경험해보세요.",
@@ -245,6 +258,16 @@ export const CHEER = {
  * cover.lines 는 표지 큰 글씨(줄마다), cover.sub 는 그 아래 작은 영어 줄, cover.date 는 날짜 줄.
  * cover.sub 가 배열이면 줄마다 따로 쓴다. cover.small 에 적은 줄은 작게 쓴다. tone: "deep" 은 짙은 파랑 묶음.
  */
+// 10.08(목) 공연무대 스페셜 아티스트. 인물 사진은 다시 그릴 수 없어서 총학 포스터를 그대로 쓴다.
+export const ARTIST = {
+  label: "SPECIAL ARTIST",
+  name: "fromis_9",
+  date: "10. 08. (목)",
+  poster: "artist-poster",
+  thumb: "artist-poster-s",
+  entryRule: "노천극장은 아주인만 입장할 수 있어요. 학생증(또는 모바일 학생증)을 준비해 주세요.",
+};
+
 export const CARD_NEWS = [
   {
     id: "main-booth",
@@ -259,6 +282,14 @@ export const CARD_NEWS = [
     title: "굿즈 안내",
     cover: { lines: ["굿즈 안내"], date: BOTH_DAYS },
     pages: ["cover", "goods-place", "tee", "keyring", "contact"],
+  },
+  {
+    // 표지 · 진열대에 그린 표지 대신 포스터를 쓴다(cover.photo / cover.thumb).
+    id: "artist",
+    days: [DAY2],
+    title: "스페셜 아티스트 fromis_9",
+    cover: { lines: ["SPECIAL ARTIST"], sub: "fromis_9", date: "10. 08. (목)", photo: "artist-poster", thumb: "artist-poster-s" },
+    pages: ["cover", "artist-info", "contact"],
   },
   {
     id: "stage",
@@ -348,6 +379,7 @@ export const PAGE_TITLES = {
   "stage-teams": "학생참여공연팀",
   "stage-banned": "반입금지 물품 안내",
   "stage-etc": "기타 유의사항",
+  "artist-info": "스페셜 아티스트",
   "barrier-about": "공연 무대 배리어 프리존 입장 안내",
   "barrier-steps": "배리어 프리존 입장 절차",
   "barrier-map": "배리어 프리존 입구",
@@ -390,6 +422,7 @@ export const PAGE_INFO = {
   "stage-queue": "공연무대 입구는 총학생회 본부 옆 노천극장 입구 하나뿐. 다른 곳으로 들어가면 퇴장, 대리 줄 서기 금지.",
   "stage-teams": "학생참여공연팀 12팀: 스파이더스, 라스트댄스, 5분쉼표, 하늘음표, 정민경·박민서, 늙크크, 김준영, MASTERPIECE, B.E.A.T, 낮에는 착합니다, 보석함, 늑대야.",
   "stage-banned": "반입 물품 검사를 합니다. 날카롭고 뾰족한 물건, 위험물품, 전문 촬영 장비, 화기 물품, 음식물·주류 등은 반입 금지.",
+  "artist-info": "10.08(목) 공연무대 스페셜 아티스트는 fromis_9. 노천극장(The Art), 입장은 17:30부터이고 아주인만 입장할 수 있어요(학생증 확인).",
   "stage-etc": "관람 방해·통제 불응 시 즉각 퇴장. 노천극장 계단이 가파르니 조심, 재입장이 막힐 수 있음, 퇴장은 입구 가까운 사람부터 천천히.",
   "barrier-about": "10.08(목) 18:00 – 22:00 노천극장(The Art)에서 배리어 프리존을 운영해요.",
   "barrier-steps": "사전 신청 없이 노천극장에서 현장 스태프에게 요청하면 배리어 프리존으로 안전하고 빠르게 이동할 수 있어요.",
@@ -409,7 +442,7 @@ export const PAGE_INFO = {
   "run-items": "지급 물품: 행사 티셔츠, 배번, 물, 참가메달.",
   "sucl-final": "SUCL2026 with 아주대학교 결승: 일레븐 VS FC미디어. 10.07(수) 16:30 – 19:00, 아주대학교 대운동장.",
   "sucl-event": "결승전 장면을 촬영해 인스타그램 스토리에 올리고 @ajou_council 을 언급하면, 추첨으로 10명에게 5만원 상당 상품권(총 50만 원 상당)을 드려요.",
-  "cheer-playlist": "CENTAUR PLAYLIST: Emperor, 투혼가, 전력질주, 승리의 푸른 횃불, 내가 바로 아주인, 우리는 하나, 부산 바캉스, 예술이야.",
+  "cheer-playlist": "CENTAUR PLAYLIST: Emperor, 투혼가, 전력질주, 승리의 푸른 횃불, 내가 바로 아주인, 우리는 하나, 부산 바캉스, 예술이야. 곡을 누르면 응원단 센토의 무대 영상이 재생돼요.",
   "cheer-ot": "2026 응원 오리엔테이션 · Crescentaur: 점점 더, 아주 크게. 아주대학교 응원단 CENTAUR와 함께 새로운 응원의 장을 열어요.",
   "cheer-torch": "푸른 횃불 챌린지: 센토 인스타그램 팔로우 → 푸른 횃불 안무 익히기 → 공연 당일 무대에서 따라 추기. 1등 Apple Watch SE3(1명), 2등 신세계 상품권 10만원권(4명).",
   "cheer-slogan": "10.08(목) 공연 무대 입장 시 선착순 500명에게 응원 슬로건을 증정해요. 수량 소진 시 조기 마감.",
@@ -431,6 +464,116 @@ export function cardNewsDayKey(set) {
   return set.days?.length === 1 ? set.days[0] : "both";
 }
 
+// 첫 화면 하이라이트 배너(돌아가며 보여 준다).
+// 평소에는 pre 가 붙은 것만 이 순서대로, 축제 당일에는 그날(day) 것만 시작 시간 순으로 보여 준다(start 가 없으면 맨 앞).
+// title 은 줄 단위, art 는 public/images/cardnews 의 소품, page 를 적으면 그 장부터 연다.
+const HIGHLIGHTS = [
+  {
+    id: "artist",
+    day: DAY2,
+    pre: true,
+    set: "artist",
+    photo: "artist-poster",
+    label: "SPECIAL ARTIST",
+    title: ["fromis_9"],
+    meta: "10.08 (목) · 노천극장 공연무대",
+    end: "2026-10-08T22:00:00",
+  },
+  {
+    // 응원대제전은 시간이 따로 공지되지 않아서 공연 시작(18:00)으로 줄만 세운다.
+    id: "cheer",
+    day: DAY2,
+    pre: true,
+    set: "cheer",
+    tone: "deep",
+    label: "응원대제전",
+    title: ["점점 더,", "아주 크게"],
+    meta: "10.08 (목) · 공연무대",
+    art: ["cheer-slogan"],
+    artKind: "wide",
+    start: "2026-10-08T18:00:00",
+    end: "2026-10-08T22:00:00",
+  },
+  {
+    id: "aro",
+    day: DAY1,
+    pre: true,
+    set: "aro",
+    label: "아로새길 거리축제",
+    title: ["거리축제 ·", "총학 주점"],
+    meta: "10.07 (수) 14:00 ~ 23:00",
+    art: ["dish-jjapa", "dish-pork"],
+    artKind: "stack",
+    start: "2026-10-07T14:00:00",
+    end: "2026-10-07T23:00:00",
+  },
+  {
+    id: "run",
+    day: DAY1,
+    pre: true,
+    set: "run",
+    label: "뛰아주",
+    title: ["캠퍼스를", "달려요"],
+    meta: "10.07 (수) 10:30 · 축구장 출발",
+    art: ["run-tee", "run-medal"],
+    start: "2026-10-07T10:30:00",
+    end: "2026-10-07T12:00:00",
+  },
+  {
+    id: "sucl",
+    day: DAY1,
+    pre: true,
+    set: "sucl",
+    label: "SUCL 2026 결승",
+    title: ["일레븐 VS", "FC미디어"],
+    meta: "10.07 (수) 16:30 · 대운동장",
+    art: ["sucl-eleven", "sucl-fcmedia"],
+    artKind: "versus",
+    start: "2026-10-07T16:30:00",
+    end: "2026-10-07T19:00:00",
+  },
+  // 아래 둘은 당일에만 나온다.
+  {
+    id: "sports",
+    day: DAY1,
+    set: "sports",
+    label: "체육대회",
+    title: ["청팀 VS 백팀"],
+    meta: "10.07 (수) 13:00 · 대운동장",
+    art: ["orb-blue", "orb-white"],
+    artKind: "versus",
+    start: "2026-10-07T13:00:00",
+    end: "2026-10-07T15:00:00",
+  },
+  {
+    id: "stage",
+    day: DAY2,
+    set: "stage",
+    page: "stage-entry",
+    label: "공연무대 입장",
+    title: ["입장은", "17:30부터"],
+    meta: "아주인만 입장 · 학생증 준비",
+    art: ["bird"],
+    start: "2026-10-08T17:30:00",
+    end: "2026-10-08T22:00:00",
+  },
+];
+
+function localDayKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+/** 지금 보여 줄 하이라이트. 축제 당일이면 { today: true, items: 그날 것(끝난 행사는 뒤로) }. */
+export function highlightsFor(now = new Date()) {
+  const today = localDayKey(now);
+  if (today !== DAY1 && today !== DAY2) return { today: false, items: HIGHLIGHTS.filter((item) => item.pre) };
+  const ended = (item) => Boolean(item.end) && new Date(item.end) < now;
+  const items = HIGHLIGHTS.filter((item) => item.day === today).sort(
+    (a, b) => Number(ended(a)) - Number(ended(b)) || (a.start || "").localeCompare(b.start || ""),
+  );
+  return { today: true, items };
+}
+
 // 타임테이블 일정에서 바로 여는 카드뉴스. 일정 제목(BaramSchedule · EVENT_PRESETS 와 같은 글자)으로 찾는다.
 // page 를 적으면 그 장부터, 없으면 표지부터 연다.
 const EVENT_NEWS = {
@@ -443,6 +586,7 @@ const EVENT_NEWS = {
   SUCL: [{ set: "sucl", label: "결승 안내" }],
   야간부스: [{ set: "bar", label: "주류 안내" }],
   공연무대: [
+    { set: "artist", label: "스페셜 아티스트" },
     { set: "stage", label: "입장 · 안전" },
     { set: "barrier-free", label: "배리어 프리존" },
     { set: "cheer", label: "응원대제전" },

@@ -18,6 +18,7 @@ import { FESTIVAL, MAIN_BOOTH_FALLBACK, findMainBooth } from "../config/festival
 import { normalizeEvents } from "../data/eventExperience";
 import { findCardNews, newsForEvent } from "../data/cardNews";
 import CardNewsViewer, { CardNewsShelf } from "../components/cardnews/CardNewsViewer";
+import HighlightBanner from "../components/cardnews/HighlightBanner";
 
 const WEEKDAY = ["일", "월", "화", "수", "목", "금", "토"];
 
@@ -78,6 +79,8 @@ export default function FestivalPage() {
   const [boothsUpdatedAt, setBoothsUpdatedAt] = useState(0);
   // 공연 목록은 기본으로 접혀 있다. 지난 공연은 숨기고 진행 중 + 다음 몇 개만 보여 준다.
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  // 타임테이블에서 고른 날짜. 고르기 전에는 오늘(축제 전이면 첫날)을 보여 준다.
+  const [pickedDay, setPickedDay] = useState(null);
   // 총학 카드뉴스 뷰어. 공유 링크(/?news=묶음&p=장)로 들어오면 바로 연다.
   const [searchParams, setSearchParams] = useSearchParams();
   const [cardNews, setCardNews] = useState(null);
@@ -145,19 +148,35 @@ export default function FestivalPage() {
   // 서버 일정에 장소·설명을 붙이고, 옛 데모 일정이면 총학 타임테이블로 바꾼다.
   const eventSource = useMemo(() => normalizeEvents(events), [events]);
 
-  const schedule = useMemo(() => {
+  const scheduleDays = useMemo(() => {
     const dated = eventSource
       .map((event) => ({ ...event, start: toDate(event.startTime), end: toDate(event.endTime) }))
       .filter((event) => event.start)
       .sort((a, b) => a.start - b.start);
-    if (!dated.length) return { dayLabel: "", items: [] };
     const days = [...new Set(dated.map((event) => dayKey(event.start)))];
     const today = dayKey(now);
-    const targetDay = days.includes(today) ? today : days.find((day) => day > today) || days[days.length - 1];
-    const items = dated.filter((event) => dayKey(event.start) === targetDay);
-    const dayLabel = targetDay === today ? "오늘" : formatDay(items[0].start, false);
-    return { dayLabel, items };
+    const forDay = (day) => {
+      const items = dated.filter((event) => dayKey(event.start) === day);
+      return { day, items, dayLabel: !items.length ? "" : day === today ? "오늘" : formatDay(items[0].start, false) };
+    };
+    const autoDay = days.includes(today) ? today : days.find((day) => day > today) || days[days.length - 1] || "";
+    // 날짜 칩은 축제 기간 것만(예전에 시험 삼아 넣은 일정의 날짜가 칩으로 뜨지 않게). 기간 안에 일정이 없으면 있는 날 전부.
+    const inFestival = days.filter((day) => day >= FESTIVAL.startDate && day <= FESTIVAL.endDate);
+    const chips = (inFestival.length ? inFestival : days).map((day) => {
+      const { items } = forDay(day);
+      const date = items[0].start;
+      const label = `${String(date.getMonth() + 1).padStart(2, "0")}.${String(date.getDate()).padStart(2, "0")} ${WEEKDAY[date.getDay()]}`;
+      return { day, label, count: items.length };
+    });
+    return { auto: forDay(autoDay), chips, forDay };
   }, [eventSource, now]);
+
+  // 상단 통계는 늘 오늘(축제 전이면 첫날) 기준, 타임테이블은 고른 날 기준.
+  const todaySchedule = scheduleDays.auto;
+  const schedule = useMemo(
+    () => (pickedDay && scheduleDays.chips.some((chip) => chip.day === pickedDay) ? scheduleDays.forDay(pickedDay) : scheduleDays.auto),
+    [pickedDay, scheduleDays],
+  );
 
   const liveCount = schedule.items.filter((event) => eventState(event, now) === "live").length;
 
@@ -285,9 +304,9 @@ export default function FestivalPage() {
             </strong>
           </div>
           <div className="v2-stat v2-rise" style={{ "--i": 4 }}>
-            <small>{schedule.dayLabel || "오늘"} 공연</small>
+            <small>{todaySchedule.dayLabel || "오늘"} 공연</small>
             <strong>
-              <CountUp value={schedule.items.length} suffix="개" />
+              <CountUp value={todaySchedule.items.length} suffix="개" />
             </strong>
           </div>
           <div className="v2-stat v2-rise" style={{ "--i": 5 }}>
@@ -319,6 +338,8 @@ export default function FestivalPage() {
           분실물
         </Link>
       </nav>
+
+      <HighlightBanner now={now} paused={Boolean(cardNews)} onOpen={(id, page) => setCardNews({ id, page })} />
 
       <section className="v2-section">
         <div className="v2-section__head">
@@ -389,6 +410,26 @@ export default function FestivalPage() {
           <h2>{schedule.dayLabel ? `${schedule.dayLabel} 공연` : "공연"}</h2>
           {liveCount > 0 ? <span className="v2-badge v2-badge--blue v2-badge--live">진행 중</span> : null}
         </div>
+        {scheduleDays.chips.length > 1 ? (
+          <div className="v2-chips cn-shelf-chips" role="group" aria-label="날짜 고르기">
+            {scheduleDays.chips.map((chip) => (
+              <button
+                key={chip.day}
+                type="button"
+                className={`v2-chip${schedule.day === chip.day ? " v2-chip--active" : ""}`}
+                aria-pressed={schedule.day === chip.day}
+                onClick={() => {
+                  setPickedDay(chip.day);
+                  // 다른 날을 골라 볼 때는 그날 일정을 다 펼쳐 보여 준다. 오늘(기본)로 돌아오면 다시 접는다.
+                  setScheduleOpen(chip.day !== todaySchedule.day);
+                }}
+              >
+                {chip.label}
+                <small>{chip.count}</small>
+              </button>
+            ))}
+          </div>
+        ) : null}
         {!loaded && !schedule.items.length ? (
           <div style={{ display: "grid", gap: "0.6rem" }}>
             <div className="v2-skeleton" style={{ height: "3.2rem" }} />

@@ -1,9 +1,9 @@
 // 카드뉴스 세 번째 묶음: 아로새길 거리축제, 뛰아주, SUCL 결승, 응원대제전.
 // 원본 카드의 글을 그대로 옮기고, 구역 고르기 · 코스 달려 보기 · 팀 응원 · 함성 키우기처럼 손으로 해 볼 거리를 붙였다.
 import { useEffect, useRef, useState } from "react";
-import { ARO, CARD_NEWS_IMG, CHEER, RUN, SUCL } from "../../data/cardNews";
+import { ARO, ARTIST, CARD_NEWS_IMG, CHEER, RUN, STAGE, SUCL } from "../../data/cardNews";
 import { CnIcon, PinMap } from "./CardNewsArt";
-import { GlassCard, vibrate } from "./CardNewsPages";
+import { GlassCard, InfoRows, vibrate } from "./CardNewsPages";
 import { Rich, useWhen } from "./CardNewsPages2";
 
 const img = (name) => `${CARD_NEWS_IMG}/${name}.webp`;
@@ -502,19 +502,80 @@ export function SuclEventPage() {
   );
 }
 
+/* ================= 스페셜 아티스트 ================= */
+export function ArtistInfoPage({ onJump }) {
+  const when = useWhen(STAGE.entryAt);
+  const [shine, setShine] = useState(0);
+  return (
+    <GlassCard eyebrow={`${ARTIST.date} 공연무대`} title={ARTIST.label} seed={163}>
+      <button
+        type="button"
+        className="cn-poster cn-in"
+        style={{ "--d": 1 }}
+        aria-label={`${ARTIST.name} 포스터`}
+        onClick={() => {
+          setShine(Date.now());
+          vibrate(8);
+        }}
+      >
+        <img src={img(ARTIST.poster)} alt="" draggable="false" />
+        {shine ? <span key={shine} className="cn-poster__shine" aria-hidden="true" /> : null}
+      </button>
+      <p className="cn-artistname cn-in" style={{ "--d": 2 }}>
+        {ARTIST.name}
+      </p>
+      <InfoRows rows={[["공연 장소", STAGE.place], ["입장 시간", `${STAGE.entry}부터`]]} />
+      <p className={`cn-status cn-status--${when.tone} cn-in`} style={{ "--d": 3 }}>
+        <i aria-hidden="true" />
+        {when.tone === "soon" ? `10월 8일 입장까지 ${when.text}` : when.tone === "live" ? "입장이 시작됐어요" : "공연이 끝났어요"}
+      </p>
+      <p className="cn-note cn-in" style={{ "--d": 4 }}>
+        {ARTIST.entryRule}
+      </p>
+      <div className="cn-duo cn-in" style={{ "--d": 5 }}>
+        <button type="button" className="cn-cta" onClick={() => onJump?.("stage", "stage-entry")}>
+          입장 안내 <CnIcon.arrow />
+        </button>
+        <button type="button" className="cn-cta" onClick={() => onJump?.("cheer", "cover")}>
+          응원대제전 <CnIcon.arrow />
+        </button>
+      </div>
+    </GlassCard>
+  );
+}
+
 /* ================= 응원대제전 ================= */
-export function CheerPlaylistPage() {
+function youtubeEmbed(video) {
+  const params = new URLSearchParams({ autoplay: "1", playsinline: "1", rel: "0" });
+  if (video.start) params.set("start", String(video.start));
+  if (video.end) params.set("end", String(video.end));
+  return `https://www.youtube-nocookie.com/embed/${video.id}?${params}`;
+}
+
+function youtubeWatch(video) {
+  return `https://www.youtube.com/watch?v=${video.id}${video.start ? `&t=${video.start}s` : ""}`;
+}
+
+export function CheerPlaylistPage({ active }) {
   const [playing, setPlaying] = useState(null);
+  const name = playing === null ? null : CHEER.playlist[playing];
+  const video = name ? CHEER.videos[name] : null;
+
+  // 다른 장으로 넘기면 소리가 계속 나지 않게 끈다.
+  useEffect(() => {
+    if (!active) setPlaying(null);
+  }, [active]);
+
   return (
     <GlassCard eyebrow="2026 아주대학교 응원단" title="CENTAUR" seed={151}>
       <span className="cn-tag cn-tag--first cn-in" style={{ "--d": 1 }}>
         CENTAUR PLAYLIST
       </span>
       <ol className="cn-playlist">
-        {CHEER.playlist.map((name, index) => {
+        {CHEER.playlist.map((song, index) => {
           const on = playing === index;
           return (
-            <li key={name} className="cn-in" style={{ "--d": Math.min(index + 2, 8) }}>
+            <li key={song} className="cn-in" style={{ "--d": Math.min(index + 2, 8) }}>
               <button
                 type="button"
                 className={`cn-song${on ? " is-on" : ""}`}
@@ -525,7 +586,7 @@ export function CheerPlaylistPage() {
                 }}
               >
                 <span className="cn-song__no">{index + 1}.</span>
-                <span className="cn-song__name">{name}</span>
+                <span className="cn-song__name">{song}</span>
                 {on ? (
                   <span className="cn-song__eq" aria-hidden="true">
                     <i />
@@ -538,17 +599,41 @@ export function CheerPlaylistPage() {
           );
         })}
       </ol>
-      <p className="cn-note cn-in" style={{ "--d": 9 }}>
-        {playing === null ? "곡 이름을 눌러 미리 떠올려 보세요" : `${CHEER.playlist[playing]} · 함께 외쳐요`}
-      </p>
-      <span className="cn-tag cn-in" style={{ "--d": 10 }}>
-        상품 안내
-      </span>
-      {CHEER.intro.map((line, index) => (
-        <p key={line} className="cn-copy cn-in" style={{ "--d": 11 + index }}>
-          {line}
-        </p>
-      ))}
+      {video ? (
+        <div className="cn-player">
+          <div className="cn-player__frame">
+            <iframe
+              key={video.id}
+              src={youtubeEmbed(video)}
+              title={`${name} · 아주대학교 응원단 CENTAUR`}
+              allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+              allowFullScreen
+              referrerPolicy="strict-origin-when-cross-origin"
+            />
+          </div>
+          <p className="cn-player__cap">
+            <b>{name}</b>
+            <span>{video.from} · 응원단 센토</span>
+            <a href={youtubeWatch(video)} target="_blank" rel="noreferrer">
+              YouTube에서 보기
+            </a>
+          </p>
+        </div>
+      ) : (
+        <>
+          <p className="cn-note cn-in" style={{ "--d": 9 }}>
+            {name ? `${name} · ${CHEER.noVideo}` : "곡 이름을 누르면 센토의 무대 영상이 나와요"}
+          </p>
+          <span className="cn-tag cn-in" style={{ "--d": 10 }}>
+            상품 안내
+          </span>
+          {CHEER.intro.map((line, index) => (
+            <p key={line} className="cn-copy cn-in" style={{ "--d": 11 + index }}>
+              {line}
+            </p>
+          ))}
+        </>
+      )}
     </GlassCard>
   );
 }
