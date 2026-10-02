@@ -43,6 +43,8 @@ export default function OpsKitchenPage() {
   const [busyId, setBusyId] = useState(null);
   // 완료를 누르고 아직 서버로 보내지 않은 주문: { 주문 id: 보낼 시각(performance.now 기준) }
   const [pending, setPending] = useState({});
+  // 되돌릴 시간이 끝나 서버로 보내는 중인 주문 id
+  const [sending, setSending] = useState([]);
   const [, setTick] = useState(0);
   const [soundOn, setSoundOn] = useState(chimeReady);
   const knownIds = useRef(null);
@@ -206,10 +208,18 @@ export default function OpsKitchenPage() {
     });
   }
 
-  function commit(order) {
+  // 되돌릴 시간이 끝났다. 서버로 보내는 동안에도 카드는 '완료로 넘기는 중' 그대로 둔다(잠깐 '조리 중'으로 돌아가 보이지 않게).
+  async function commit(order) {
     if (!pendingTimers.current.has(order.id)) return;
-    clearPending(order.id);
-    sendRef.current(order, "READY");
+    window.clearTimeout(pendingTimers.current.get(order.id));
+    pendingTimers.current.delete(order.id);
+    setSending((current) => [...current, order.id]);
+    try {
+      await sendRef.current(order, "READY");
+    } finally {
+      setSending((current) => current.filter((orderId) => orderId !== order.id));
+      clearPending(order.id);
+    }
   }
 
   function finish(order) {
@@ -366,6 +376,7 @@ export default function OpsKitchenPage() {
         <div className="kt-orders">
           {queue.map((order) => {
             const waiting = order.id in pending;
+            const leaving = sending.includes(order.id);
             // '먼저': 아직 완료를 누르지 않은 주문 가운데 입금이 가장 먼저 확인된 것.
             const first = toMake[0]?.id === order.id;
             const cooking = order.status === "PREPARING";
@@ -398,9 +409,9 @@ export default function OpsKitchenPage() {
                 {order.request && <p className="kt-order__request">요청 · {order.request}</p>}
                 <div className="kt-order__foot">
                   <span className={`kt-state kt-state--${tone}`}>
-                    {waiting ? `완료로 넘기는 중 · ${left}초` : cooking ? "조리 중" : "조리 대기"}
+                    {leaving ? "완료로 넘기는 중…" : waiting ? `완료로 넘기는 중 · ${left}초` : cooking ? "조리 중" : "조리 대기"}
                   </span>
-                  {waiting ? (
+                  {leaving ? null : waiting ? (
                     <button type="button" className="kt-btn kt-btn--undo" onClick={() => clearPending(order.id)}>
                       되돌리기
                     </button>
