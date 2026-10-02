@@ -510,6 +510,15 @@ export default function FestivalPage() {
         </Link>
       </section>
 
+      {FESTIVAL.siteContact?.phone ? (
+        <footer className="v2-contact">
+          사이트 이용 중 오류나 문의는
+          <br />
+          {FESTIVAL.siteContact.role} {FESTIVAL.siteContact.name}{" "}
+          <a href={`tel:${FESTIVAL.siteContact.phone.replace(/[^0-9+]/g, "")}`}>{FESTIVAL.siteContact.phone}</a>
+        </footer>
+      ) : null}
+
       {cardNews ? (
         <CardNewsViewer key={cardNews.id} setId={cardNews.id} startIndex={cardNews.page} onClose={() => setCardNews(null)} />
       ) : null}

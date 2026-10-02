@@ -19,6 +19,9 @@ export const FESTIVAL = {
   lostFoundClaim: false,
   // 손님 분실물 화면 맨 위의 보관 안내. hours(운영 시간) · after(축제가 끝난 뒤 보관처)는 비워 두면 화면에 나오지 않는다.
   lostFound: { place: "축제 본부(총학생회 부스)", hours: "", after: "" },
+  // 손님 첫 화면 맨 아래의 사이트 문의 한 줄. 주문 · 자리 · 분실물 문의까지 몰리지 않게 '사이트 오류 · 문의'로만 적는다.
+  // 누구나 보는 화면이라 축제가 끝나면 phone 을 비운다(비우면 줄이 통째로 안 나온다).
+  siteContact: { role: "소통개발국장", name: "정재훈", phone: "010-6428-6247" },
 };
 
 /**

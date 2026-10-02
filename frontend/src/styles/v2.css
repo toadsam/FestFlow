@@ -2067,3 +2067,22 @@
   width: 1.25rem;
   height: 1.25rem;
 }
+
+/* ---------- 첫 화면 맨 아래 · 사이트 문의 한 줄 ---------- */
+.app-shell[data-v2="true"] .v2-contact {
+  margin: 1.75rem 0 0;
+  padding: 0 1rem;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: var(--v2-text-3) !important;
+}
+
+/* 전역 링크 규칙(색 · 밑줄 없앰)보다 세야 번호가 누를 수 있게 보인다. */
+.app-shell[data-v2="true"] .v2-page .v2-contact a:not(#_) {
+  color: var(--v2-text-2) !important;
+  font-weight: 700;
+  text-decoration: underline !important;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+}
