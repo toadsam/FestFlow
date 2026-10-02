@@ -350,7 +350,16 @@ export default function OpsKitchenPage() {
         )}
       </section>
 
-      {!soundOn && <p className="kt-hint">화면을 한 번 누르면 새 주문이 올 때 소리가 나요.</p>}
+      <div className="kt-sound">
+        <span>
+          {soundOn
+            ? "새 주문이 오면 소리가 나요. 기기 소리(미디어 음량)를 끝까지 올려 두세요."
+            : "화면을 한 번 누르면 새 주문이 올 때 소리가 나요."}
+        </span>
+        <button type="button" className="ops-btn ops-btn--ghost ops-btn--sm" onClick={() => playChime("kitchen")}>
+          소리 듣기
+        </button>
+      </div>
       {flash && <div className="ops-banner">{flash}</div>}
       {error && (
         <div className="ops-banner ops-banner--red">

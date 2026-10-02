@@ -61,6 +61,7 @@ export default function OpsBoothOrders({ boothId, opsKey, notify, onSummary }) {
   // 이 화면에서 직접 상태를 바꾼 주문은 알림을 울리지 않는다.
   const selfChanged = useRef(new Set());
   const serveTimer = useRef(0);
+  const soundTimer = useRef(0);
   const loadedOnce = useRef(false);
   const authFailed = useRef(false);
 
@@ -175,6 +176,7 @@ export default function OpsBoothOrders({ boothId, opsKey, notify, onSummary }) {
       if (timer) window.clearTimeout(timer);
       if (reloadTimer) window.clearTimeout(reloadTimer);
       window.clearTimeout(serveTimer.current);
+      window.clearTimeout(soundTimer.current);
       window.clearInterval(pollTimer);
       document.removeEventListener("visibilitychange", poll);
       stream.close();
@@ -223,6 +225,14 @@ export default function OpsBoothOrders({ boothId, opsKey, notify, onSummary }) {
       selfChanged.current.delete(order.id);
       setBusyId(null);
     }
+  }
+
+  // 현장에서 기기 소리가 충분히 큰지 미리 들어 본다: 새 주문 소리 → 음식 나옴 소리.
+  function testSound() {
+    playChime("order");
+    window.clearTimeout(soundTimer.current);
+    soundTimer.current = window.setTimeout(() => playChime("ready"), 2600);
+    say("새 주문 소리 → 음식 나옴 소리 순서로 나요. 작으면 기기 소리를 올려 주세요.");
   }
 
   async function saveConfig() {
@@ -336,6 +346,7 @@ export default function OpsBoothOrders({ boothId, opsKey, notify, onSummary }) {
             <button type="button" className={showAll ? "ops-seg--on" : ""} onClick={() => setShowAll(true)}>오늘 전체</button>
           </div>
           <div className="ops-row ops-row--wrap">
+            <button type="button" className="ops-btn ops-btn--ghost ops-btn--sm" onClick={testSound}>알림 소리 듣기</button>
             <Link to={`/ops/booth/${boothId}/kitchen`} className="ops-btn ops-btn--dark ops-btn--sm">요리사 창 열기</Link>
             <Link to={`/ops/booth/${boothId}/table-qr`} className="ops-btn ops-btn--ghost ops-btn--sm">주문 QR 인쇄</Link>
           </div>

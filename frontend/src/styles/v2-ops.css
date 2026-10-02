@@ -1704,10 +1704,25 @@
   font-variant-numeric: tabular-nums;
 }
 
-.app-shell[data-ops-v2="true"] .kt-hint {
-  margin: 0;
+/* 소리 안내 + 소리 듣기 */
+.app-shell[data-ops-v2="true"] .kt-sound {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.app-shell[data-ops-v2="true"] .kt-sound span {
   font-size: 13px;
+  line-height: 1.45;
   color: var(--ops-ink-3) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.app-shell[data-ops-v2="true"] .kt-sound .ops-btn {
+  flex: 0 0 auto;
+  background: var(--ops-surface) !important;
+  color: var(--ops-ink) !important;
+  box-shadow: var(--ops-shadow) !important;
 }
 
 .app-shell[data-ops-v2="true"] .kt .ops-banner {
