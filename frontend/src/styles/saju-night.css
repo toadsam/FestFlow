@@ -1161,13 +1161,54 @@
   color: var(--nt-ivory-3) !important;
 }
 
-.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent__box,
-.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent__box * {
+/* 동의 칸: 예전에는 체크 표시가 늘 보여서 체크 전후가 똑같았다. 빈 네모 → 금색으로 채운 네모 + 체크로 확실히 가른다. */
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent {
+  border: 0 !important;
+  background: rgba(255, 255, 255, 0.07) !important;
+  box-shadow: inset 0 0 0 2px rgba(230, 200, 120, 0.7) !important;
   color: var(--nt-ivory) !important;
 }
 
-.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent__box {
-  background: rgba(255, 255, 255, 0.08) !important;
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent.is-checked {
+  background: rgba(230, 200, 120, 0.2) !important;
+  box-shadow: inset 0 0 0 2px var(--nt-gold) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent.is-error {
+  box-shadow: inset 0 0 0 2px rgba(255, 138, 128, 0.9) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent .am-consent__box {
+  background: transparent !important;
+  border: 2px solid var(--nt-gold) !important;
+  box-shadow: none !important;
+  color: transparent !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent .am-consent__box * {
+  color: inherit !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent.is-checked .am-consent__box {
+  background: var(--nt-gold) !important;
+  color: #2a1c5c !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent .am-consent__text b {
+  color: var(--nt-ivory) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent .am-consent__text em {
+  background: var(--nt-gold) !important;
+  color: #2a1c5c !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent .am-consent__text > span {
+  color: var(--nt-ivory-2) !important;
+}
+
+.app-shell.app-shell.app-shell.app-shell.festival-shell[data-v2="true"] .ai-match-page.ai-match-page--night .am-consent .am-consent__state {
+  color: var(--nt-gold) !important;
 }
 
 /* 검색창 안 input 은 바깥 상자만 보이게(이중 상자 방지) */

@@ -4,7 +4,7 @@
 // 블라인드 만남이라 두 사람은 서로 다른 대기 장소로 가고, 스태프가 부스로 데려온다.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fetchAiMatchMeetupSlots } from "../api";
-import MeetupEscort from "./MeetupEscort";
+import MeetupEscort, { waitingPlaceMapUrl } from "./MeetupEscort";
 import "../styles/saju-meetup.css";
 
 // 확정 뒤 약속 불이행·참가자 사이 일에 대한 안내. 확정 창·티켓·가입 화면에 같은 말을 쓴다.
@@ -297,9 +297,20 @@ export default function MeetupScheduler({ request, myProfileId, busy, onPropose,
             <li>부스에서는 얼굴을 가린 채 앱 채팅으로 10분 이야기해요. 끝나고 둘 다 원하면 얼굴을 봐요.</li>
           </ul>
           <div className="mu-ticket__actions">
-            <button type="button" className="mu-ghost" onClick={onOpenMap}>
-              부스 길찾기
-            </button>
+            {/* 부스가 아니라 내가 기다릴 곳으로 안내한다(부스까지는 스태프가 데려간다). 좌표를 모르는 장소면 부스 길찾기. */}
+            {waitingPlaceMapUrl(myPlace) ? (
+              <button
+                type="button"
+                className="mu-ghost"
+                onClick={() => window.open(waitingPlaceMapUrl(myPlace), "_blank", "noopener,noreferrer")}
+              >
+                {myPlace} 길찾기
+              </button>
+            ) : (
+              <button type="button" className="mu-ghost" onClick={onOpenMap}>
+                부스 길찾기
+              </button>
+            )}
           </div>
           <p className="mu-ticket__lock">
             확정된 약속은 바꾸거나 취소할 수 없어요. 부득이하게 못 오면 소개팅 부스 스태프에게 꼭 알려 주세요.

@@ -849,7 +849,8 @@ export default function AiMatchPage() {
       (!phoneMissing && !phoneInvalid) &&
       (isEditingProfile || (pin.length >= 4 && pin.length <= 10 && !/\s/.test(pin) && pin === pinConfirm)),
   );
-  const registerSubmitDisabled = !canRegister;
+  // 다 채우지 않아도 눌린다 — 누르면 안 채운 칸으로 화면을 옮겨 준다. 처리 중일 때만 잠근다.
+  const registerSubmitDisabled = submitting || converting;
   const bannerText = errorMessage
     ? errorMessage
       : converting
@@ -1682,72 +1683,55 @@ export default function AiMatchPage() {
     }
   }
 
+  // 등록을 눌렀을 때 안 채운 칸으로 화면을 옮기고, 그 칸을 잠깐 강조한다.
+  function goToRegisterField(key) {
+    // 오류 표시가 화면에 그려진 뒤에 옮긴다(화면이 가려져 있어도 도는 setTimeout 을 쓴다).
+    window.setTimeout(() => {
+      const target = document.querySelector(`.am-reg [data-reg-field="${key}"]`);
+      if (!target) return;
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+      target.classList.remove("is-flash");
+      // 같은 칸에서 다시 눌러도 강조가 처음부터 돌게 한다.
+      void target.offsetWidth;
+      target.classList.add("is-flash");
+      window.setTimeout(() => target.classList.remove("is-flash"), 1900);
+      const input = target.querySelector("input:not([type=file]):not([type=checkbox]), textarea");
+      if (input) window.setTimeout(() => input.focus({ preventScroll: true }), 380);
+    }, 60);
+  }
+
   async function handleRegister(event) {
     event.preventDefault();
     setRegisterAttempted(true);
-    if (!isEditingProfile && !phoneVerifiedForCurrentNumber) {
-      setPhoneCheckAttempted(true);
-      setErrorMessage("전화번호 확인을 먼저 완료해 주세요.");
+    // 화면에 놓인 순서(전화번호 → 사진 → 계정 → 사주 → 소개 → 동의)대로 본다.
+    const checks = [
+      ["phone", phoneMissing, "전화번호를 입력해 주세요."],
+      ["phone", phoneInvalid, "전화번호 형식이 올바르지 않습니다."],
+      ["phone", !isEditingProfile && !phoneVerifiedForCurrentNumber, "전화번호 확인을 먼저 완료해 주세요."],
+      ["photo", imageMissing, "프로필 사진을 먼저 업로드해 주세요."],
+      ["nickname", nicknameMissing, "닉네임을 입력해 주세요."],
+      ["nickname", nicknameTaken, "이미 사용 중인 닉네임입니다."],
+      ["nickname", nicknameInvalid, "닉네임은 2~12자, 띄어쓰기 없이 적어 주세요."],
+      ["pin", !isEditingProfile && pinMissing, "비밀번호를 입력해 주세요."],
+      ["pin", !isEditingProfile && pinInvalid, "비밀번호는 4~10자여야 합니다."],
+      ["pinConfirm", !isEditingProfile && pinConfirmMissing, "비밀번호 확인을 입력해 주세요."],
+      ["pinConfirm", !isEditingProfile && pinMismatch, "비밀번호가 서로 일치하지 않습니다."],
+      ["realName", realNameMissing, "사주를 뽑으려면 이름이 필요해요."],
+      ["birthDate", birthDateMissing, "사주를 뽑으려면 생년월일이 필요해요."],
+      ["birthDate", birthDateInvalid, "생년월일을 다시 확인해 주세요."],
+      ["intro", introMissing, "자기소개를 입력해 주세요."],
+      ["consent", consentMissing, "프로필 공개 동의에 체크해 주세요."],
+    ];
+    const failed = checks.find(([, bad]) => bad);
+    if (failed) {
+      if (failed[0] === "phone") setPhoneCheckAttempted(true);
+      setErrorMessage(failed[2]);
+      goToRegisterField(failed[0]);
       return;
     }
-    if (imageMissing) {
-      setErrorMessage("프로필 사진을 먼저 업로드해 주세요.");
-      return;
-    }
-    if (nicknameMissing) {
-      setErrorMessage("닉네임을 입력해 주세요.");
-      return;
-    }
-    if (nicknameTaken) {
-      setErrorMessage("이미 사용 중인 닉네임입니다.");
-      return;
-    }
-    if (nicknameInvalid) {
-      setErrorMessage("닉네임은 2~12자, 띄어쓰기 없이 적어 주세요.");
-      return;
-    }
-    if (!isEditingProfile && pinMissing) {
-      setErrorMessage("비밀번호를 입력해 주세요.");
-      return;
-    }
-    if (!isEditingProfile && pinInvalid) {
-      setErrorMessage("비밀번호는 4~10자여야 합니다.");
-      return;
-    }
-    if (!isEditingProfile && pinConfirmMissing) {
-      setErrorMessage("비밀번호 확인을 입력해 주세요.");
-      return;
-    }
-    if (!isEditingProfile && pinMismatch) {
-      setErrorMessage("비밀번호가 서로 일치하지 않습니다.");
-      return;
-    }
-    if (phoneMissing) {
-      setErrorMessage("전화번호를 입력해 주세요.");
-      return;
-    }
-    if (phoneInvalid) {
-      setErrorMessage("전화번호 형식이 올바르지 않습니다.");
-      return;
-    }
-    if (introMissing) {
-      setErrorMessage("자기소개를 입력해 주세요.");
-      return;
-    }
-    if (realNameMissing) {
-      setErrorMessage("사주를 뽑으려면 이름이 필요해요.");
-      return;
-    }
-    if (birthDateMissing) {
-      setErrorMessage("사주를 뽑으려면 생년월일이 필요해요.");
-      return;
-    }
-    if (birthDateInvalid) {
-      setErrorMessage("생년월일을 다시 확인해 주세요.");
-      return;
-    }
-    if (consentMissing) {
-      setErrorMessage("프로필 공개 동의가 필요합니다.");
+    if (nicknameCheck.status === "checking") {
+      setErrorMessage("닉네임을 확인하는 중이에요. 잠시 뒤 다시 눌러 주세요.");
+      goToRegisterField("nickname");
       return;
     }
     if (!canRegister) return;
@@ -2285,7 +2269,7 @@ export default function AiMatchPage() {
                 <p>중복 가입과 AI 과사용을 막는 용도예요. 매칭이 성사됐을 때 본부에서만 봐요.</p>
               </div>
             </div>
-            <label className="am-field">
+            <label className="am-field" data-reg-field="phone">
               <span className="am-field__label">전화번호</span>
               <div className={`am-input${phoneMsg[0] === "error" ? " is-error" : phoneMsg[0] === "ok" ? " is-ok" : ""}`}>
                 <input
@@ -2310,7 +2294,7 @@ export default function AiMatchPage() {
         ) : null}
 
         {/* 2. 사진 */}
-        <section className={`am-card${!isEditingProfile && !phoneVerifiedForCurrentNumber ? " am-card--locked" : ""}`}>
+        <section className={`am-card${!isEditingProfile && !phoneVerifiedForCurrentNumber ? " am-card--locked" : ""}`} data-reg-field="photo">
           <div className="am-card__head">
             <span className="am-card__num">{isEditingProfile ? 1 : 2}</span>
             <div>
@@ -2366,7 +2350,7 @@ export default function AiMatchPage() {
               <p>닉네임은 다른 참가자에게 보여요. 비밀번호는 신청함에 들어갈 때 써요.</p>
             </div>
           </div>
-          <label className="am-field">
+          <label className="am-field" data-reg-field="nickname">
             <span className="am-field__label">
               닉네임 <small>{nickname.length}/12</small>
             </span>
@@ -2386,7 +2370,7 @@ export default function AiMatchPage() {
 
           {!isEditingProfile ? (
             <div className="am-grid-2">
-              <label className="am-field">
+              <label className="am-field" data-reg-field="pin">
                 <span className="am-field__label">비밀번호</span>
                 <div className={`am-input${pinMsg[0] === "error" ? " is-error" : pinMsg[0] === "ok" ? " is-ok" : ""}`}>
                   <input
@@ -2404,7 +2388,7 @@ export default function AiMatchPage() {
                 </div>
                 <Msg tone={pinMsg[0]}>{pinMsg[1]}</Msg>
               </label>
-              <label className="am-field">
+              <label className="am-field" data-reg-field="pinConfirm">
                 <span className="am-field__label">비밀번호 확인</span>
                 <div className={`am-input${pinConfirmMsg[0] === "error" ? " is-error" : pinConfirmMsg[0] === "ok" ? " is-ok" : ""}`}>
                   <input
@@ -2441,14 +2425,14 @@ export default function AiMatchPage() {
             </div>
           </div>
           <div className="am-grid-2">
-            <label className="am-field">
+            <label className="am-field" data-reg-field="realName">
               <span className="am-field__label">이름</span>
               <div className={`am-input${realNameMsg[0] === "error" ? " is-error" : realNameMsg[0] === "ok" ? " is-ok" : ""}`}>
                 <input value={realName} maxLength={40} autoComplete="name" onChange={(event) => setRealName(event.target.value)} onBlur={() => mark("realName")} placeholder="예) 김바람" />
               </div>
               <Msg tone={realNameMsg[0]}>{realNameMsg[1]}</Msg>
             </label>
-            <label className="am-field">
+            <label className="am-field" data-reg-field="birthDate">
               <span className="am-field__label">생년월일 <small>양력</small></span>
               <div className={`am-input${birthDateMsg[0] === "error" ? " is-error" : birthDateMsg[0] === "ok" ? " is-ok" : ""}`}>
                 <input type="date" value={birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(event) => setBirthDate(event.target.value)} onBlur={() => mark("birthDate")} />
@@ -2521,7 +2505,7 @@ export default function AiMatchPage() {
             </div>
           </div>
 
-          <label className="am-field">
+          <label className="am-field" data-reg-field="intro">
             <span className="am-field__label">자기소개</span>
             <div className={`am-input${introMsg[0] === "error" ? " is-error" : ""}`}>
               <textarea
@@ -2547,13 +2531,23 @@ export default function AiMatchPage() {
             </div>
           </label>
 
-          <label className={`am-consent${consentMissing && registerAttempted ? " is-error" : ""}`}>
+          {/* 체크 전후가 확실히 달라 보여야 한다(빈 네모 → 채워진 네모 + 체크, '눌러서 체크' → '동의함'). */}
+          <label
+            data-reg-field="consent"
+            className={`am-consent${consent ? " is-checked" : ""}${consentMissing && registerAttempted ? " is-error" : ""}`}
+          >
             <input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />
             <span className="am-consent__box" aria-hidden="true"><IconCheckSmall /></span>
-            <span>사진과 소개가 공개 목록에 보이는 것에 동의해요.</span>
+            <span className="am-consent__text">
+              <b>
+                <em>필수</em>프로필 공개 동의
+              </b>
+              <span>사진과 소개가 공개 목록에 보이는 것에 동의해요.</span>
+            </span>
+            <span className="am-consent__state" aria-hidden="true">{consent ? "동의함" : "눌러서 체크"}</span>
           </label>
           <p className="am-consent-note">{ORGANIZER_DISCLAIMER}</p>
-          {consentMissing && registerAttempted ? <Msg tone="error">동의가 필요해요.</Msg> : null}
+          {consentMissing && registerAttempted ? <Msg tone="error">위 칸을 눌러 동의에 체크해 주세요.</Msg> : null}
         </section>
 
         <div className="am-submit">

@@ -7,10 +7,30 @@ import "../styles/saju-escort.css";
 
 // 대기 장소 사진(frontend/public/images/meetup/). 세로 사진이라 티켓에는 4:3 으로 잘라 보여 주고(focus = 세로 위치),
 // 누르면 원본을 크게 연다. spot 은 사진 속에서 서 있을 자리. 파일이 없으면 사진 칸을 숨긴다.
+// map 은 길찾기 목적지 — 건물 한가운데가 아니라 사진 속 그 자리다.
+//   성호관: 잔디밭 쪽(남서) 면의 로고 입구 앞. 중앙도서관: 뒤쪽(남쪽) 1층 카페 027 라운지 데크 앞.
+//   지도에 따로 등록된 장소가 아니라서 위성 사진과 입구 위치로 잡은 좌표다(2026-10-03). 현장과 다르면 여기 숫자만 고친다.
 const WAITING_PLACE_PHOTOS = {
-  "성호관 앞": { src: "/images/meetup/seongho.jpg", focus: "50% 72%", spot: "아주대 로고가 있는 입구 앞" },
-  "중앙도서관 앞": { src: "/images/meetup/library.jpg", focus: "50% 80%", spot: "1층 카페 027 라운지 앞 데크" },
+  "성호관 앞": {
+    src: "/images/meetup/seongho.jpg",
+    focus: "50% 72%",
+    spot: "아주대 로고가 있는 입구 앞",
+    map: { label: "성호관 로고 입구 앞", lat: 37.28282, lng: 127.04489 },
+  },
+  "중앙도서관 앞": {
+    src: "/images/meetup/library.jpg",
+    focus: "50% 80%",
+    spot: "1층 카페 027 라운지 앞 데크",
+    map: { label: "중앙도서관 카페 027 라운지 앞", lat: 37.28137, lng: 127.04421 },
+  },
 };
+
+/** 내 대기 장소로 가는 카카오맵 길찾기 주소. 좌표를 모르는 장소면 null. */
+export function waitingPlaceMapUrl(place) {
+  const target = WAITING_PLACE_PHOTOS[place]?.map;
+  if (!target) return null;
+  return `https://map.kakao.com/link/to/${encodeURIComponent(target.label)},${target.lat},${target.lng}`;
+}
 
 const STAGE_INDEX = { NONE: 0, ARRIVED: 1, DEPARTED: 2, PICKED_UP: 3, AT_BOOTH: 4 };
 const ARRIVAL_OPEN_MS = 60 * 60_000;

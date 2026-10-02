@@ -767,19 +767,27 @@
   transform: scale(0.96) !important;
 }
 
-/* 동의 */
+/* 동의: 눌러서 체크하는 칸. 체크 전(빈 네모 · '눌러서 체크')과 후(채워진 네모 + 체크 · '동의함')가 확실히 달라 보이게 한다. */
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  min-height: 68px;
   padding: 14px;
-  border-radius: 14px;
-  background: var(--v2-gray);
-  font-size: 14px;
-  font-weight: 600;
+  border: 2px solid var(--v2-blue);
+  border-radius: 16px;
+  background: #fff;
   color: var(--v2-text) !important;
   cursor: pointer;
-  border: 1.5px solid transparent;
+  transition: background 0.2s, border-color 0.2s, transform 0.12s;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent:active {
+  transform: scale(0.985);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent.is-checked {
+  background: var(--v2-blue-tint);
 }
 
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent.is-error {
@@ -797,21 +805,91 @@
 
 .app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent__box {
   flex: 0 0 auto;
-  width: 24px;
-  height: 24px;
-  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   background: #fff;
-  border: 1.5px solid var(--v2-line-strong);
+  border: 2px solid var(--v2-blue);
   display: grid;
   place-items: center;
   color: transparent !important;
   transition: background 0.15s, border-color 0.15s;
 }
 
-.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent input:checked + .am-consent__box {
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent__box svg {
+  width: 18px;
+  height: 18px;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent.is-checked .am-consent__box {
   background: var(--v2-blue);
   border-color: var(--v2-blue);
   color: #fff !important;
+  animation: am-check-pop 0.28s var(--v2-ease);
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent__text {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 3px;
+  min-width: 0;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent__text b {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 800;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent__text em {
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--v2-blue);
+  color: #fff !important;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent__text > span {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-consent__state {
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--v2-blue) !important;
+  white-space: nowrap;
+}
+
+@keyframes am-check-pop {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+
+/* 등록을 눌렀을 때 안 채운 칸을 잠깐 강조 */
+.app-shell.festival-shell[data-v2="true"] .ai-match-page .am-reg [data-reg-field].is-flash {
+  border-radius: 16px;
+  animation: am-field-flash 0.9s ease-out 2;
+}
+
+@keyframes am-field-flash {
+  0% { outline: 3px solid rgba(255, 110, 110, 0.95); outline-offset: 3px; }
+  100% { outline: 3px solid rgba(255, 110, 110, 0); outline-offset: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-shell.festival-shell[data-v2="true"] .ai-match-page .am-reg [data-reg-field].is-flash {
+    outline: 3px solid rgba(255, 110, 110, 0.95);
+    outline-offset: 3px;
+    animation: none;
+  }
 }
 
 /* 사주 미리보기 */
