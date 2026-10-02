@@ -1,6 +1,7 @@
 // 자리 현황판. 입구 스태프가 한 손으로 테이블을 누르면 "이용 중" ↔ "빈 자리"가 바뀐다.
 // 손님 화면과 첫 화면 카드는 이 조작을 실시간으로 받는다.
 // 테이블 QR 로 주문이 들어오면 그 테이블은 저절로 "이용 중"이 된다. 비우는 것은 늘 스태프가 직접 누른다.
+// 빈 자리로 바꿀 때는 확인 창을 한 번 거친다(여럿이 돌아다니며 누르다 손님이 앉은 자리를 비우지 않게).
 // 이용 중인 테이블에는 앉은 지 얼마나 됐는지가 같이 보인다.
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
@@ -12,7 +13,7 @@ import {
   releaseOpsBoothReservationTable,
 } from "../api";
 import { IconArrowLeft, IconRefresh } from "../components/UxIcons";
-import { useToast } from "../components/v2/V2Kit";
+import { BottomSheet, useToast } from "../components/v2/V2Kit";
 
 const BOOTH_KEY_STORAGE_KEY = "festflow_ops_booth_key";
 
@@ -60,7 +61,8 @@ export default function OpsTableBoardPage() {
   const [busyId, setBusyId] = useState(null);
   const [updatedAt, setUpdatedAt] = useState(0);
   const [tick, setTick] = useState(0);
-  const [pendingRelease, setPendingRelease] = useState(null);
+  // 빈 자리로 바꾸려고 누른 테이블(확인 창이 떠 있는 동안).
+  const [releaseId, setReleaseId] = useState(null);
   const [showToast, toastNode] = useToast();
   const loadingRef = useRef(false);
 
@@ -127,24 +129,49 @@ export default function OpsTableBoardPage() {
   }
 
   async function toggle(table) {
-    const status = statusOf(table);
     if (busyId) return;
-    if (status === "RESERVED" && pendingRelease !== table.id) {
-      // 예약 손님 자리를 실수로 비우지 않도록 한 번 더 누르게 한다.
-      setPendingRelease(table.id);
-      window.setTimeout(() => setPendingRelease((current) => (current === table.id ? null : current)), 4000);
+    if (statusOf(table) !== "AVAILABLE") {
+      // 이용 중 · 예약 자리를 비우는 건 확인 창에서 한 번 더 묻는다.
+      setReleaseId(table.id);
       return;
     }
     setBusyId(table.id);
-    setPendingRelease(null);
     try {
-      if (status === "AVAILABLE") {
-        await occupyOpsBoothReservationTable(id, table.id, key);
-        showToast(`${table.tableName} 이용 중으로 바꿨어요.`);
-      } else {
-        await releaseOpsBoothReservationTable(id, table.id, key);
-        showToast(`${table.tableName} 비웠어요.`);
-      }
+      await occupyOpsBoothReservationTable(id, table.id, key);
+      showToast(`${table.tableName} 이용 중으로 바꿨어요.`);
+      await load(key);
+    } catch (toggleError) {
+      setError(toggleError.message || "바꾸지 못했어요. 다시 눌러 주세요.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  const releaseTable = releaseId ? tables.find((table) => table.id === releaseId) || null : null;
+  const releaseStatus = releaseTable ? statusOf(releaseTable) : "";
+
+  // 확인 창을 띄워 둔 사이에 다른 사람이 먼저 비웠으면 창을 닫는다.
+  useEffect(() => {
+    if (!releaseId) return;
+    if (!releaseTable) {
+      setReleaseId(null);
+      return;
+    }
+    if (releaseStatus === "AVAILABLE") {
+      setReleaseId(null);
+      showToast(`${releaseTable.tableName}은 이미 빈 자리예요.`);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [releaseId, releaseTable, releaseStatus]);
+
+  async function confirmRelease() {
+    const table = releaseTable;
+    if (!table || busyId) return;
+    setReleaseId(null);
+    setBusyId(table.id);
+    try {
+      await releaseOpsBoothReservationTable(id, table.id, key);
+      showToast(`${table.tableName} 비웠어요.`);
       await load(key);
     } catch (toggleError) {
       setError(toggleError.message || "바꾸지 못했어요. 다시 눌러 주세요.");
@@ -203,8 +230,8 @@ export default function OpsTableBoardPage() {
         </div>
       </div>
       <p className="tb-hint">
-        손님이 앉으면 한 번, 나가면 한 번 누르세요. 손님 화면의 &quot;남은 자리&quot;가 바로 바뀌어요. 테이블 QR로 주문이
-        들어오면 저절로 이용 중이 되고, 비우는 건 직접 눌러야 해요.
+        손님이 앉으면 한 번 누르세요. 손님이 나가면 누른 뒤 확인 창에서 &quot;빈 자리로 바꾸기&quot;를 눌러요. 손님 화면의
+        &quot;남은 자리&quot;가 바로 바뀌어요. 테이블 QR로 주문이 들어오면 저절로 이용 중이 되고, 비우는 건 직접 눌러야 해요.
       </p>
 
       {error && <p className="v2-note v2-note--danger">{error}</p>}
@@ -223,7 +250,7 @@ export default function OpsTableBoardPage() {
             const status = statusOf(table);
             const free = status === "AVAILABLE";
             const reserved = status === "RESERVED";
-            const confirming = pendingRelease === table.id;
+            const confirming = releaseId === table.id;
             const seated = status === "IN_USE" ? seatedLabel(table.occupiedSince, Date.now()) : "";
             return (
               <button
@@ -239,7 +266,7 @@ export default function OpsTableBoardPage() {
                   {busyId === table.id
                     ? "바꾸는 중"
                     : confirming
-                      ? "한 번 더 누르면 비움"
+                      ? "확인 중"
                       : free
                         ? "빈 자리"
                         : reserved
@@ -252,6 +279,35 @@ export default function OpsTableBoardPage() {
           })}
         </div>
       )}
+      <BottomSheet
+        open={Boolean(releaseTable)}
+        onClose={() => setReleaseId(null)}
+        title={releaseTable ? `${releaseTable.tableName} 테이블을 빈 자리로 바꿀까요?` : ""}
+        description={
+          releaseStatus === "RESERVED"
+            ? "예약 손님 자리예요. 비우면 예약이 취소돼요."
+            : "손님이 나가고 자리를 치운 게 맞는지 한 번 더 확인해 주세요."
+        }
+      >
+        {releaseTable ? (
+          <div className="tb-confirm">
+            <p className="tb-confirm__now">
+              지금 <b>{releaseStatus === "RESERVED" ? "예약 손님" : "이용 중"}</b>
+              {releaseStatus === "IN_USE" && seatedLabel(releaseTable.occupiedSince, Date.now())
+                ? ` · ${seatedLabel(releaseTable.occupiedSince, Date.now())}`
+                : ""}
+            </p>
+            <div className="tb-confirm__btns">
+              <button type="button" className="v2-btn v2-btn--gray tb-confirm__no" onClick={() => setReleaseId(null)}>
+                아니요
+              </button>
+              <button type="button" className="v2-btn tb-confirm__yes" onClick={confirmRelease}>
+                빈 자리로 바꾸기
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </BottomSheet>
       {toastNode}
     </section>
   );

@@ -76,7 +76,7 @@ const steps = [
     key: "release",
     frame: "console",
     title: `손님이 나가면 현황판에서 ${TABLE}을 눌러 비우기`,
-    body: "주문이 끝나도 자리는 저절로 비지 않아요. 콘솔 위의 ‘현황판’을 열어 손님이 일어난 테이블을 직접 눌러요.",
+    body: "주문이 끝나도 자리는 저절로 비지 않아요. 콘솔 위의 ‘현황판’을 열어 손님이 일어난 테이블을 누르고, 확인 창에서 ‘빈 자리로 바꾸기’를 눌러요.",
   },
 ];
 
@@ -258,7 +258,12 @@ function findTarget(stepKey, doc, { order }) {
   if (stepKey === "release") {
     // 콘솔에 있으면 위쪽 ‘현황판’ 버튼, 현황판에 와 있으면 그 테이블.
     if (!path.endsWith("/tables")) return pick('.ops__top-row a[href$="/tables"]');
-    return [...doc.querySelectorAll(".tb-table")].find((button) => button.querySelector("strong")?.textContent.trim() === TABLE) || null;
+    // 테이블을 누르면 확인 창이 뜬다 → 그 안의 '빈 자리로 바꾸기'.
+    return (
+      pick(".tb-confirm__yes") ||
+      [...doc.querySelectorAll(".tb-table")].find((button) => button.querySelector("strong")?.textContent.trim() === TABLE) ||
+      null
+    );
   }
   if (!order) return null;
   if (stepKey === "cook" || stepKey === "ready") {

@@ -407,6 +407,33 @@
   opacity: 0.6;
 }
 
+/* 빈 자리로 바꾸기 전 확인 창 */
+.app-shell[data-v2="true"] .tb-confirm__now {
+  margin: -0.5rem 0 1.1rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 14px;
+  background: var(--v2-red-soft);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--v2-text) !important;
+}
+
+.app-shell[data-v2="true"] .tb-confirm__now b {
+  color: var(--v2-red) !important;
+}
+
+.app-shell[data-v2="true"] .tb-confirm__btns {
+  display: grid;
+  grid-template-columns: 1fr 1.6fr;
+  gap: 0.6rem;
+}
+
+.app-shell[data-v2="true"] .tb-confirm__btns .v2-btn {
+  width: 100%;
+  min-height: 3.4rem;
+  font-size: 1.02rem;
+}
+
 /* ---------- 일러스트 메뉴 타일 ---------- */
 .app-shell[data-v2="true"] .v2-dish__photo--illust {
   display: grid;

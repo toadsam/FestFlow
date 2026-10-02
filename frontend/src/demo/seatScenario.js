@@ -64,7 +64,7 @@ const steps = [
     key: "release",
     frame: BOARD,
     title: "손님이 나갔어요 — 그 자리를 눌러 비우기",
-    body: "자리는 저절로 비지 않아요. 손님이 일어난 걸 보고 직접 눌러요.",
+    body: "자리는 저절로 비지 않아요. 손님이 일어난 걸 보고 그 자리를 누른 뒤, 확인 창에서 ‘빈 자리로 바꾸기’를 눌러요.",
   },
   {
     key: "clear",
@@ -203,7 +203,8 @@ function findTarget(stepKey, doc, { table }) {
     // 이미 누가 앉은 자리면 다른 빈 자리를 가리킨다.
     return button?.classList.contains("tb-table--available") ? button : doc.querySelector(".tb-table--available");
   }
-  if (stepKey === "release") return table ? boardTable(table.tableName)(doc) : null;
+  // 테이블을 누르면 확인 창이 뜬다 → 그 안의 '빈 자리로 바꾸기'.
+  if (stepKey === "release") return doc.querySelector(".tb-confirm__yes") || (table ? boardTable(table.tableName)(doc) : null);
   if (stepKey === "soldout") {
     return [...doc.querySelectorAll(".ops-soldout__chip:not(.is-out)")].find((chip) => chip.querySelector("span")?.textContent.trim() === DISH) || doc.querySelector(".ops-soldout__chip:not(.is-out)");
   }
