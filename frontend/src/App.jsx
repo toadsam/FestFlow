@@ -39,7 +39,8 @@ export default function App() {
   // 자리 현황판은 스태프가 한 손으로 쓰는 전체 화면이라 운영 탭도 손님 탭도 붙이지 않는다.
   const isTableBoardRoute = /^\/ops\/booth\/[^/]+\/tables$/.test(location.pathname);
   // 부스 운영 콘솔은 토스풍 스킨(v2-ops.css). 데스크톱에선 사이드바가 있어 옛 운영 하단 탭을 붙이지 않는다.
-  const isBoothOpsRoute = /^\/ops\/booth\/[^/]+$/.test(location.pathname);
+  // 요리사 창(/kitchen)도 같은 스킨을 쓰고, 주방 태블릿에서 화면 폭을 다 쓴다.
+  const isBoothOpsRoute = /^\/ops\/booth\/[^/]+(\/kitchen)?$/.test(location.pathname);
   const isOpsPanelRoute =
     !isTableBoardRoute && (location.pathname.startsWith("/ops") || location.pathname.startsWith("/admin/simulation"));
   // 테이블 QR 주문 흐름은 하단 탭 없이 전체 화면으로 쓴다.

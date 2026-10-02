@@ -35,6 +35,7 @@ import LineupPage from "./pages/LineupPage";
 import LostFoundPage from "./pages/LostFoundPage";
 import MorePage from "./pages/MorePage";
 import OpsBoothPage from "./pages/OpsBoothPage";
+import OpsKitchenPage from "./pages/OpsKitchenPage";
 import OpsSimulationPage from "./pages/OpsSimulationPage";
 import OpsTableBoardPage from "./pages/OpsTableBoardPage";
 import TableOrderPage from "./pages/order/TableOrderPage";
@@ -111,6 +112,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             <Route path="ops/booth/:id" element={routeElement(OpsBoothPage)} />
             <Route path="ops/booth/:id/table-qr" element={routeElement(TableQrPage)} />
             <Route path="ops/booth/:id/tables" element={routeElement(OpsTableBoardPage)} />
+            <Route path="ops/booth/:id/kitchen" element={routeElement(OpsKitchenPage)} />
             {/* 공용 QR: 테이블을 고른 뒤 주문 화면으로 간다. */}
             <Route path="order/:boothId" element={routeElement(TablePickPage)} />
             <Route path="order/:boothId/:table" element={routeElement(TableOrderPage)} />

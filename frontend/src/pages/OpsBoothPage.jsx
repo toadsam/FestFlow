@@ -263,7 +263,7 @@ export default function OpsBoothPage() {
   const [error, setError] = useState("");
   const [data, setData] = useState(null);
   const [reservationAlert, setReservationAlert] = useState("");
-  const [orderCounts, setOrderCounts] = useState({ pending: 0, cooking: 0 });
+  const [orderCounts, setOrderCounts] = useState({ pending: 0, cooking: 0, ready: 0 });
   const [active, setActive] = useState("overview");
   const [saving, setSaving] = useState("");
   const [summary, setSummary] = useState(null);
@@ -806,7 +806,8 @@ export default function OpsBoothPage() {
   const handleOrderSummary = useCallback((counts) => setOrderCounts(counts), []);
 
   const badgeFor = (sectionId) => {
-    if (sectionId === "orders") return orderCounts.pending;
+    // 스태프가 지금 손대야 하는 주문: 입금을 확인할 것 + 가져다줄 것(요리사가 완료한 주문).
+    if (sectionId === "orders") return orderCounts.pending + (orderCounts.ready || 0);
     if (sectionId === "reservations") return activeReservations.filter((r) => r.status !== "CHECKED_IN").length;
     return 0;
   };
@@ -865,6 +866,9 @@ export default function OpsBoothPage() {
           <Link to={`/ops/booth/${id}/tables`} className="ops-btn ops-btn--dark ops-btn--sm">
             <Icons.tables /> 자리 현황판 열기
           </Link>
+          <Link to={`/ops/booth/${id}/kitchen`} className="ops-btn ops-btn--dark ops-btn--sm">
+            <Icons.orders /> 요리사 창 열기
+          </Link>
           <Link to={`/ops/booth/${id}/table-qr`} className="ops-btn ops-btn--ghost ops-btn--sm">
             <Icons.print /> 주문 QR 인쇄
           </Link>
@@ -883,6 +887,7 @@ export default function OpsBoothPage() {
             </div>
             <div className="ops-row">
               <Link to={`/ops/booth/${id}/tables`} className="ops-btn ops-btn--dark ops-btn--sm">현황판</Link>
+              <Link to={`/ops/booth/${id}/kitchen`} className="ops-btn ops-btn--ghost ops-btn--sm">요리사 창</Link>
               <button type="button" className="ops-btn ops-btn--ghost ops-btn--sm" onClick={clearKey} aria-label="키 지우고 나가기">
                 <Icons.logout />
               </button>
@@ -931,7 +936,7 @@ export default function OpsBoothPage() {
                   <button type="button" className="ops-kpi" onClick={() => jump("orders")} style={{ textAlign: "left" }}>
                     <small>입금 대기 주문</small>
                     <strong>{orderCounts.pending}<em>건</em></strong>
-                    <span>조리 중 {orderCounts.cooking}건</span>
+                    <span>조리 중 {orderCounts.cooking}건 · 서빙할 것 {orderCounts.ready || 0}건</span>
                   </button>
                   {RESERVATIONS_ON && (
                     <button type="button" className="ops-kpi ops-kpi--yellow" onClick={() => jump("reservations")} style={{ textAlign: "left" }}>

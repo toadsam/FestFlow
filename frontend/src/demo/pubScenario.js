@@ -1,4 +1,5 @@
-// 눌러 보는 매뉴얼 · 주점 주문 흐름. 화면 셋(손님 폰 · 주문 콘솔 · 자리 현황판)과 순서, 방금 일어난 일을 글로 바꾸는 규칙.
+// 눌러 보는 매뉴얼 · 주점 주문 흐름. 화면 셋(손님 폰 · 주문 콘솔 · 요리사 창)과 순서, 방금 일어난 일을 글로 바꾸는 규칙.
+// 주문 → 입금 확인(콘솔) → 조리 시작 · 완료(요리사 창) → 서빙 완료(콘솔) → 자리 비우기(콘솔에서 여는 현황판).
 import { DEMO_BOOTH_ID, DEMO_OPS_KEY } from "./pubDomain";
 
 const TABLE = "3번";
@@ -21,19 +22,20 @@ const frames = [
     id: "console",
     who: "스태프",
     label: "주문 콘솔",
-    sub: "주문을 받는 스태프 화면",
+    sub: "입금을 확인하고 음식을 나르는 스태프 화면",
     home: `/ops/booth/${BOOTH}`,
-    allow: [new RegExp(`^/ops/booth/${BOOTH}(/|$)`)],
+    // 콘솔과, 콘솔에서 여는 자리 현황판 · QR 인쇄. 요리사 창은 옆 화면에 따로 떠 있다.
+    allow: [new RegExp(`^/ops/booth/${BOOTH}(/tables|/table-qr)?$`)],
     staff: true,
     session: [[OPS_KEY_STORAGE, DEMO_OPS_KEY]],
   },
   {
-    id: "board",
-    who: "스태프",
-    label: "자리 현황판",
-    sub: "입구 스태프가 보는 화면",
-    home: `/ops/booth/${BOOTH}/tables`,
-    allow: [new RegExp(`^/ops/booth/${BOOTH}(/|$)`)],
+    id: "kitchen",
+    who: "요리사",
+    label: "요리사 창",
+    sub: "주방에서 보는 화면 · 입금 확인된 순서",
+    home: `/ops/booth/${BOOTH}/kitchen`,
+    allow: [new RegExp(`^/ops/booth/${BOOTH}/kitchen$`)],
     staff: true,
     session: [[OPS_KEY_STORAGE, DEMO_OPS_KEY]],
   },
@@ -50,16 +52,31 @@ const steps = [
     key: "paid",
     frame: "console",
     title: "‘입금 확인’ 누르기",
-    body: "통장에 입금자명으로 돈이 들어왔는지 보고, 새로 뜬 주문 카드의 ‘입금 확인’을 눌러요.",
+    body: "통장에 입금자명으로 돈이 들어왔는지 보고, 새로 뜬 주문 카드의 ‘입금 확인’을 눌러요. 누르는 순간 요리사 창에 떠요.",
   },
-  { key: "cook", frame: "console", title: "‘조리 시작’ 누르기", body: "주방에 주문을 넘기면서 눌러요." },
-  { key: "ready", frame: "console", title: "‘준비 완료’ 누르기", body: "음식이 다 되면 눌러요. 손님 화면에 준비됐다고 떠요." },
-  { key: "complete", frame: "console", title: "‘완료’ 누르기", body: "테이블에 가져다준 뒤 눌러요. 주문은 처리 중 목록에서 빠져요." },
+  {
+    key: "cook",
+    frame: "kitchen",
+    title: "‘조리 시작’ 누르기",
+    body: "요리사 창에는 입금이 확인된 주문만, 확인된 순서대로 떠요. 맨 위 주문부터 만들기 시작하면서 눌러요.",
+  },
+  {
+    key: "ready",
+    frame: "kitchen",
+    title: "다 만들면 ‘완료’ 누르기",
+    body: "누르면 5초 동안 ‘되돌리기’가 떠요(잘못 눌렀을 때). 5초가 지나면 주문 콘솔의 ‘서빙할 것’으로 넘어가요.",
+  },
+  {
+    key: "complete",
+    frame: "console",
+    title: "가져다주고 ‘서빙 완료’ 누르기",
+    body: "‘서빙할 것’에 올라온 테이블로 음식을 가져다준 뒤 눌러요. 주문은 처리 중 목록에서 빠져요.",
+  },
   {
     key: "release",
-    frame: "board",
-    title: `손님이 나가면 ${TABLE}을 눌러 비우기`,
-    body: "주문이 끝나도 자리는 저절로 비지 않아요. 손님이 일어난 걸 보고 직접 눌러요.",
+    frame: "console",
+    title: `손님이 나가면 현황판에서 ${TABLE}을 눌러 비우기`,
+    body: "주문이 끝나도 자리는 저절로 비지 않아요. 콘솔 위의 ‘현황판’을 열어 손님이 일어난 테이블을 직접 눌러요.",
   },
 ];
 
@@ -83,6 +100,12 @@ function progress(snapshot) {
   };
 }
 
+// 요리사 창 · 콘솔에서 그 주문의 카드를 찾는다(바뀐 자리 표시용).
+const kitchenCard = (orderNo) => (doc) =>
+  [...doc.querySelectorAll(".kt-order")].find((node) => node.querySelector(".kt-order__meta")?.textContent.includes(`#${orderNo}`)) || null;
+const consoleCard = (orderNo) => (doc) =>
+  [...doc.querySelectorAll(".ops-order")].find((node) => node.querySelector(".ops-order__meta")?.textContent.includes(`#${orderNo}`)) || null;
+
 function describe(event) {
   const from = frames.some((frame) => frame.id === event.role) ? event.role : "console";
   switch (event.type) {
@@ -92,50 +115,71 @@ function describe(event) {
         cause: `손님이 ${event.order.tableLabel} 테이블에서 주문했어요 (${won(event.order.totalAmount)})`,
         effects: [
           { frame: "guest", text: "‘주문이 완료되었어요’ 화면으로 넘어가고 입금 계좌가 보여요." },
-          { frame: "console", text: `‘새 주문 · ${event.order.tableLabel} 테이블’ 띠가 뜨고, 주문 카드가 ‘입금 대기’로 생겨요.` },
-          event.seated
-            ? { frame: "board", text: `${event.order.tableLabel}이 빨간 ‘이용 중 · 방금 앉음’으로 바뀌어요.` }
-            : { frame: "board", quiet: true, text: `${event.order.tableLabel}은 이미 이용 중이라 앉은 시간이 그대로예요.` },
+          {
+            frame: "console",
+            text: `‘새 주문 · ${event.order.tableLabel} 테이블’ 띠와 소리가 나고, 주문 카드가 ‘입금 대기’로 생겨요.${
+              event.seated ? ` 자리 현황판의 ${event.order.tableLabel}도 저절로 ‘이용 중’이 돼요.` : ""
+            }`,
+          },
+          { frame: "kitchen", quiet: true, text: "아직 아무것도 안 떠요. 입금이 확인된 주문만 떠요." },
         ],
       };
     case "order.status": {
       const table = event.order.tableLabel;
+      const no = event.order.orderNo;
+      const byKitchen = from === "kitchen";
+      const wasInKitchen = event.from === "PAID" || event.from === "PREPARING";
       const map = {
         PAID: {
           cause: `스태프가 ${table} 주문의 ‘입금 확인’을 눌렀어요`,
           effects: [
             { frame: "guest", text: "‘입금이 확인됐어요’로 바뀌고 입금 계좌 안내가 사라져요." },
-            { frame: "console", text: "주문 카드가 ‘입금 확인’으로 바뀌고 다음 버튼이 ‘조리 시작’이 돼요." },
+            { frame: "console", text: "주문 카드가 ‘입금 확인’으로 바뀌고 ‘요리사 창에 떠 있어요’가 보여요." },
+            { frame: "kitchen", show: kitchenCard(no), text: "소리와 함께 주문 카드가 떠요. 입금이 확인된 순서대로 아래에 쌓여요." },
           ],
         },
         PREPARING: {
-          cause: `스태프가 ${table} 주문의 ‘조리 시작’을 눌렀어요`,
+          cause: byKitchen ? `요리사가 ${table} 주문의 ‘조리 시작’을 눌렀어요` : `스태프가 콘솔에서 ${table} 주문의 ‘조리 시작’을 대신 눌렀어요`,
           effects: [
             { frame: "guest", text: "‘조리 중이에요’로 바뀌어요." },
-            { frame: "console", text: "주문 카드가 ‘조리 중’으로 바뀌어요." },
+            { frame: "console", show: byKitchen ? consoleCard(no) : undefined, text: "주문 카드가 ‘조리 중’으로 바뀌어요." },
+            { frame: "kitchen", show: byKitchen ? undefined : kitchenCard(no), text: "카드 테두리가 보라색 ‘조리 중’으로 바뀌고 버튼이 ‘완료’가 돼요." },
           ],
         },
         READY: {
-          cause: `스태프가 ${table} 주문의 ‘준비 완료’를 눌렀어요`,
+          cause: byKitchen ? `요리사가 ${table} 주문을 ‘완료’했어요` : `스태프가 콘솔에서 ${table} 주문의 ‘준비 완료’를 대신 눌렀어요`,
           effects: [
             { frame: "guest", text: "‘준비가 끝났어요!’로 바뀌어요." },
-            { frame: "console", text: "주문 카드가 ‘준비 완료’로 바뀌어요." },
+            {
+              frame: "console",
+              show: (doc) => doc.querySelector(".ops-serve"),
+              text: byKitchen
+                ? `‘음식 나왔어요 · ${table} 테이블’ 띠와 소리가 나고, 맨 위 ‘서빙할 것’에 올라와요.`
+                : "맨 위 ‘서빙할 것’에 올라와요.",
+            },
+            {
+              frame: "kitchen",
+              show: byKitchen ? undefined : (doc) => doc.querySelector(".kt-served"),
+              text: `카드가 목록에서 빠지고, 맨 아래 ‘다 만든 주문 · 서빙 기다리는 중’에 ${table}이 남아요.`,
+            },
           ],
         },
         COMPLETED: {
-          cause: `스태프가 ${table} 주문의 ‘완료’를 눌렀어요`,
+          cause: `스태프가 ${table} 주문의 ‘서빙 완료’를 눌렀어요`,
           effects: [
             { frame: "guest", text: "‘맛있게 드세요!’로 바뀌어요." },
-            { frame: "console", text: "‘처리 중’ 목록에서 빠져요. ‘오늘 전체’를 누르면 다시 볼 수 있어요." },
-            { frame: "board", quiet: true, text: `${table}은 그대로 ‘이용 중’이에요. 자리는 저절로 비지 않아요.` },
+            { frame: "console", text: "‘서빙할 것’에서 빠져요. ‘오늘 전체’를 누르면 다시 볼 수 있어요. 자리는 그대로 ‘이용 중’이에요." },
+            { frame: "kitchen", quiet: !event.from || event.from !== "READY", text: `‘다 만든 주문’에서 ${table}이 빠져요.` },
           ],
         },
         CANCELED: {
           cause: `스태프가 ${table} 주문을 취소했어요`,
           effects: [
             { frame: "guest", text: "‘주문이 취소되었어요’로 바뀌어요." },
-            { frame: "console", text: "‘처리 중’ 목록에서 빠져요." },
-            { frame: "board", quiet: true, text: `${table}은 그대로 ‘이용 중’이에요. 손님이 나갔으면 직접 비워요.` },
+            { frame: "console", text: "‘처리 중’ 목록에서 빠져요. 자리는 그대로 ‘이용 중’이라, 손님이 나갔으면 현황판에서 직접 비워요." },
+            wasInKitchen
+              ? { frame: "kitchen", text: "주방에 떠 있던 카드가 사라져요. 만들던 음식은 멈춰요." }
+              : { frame: "kitchen", quiet: true, text: "입금 전이라 요리사 창에는 뜬 적이 없어요." },
           ],
         },
       };
@@ -146,8 +190,7 @@ function describe(event) {
         from,
         cause: `스태프가 ${event.table.tableName}을 ‘이용 중’으로 바꿨어요`,
         effects: [
-          { frame: "board", text: `${event.table.tableName}이 빨간 ‘이용 중 · 방금 앉음’이 돼요.` },
-          { frame: "console", text: `‘자리’의 ${event.table.tableName}도 이용 중으로 바뀌어요.` },
+          { frame: "console", text: `현황판의 ${event.table.tableName}이 빨간 ‘이용 중 · 방금 앉음’이 돼요.` },
           { frame: "guest", quiet: true, text: "손님이 보는 주점 화면의 ‘남은 자리’가 하나 줄어요." },
         ],
       };
@@ -156,8 +199,7 @@ function describe(event) {
         from,
         cause: `스태프가 ${event.table.tableName}을 비웠어요`,
         effects: [
-          { frame: "board", text: `${event.table.tableName}이 초록 ‘빈 자리’로 돌아와요.` },
-          { frame: "console", text: `‘자리’의 ${event.table.tableName}도 빈 자리로 바뀌어요.` },
+          { frame: "console", text: `현황판의 ${event.table.tableName}이 초록 ‘빈 자리’로 돌아와요.` },
           { frame: "guest", quiet: true, text: "손님이 보는 주점 화면의 ‘남은 자리’가 하나 늘어요." },
         ],
       };
@@ -214,30 +256,38 @@ function findTarget(stepKey, doc, { order }) {
     return pick(".od-cartbar") || pick(".od-menu-item:not(:disabled)");
   }
   if (stepKey === "release") {
+    // 콘솔에 있으면 위쪽 ‘현황판’ 버튼, 현황판에 와 있으면 그 테이블.
+    if (!path.endsWith("/tables")) return pick('.ops__top-row a[href$="/tables"]');
     return [...doc.querySelectorAll(".tb-table")].find((button) => button.querySelector("strong")?.textContent.trim() === TABLE) || null;
   }
   if (!order) return null;
-  const card = [...doc.querySelectorAll(".ops-order")].find((node) =>
-    node.querySelector(".ops-order__meta")?.textContent.includes(`#${order.orderNo}`),
-  );
-  return card?.querySelector(".ops-btn--primary") || null;
+  if (stepKey === "cook" || stepKey === "ready") {
+    const card = kitchenCard(order.orderNo)(doc);
+    // 완료를 누르고 되돌리기를 기다리는 5초 동안은 누를 곳이 없다.
+    if (!card || card.classList.contains("kt-order--done")) return null;
+    return card.querySelector(".kt-btn--start, .kt-btn--done");
+  }
+  // 콘솔 단계인데 현황판 · QR 인쇄 화면에 가 있으면 콘솔로 돌아가는 버튼.
+  if (path !== `/ops/booth/${BOOTH}`) return pick('.v2-topbar a, a[href$="/ops/booth/' + BOOTH + '"]');
+  return consoleCard(order.orderNo)(doc)?.querySelector(".ops-btn--primary") || null;
 }
 
 export const pubScenario = {
   id: "pub",
   label: "주점 주문",
   shortLabel: "주문",
-  subtitle: "주점 · 테이블 QR 주문",
+  subtitle: "주점 · 테이블 QR 주문 → 주방 → 서빙",
   frames,
   steps,
   progress,
   describe,
   findTarget,
   /** 누를 곳이 이 요소 안에 있으면 요소가 통째로 보이게 맞춘다. */
-  scrollAnchor: ".ops-order",
+  scrollAnchor: ".ops-order, .kt-order",
   ideas: [
-    "주문 콘솔에서 주문을 ‘취소’하면 손님 화면은?",
+    "요리사 창에서 ‘완료’를 누르고 5초 안에 ‘되돌리기’를 누르면?",
+    "주문을 두 건 넣고 나중 주문부터 ‘입금 확인’하면 요리사 창 순서는?",
+    "주문 콘솔에서 조리 중인 주문을 ‘취소’하면 요리사 창은?",
     "주문 콘솔 ‘메뉴판’에서 품절로 바꾸면 손님 메뉴는?",
-    "자리 현황판에서 빈 자리를 누르면? (주문 없이 앉은 손님)",
   ],
 };
