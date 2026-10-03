@@ -93,12 +93,12 @@ function EscortControl({ stage = "NONE", stageAt, busy, onStage }) {
         {stageAt && stage !== "NONE" ? ` · ${timeLabel(stageAt)}` : ""}
       </span>
       {next ? (
-        <button type="button" className="mu-esc__next" disabled={busy} onClick={() => onStage(next)}>
+        <button type="button" className="mu-esc__next" disabled={busy} onClick={() => onStage(next, stage)}>
           {ESCORT_NEXT[stage]}
         </button>
       ) : null}
       {index > 0 ? (
-        <button type="button" className="mu-esc__undo" disabled={busy} onClick={() => onStage(ESCORT_STEPS[index - 1])} title="한 단계 되돌리기">
+        <button type="button" className="mu-esc__undo" disabled={busy} onClick={() => onStage(ESCORT_STEPS[index - 1], stage)} title="한 단계 되돌리기">
           되돌리기
         </button>
       ) : null}
@@ -231,7 +231,7 @@ function PlaceBoard({ items, now, busyId, onStage }) {
                   stage={person.stage || "NONE"}
                   stageAt={person.stageAt}
                   busy={busyId === person.item.requestId}
-                  onStage={(stage) => onStage(person.item.requestId, person.side, stage)}
+                  onStage={(stage, fromStage) => onStage(person.item.requestId, person.side, stage, fromStage)}
                 />
               </li>
             );
@@ -349,6 +349,8 @@ export default function AdminMeetupSchedule({ onChanged }) {
       await load(date);
       onChanged?.();
     } catch (actionError) {
+      // 다른 스태프가 먼저 바꿨거나 순서가 안 맞으면 서버가 거절한다. 지금 상태를 다시 읽어 보여 준 뒤 이유를 띄운다.
+      await load(date);
       setError(actionError.message || "처리하지 못했습니다.");
     } finally {
       setBusyId(null);
@@ -420,7 +422,7 @@ export default function AdminMeetupSchedule({ onChanged }) {
         items={items}
         now={now}
         busyId={busyId}
-        onStage={(requestId, side, stage) => run(requestId, () => setAdminAiMatchEscortStage(requestId, side, stage))}
+        onStage={(requestId, side, stage, fromStage) => run(requestId, () => setAdminAiMatchEscortStage(requestId, side, stage, fromStage))}
       />
 
       {error ? <p className="mu-admin__empty">{error}</p> : null}
@@ -429,8 +431,11 @@ export default function AdminMeetupSchedule({ onChanged }) {
         <div className="mu-admin__list">
           {items.map((item, index) => {
             const busy = busyId === item.requestId;
-            const bothArrived = Boolean(item.requesterArrivedAt && item.profileArrivedAt);
             const done = item.meetupOutcome === "MET";
+            // 만남 완료는 얼굴 보기 결과가 나온 뒤에만(그 전에 누르면 채팅이 못 열리거나 닫힌다).
+            // 노쇼는 채팅을 시작하기 전까지만(시작했다면 두 사람 다 온 것이다). 서버도 같은 규칙으로 막는다.
+            const chatResult = item.chatPhase === "MATCH" || item.chatPhase === "NO_MATCH";
+            const chatStarted = Boolean(item.chatPhase) && item.chatPhase !== "NONE";
             return (
               <article
                 key={item.requestId}
@@ -475,7 +480,7 @@ export default function AdminMeetupSchedule({ onChanged }) {
                     stage={item.requesterEscortStage}
                     stageAt={item.requesterEscortStageAt}
                     busy={busy || done}
-                    onStage={(stage) => run(item.requestId, () => setAdminAiMatchEscortStage(item.requestId, "REQUESTER", stage))}
+                    onStage={(stage, fromStage) => run(item.requestId, () => setAdminAiMatchEscortStage(item.requestId, "REQUESTER", stage, fromStage))}
                   />
                   <Person
                     nickname={item.profileNickname}
@@ -485,19 +490,31 @@ export default function AdminMeetupSchedule({ onChanged }) {
                     stage={item.profileEscortStage}
                     stageAt={item.profileEscortStageAt}
                     busy={busy || done}
-                    onStage={(stage) => run(item.requestId, () => setAdminAiMatchEscortStage(item.requestId, "PROFILE", stage))}
+                    onStage={(stage, fromStage) => run(item.requestId, () => setAdminAiMatchEscortStage(item.requestId, "PROFILE", stage, fromStage))}
                   />
-                  {!done ? (
+                  {!done && (chatResult || !chatStarted) ? (
                     <div className="mu-admin__actions">
-                      <button
-                        type="button"
-                        className={`mu-admin__btn mu-admin__btn--met${bothArrived ? " is-ready" : ""}`}
-                        disabled={busy}
-                        onClick={() => run(item.requestId, () => markAdminAiMatchMet(item.requestId))}
-                      >
-                        만남 완료
-                      </button>
-                      {noShowId === item.requestId ? (
+                      {chatResult ? (
+                        <button
+                          type="button"
+                          className="mu-admin__btn mu-admin__btn--met is-ready"
+                          disabled={busy}
+                          onClick={() => {
+                            const ok = window.confirm(
+                              [
+                                `${item.requesterNickname} · ${item.profileNickname}`,
+                                "",
+                                "만남 완료로 기록할까요?",
+                                "얼굴 보기 결과는 그대로 남고, 이 약속은 끝난 것으로 정리돼요.",
+                              ].join("\n"),
+                            );
+                            if (ok) run(item.requestId, () => markAdminAiMatchMet(item.requestId));
+                          }}
+                        >
+                          만남 완료
+                        </button>
+                      ) : null}
+                      {chatStarted ? null : noShowId === item.requestId ? (
                         <span className="mu-admin__noshow">
                           <small>누가 안 왔나요? 확정된 약속이면 두 사람에게 취소 문자가 가요.</small>
                           {[
@@ -510,7 +527,17 @@ export default function AdminMeetupSchedule({ onChanged }) {
                               type="button"
                               className="mu-admin__btn mu-admin__btn--danger"
                               disabled={busy}
-                              onClick={() => run(item.requestId, () => markAdminAiMatchNoShow(item.requestId, side))}
+                              onClick={() => {
+                                const ok = window.confirm(
+                                  [
+                                    `${side === "BOTH" ? "두 사람 모두" : label} 노쇼로 처리할까요?`,
+                                    "",
+                                    "약속이 취소되고 시간 칸이 비워져요.",
+                                    item.confirmed ? "두 사람에게 취소 문자가 가요. 되돌릴 수 없어요." : "되돌릴 수 없어요.",
+                                  ].join("\n"),
+                                );
+                                if (ok) run(item.requestId, () => markAdminAiMatchNoShow(item.requestId, side));
+                              }}
                             >
                               {label}
                             </button>

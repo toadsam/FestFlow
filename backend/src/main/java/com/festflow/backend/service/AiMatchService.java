@@ -821,6 +821,11 @@ public class AiMatchService {
         if (!AiMatchRequest.ESCORT_STAGES.contains(stage)) {
             throw new ResponseStatusException(BAD_REQUEST, "알 수 없는 단계입니다.");
         }
+        // 화면이 본 단계와 지금 단계가 다르면 그 사이 다른 스태프가 바꾼 것이다. 늦게 갱신된 폰이 단계를 되감지 않게 바꾸지 않는다.
+        String fromStage = requestDto.fromStage() == null ? "" : requestDto.fromStage().trim().toUpperCase();
+        if (!fromStage.isEmpty() && !fromStage.equals(request.escortStage("REQUESTER".equals(side)))) {
+            throw new ResponseStatusException(CONFLICT, "다른 스태프가 방금 이 사람의 단계를 바꿨어요. 화면을 새로 읽었으니 다시 확인해 주세요.");
+        }
         request.setEscortStage("REQUESTER".equals(side), stage);
         syncChatWithEscort(request);
         return toAdminRequestDto(request);
@@ -922,6 +927,11 @@ public class AiMatchService {
     @Transactional
     public AiMatchAdminRequestDto markMet(Long requestId) {
         AiMatchRequest request = findMeetupRequest(requestId);
+        // 채팅 전이나 채팅 중에 누르면 채팅이 열리지 못하거나 바로 닫힌다. 얼굴 보기 결과가 나온 뒤에만 받는다.
+        String phase = request.chatPhase(LocalDateTime.now(), chatMinutes, chatChooseMinutes);
+        if (!"MATCH".equals(phase) && !"NO_MATCH".equals(phase)) {
+            throw new ResponseStatusException(CONFLICT, "만남 완료는 채팅이 끝나 얼굴 보기 결과가 나온 뒤에 누를 수 있어요.");
+        }
         request.markMet();
         return toAdminRequestDto(request);
     }
@@ -937,6 +947,10 @@ public class AiMatchService {
             case "BOTH" -> "NO_SHOW_BOTH";
             default -> throw new ResponseStatusException(BAD_REQUEST, "누가 안 왔는지 골라 주세요.");
         };
+        // 채팅을 시작했다면 두 사람 다 온 것이다. 여기서 노쇼로 바꾸면 채팅 결과가 지워지고 두 사람에게 취소 문자가 나간다.
+        if (request.getChatStartedAt() != null || "MET".equals(request.getMeetupOutcome())) {
+            throw new ResponseStatusException(CONFLICT, "채팅을 시작한 커플은 노쇼로 처리할 수 없어요. 두 사람 모두 온 약속이에요.");
+        }
         // 확정된 약속이었으면 두 사람에게 취소 문자를 보낸다. 기다린 사람이 영문도 모르고 서 있지 않게.
         boolean wasConfirmed = "CONFIRMED".equals(request.getStatus());
         LocalDateTime meetupAt = request.getMeetupAt();

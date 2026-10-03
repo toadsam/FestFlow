@@ -985,6 +985,11 @@ export function createAimatchDomain({ nowMs, stamp, emit, clock }) {
     const stage = `${body?.stage ?? ""}`.trim().toUpperCase();
     if (!ESCORT_STAGES.includes(stage)) throw httpError(400, "알 수 없는 단계입니다.");
     const before = escortStage(request, requesterSide);
+    // 화면이 본 단계와 지금 단계가 다르면 다른 스태프가 먼저 바꾼 것이다(실제 서버와 같다).
+    const fromStage = `${body?.fromStage ?? ""}`.trim().toUpperCase();
+    if (fromStage && fromStage !== before) {
+      throw httpError(409, "다른 스태프가 방금 이 사람의 단계를 바꿨어요. 화면을 새로 읽었으니 다시 확인해 주세요.");
+    }
     setEscortStage(request, requesterSide, stage);
     // 채팅을 시작해 놓고 '부스 도착'을 되돌린 경우(잘못 누름), 아직 아무 말도 선택도 없으면 채팅을 다시 닫아 시간을 돌려준다.
     if (
@@ -1036,6 +1041,10 @@ export function createAimatchDomain({ nowMs, stamp, emit, clock }) {
 
   function markMet(requestId, role) {
     const request = findMeetupRequest(requestId);
+    const phase = chatPhase(request);
+    if (phase !== "MATCH" && phase !== "NO_MATCH") {
+      throw httpError(409, "만남 완료는 채팅이 끝나 얼굴 보기 결과가 나온 뒤에 누를 수 있어요.");
+    }
     const now = stamp();
     request.requesterStages[0] = request.requesterStages[0] || now;
     request.profileStages[0] = request.profileStages[0] || now;
@@ -1052,6 +1061,9 @@ export function createAimatchDomain({ nowMs, stamp, emit, clock }) {
     const side = `${body?.side ?? "BOTH"}`.trim().toUpperCase();
     const outcome = { REQUESTER: "NO_SHOW_REQUESTER", PROFILE: "NO_SHOW_PROFILE", BOTH: "NO_SHOW_BOTH" }[side];
     if (!outcome) throw httpError(400, "누가 안 왔는지 골라 주세요.");
+    if (request.chatStartedAt || request.meetupOutcome === "MET") {
+      throw httpError(409, "채팅을 시작한 커플은 노쇼로 처리할 수 없어요. 두 사람 모두 온 약속이에요.");
+    }
     const wasConfirmed = request.status === "CONFIRMED";
     state.slots = state.slots.filter((slot) => slot.requestId !== request.id);
     request.meetupOutcome = outcome;

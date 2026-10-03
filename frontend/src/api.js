@@ -1439,11 +1439,12 @@ export async function fetchAdminAiMatchChatLog(requestId) {
   return parseJson(response, "채팅 기록을 불러오지 못했습니다.");
 }
 
-export async function setAdminAiMatchEscortStage(requestId, side, stage) {
+// fromStage: 누른 화면에 보이던 지금 단계. 서버 단계와 다르면(다른 스태프가 먼저 바꿈) 서버가 바꾸지 않고 409 를 준다.
+export async function setAdminAiMatchEscortStage(requestId, side, stage, fromStage) {
   const response = await fetch(`${API_BASE}/admin/ai-match/requests/${requestId}/escort`, {
     method: "PUT",
     headers: withAuth({ "Content-Type": "application/json" }),
-    body: JSON.stringify({ side, stage }),
+    body: JSON.stringify({ side, stage, fromStage }),
   });
   return parseJson(response, "단계를 바꾸지 못했습니다.");
 }

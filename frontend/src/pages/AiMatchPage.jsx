@@ -1033,6 +1033,12 @@ export default function AiMatchPage() {
     setRequestPlace(MEET_PLACES[0]);
   }, [selectedProfile]);
 
+  // 프로필 수정 화면을 저장하지 않고 떠나면(하단 탭 · 뒤로) '수정 중'을 푼다.
+  // 수정하는 동안은 아래 자동 갱신을 멈추는데, 안 풀면 신청함 · 약속 · 부스 안내가 화면에 계속 안 바뀐다.
+  useEffect(() => {
+    if (activeScreen !== "register" && editingProfileId !== null) setEditingProfileId(null);
+  }, [activeScreen, editingProfileId]);
+
   useEffect(() => {
     if (!accessProfile || !accessNickname || !accessPin || isEditingProfile) return undefined;
 
